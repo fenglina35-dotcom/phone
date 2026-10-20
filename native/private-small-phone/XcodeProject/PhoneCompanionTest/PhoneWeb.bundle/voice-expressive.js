@@ -20,6 +20,17 @@ const ELEVEN={轻笑:'[chuckles softly]',笑着说:'[smiling]',开心:'[happy]',
 const ALIAS={笑:'笑着说',微笑:'笑着说',高兴:'开心',耳语:'小声',悄悄:'小声',轻声:'小声',伤心:'难过',心疼:'温柔',哄:'温柔',腻:'黏糊',黏:'黏糊',粘:'黏糊',哭腔:'哽咽',叹:'叹气',顿:'停顿',慢:'慢慢说',生气:'不满',吃醋:'不满'};
 const CUE_WORDS='轻笑|笑着说|微笑|笑|开心|高兴|撒娇|黏糊|腻|黏|粘|温柔|宠溺|心疼|哄|小声|耳语|悄悄|轻声|气声|难过|伤心|低落|委屈|哽咽|哭腔|叹气|叹|停顿|顿|慢慢说|慢|害羞|认真|不满|生气|吃醋|惊讶';
 const cueRe=()=>new RegExp('[\\[【]\\s*('+CUE_WORDS+')\\s*[\\]】]','g');
+/* VOICE_TONE_GUESS_V1：角色有时写出列表外的语气提示（[语气变低] [声音放轻] [冷冷地]……），以前既不出声也不去掉，台词里露出方括号。
+   现在凡是方括号里明显在说语气、声音的中文，换成最接近的一个已知提示；说不清是哪种就只去掉。不像语气的方括号（[挂断] 这类）原样留下。 */
+const KNOWN_CUE=new Set(CUE_WORDS.split('|'));
+const TONE_HINT=/语气|声音|声调|嗓|笑|哭|叹|哽|颤|抖|低|轻|柔|软|冷|硬|凶|沉|哑|急|慢|拖|停|顿|喘|呼吸|撒娇|委屈|难过|伤|失落|生气|不耐|严肃|认真|正经|害羞|羞|惊|诧|温|甜|宠|哄|悄/;
+const TONE_GUESS=[[/笑出声|轻笑|低笑|闷笑|笑了一下/,'轻笑'],[/笑/,'笑着说'],[/哽|哭|颤|抖/,'哽咽'],[/叹/,'叹气'],[/委屈/,'委屈'],[/撒娇|娇|黏|甜/,'撒娇'],[/宠/,'宠溺'],
+  [/冷|硬|凶|怒|生气|不耐|严厉|不满/,'不满'],[/难过|伤|失落|低落|闷/,'低落'],[/小声|轻声|低声|耳语|悄|压低|变低|放低|放轻|低沉|沉|哑|低/,'小声'],[/柔|软|温|哄/,'温柔'],
+  [/认真|严肃|正经|郑重/,'认真'],[/害羞|羞|腼腆/,'害羞'],[/惊|诧/,'惊讶'],[/慢|拖/,'慢慢说'],[/停|顿/,'停顿'],[/喘|呼吸|气声/,'气声'],[/开心|高兴|雀跃/,'开心']];
+// a known cue → its own name; a tone-like cue → the nearest known one ('' = drop it); anything else → null (not a cue, keep it)
+function guessCue(w){w=String(w||'').trim();if(KNOWN_CUE.has(w))return ALIAS[w]||w;if(!TONE_HINT.test(w))return null;for(const [re,name] of TONE_GUESS)if(re.test(w))return name;return '';}
+// [...] may hold any tone hint; 【...】 is an action line in video calls and only counts when it is exactly a known cue (as before)
+const anyCueRe=()=>new RegExp('\\[\\s*([\\u4e00-\\u9fa5]{1,8})\\s*\\]|【\\s*('+CUE_WORDS+')\\s*】','g');
 const spatialRe=()=>/[\[【]\s*(左耳|右耳|脑后|面前|贴近|退开)\s*[\]】]/g;
 const SOUND_COOLDOWN_MS=6*60000,_soundAt=new Map(),_handed=new Map();
 /* warmVoiceMsg 把带小提示的念法交过来，下一次合成同一正文时取用一次（发声入口仍读 m.content，原有的语言锁照常作用在它身上） */
@@ -43,9 +54,10 @@ function styleKind(tts){let k='';try{k=typeof ttsStyleKind==='function'?ttsStyle
 function roleTts(c){try{return typeof ttsCfg==='function'?ttsCfg(c):null;}catch(_){return null;}}
 
 /* 语音正文 → 显示用的干净文字、给模型念的带提示文字、方位标签（记在干净文字的第几个字）。开关关着时不处理。 */
-function split(raw,force){if(!on()&&!force)return null;raw=String(raw==null?'':raw);const re=new RegExp(cueRe().source+'|'+spatialRe().source,'g');let text='',perf='',last=0,m;const spatial=[];let hit=false;
-  while((m=re.exec(raw))){const chunk=raw.slice(last,m.index);text+=chunk;perf+=chunk;last=re.lastIndex;hit=true;
-    if(m[1]){perf+='['+(ALIAS[m[1]]||m[1])+']';}else if(m[2]){spatial.push({at:[...text].length,tag:m[2]});}}
+function split(raw,force){if(!on()&&!force)return null;raw=String(raw==null?'':raw);const re=new RegExp(spatialRe().source+'|'+anyCueRe().source,'g');let text='',perf='',last=0,m;const spatial=[];let hit=false;
+  while((m=re.exec(raw))){const chunk=raw.slice(last,m.index);
+    if(m[2]||m[3]){const g=guessCue(m[2]||m[3]);if(g===null)continue;text+=chunk;perf+=chunk;last=re.lastIndex;hit=true;if(g)perf+='['+g+']';}
+    else if(m[1]){text+=chunk;perf+=chunk;last=re.lastIndex;hit=true;spatial.push({at:[...text].length,tag:m[1]});}}
   if(!hit)return null;const tail=raw.slice(last);text+=tail;perf+=tail;
   return {text:text.replace(/[ \t]{2,}/g,' ').trim(),perf:perf.trim(),spatial};}
 
@@ -58,7 +70,7 @@ function prompt(c){if(!on())return '';let s='';const k=styleKind(roleTts(c));
  const ACTION_CUES=[[/大笑|笑出声|放声笑|轻笑|低笑|浅笑|笑了|笑一下|笑起来|笑着|失笑|嗤笑|闷笑|勾起.{0,3}(?:嘴角|唇角)|笑意/,'轻笑'],[/叹气|叹了|叹息/,'叹气'],[/哽咽|哭腔|抽泣|红了眼/,'哽咽'],[/撒娇/,'撒娇'],[/宠溺/,'宠溺'],[/温柔|柔声|放软/,'温柔'],[/小声|压低声音|耳语|凑近耳边/,'小声']];
  function actionCues(text){const t=String(text||''),out=[];for(const [re,name] of ACTION_CUES){if(out.length>=2)break;if(re.test(t)&&!out.includes(name))out.push(name);}return out;}
 // Cue and position tags are performance hints only: never shown, never kept in call lines or their translations.
- function stripTags(t){return String(t==null?'':t).replace(new RegExp('\\[\\s*(?:'+CUE_WORDS+')\\s*\\]|'+spatialRe().source,'g'),'').replace(/([（(])\s+/g,'$1').replace(/[ \t]{2,}/g,' ').trim();}
+ function stripTags(t){return String(t==null?'':t).replace(/\[\s*([\u4e00-\u9fa5]{1,8})\s*\]/g,(all,w)=>guessCue(w)===null?all:'').replace(new RegExp('\\[\\s*(?:'+CUE_WORDS+')\\s*\\]|'+spatialRe().source,'g'),'').replace(/([（(])\s+/g,'$1').replace(/[ \t]{2,}/g,' ').trim();}
 function soundAllowed(o){const k=String(o&&o.id||'_');return Date.now()-(_soundAt.get(k)||0)>SOUND_COOLDOWN_MS;}
 function soundMark(o){_soundAt.set(String(o&&o.id||'_'),Date.now());}
 function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueKind(cue):'';}catch(_){}
@@ -70,7 +82,7 @@ function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueK
 function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(tts);if(kind!=='fish'&&kind!=='eleven')return null;
   const map=kind==='fish'?FISH:ELEVEN,marks=[];const handed=takePerf(text)||{},ask=String((opt&&opt.ask)||handed.ask||'');
   if(handed.directed&&kind==='fish'){const tags=[];let d=String(handed.directed).replace(/\[[^\]\n]{1,60}\]/g,x=>{tags.push(x);return '\uE010'+(tags.length-1)+'\uE011';});if(typeof ttsDropOffLanguage==='function')d=ttsDropOffLanguage(d,o);d=d.replace(/\uE010(\d+)\uE011/g,(_,i)=>tags[+i]||'').replace(/[ \t]{2,}/g,' ').trim();if(d){if(/chuckl|laugh|sigh/i.test(d))soundMark(o);return d;}}let src=String((opt&&opt.perf)||handed.perf||text||'').replace(spatialRe(),'');
-  src=src.replace(cueRe(),(_,w)=>{marks.push(ALIAS[w]||w);return '\uE010'+(marks.length-1)+'\uE011';});
+  src=src.replace(anyCueRe(),(all,w,k)=>{const g=guessCue(w||k);if(g===null)return all;if(!g)return '';marks.push(g);return '\uE010'+(marks.length-1)+'\uE011';});
   /* 外语角色的语言锁（去掉混进外语语音里的中文）同样作用在带提示的念法上；提示已换成占位符，不会被误删 */
   if(typeof ttsDropOffLanguage==='function')src=ttsDropOffLanguage(src,o);
   let base=typeof ttsCleanBase==='function'?ttsCleanBase(src):src.trim();if(!base.replace(/\uE010\d+\uE011/g,'').trim())return '';

@@ -12,7 +12,7 @@ test('desk pet ships identically in web and private and is wired into every entr
   for(const p of ['app.js',P+'app.js']){const s=read(p);
     assert.match(s,/else if\(c\.p==='deskPet'\)html=typeof renderDeskPetPage==='function'\?renderDeskPetPage\(\):'';/);
     assert.match(s,/if\(_main&&typeof deskPetPrompt==='function'\)s\+=deskPetPrompt\(c\);/);
-    assert.equal((s.match(/content=typeof deskPetConsume==='function'\?deskPetConsume\(content,c\):content;/g)||[]).length,4);
+    assert.equal((s.match(/content=typeof deskPetConsume==='function'\?deskPetConsume\(content,c\):content;/g)||[]).length,5,'聊天四处加通话一处（CALL_DESKPET_TAG_V1）');
     assert.match(s,/\|批准\|驳回\|桌宠\)\\s\*/);
     assert.doesNotMatch(s,/deskPetSet\(/,'入口只在设置最下面，不在角色资料页');
   }

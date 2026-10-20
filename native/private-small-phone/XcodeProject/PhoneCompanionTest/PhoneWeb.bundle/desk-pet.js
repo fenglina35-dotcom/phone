@@ -77,6 +77,9 @@ const FX={
   note:{w:4,h:6,svg:R(3,0,1,5,'#6d8cff')+R(1,4,3,2,'#6d8cff')+R(3,0,1,1,'#6d8cff')},
   dots:{w:7,h:1,svg:P([[0,0],[3,0],[6,0]],'#a99')},
   code:{w:7,h:5,svg:P([[2,0],[1,1],[0,2],[1,3],[2,4],[4,0],[5,1],[6,2],[5,3],[4,4]],'#7ee0a1')},
+  /* 想你：冒一个白色思念泡泡，里面一颗粉心；亲亲：飞出一个像素红唇（DESK_PET_MISS_KISS_HUG_V1） */
+  miss:{w:9,h:7,svg:R(1,0,7,6,'#d9d2e4')+R(0,1,9,4,'#d9d2e4')+R(1,1,7,4,'#fff')+R(2,0,5,1,'#fff')+R(2,5,5,1,'#fff')+P([[3,1],[5,1],[2,2],[3,2],[4,2],[5,2],[6,2],[3,3],[4,3],[5,3],[4,4]],'#ff5c8a')+R(0,6,1,1,'#fff')},
+  kiss:{w:7,h:3,svg:R(1,0,2,1,'#e8334f')+R(4,0,2,1,'#e8334f')+R(0,1,7,1,'#e8334f')+R(1,2,5,1,'#c81f3d')+R(2,1,3,1,'#ff7a90')},
 };
 
 /* 角色或用户可以让它做的表情 / 动作 */
@@ -102,8 +105,11 @@ const CMDS={
   '伸懒腰':{eyes:'closed',cls:'stretch'},
   '趴下':{eyes:'open',cls:'lie'},
   '坐下':{eyes:'open',cls:'sit'},
+  '想你':{eyes:'happy',cls:'bob blush',fx:'miss'},
+  '亲亲':{eyes:'wink',cls:'bob',fx:'kiss'},
+  '抱抱':{eyes:'wide',cls:'hug',fx:'heart'},
 };
-const CMD_ALIAS={'醒醒':'醒来','醒过来':'醒来','起床':'醒来','醒':'醒来','笑一笑':'开心','笑起来':'开心','笑一个':'开心','回来':'过来','高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
+const CMD_ALIAS={'想你了':'想你','好想你':'想你','么么哒':'亲亲','亲一个':'亲亲','亲一下':'亲亲','求抱抱':'抱抱','抱一下':'抱抱','抱一个':'抱抱','醒醒':'醒来','醒过来':'醒来','起床':'醒来','醒':'醒来','笑一笑':'开心','笑起来':'开心','笑一个':'开心','回来':'过来','高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
 function normPetSetting(v){const aliases={'摘帽子':'摘帽子','脱帽子':'摘帽子','摘耳机':'摘耳机','取下耳机':'摘耳机','戴上帽子':'戴帽子','戴上耳机':'戴耳机'};if(aliases[v])return aliases[v];const color=String(v||'').match(/^(?:颜色|换颜色)[|｜:：](.+)$/);if(color){const key=Object.keys(DP_COLORS).find(k=>k===color[1]||DP_COLOR_NAMES[k]===color[1]);return key?'颜色:'+key:'';}const size=String(v||'').match(/^(?:大小|尺寸)[|｜:：](小|中|大|s|m|l)$/);if(size)return'大小:'+({小:'s',中:'m',大:'l'}[size[1]]||size[1]);const name=String(v||'').match(/^(?:名字|改名)[|｜:：]([^\[\]【】|｜<>]{1,10})$/);return name?'名字:'+name[1]:'';}
 function applyPetSetting(k){const p=cfg();if(!p)return false;if(k==='摘帽子')p.hats=false;else if(k==='摘耳机')p.phones=false;else if(k.startsWith('颜色:'))p.color=k.slice(3);else if(k.startsWith('大小:'))p.size=k.slice(3);else if(k.startsWith('名字:'))p.name=k.slice(3);else return false;if(root&&k.startsWith('大小:')){unmount();sync();}else applyLook();save();rerender();return true;}
 function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');const setting=normPetSetting(v);if(setting)return setting;if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(恢复|正常|停|停下|好了|别闹了)$/.test(v))return'恢复';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
@@ -151,7 +157,7 @@ ${Object.keys(EYES).map(k=>`.dp-root[data-eyes=${k}] .e-${k}`).join(',')}{displa
 .dp-root .dp-eyes{transition:transform .25s ease}
 .dp-root.look-l .dp-eyes{transform:translateX(-1px)}.dp-root.look-r .dp-eyes{transform:translateX(1px)}
 .dp-root.land .dp-body{animation:dpLand .32s ease-out}
-.dp-fx{position:absolute;z-index:181;pointer-events:none;animation:dpFx 1.5s ease-out forwards}
+.dp-root.hug .dp-nub-l,.dp-root.hug .dp-nub-r{animation:dpHug .5s steps(1) infinite} @keyframes dpHug{0%{transform:translateY(1px)}50%{transform:translateY(-1px)}} .dp-fx{position:absolute;z-index:181;pointer-events:none;animation:dpFx 1.5s ease-out forwards}
 .dp-fx svg{display:block;width:100%;height:100%}
 .dp-fx.pop{animation:dpPop .9s ease-out forwards}
 @keyframes dpBreathe{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-.6px) scaleY(.97) scaleX(1.015)}}

@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1827 · 角色日程到点自然报备'/);
-  assert.match(app,/const url='sw\.js\?v=1827&r=v1827-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1827'/);
-  assert.match(html,/app\.js\?v=1827/);
-  assert.match(sw,/const BUILD='1827'/);
-  assert.match(sw,/north-shell-v1827-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1827/);
-  assert.match(repair,/小手机\.html\?v=1827/);
+  assert.match(app,/APP_VER='v1849 · 通话标签与心率'/);
+  assert.match(app,/const url='sw\.js\?v=1849&r=v1849-owner-todo-report-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1849'/);
+  assert.match(html,/app\.js\?v=1849/);
+  assert.match(sw,/const BUILD='1849'/);
+  assert.match(sw,/north-shell-v1849-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1849/);
+  assert.match(repair,/小手机\.html\?v=1849/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.480;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 480;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.480 \(480\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.501;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 501;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.501 \(501\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

@@ -113,3 +113,57 @@ assert.match(source, /\[点外卖\\\|[\s\S]*?refreshChatMessages\(id\);continue;
 assert.match(source, /\[表情\\\|[\s\S]*?refreshChatMessages\(id\);/, 'role stickers must use the safe message-only refresh');
 
 console.log('chat composer preservation tests passed');
+
+
+// CHAT_SEND_KEEP_HISTORY_V1: exercise real sendText, DOM and scheduleReply on both entrypoints.
+const {default: test} = await import('node:test');
+test('sending preserves old message nodes in manual, busy and automatic chat flows', async () => {
+  const {createRequire} = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const {chromium} = require('playwright');
+  const path = require('node:path');
+  const browser = await chromium.launch({headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+  try {
+    for (const privateApp of [false,true]) {
+      const page = await browser.newPage({viewport:{width:390,height:844}});
+      const errors=[];
+      page.on('pageerror', e=>errors.push(e.message));
+      if(privateApp) await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false})};});
+      await page.route('**/*', route=>{
+        const u=new URL(route.request().url());
+        if(u.origin!=='http://127.0.0.1:8778') return route.abort();
+        const f=path.resolve(decodeURIComponent(u.pathname.slice(1)));
+        const ok=f.startsWith(process.cwd()+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile();
+        return route.fulfill({status:ok?200:404,body:ok?fs.readFileSync(f):'',contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':'text/html'});
+      });
+      await page.goto('http://127.0.0.1:8778/'+(privateApp?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'小手机.html')+'?northPreview=black-home');
+      await page.waitForFunction(()=>window.__northBootReady);
+      for(const mode of ['manual','busy','automatic']) {
+        const result=await page.evaluate(mode=>{
+          S.me.locked=false;S.settings.sound=false;S.settings.manualReply=mode!=='automatic';
+          S.settings.manualReplyScenes={wechat:mode!=='automatic'};S.settings.replyDelay=60;
+          const c=S.contacts[0];c.blocked=false;c.proactive={enabled:false};
+          S.couple=Object.assign(S.couple||{},{cid:c.id});
+          c.wechatBusy={modeVersion:2,enabled:true,active:mode==='busy',status:'busy',sessionId:'fixture',accountId:actId(),startedAt:Date.now()-1000,until:Date.now()+600000,pendingMessageIds:[]};
+          const rows=msgs(c.id);rows.splice(0,rows.length,...Array.from({length:200},(_,i)=>({id:'history-'+i,role:i%2?'user':'assistant',type:'text',content:'历史消息 '+i,time:Date.now()-600000+i*1000})));
+          stack=[{p:'home'},{p:'chat',id:c.id}];render();
+          const box=document.getElementById('chatbg'),input=document.getElementById('cinput');
+          const oldRows=Array.from(box.querySelectorAll('[data-message-id]'));
+          S.settings.quoteOn=true;_quoting={id:c.id,text:'引用旧消息',who:'ta'};quoteComposerRefresh(c.id);
+          const before=rows.length;input.value='这是一条新消息';sendText(c.id);
+          const key=replyStateKey(c.id,actId()),queued=!!_replyTimers[key];clearTimeout(_replyTimers[key]);delete _replyTimers[key];
+          return {quoteGone:!document.getElementById('chatQuotePending'),quoteStored:rows[rows.length-1].quote&&rows[rows.length-1].quote.text==='引用旧消息',boxKept:box===document.getElementById('chatbg'),inputKept:input===document.getElementById('cinput'),oldKept:oldRows.length>0&&oldRows.every(n=>n.isConnected&&box.contains(n)),count:rows.length-before,newVisible:document.getElementById('chatbg').textContent.includes('这是一条新消息'),queued,busyPending:c.wechatBusy.pendingMessageIds.length,manual:manualReplySceneOn('wechat')};
+        },mode);
+        assert.equal(result.boxKept,true,`${privateApp}/${mode}: the message container was replaced`);
+        assert.equal(result.inputKept,true,`${privateApp}/${mode}: the input was replaced`);
+        assert.equal(result.oldKept,true,`${privateApp}/${mode}: historical messages were removed`);
+        assert.equal(result.count,1);assert.equal(result.newVisible,true);
+        assert.equal(result.quoteGone,true);assert.equal(result.quoteStored,true);
+        assert.equal(result.queued,mode==='automatic');
+        if(mode==='busy')assert.equal(result.busyPending,1);
+      }
+      assert.deepEqual(errors,[]);
+      await page.close();
+    }
+  } finally {await browser.close();}
+});

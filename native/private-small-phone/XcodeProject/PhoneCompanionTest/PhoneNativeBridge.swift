@@ -3,9 +3,11 @@ import CoreLocation
 import CryptoKit
 import Foundation
 import Photos
+import PhotosUI
 import Security
 import Speech
 import UIKit
+import UniformTypeIdentifiers
 import UserNotifications
 import WebKit
 
@@ -16,7 +18,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.480 (480)"
+    private static let build = "1.0.501 (501)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -225,6 +227,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     nonisolated(unsafe) private var storageReadSessions:
         [String: NativeStorageReadSession] = [:]
     private var pendingSpeechEvents: [[String: Any]] = []
+    // NATIVE_IMAGE_PICKER_V1: photos picked for the sticker store, kept until the web side has read them.
+    private var pickedImages: (session: String, items: [(mime: String, data: Data)])?
+    private var pickImagesDelegate: PickedImagesDelegate?
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
     func userContentController(
@@ -347,6 +352,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "media.photo.save":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performPhotoSave(requestID: requestID, arguments: arguments)
+        case "media.pickImages":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performPickImages(requestID: requestID, arguments: arguments)
+        case "media.pickImages.read":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performPickImagesRead(requestID: requestID, arguments: arguments)
+        case "media.pickImages.clear":
+            pickedImages = nil
+            reply(requestID: requestID, result: ["cleared": true])
         case "device.snapshot":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLocalDeviceSnapshot(
@@ -672,6 +686,114 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         default:
             reply(requestID: requestID, error: "photo_library_denied")
         }
+    }
+
+    // NATIVE_IMAGE_PICKER_V1（2026-10-18 她同意加的）：表情仓库导入用的相册选图器。
+    // WKWebView 自带的文件选择会把相册里的动图转成静止 JPEG；这里用 PHPicker 并要求原始格式（.current），
+    // GIF / WebP 原样交给网页，HEIC 才转成 JPEG。不需要相册读取授权。先只回传张数和格式，
+    // 网页再逐张读取，图片内容走 callAsyncJavaScript 的参数，不拼进脚本源码。
+    private func performPickImages(requestID: String, arguments: [String: Any]) {
+        guard pickImagesDelegate == nil else {
+            reply(requestID: requestID, error: "picker_busy")
+            return
+        }
+        var presenter = webView?.window?.rootViewController
+        while let next = presenter?.presentedViewController { presenter = next }
+        guard let presenter else {
+            reply(requestID: requestID, error: "no_presenter")
+            return
+        }
+        let limit = max(1, min(120, (arguments["limit"] as? NSNumber)?.intValue ?? 60))
+        var configuration = PHPickerConfiguration()
+        configuration.filter = .images
+        configuration.selectionLimit = limit
+        configuration.selection = .ordered
+        configuration.preferredAssetRepresentationMode = .current
+        let picker = PHPickerViewController(configuration: configuration)
+        let delegate = PickedImagesDelegate { [weak self] results in
+            Task { @MainActor [weak self] in
+                self?.finishPickImages(requestID: requestID, results: results)
+            }
+        }
+        pickImagesDelegate = delegate
+        picker.delegate = delegate
+        presenter.present(picker, animated: true)
+    }
+
+    private func finishPickImages(requestID: String, results: [PHPickerResult]) {
+        pickImagesDelegate = nil
+        let providers = results.map(\.itemProvider)
+        Task { [weak self] in
+            var items: [(mime: String, data: Data)] = []
+            for provider in providers {
+                if let item = await Self.loadPickedImage(provider) { items.append(item) }
+            }
+            await MainActor.run {
+                guard let self else { return }
+                let session = UUID().uuidString
+                self.pickedImages = items.isEmpty ? nil : (session, items)
+                self.reply(
+                    requestID: requestID,
+                    result: [
+                        "session": items.isEmpty ? "" : session,
+                        "picked": results.count,
+                        "items": items.map { ["mime": $0.mime, "size": $0.data.count] }
+                    ]
+                )
+            }
+        }
+    }
+
+    nonisolated private static func loadPickedImage(_ provider: NSItemProvider) async -> (mime: String, data: Data)? {
+        let order: [(UTType, String)] = [
+            (.gif, "image/gif"), (.webP, "image/webp"), (.png, "image/png"),
+            (.jpeg, "image/jpeg"), (.heic, "image/heic"), (.image, "image/other")
+        ]
+        for (type, mime) in order where provider.hasItemConformingToTypeIdentifier(type.identifier) {
+            let data: Data? = await withCheckedContinuation { continuation in
+                provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { data, _ in
+                    continuation.resume(returning: data)
+                }
+            }
+            guard let data, !data.isEmpty, data.count <= 12 * 1_024 * 1_024 else { continue }
+            if mime == "image/heic" || mime == "image/other" {
+                guard let image = UIImage(data: data),
+                      let jpeg = image.jpegData(compressionQuality: 0.9) else { continue }
+                return ("image/jpeg", jpeg)
+            }
+            return (mime, data)
+        }
+        return nil
+    }
+
+    private func performPickImagesRead(requestID: String, arguments: [String: Any]) {
+        let session = arguments["session"] as? String ?? ""
+        let index = (arguments["index"] as? NSNumber)?.intValue ?? -1
+        guard let picked = pickedImages, picked.session == session,
+              index >= 0, index < picked.items.count,
+              let webView else {
+            reply(requestID: requestID, error: "picked_image_missing")
+            return
+        }
+        let item = picked.items[index]
+        webView.callAsyncJavaScript(
+            """
+            if (window.__smallPhoneNativeReply) {
+              window.__smallPhoneNativeReply({
+                requestId: String(requestID),
+                result: { mime: String(mime), base64: String(base64 || '') }
+              });
+            }
+            """,
+            arguments: [
+                "requestID": requestID,
+                "mime": item.mime,
+                "base64": item.data.base64EncodedString()
+            ],
+            in: nil,
+            in: .page,
+            completionHandler: { _ in }
+        )
     }
 
     // 快捷指令查岗截屏：一次取最早的一张。图片走 callAsyncJavaScript 的参数，
@@ -3343,5 +3465,15 @@ private final class PrivateBackupUploadProgressDelegate: NSObject,
         totalBytesExpectedToSend: Int64
     ) {
         onProgress(totalBytesSent, totalBytesExpectedToSend)
+    }
+}
+
+// NATIVE_IMAGE_PICKER_V1: closes the photo picker and hands the chosen items back to the bridge.
+final class PickedImagesDelegate: NSObject, PHPickerViewControllerDelegate {
+    private let onFinish: ([PHPickerResult]) -> Void
+    init(onFinish: @escaping ([PHPickerResult]) -> Void) { self.onFinish = onFinish }
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        onFinish(results)
     }
 }

@@ -196,7 +196,7 @@ test('private recovery UI previews exact role rows and writes only after verifie
   assert.match(app, /普通微信 \$\{m\.chatRows\} 条 · 通话行 \$\{m\.callRows\} 条/);
   assert.match(app, /不会按名字误配/);
   const build = functionSource('recoveryBuildSafeMergePlan');
-  assert.match(build, /recoveryReadCandidateRaw\(row\.x\)/);
+  assert.match(build, /recoveryReadCandidateRaw\(row\.x(?:,\{allowNewer:true\})?\)/);
   assert.match(build, /const liveJSON=JSON\.stringify\(S&&S\.messages\|\|\{\}\),liveMessages=JSON\.parse\(liveJSON\)/);
   assert.match(build, /primary=\[liveMessages,archive,base\.messages\]/);
   assert.match(build, /JSON\.stringify\(S&&S\.messages\|\|\{\}\)!==liveJSON/);

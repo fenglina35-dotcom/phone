@@ -262,7 +262,8 @@ test('position and cue tags never stay in call lines, their translations, raw ou
   const priv=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   for(const src of [app,priv]){
     assert.match(src,/units\.forEach\(u=>\{u\.orig=NorthVoiceExpressive\.stripTags\(u\.orig\);if\(u\.trans\)u\.trans=NorthVoiceExpressive\.stripTags\(u\.trans\);\}\)/);
-    assert.match(src,/m\._call&&typeof m\.content==='string'&&\/\\\[\\s\*\(\?:左耳/,'old call records are cleaned');
+    // VOICE_TONE_GUESS_V1 widened this from a fixed list to anything stripTags would remove
+    assert.match(src,/m\._call&&typeof m\.content==='string'&&\/\[\\\[【\]\/\.test\(m\.content\)&&NorthVoiceExpressive\.stripTags\(m\.content\)!==m\.content/,'old call records are cleaned');
   }
   assert.doesNotMatch(priv,/if\(!_rawOutput&&typeof NorthVoiceExpressive!=='undefined'\)\{const _pend/,'raw output mode no longer skips the cleanup');
 });

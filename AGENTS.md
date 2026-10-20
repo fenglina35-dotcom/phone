@@ -16,6 +16,9 @@
   through `scripts/run_tests_mac.sh`, which preloads `scripts/test_browser_fallback.cjs`: a
   missing executable or module is replaced by the one in `~/.north-test-tools`. No test file
   is changed, and on the Windows PC nothing is altered.
+- The preload also starts every Chromium with `--mute-audio`. Headless browsers otherwise play
+  the app's spoken replies through the Mac speakers, and the user heard English speech at random
+  whenever a session ran tests. Do not launch test browsers around it without muting them.
 - `scripts/run_tests_mac.sh` runs the whole suite; pass test files to run some of them;
   `scripts/run_tests_mac.sh --check scripts/check_chat_authorized_phone.cjs` runs a check script.
 - Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not

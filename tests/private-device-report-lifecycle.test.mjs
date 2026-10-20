@@ -91,15 +91,15 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.480 \(480\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.501 \(501\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(privateApp, /APP_VER='v1830 · 角色日程到点自然报备'/);
+  assert.match(privateApp, /APP_VER='v1852 · 通话标签与心率'/);
   assert.equal(privateAlias, privateIndex);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1830'/);
-  assert.match(privateIndex, /app\.js\?v=1830/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1852'/);
+  assert.match(privateIndex, /app\.js\?v=1852/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1830/);
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1830\'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1852/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1852\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {
@@ -134,7 +134,7 @@ test('local recovery lists physical candidates and remains rollback-safe', () =>
   assert.match(privateApp, /privateNativeCoreGet\(row\[0\],\{primaryOnly:true\}\)/);
   assert.match(privateApp, /privateNativeCoreGet\(row\[0\],\{backup:true\}\)/);
   assert.match(privateApp, /imgGetIDB\(row\[0\]\)/);
-  assert.match(privateApp, /recoveryReadCandidateRaw\(row\.x\)/);
+  assert.match(privateApp, /recoveryReadCandidateRaw\(row\.x(?:,\{allowNewer:true\})?\)/);
   assert.match(privateApp, /'native-primary',row\[0\]/);
   assert.match(privateApp, /safe-message-merge/);
   assert.match(privateApp, /PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY/);

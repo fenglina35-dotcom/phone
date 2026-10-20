@@ -1187,3 +1187,8 @@ html body :is(#modal,#cfm).spy-monitor-modal{--so-accent:#ffbf43}html body #moda
 
 /* Keep monitor summary labels intact in the narrow preview and on phones. */
 .sm-stats{gap:4px}.sm-stats>div{gap:3px}.sm-stats>div+div{padding-left:4px}.sm-stats i,.sm-stats svg{width:14px}.sm-stats i{flex-basis:14px}.sm-stats span{font-size:9px;white-space:nowrap}
+
+/* WX_STEPS_NEW_ICON_V1：微信运动图标换成银行页的新微信图标，去掉绿色方块底 */
+.wx-steps-icon.wx-steps-new,.wxlight .wx-steps-icon.wx-steps-new{background:#7ee571!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)!important;overflow:hidden}
+/* 底色是她自己挑的 #7EE571，夜间和白色主题都一样；图标放大 */
+.wx-steps-icon.wx-steps-new svg{width:92%!important;height:92%!important}

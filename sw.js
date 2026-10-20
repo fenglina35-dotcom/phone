@@ -1,6 +1,6 @@
-const BUILD='1827';
-const HOTFIX='v1827-owner-todo-report-1';
-const SHELL_CACHE='north-shell-v1827-owner-todo-report-1';
+const BUILD='1849';
+const HOTFIX='v1849-owner-todo-report-1';
+const SHELL_CACHE='north-shell-v1849-owner-todo-report-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -20,7 +20,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1827-owner-todo-report-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1849-owner-todo-report-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./task-notes.js?v='+BUILD,kind:'tasks'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
@@ -125,6 +125,37 @@ const OPTIONAL_FILES=[
   './vendor/MP4BOX-LICENSE.txt'
 ];
 
+/* SW_KEEP_BIG_FILES_V1（2026-10-18：很多人不开梯子，GitHub 很慢）：以前每次更新版本，整个缓存连同像素少女（约 89MB）、
+   美团店铺数据（约 12MB）、图片和声音一起删掉，更新一次就得重新从 GitHub 下一遍，所以总是刷不出来。
+   现在这些大文件放进一份不随版本删除的长期缓存：打开时先用存好的（马上就能用），新版本才在后台悄悄换新，换不到也不影响使用。
+   小手机自己的程序文件（app.js、页面）不放进来，还是跟版本走。 */
+const STATIC_CACHE='north-static-v1';
+function staticKind(path){
+  if(/\/games\/pixel-home\//.test(path))return 'pixel';
+  if(/\/assets\/north-[a-z-]+-shop\.js$/.test(path))return 'data';
+  if(/\/assets\/(?!travel-home\/)(?!app-icons\/)[^?]+\.(?:png|jpe?g|webp|gif|mp3|m4a|wav)$/.test(path))return 'media';
+  return '';
+}
+async function staticStore(cache,key,response){
+  if(!response||!response.ok||response.type==='opaque')return;
+  const body=await response.blob();const headers=new Headers(response.headers);headers.set('x-north-build',BUILD);headers.delete('content-encoding');
+  await cache.put(key,new Response(body,{status:200,statusText:response.statusText,headers}));
+}
+/* 先给存好的；没存过才等网络。存的是旧版本的（或者像素少女自己的页面和脚本），在后台换新一次。 */
+async function staticResponse(request,event,key,kind){
+  let cache;try{cache=await caches.open(STATIC_CACHE);}catch(_){cache=null;}
+  const hit=cache?await cache.match(key,{ignoreSearch:kind!=='pixel'}).catch(()=>null):null;
+  const pixelCode=kind==='pixel'&&!/\/(?:asset-data|assets)\//.test(new URL(key.url).pathname)&&/\.(?:html|js|css|json)$/.test(new URL(key.url).pathname);
+  if(hit){
+    const stale=kind==='pixel'?pixelCode:hit.headers.get('x-north-build')!==BUILD;
+    if(stale&&cache)event.waitUntil(fetch(request,{cache:'no-cache'}).then(r=>staticStore(cache,key,r)).catch(()=>{}));
+    return hit;
+  }
+  const response=await fetchRetry(request,{cache:'no-cache'},3);
+  if(response.ok&&cache)event.waitUntil(staticStore(cache,key,response.clone()).catch(()=>{}));
+  return response;
+}
+
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 function timeoutFetch(request,options,ms){
   const controller=typeof AbortController!=='undefined'?new AbortController():null;
@@ -168,7 +199,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1827-owner-todo-report-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1849-owner-todo-report-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -194,9 +225,14 @@ async function currentCore(cache,kind){
 }
 async function warmOptionalFiles(){
   const cache=await caches.open(SHELL_CACHE);
-  await Promise.all(OPTIONAL_FILES.map(async url=>{
-    try{const response=await fetchRetry(url,{cache:'no-cache'},1);if(response&&response.ok)await cache.put(url,response);}catch(_){}
-  }));
+  let staticCache=null;try{staticCache=await caches.open(STATIC_CACHE);}catch(_){}
+  for(let i=0;i<OPTIONAL_FILES.length;i+=6){
+    await Promise.all(OPTIONAL_FILES.slice(i,i+6).map(async url=>{
+      try{const fileUrl=new URL(url,self.location.href),kind=staticKind(fileUrl.pathname);
+        if(kind&&staticCache){const key=new Request(fileUrl.origin+fileUrl.pathname),hit=await staticCache.match(key);if(hit&&hit.headers.get('x-north-build')===BUILD)return;const r=await fetchRetry(url,{cache:'no-cache'},2);await staticStore(staticCache,key,r);return;}
+        const response=await fetchRetry(url,{cache:'no-cache'},2);if(response&&response.ok)await cache.put(url,response);}catch(_){}
+    }));
+  }
   const iconCache=await caches.open(GLASS_ICON_CACHE);
   for(let i=0;i<GLASS_ICON_FILES.length;i+=8){
     await Promise.all(GLASS_ICON_FILES.slice(i,i+8).map(async url=>{
@@ -280,28 +316,16 @@ self.addEventListener('fetch',event=>{
 
   // The embedded game has its own document, never the phone shell fallback.
   if(/\/games\/pixel-home\//.test(url.pathname)){
-    event.respondWith((async()=>{
-      let cache;
-      /* v1688: the per-visit session token is not part of the file, so it is not part of the cache key
-         (every visit used to add another copy of index.html). Explicit retries always go to the network. */
-      const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
-      const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');
-      try{cache=await caches.open(SHELL_CACHE);if(!retry){const cached=await cache.match(key);if(cached)return cached;}}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
-      /* A single failed download used to leave the game without a script; retry, then use any earlier copy. */
-      let response,failure;
-      try{
-        response=await fetchRetry(request,{cache:retry?'no-store':'no-cache'},3);
-        if(response.ok&&cache){const save=cache.put(key,response.clone()).catch(()=>{});event.waitUntil(save);}
-        if(response.ok||!cache)return response;
-      }catch(error){if(!cache)throw error;failure=error;}
-      try{
-        const older=await cache.match(key,{ignoreSearch:true});if(older)return older;
-        for(const name of await caches.keys()){if(!/^north-shell-/.test(name))continue;const hit=await (await caches.open(name)).match(key,{ignoreSearch:true});if(hit)return hit;}
-      }catch(_){/* An older copy is only a bonus. */}
-      if(failure)throw failure;
-      return response;
-    })());return;
+    /* 每次进入带的 session 和手动重试的 retry 不算进文件名（以前每次进入都多存一份 index.html）；手动重试一定走网络 */
+    const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
+    const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');
+    if(retry){event.respondWith((async()=>{const r=await fetchRetry(request,{cache:'no-store'},3);try{if(r.ok){const c=await caches.open(STATIC_CACHE);event.waitUntil(staticStore(c,key,r.clone()));}}catch(_){}return r;})());return;}
+    event.respondWith(staticResponse(request,event,key,'pixel'));return;
   }
+
+  /* 美团店铺数据、美团图片、壁纸、声音：长期缓存，换版本不用重下 */
+  /* 带 art= 的插画归新版本自己的插画缓存（PAGE_ART_CACHE_V1）管，这里不碰 */
+  {const kind=url.searchParams.has('art')?'':staticKind(url.pathname);if(kind&&kind!=='pixel'){const key=new Request(url.origin+url.pathname);event.respondWith(staticResponse(request,event,key,kind).catch(()=>Response.error()));return;}}
 
   if(/\/assets\/app-icons\/glass\/(?:black|gray|pink|blue)\/[^/]+\.webp$/.test(url.pathname)){
     event.respondWith((async()=>{
@@ -352,9 +376,13 @@ self.addEventListener('fetch',event=>{
       const cached=await currentCore(cache,'html');
       const explicit=/\/小手机\.html$/.test(decodedPath)&&(url.searchParams.has('reload')||url.searchParams.has('open')||url.searchParams.has('from')||url.searchParams.has('north_update'));
       const reloading=request.cache==='reload'||request.cache==='no-cache';
+      /* 「立即更新」要的正好是这个版本：装新版本时这一页已经存好、核对过，直接用，不再等 GitHub（以前要等最多 12 秒） */
+      const wanted=String(url.searchParams.get('north_update')||'').replace(/\D/g,'');
+      if(cached&&!reloading&&wanted&&wanted===BUILD)return cached;
       if(cached&&!explicit&&!reloading)return cached;
       try{
-        const response=await checkedResponse(request,'html',1);
+        /* 从桌面图标打开（带 open/from）也会走到这里：网络 3.5 秒内没回就先用存好的，不让人干等 */
+        const response=explicit&&cached&&!reloading?await Promise.race([checkedResponse(request,'html',1),sleep(3500).then(()=>{throw new Error('slow');})]):await checkedResponse(request,'html',1);
         await cache.put(CORE_FILES.find(item=>item.kind==='html').url,response.clone());
         return response;
       }catch(_){

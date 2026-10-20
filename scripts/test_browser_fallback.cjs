@@ -4,7 +4,8 @@
 // fixed Windows location. On any other machine that launch fails (and a test that has already
 // opened a local server then never exits). Preloading this file changes nothing in those
 // tests: when the requested executable does not exist, Playwright's own Chromium is used
-// instead. Where the executable exists (the Windows PC) nothing is altered.
+// instead. Where the executable exists (the Windows PC) nothing is altered. Every Chromium
+// launched through here is also started with --mute-audio, so tests stay silent.
 //
 // A few database tests load PGlite from a fixed folder under the Windows user profile. When
 // that file does not exist, the PGlite installed on NODE_PATH is used instead.
@@ -22,6 +23,10 @@ function patch(playwright){
     const launch=type.launch.bind(type);
     type.launch=function(options){
       if(options&&options.executablePath&&!fs.existsSync(options.executablePath)){options={...options};delete options.executablePath;}
+      // Headless Chromium still plays audio through the speakers; pages that read replies aloud
+      // made the Mac speak at random while other sessions ran tests. Mute every launched browser.
+      const args=(options&&options.args)||[];
+      if(!args.includes('--mute-audio'))options={...(options||{}),args:[...args,'--mute-audio']};
       return launch(options);
     };
     type.__northFallback=true;
