@@ -368,6 +368,7 @@ async function runOnlineConsumer(raw,opt={}){
     diceCompare:false
   };
   vm.createContext(ctx);
+  vm.runInContext(source.slice(source.indexOf('function normalizeStickerTags('),source.indexOf('\nfunction splitChatBubbles(')),ctx);
   vm.runInContext(`
     ${source.slice(source.indexOf('const _replyHandoffClaims='),source.indexOf('const _roleBackgroundPending='))}
     this.exercise=async function(content){

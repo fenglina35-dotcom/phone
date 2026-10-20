@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1854'/);
-  assert.match(index, /app\.js\?v=1854&r=v1854-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1855'/);
+  assert.match(index, /app\.js\?v=1855&r=v1855-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1854 · 光遇同角色同步'/);
+  assert.match(app, /APP_VER='v1855 · 语音查看与表情修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.501 \(501\)/);
   assert.match(bridge, /private static let build = "1\.0\.501 \(501\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 501;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.501;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1849 · 通话标签与心率'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1849'/);
+  assert.match(publicApp, /APP_VER='v1850 · 语音查看与表情修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1850'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

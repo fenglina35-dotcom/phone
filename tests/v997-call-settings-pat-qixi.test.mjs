@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1849 · 通话标签与心率'/);
+  assert.match(app,/APP_VER='v1850 · 语音查看与表情修复'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1849-roleplay-studio-1/);
-  assert.match(html,/sw\.js\?v=1849&r=v1849-owner-todo-report-1/);
+  assert.match(html,/north-sw-reloaded-1850-roleplay-studio-1/);
+  assert.match(html,/sw\.js\?v=1850&r=v1850-owner-todo-report-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
