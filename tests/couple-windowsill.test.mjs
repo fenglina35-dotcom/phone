@@ -17,9 +17,12 @@ test('the windowsill is enabled again with the steady-30 setting she picked on h
   assert.doesNotMatch(js, /^\s*return;\s*$/m, 'no early exit before the windowsill is wired');
   const shell = read(T + 'smallphone/shell.js');
   assert.match(shell, /WINDOWSILL_STEADY30_V1/);
-  assert.match(shell, /window\.__WS_DPR_MAX = saver \? 1\.25 : 1\.6;/);
-  for (const k of ['__WS_SHADOW_FREEZE', '__WS_NO_AO', '__WS_NO_DOF', '__WS_PCF', '__WS_NO_CANDLE_SHADOW', '__WS_FAKE_AREA']) assert.match(shell, new RegExp('window\\.' + k + ' = true;'), k);
-  assert.match(shell, /go = t - last >= 31/, 'at most 30 pictures a second, one decision per display frame');
+  // the defaults are still her pick (1.6, steady 30, the cheap shadows/lights); WINDOWSILL_GFX_PAGE_V1 lets her 窗台画面 page change each one
+  assert.match(shell, /var G = \{dpr: 1\.6, zoom: 2\.6, fps: 30, drop: true, ao: false, dof: false, liveShadow: false, softShadow: false, candleShadow: false, realLight: false\};/);
+  assert.match(shell, /window\.__WS_DPR_MAX = G\.dpr;/);
+  for (const [k, g] of [['__WS_SHADOW_FREEZE', 'liveShadow'], ['__WS_NO_AO', 'ao'], ['__WS_NO_DOF', 'dof'], ['__WS_PCF', 'softShadow'], ['__WS_NO_CANDLE_SHADOW', 'candleShadow'], ['__WS_FAKE_AREA', 'realLight']])
+    assert.match(shell, new RegExp('window\\.' + k + ' = !G\\.' + g + ';'), k);
+  assert.match(shell, /go = G\.fps !== 30 \|\| t - last >= 31/, 'at most 30 pictures a second, one decision per display frame');
   assert.doesNotMatch(shell, /__WS_NO_GLASS|glass\.enabled = false/, 'she asked to keep the glass');
   const built = read(P + 'couple-windowsill/windowsill.js');
   assert.match(built, /shadowMap\.autoUpdate=!window\.__WS_SHADOW_FREEZE/);
@@ -66,8 +69,21 @@ test('the desk is wired to her small phone (WINDOWSILL_DESK_V1)', () => {
   assert.match(built, /window\.__WS_SEASON_CHANGED&&window\.__WS_SEASON_CHANGED\(/);
   // every close-up goes to 2.6 while the camera moves in
   assert.match(read('scripts/build_couple_windowsill.mjs'), /const want = !!focusKey && focusT > \.6 && \(focusKey !== 'phone' \|\| phoneFlip\.v > \.6\);/);
-  // her photos are not darkened by the room light
-  assert.match(shell, /mat\.emissiveMap = t; mat\.emissiveIntensity = \.55;/);
+  // WINDOWSILL_BOARD_BRIGHT_V1: the left board's pictures start as the author made them (0); she drags two sliders on the 窗台画面 page
+  assert.match(shell, /var phBright = 0,/);
+  assert.match(shell, /k = phBright \/ 100 \* 1\.2;/);
+  assert.doesNotMatch(shell, /id = 'sp-br'/, 'the sliders moved off the album card to the 窗台画面 page');
+  assert.match(read('scripts/build_couple_windowsill.mjs'), /window\.__WS_BOARD_MISC = \[cal, notes\];/);
+  assert.match(read('scripts/build_couple_windowsill.mjs'), /Math\.min\(window\.devicePixelRatio \|\| 1, window\.__WS_ZOOM_PR \|\| 2\.6\)/);
+  for (const outer of [js, read('couple-windowsill.js')]) {
+    assert.match(outer, /\}\), bright: wallBright\(\), brightMisc: wallBright\('wallBrightMisc'\)\}\);/, 'the remembered values go back with the photos');
+    assert.match(outer, /if \(c && c\.list && c\.gfx\) return gfxPage\(\);/);
+    assert.match(outer, /go\(\\'couple\\',\{list:1,gfx:1\}\)/, 'entry row on the 设置与授权 page');
+    assert.match(outer, /src="couple-windowsill\/index\.html\?g=' \+ encodeURIComponent\(gfxKey\(\)\)/);
+    assert.match(outer, /holder\.getAttribute\('data-gfx'\) !== gfxKey\(\)/, 'a changed setting sets the desk up again');
+    assert.match(outer, /if \(done && wallBright\(k\) !== v\) \{ cp\(\)\[k\] = v;/);
+    assert.doesNotMatch(outer, /窗台省电模式/, 'the old saver switch became the 清晰度 choice');
+  }
   // star jar = 任务便签 stars; the buttons open the matching pages
   assert.match(js, /S\.taskNotes && S\.taskNotes\.stars/);
   assert.match(js, /else if \(key === 'jar'\) go\('tasks'\)/);

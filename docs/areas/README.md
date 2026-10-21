@@ -87,6 +87,8 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 网页版（v1780 起）：查岗截屏只有私人 iPhone App 能做。网页的设置行小字改为「替你发消息、向角色报告事件」，PhoneShortcuts.open 在非私人原生时直接进入云端动作（未连接 North 时显示教程），云端动作窗口与生成结果窗口有「详细教程」（PhoneShortcuts.guide，只在网页 phone-shortcuts.js）。私人版不改。
 ## 情侣空间锁定到点自动解锁
 
+共同生活 / 线下（COHAB_LOCK_UNTIL_V1，2026-10-21）：cohabApplyPhoneTags 的 [共同生活锁定|App|到07:00] 也先过 lockUntilPrepare、锁完 lockUntilCommit，和聊天同一套；之前这条出口漏了，锁屏没时间、到点不开。锁定成功的回执原生写「XX已经锁定」（LOCK_DONE_TEXT_V1）。
+
 现在：角色锁 App（小手机内置 App 与伴生的真实 iPhone App）必须带解锁时间：[锁定|App名|到07:00]、[锁定|App名|3天]、2小时、30分钟、明晚10点；标签没写时间时依次：lockUntilFromText 从角色这条回复的可见话里找（锁到…/锁你N天/N小时后再给你开/明天中午再给你开，支持中文数字，内心块不算），再 lockUntilAsk 后台问角色一句（不进聊天，roleInterceptStage「锁定解锁时间」，账号或绑定变化则作废，只覆盖仍是默认值的记录），都失败才用下一个至少一小时后的 07:00；最长7天。无上下午词的「N点」取更近的上午或晚上（晚7点说「到十一点」是23点），补零写法 07:00 仍是早上。教角色的四处锁定说明都写了这条。applyControlTags 在执行任何锁定标签前用 lockUntilPrepare 取出时间段并还原标签，原锁定代码不变；执行完 lockUntilCommit 按前后快照只给新锁上（或已有时间的再次锁定）的目标记 S.couple.lockUntil（'int:'+内置键 / 'ext:'+外置ID），外置同时发 device.autoUnlock 给原生。lockUntilSweep 每30秒和回前台检查：到点内置删锁、外置发角色解锁命令；目标已被提前解锁就删记录。情侣空间「管控授权」页「ta锁住的」和打开被锁 App 的提示显示「还剩…·几月几日 HH:MM 自动解锁」。角色看到的锁定状态（buildSystem 内置控制台账与「你现在锁着ta的」、伴生外置状态、companionControlLedgerForParser）都附 lockUntilRoleNote「你定的解锁时间：…，还剩…」，否则角色被问锁到几点会说没设时间（v1779 实机）。「你现在锁着ta的」整段要求授权过内置 App，只用伴生锁真实 iPhone 时根本不出现，外置时间又埋在伴生设备长段里，角色仍说没设（v1781 实机）；现在 buildSystem 在授权判断之前单独加「# 你自己定的自动解锁时间」（lockUntilRoleRows，内置与外置都列）。自动限额锁（auto）不受影响。
 
 原生：CompanionSyncService.scheduleAutoUnlock 把 externalID→解锁秒数和 token 存进 App Group（companion.lock.autoUnlock.v1 / .token.），启动一次性 DeviceActivity「autoUnlock.*」（至少15分钟）。PhoneCompanionMonitor 在该活动 intervalDidEnd 时把 token 从默认屏蔽库和 persistentLockLedger 库及账本移除，记录保留；主 App 在 effectiveLockedTokens 开头 applyDueAutoUnlocks，先把到点条目从 UserDefaults 保存的锁定名单和账本删掉，避免重新补锁。提前解锁（unlock 命令）会 forgetAutoUnlock。屏蔽页只在有未到点的解锁时间时显示一行浅白剩余时间（每次显示屏蔽页时计算，不是实时跳动）。
@@ -494,9 +496,9 @@ v1837/v1840（她的要求）：导入时不再用识图，每张名字她自己
 
 ## 情侣空间 · 赴约窗台（COUPLE_WINDOWSILL_V1，私人版）
 
-当前状态（私人v1846 / iOS495）：按要求暂时停用3D首页，打开情侣空间直接回到原页面。private-couple-windowsill.js入口提前返回，不包装原渲染、不注册事件或计时器、不显示窗台省电项；CoupleWindowsill.paused=true。场景和第三方源码保留，以下是暂停前的历史做法。重新启用前需先完成独立网页真机测试并与她商量。
+历史（私人v1846 / iOS495，v1850 起已重新启用）：当时按要求暂时停用3D首页，打开情侣空间直接回到原页面。private-couple-windowsill.js入口提前返回，不包装原渲染、不注册事件或计时器、不显示窗台省电项；CoupleWindowsill.paused=true。场景和第三方源码保留，以下是暂停前的历史做法。重新启用前需先完成独立网页真机测试并与她商量。
 
-现在：私人版打开情侣空间先看到 3D「赴约 · 窗台」（唐幡 TangfanOVO 的开源作品，AGPL-3.0，她说已征得作者同意；网页版不接，接之前要作者书面授权）。上游源码原样放在 native/private-small-phone/third_party/qiaosi-windowsill（固定在 309508f1，UPSTREAM.md 写出处），我们加的只有 smallphone/shell.js。scripts/build_couple_windowsill.mjs（需要临时装 esbuild@0.24.0 和 three@0.170.0）把 three.js + 场景打成普通脚本 windowsill.js、四件模型打成 models.js，输出到 PhoneWeb.bundle/couple-windowsill/（私人 .gitignore 已放行）；App 是本地文件，不能用模块脚本和 fetch，所以 shell.js 把场景读 ./models/*.gltf.json 的请求换成打包数据。shell.js 还：省电模式（saver=1：像素密度 1、最多 30 帧）、左上角「返回」（postMessage windowsill:back）、去掉「草稿 · 演示数据」、打不开 WebGL 时通知退回旧情侣空间。
+现在：私人版打开情侣空间先看到 3D「赴约 · 窗台」（唐幡 TangfanOVO 的开源作品，AGPL-3.0，她说已征得作者同意；网页版当时不接；v1848 起她说明作者同意，网页也接了，见下面「网页版」）。上游源码原样放在 native/private-small-phone/third_party/qiaosi-windowsill（固定在 309508f1，UPSTREAM.md 写出处），我们加的只有 smallphone/shell.js。scripts/build_couple_windowsill.mjs（需要临时装 esbuild@0.24.0 和 three@0.170.0）把 three.js + 场景打成普通脚本 windowsill.js、四件模型打成 models.js，输出到 PhoneWeb.bundle/couple-windowsill/（私人 .gitignore 已放行）；App 是本地文件，不能用模块脚本和 fetch，所以 shell.js 把场景读 ./models/*.gltf.json 的请求换成打包数据。shell.js 还：省电模式（saver=1：像素密度 1、最多 30 帧）、左上角「返回」（postMessage windowsill:back）、去掉「草稿 · 演示数据」、打不开 WebGL 时通知退回旧情侣空间。
 private-couple-windowsill.js（只在私人版两个入口加载）：包装 renderCouple 和 render。首页（cur().p==='couple' 且无 list）在 .screen 里挂一个 iframe（z-index 150，在弹窗 200、提示 500、远程操控 550、来电和横幅之下），不跟着小手机重画；离开或 App 进后台就拆掉省电。右上「设置与授权」下面的小玻璃条列出正在锁着的软件和「还剩…自动解锁」（ROLE_LOCK_UNTIL_V1 要求情侣空间能看到解锁时间，核心检查会查；第一次发布前就是因为窗台盖住了这行，核心检查失败后补上的）。「设置与授权」= go('couple',{list:1})，就是原来完整的情侣空间（甜蜜日常、管控授权、伴生设备），最上面多一个窗台省电开关（S.settings.windowsillSaver）。角色远程操控用自己的模拟层，不受窗台影响。
 v1842（她第一次在手机上试后的要求）：
 - 闪白屏：上游底色是浅米白（--bg:#e6e3dd），画面清空、调整大小、或 iOS 内存紧张回收 WebGL 时露出来；shell.js 把底色改成 #0d0b0a，webglcontextlost 时通知外面重载（最多两次，再不行退回旧情侣空间）。桌宠和图片偶尔变黑推断同因（回收后贴图没重传），重载能恢复；电脑上复现不了，未真机确认。
@@ -532,9 +534,10 @@ v1844（她在 iPhone 15 上试 v1843：画质和电脑上不一样、动起来�
 停放（WINDOWSILL_KEEP_V1）：离开窗台 = park()（holder 隐藏、发 windowsill:pause，shell 的限速 rAF 把回调攒着不画），回来 unpark() 立即继续；离开满 10 分钟或 WebGL 被收回才真正 unmount。render() 只换 #app，窗台挂在 .screen 下不会被冲掉。
 网页版（v1848，COUPLE_WINDOWSILL_WEB_V1，2026-10-20 她说明作者同意）：网页入口 小手机.html 加载根目录 couple-windowsill.js（私人版外层的复制，改了称呼、健康提示、加开关 S.settings.windowsillOff），iframe 用根目录 couple-windowsill/（打包脚本和私人版同时输出、内容一样，测试会比对）。改外层时两份都要改（私人版 private-couple-windowsill.js 有她的名字 North，网页版不能有）。
 v1852 / 网页 v1849：凑近任何东西都切到 2.6（打包脚本 crisp 条件改为 !!focusKey，手机仍要翻过来），全景 1.6；相册照片 emissive 0.55；季节由她调、记在 S.settings.windowsillSeason（打包时在 setSeason 开口 __WS_SEASON_CHANGED 通知外层），不再跟月份。
+窗台画面页（v1853 / 网页 v1850，WINDOWSILL_GFX_PAGE_V1）：情侣空间「设置与授权」最上面「窗台画面」，go('couple',{list:1,gfx:1})，外层 gfxPage() 画，CoupleWindowsill.set / bright 改值；画面开关存 S.settings.windowsillGfx，经 iframe 地址 ?g=JSON 交给 shell.js（默认值仍是她选的 1.6、稳定30、省的影子和灯），holder 的 data-gfx 和当前设置不同就拆掉重摆；挂板亮度两条（照片 phBright 管 __WS_WALLPH 三块，其他 miscBright 管打包时收集的 __WS_BOARD_MISC：挂历、碎碎念、纸胶带、车票、花瓣），值随 windowsill:photos 发进去，用 emissiveMap=map 加自发光，0 = 作者原样。凑近清晰度走 window.__WS_ZOOM_PR。
 - 注意：shell.js 比 pet.js 先加载，帧图要等 DOMContentLoaded 再读。
 
-后续步骤（未做）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。
+后续步骤（v1851 已做，见上面「桌面功能」）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。
 验证：tests/couple-windowsill.test.mjs；电脑上私人页面：窗台离线显示（无联网请求、无报错）、设置与授权保留原内容、返回离开并拆掉、远程操控层和弹窗盖在窗台上、网页版情侣空间不变。未验证：iPhone 上速度、发热、WebGL 表现。
 
 

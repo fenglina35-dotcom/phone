@@ -35,7 +35,7 @@ for (const [from, to] of [
   ['bokeh.uniforms.aperture.value = ap; bokeh.uniforms.maxblur.value = mb;', 'bokeh.uniforms.aperture.value = ap * (window.__WS_DOF ?? 1); bokeh.uniforms.maxblur.value = mb * (window.__WS_DOF ?? 1);'],
   // the low tier keeps some sharpness instead of dropping to 1x for good
   ['renderer.setPixelRatio(1); composer.setPixelRatio(1); resize(); sun.shadow.mapSize.set(1024, 1024);', 'renderer.setPixelRatio(window.__WS_LOWQ_PR || 1); composer.setPixelRatio(window.__WS_LOWQ_PR || 1); resize(); sun.shadow.mapSize.set(1024, 1024);'],
-  ['const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? 1 : DPR);', 'const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? (window.__WS_LOWQ_PR || 1) : DPR);'],
+  ['const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? 1 : DPR);', 'const pr = want ? Math.min(window.devicePixelRatio || 1, window.__WS_ZOOM_PR || 2.6) : (lowQ ? (window.__WS_LOWQ_PR || 1) : DPR);'],
   // every close-up turns sharp (2.6, as upstream does for the phone screen) while the camera moves in; the overview stays at 1.6
   // (she tried it on her phone with the speed test page and chose it, 2026-10-20). The phone still waits until it is turned over.
   ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = !!focusKey && focusT > .6 && (focusKey !== 'phone' || phoneFlip.v > .6);"],
@@ -83,6 +83,11 @@ const steadyTick = dt => {
   ["if (focusKey === 'candle'){ blowCandle(); return; }", "if (focusKey === 'candle'){ if (window.__WS_CANDLE_TAP) window.__WS_CANDLE_TAP(); else blowCandle(); return; }"],
   ["if (hit && hit.object.userData.key === 'candle' && focusKey === 'candle'){ blowCandle(); return; }", "if (hit && hit.object.userData.key === 'candle' && focusKey === 'candle'){ if (window.__WS_CANDLE_TAP) window.__WS_CANDLE_TAP(); else blowCandle(); return; }"],
   // 相册 (her photos on the board, five places: Polaroid, postcard, the three cells of the strip); the tag sits on the postcard
+  // the rest of the board (挂历、碎碎念、纸胶带、车票、玉兰花瓣) gets its own brightness slider on the 相册 card (WINDOWSILL_BOARD_BRIGHT_V1)
+  ["  add(notes, 'notes');\n}", "  add(notes, 'notes');\n}\nwindow.__WS_BOARD_MISC = [cal, notes];"],
+  ["const tw = washi(.42, '#6b5d52'); onBoard(tw, 1.7, 2.08, .5, .04); add(tw, null);", "const tw = washi(.42, '#6b5d52'); onBoard(tw, 1.7, 2.08, .5, .04); add(tw, null); window.__WS_BOARD_MISC.push(tw);"],
+  ["add(onBoard(pinIt(paperM(1.1, .46, tk, .02), 1.1, .46, ['tl'], .02, pinDark), 1.45, -1.75, -.12), null);", "window.__WS_BOARD_MISC.push(add(onBoard(pinIt(paperM(1.1, .46, tk, .02), 1.1, .46, ['tl'], .02, pinDark), 1.45, -1.75, -.12), null));"],
+  ["add(onBoard(pm, -.25, -1.95, .5, .012), null);", "add(onBoard(pm, -.25, -1.95, .5, .012), null); window.__WS_BOARD_MISC.push(pm);"],
   ['// 拍立得、明信片、车票、一条三连拍、一片压干的玉兰花瓣\n{', '// 拍立得、明信片、车票、一条三连拍、一片压干的玉兰花瓣\nconst WALLPH = []; window.__WS_WALLPH = WALLPH;\n{'],
   ['add(onBoard(paperM(.85, 1.02, pol), 1.55, 1.6, .09, .01), null);', "(WALLPH[0] = add(onBoard(paperM(.85, 1.02, pol), 1.55, 1.6, .09, .01), 'photos')).userData.slot = 0;"],
   ["add(onBoard(pinIt(paperM(1.5, 1.03, pc, .05), 1.5, 1.03, ['tl', 'tr'], .05), -1.2, -.95, -.05), null);", "(WALLPH[1] = add(onBoard(pinIt(paperM(1.5, 1.03, pc, .05), 1.5, 1.03, ['tl', 'tr'], .05), -1.2, -.95, -.05), 'photos')).userData.slot = 1;"],

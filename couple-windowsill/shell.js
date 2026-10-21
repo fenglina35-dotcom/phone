@@ -20,18 +20,24 @@
 (function () {
   'use strict';
   var q = new URLSearchParams(location.search);
-  var saver = q.get('saver') === '1';
-  // WINDOWSILL_STEADY30_V1: the setting she picked on her iPhone 15 (「新方案，清晰度 1.6，稳定 30 张」): steady 30 pictures a second
-  window.__WS_DPR_MAX = saver ? 1.25 : 1.6;
-  window.__WS_LOWQ_FPS = 14;                // capped at 30, so only drop a tier when it really cannot keep up
+  // WINDOWSILL_STEADY30_V1: the setting she picked on her iPhone 15 (「新方案，清晰度 1.6，稳定 30 张」) is the default.
+  // WINDOWSILL_GFX_PAGE_V1: her 「窗台画面」 page in the small phone can change each of them; it arrives as ?g={...}
+  var G = {dpr: 1.6, zoom: 2.6, fps: 30, drop: true, ao: false, dof: false, liveShadow: false, softShadow: false, candleShadow: false, realLight: false};
+  try { var gq = JSON.parse(q.get('g') || '{}'); Object.keys(G).forEach(function (k) { if (typeof gq[k] === typeof G[k]) G[k] = gq[k]; }); } catch (e) {}
+  if (q.get('saver') === '1') G.dpr = 1.25;
+  G.dpr = Math.min(2.6, Math.max(1, +G.dpr || 1.6));
+  var saver = G.dpr <= 1.25;
+  window.__WS_DPR_MAX = G.dpr;
+  window.__WS_LOWQ_FPS = G.drop ? 14 : 1;   // capped at 30, so only drop a tier when it really cannot keep up (1 = never drop)
   window.__WS_LOWQ_PR = saver ? 1 : 1.25;
+  window.__WS_ZOOM_PR = G.zoom > 0 ? Math.min(2.6, G.zoom) : G.dpr;   // close-ups turn sharp (0 = stay as the overview)
   window.__WS_DOF = .45;
-  window.__WS_SHADOW_FREEZE = true;         // shadows drawn once, again only when the sun moves
-  window.__WS_NO_AO = true;                 // no ambient-occlusion pass
-  window.__WS_NO_DOF = true;                // no depth-of-field blur (also what made the room look blurry)
-  window.__WS_PCF = true;                   // plain shadow edges
-  window.__WS_NO_CANDLE_SHADOW = true;
-  window.__WS_FAKE_AREA = true;             // cheap stand-ins for the two area lights (the glass stays)
+  window.__WS_SHADOW_FREEZE = !G.liveShadow; // shadows drawn once, again only when the sun moves
+  window.__WS_NO_AO = !G.ao;                 // no ambient-occlusion pass
+  window.__WS_NO_DOF = !G.dof;               // no depth-of-field blur (also what made the room look blurry)
+  window.__WS_PCF = !G.softShadow;           // plain shadow edges
+  window.__WS_NO_CANDLE_SHADOW = !G.candleShadow;
+  window.__WS_FAKE_AREA = !G.realLight;      // cheap stand-ins for the two area lights (the glass stays)
   window.__WS_QUIET_CANDLE = true;          // no 晚安 / 蜡烛点上了 bubble (she asked: no grey pop-ups on the candle)
   window.__WS_PHONE_COLOR = '#c98a98';      // the desk phone in pink metal (she asked); same metal finish as upstream
   window.__WS_PHONE_BACK = '#d9a7b1';       // frosted back glass, camera ring and side band follow the pink
@@ -46,7 +52,7 @@
     return realFetch ? realFetch(url, opt) : Promise.reject(new Error('offline'));
   };
 
-  {   // at most 30 pictures a second, saver or not (steady 30 felt smoother than 16-40).
+  {   // at most 30 pictures a second unless she chose 不限 on the 窗台画面 page; parking (pause / resume) works either way (steady 30 felt smoother than 16-40).
       // One decision per display frame (by its timestamp), so every callback of that frame is let through or held together;
       // deciding per callback let the scene's loop take every slot and starved any other callback.
     var raf = window.requestAnimationFrame.bind(window), last = 0, seenT = -1, go = true, held = [];
@@ -54,7 +60,7 @@
       if (window.__WS_PAUSED) { held.push(cb); return 0; }   // parked while she is elsewhere in the small phone: draw nothing
       return raf(function step(t) {
         if (window.__WS_PAUSED) { held.push(cb); return; }
-        if (t !== seenT) { seenT = t; go = t - last >= 31; if (go) last = t; }
+        if (t !== seenT) { seenT = t; go = G.fps !== 30 || t - last >= 31; if (go) last = t; }
         if (!go) return raf(step);
         cb(t);
       });
@@ -217,6 +223,30 @@
 
   // 相册: five places on the board (0 拍立得, 1 明信片, 2-4 三连拍 top / middle / bottom), tap a photo to see it full size
   var PH_NAMES = ['拍立得', '明信片', '三连拍上', '三连拍中', '三连拍下'], photos = ['', '', '', '', ''], phImg = [null, null, null, null, null], phOrig = [null, null, null];
+  // 挂板亮度（WINDOWSILL_BOARD_BRIGHT_V1）：她在小手机「窗台画面」页里拖，0 = 作者原样；照片三块一起调，其他贴图另一条，外层记住后随照片发来
+  var phBright = 0, miscBright = 0, brTry = 0;   // miscBright: 挂板上其他的贴图（挂历、碎碎念、纸胶带、车票、玉兰花瓣）
+  function applyBright(m) {
+    var W = window.__WS_WALLPH, mesh = W && W[m]; if (!mesh) return false;
+    var mat = mesh.material, t = mat.map, k = phBright / 100 * 1.2;
+    if (k > 0) { if (mat.emissiveMap !== t) { mat.emissive && mat.emissive.set('#ffffff'); mat.emissiveMap = t; mat.needsUpdate = true; } mat.emissiveIntensity = k; }
+    else if (mat.emissiveMap) { mat.emissiveMap = null; mat.emissiveIntensity = 0; mat.needsUpdate = true; }
+    return true;
+  }
+  function glow(mat, k) {
+    if (!mat || !mat.map || !('emissiveIntensity' in mat)) return;
+    if (k > 0) { if (mat.emissiveMap !== mat.map) { mat.emissive && mat.emissive.set('#ffffff'); mat.emissiveMap = mat.map; mat.needsUpdate = true; } mat.emissiveIntensity = k; }
+    else if (mat.emissiveMap) { mat.emissiveMap = null; mat.emissiveIntensity = 0; mat.needsUpdate = true; }
+  }
+  function applyMisc() {
+    var L = window.__WS_BOARD_MISC; if (!L) return false;
+    var k = miscBright / 100 * 1.2;
+    L.forEach(function (o) { o && o.traverse && o.traverse(function (m) { if (m.isMesh) glow(m.material, k); }); });
+    return true;
+  }
+  function applyBrightAll() {
+    var ok = applyBright(0) & applyBright(1) & applyBright(2) & applyMisc();
+    if (!ok && brTry++ < 40) setTimeout(applyBrightAll, 500);   // the board is built after the first message may arrive
+  }
   function cover(g, img, x, y, w, h) {
     var k = Math.max(w / img.naturalWidth, h / img.naturalHeight), iw = img.naturalWidth * k, ih = img.naturalHeight * k;
     g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip(); g.drawImage(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih); g.restore();
@@ -232,10 +262,8 @@
     if (m === 1 && phImg[1]) { cover(g, phImg[1], 0, 0, c.width, c.height); g.fillStyle = 'rgba(236,230,220,.92)'; g.fillRect(0, 0, c.width, 8 * K); g.fillRect(0, c.height - 8 * K, c.width, 8 * K); g.fillRect(0, 0, 8 * K, c.height); g.fillRect(c.width - 8 * K, 0, 8 * K, c.height); }
     if (m === 2) for (var f = 0; f < 3; f++) if (phImg[2 + f]) cover(g, phImg[2 + f], 8 * K, (10 + f * 88) * K, 64 * K, 78 * K);
     t.image = c; t.dispose(); t.needsUpdate = true;   // a new size needs a fresh GPU texture
-    // her photos glow a little on their own so the room's dim light does not darken them (she: 上传的图片明显变暗了)
-    var mat = mesh.material, lit = m === 0 ? !!phImg[0] : m === 1 ? !!phImg[1] : !!(phImg[2] || phImg[3] || phImg[4]);
-    if (lit && mat.emissiveMap !== t) { mat.emissive && mat.emissive.set('#ffffff'); mat.emissiveMap = t; mat.emissiveIntensity = .55; mat.needsUpdate = true; }
-    else if (!lit && mat.emissiveMap) { mat.emissiveMap = null; mat.emissiveIntensity = 0; mat.needsUpdate = true; }
+    if (mesh.material.emissiveMap) mesh.material.emissiveMap = null;   // the redrawn picture becomes the new glow map
+    applyBright(m);
   }
   function setPhoto(i, url, keep) {
     photos[i] = url || '';
@@ -289,7 +317,7 @@
   window.addEventListener('message', function (e) {
     var dt = e.data || {};
     if (dt.type === 'windowsill:data') { desk = dt; applyDesk(); }
-    else if (dt.type === 'windowsill:photos') { (dt.list || []).slice(0, 5).forEach(function (u, i) { if ((u || '') !== photos[i]) setPhoto(i, u, true); }); }
+    else if (dt.type === 'windowsill:photos') { (dt.list || []).slice(0, 5).forEach(function (u, i) { if ((u || '') !== photos[i]) setPhoto(i, u, true); }); var nb = dt.bright >= 0 && dt.bright <= 100 ? +dt.bright : phBright, nm = dt.brightMisc >= 0 && dt.brightMisc <= 100 ? +dt.brightMisc : miscBright; if (nb !== phBright || nm !== miscBright) { phBright = nb; miscBright = nm; brTry = 0; applyBrightAll(); } }
     else if (dt.type === 'windowsill:candleSet' && window.__WS_CANDLE_SET) window.__WS_CANDLE_SET(!!dt.lit);
     else if (dt.type === 'windowsill:pause') window.__WS_PAUSED = true;
     else if (dt.type === 'windowsill:resume' && window.__WS_RESUME) window.__WS_RESUME();

@@ -70,7 +70,7 @@ for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/
 test('the role is told every lock needs an unlock time, in both bundles', () => {
   for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/app.js']) {
     const s = fs.readFileSync(file, 'utf8');
-    assert.equal(s.split('锁定时必须在标签最后加解锁时间').length - 1, 2, file);
+    assert.equal(s.split('锁定时必须在标签最后加解锁时间').length - 1, 3, file + ': chat, real iPhone, and 共同生活 / 线下 (COHAB_LOCK_UNTIL_V1)');
     assert(s.includes("const _lockPlan=typeof lockUntilPrepare==='function'?lockUntilPrepare(content):null,_lockBefore=_lockPlan?lockUntilSnapshot():null;if(_lockPlan)content=_lockPlan.content;"), file);
     assert(s.includes('if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore,c,decisionText||content);'), file);
     assert(s.includes("roleInterceptStage:'锁定解锁时间'"), file + ' asks the role in the background when no time was given');

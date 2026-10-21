@@ -2044,7 +2044,9 @@ final class CompanionSyncService: ObservableObject {
                 saveShieldRoleActors(previousRoleActors)
                 throw CompanionSyncError.message("本地屏蔽配置写入失败，未发送成功回执")
             }
-            return "屏蔽配置已写入；最终是否生效请以打开目标 App 时的系统屏蔽页为准"
+            // LOCK_DONE_TEXT_V1 (2026-10-21, she asked): say which app is locked, in plain words
+            let lockedName = (appAliases[externalID] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return lockedName.isEmpty ? "应用已经锁定" : "\(lockedName)已经锁定"
 
         case "unlock":
             guard await screenTimeControlAuthorizationSettled() else {

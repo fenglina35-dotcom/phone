@@ -70,7 +70,7 @@ test('co-living inspection is autonomous, factual, visible and not daily-count l
   const deliver=functionSource('cohabPhoneDeliverFact');
   assert.match(prompt,/不限每天次数/);
   assert.match(prompt,/\[共同生活查看\|准确项目\]/);
-  assert.match(prompt,/\[共同生活锁定\|准确App名\]/);
+  assert.match(prompt,/\[共同生活锁定\|准确App名\|到07:00\]，锁定时必须在标签最后加解锁时间/);   // COHAB_LOCK_UNTIL_V1: the lock tag carries its unlock time
   assert.match(prompt,/\[共同生活解锁\|准确App名\]/);
   assert.match(prompt,/\[共同生活限额\|准确App名\|1到720的分钟数\]/);
   assert.match(prompt,/iPhone睡眠与步数/);

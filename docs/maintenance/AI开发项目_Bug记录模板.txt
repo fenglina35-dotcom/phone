@@ -2419,3 +2419,8 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 通话里「[语气变低]」露出且不出那种语气（VOICE_TONE_GUESS_V1）：voice-expressive.js 只认固定列表；现在 [] 里明显在说语气声音的中文换成最接近的已知提示（变低→小声、冷冷地→不满……），说不清的去掉，不像语气的（[挂断]、[桌宠|…]）原样；【】是视频动作行，只认原列表。旧通话记录清理也改成「stripTags 有变化就清」。回归测试 tests/voice-tone-guess.test.mjs，旧实现保留方括号。
 - 私人版心率：后台有之前的心率，App 里没有（HEALTH_KEEP_LAST_V1）。原生取「最新一条」不限时间，但手机锁着时 HealthKit 读不到，新的一份健康数据心率为空，App 整份替换就丢了。现在新一份里没有的心率、HRV、心电保留上一份及其记录时间。tests/companion-health-keep-last.test.mjs。真机待她看。
 - 窗台：凑近任何东西都切到清晰度 2.6（她在测速网页试过选的），全景 1.6；相册照片自带一点亮（emissive 0.55），不被屋里暗光压暗；季节不再跟月份，她在窗台上调的季节记在 S.settings.windowsillSeason，下次打开照用。
+
+2026-10-21 网页v1850 / 私人v1853 / iOS502：
+- 共同生活里角色锁的 App 锁屏上没有解锁时间、到点也不会自己开（COHAB_LOCK_UNTIL_V1）。她说 10-16 专门做过；查 Bug 记录：ROLE_LOCK_UNTIL_V1 只接在 applyControlTags（聊天等）上，共同生活 / 线下用的是 cohabApplyPhoneTags 的 [共同生活锁定|App]，直接 companionDispatchRoleByText，从来不取时间，教角色的说明也没写时间。手机存档证实：10-21 02:50 先生在共同生活语音里锁了抖音（仅外置），S.couple.lockUntil 为空。修复：锁定标签先过 lockUntilPrepare 取出时间段，锁完用同一个 lockUntilCommit 记录并发 device.autoUnlock；没写时间时同聊天一样（角色的话→后台问一句→下一个早上7点）；说明改成必须带时间。回归 tests/cohab-lock-until.test.mjs 真跑 cohabApplyPhoneTags，旧代码 6 项全失败。
+- 锁定回执「屏蔽配置已写入；最终是否生效请以…为准」她看不懂，改成「抖音已经锁定」（LOCK_DONE_TEXT_V1，CompanionSyncView.swift，名字取 appAliases，取不到写「应用已经锁定」）。经她同意改私人原生。注意 tests/companion-native-resilience.test.mjs 读的是 native/phone-companion-v857 旧副本，不是私人包。
+- 窗台：她要把测速时试过的做法做成开关自己选（WINDOWSILL_GFX_PAGE_V1）。情侣空间「设置与授权」最上面一行「窗台画面」进独立一页：清晰度 1.25/1.6/2、凑近时 不变/2.2/2.6、每秒 稳定30/不限、跑不动自动降档、六个效果开关（角落阴影细节、远处虚化、影子跟着动、柔和影子边、蜡烛投影子、作者原来的面光）、挂板亮度两条（照片 / 其他：挂历、碎碎念、车票、纸胶带、花瓣，WINDOWSILL_BOARD_BRIGHT_V1，默认作者原样）、恢复推荐。存 S.settings.windowsillGfx（亮度在 S.couple.wallBright / wallBrightMisc），iframe 地址 ?g=JSON，shell.js 读了再定开关；设置变了回窗台时重新加载。旧的「窗台省电模式」并进清晰度（旧开关打开的仍按 1.25）。相册卡片上的亮度滑条去掉。

@@ -30,6 +30,79 @@
   }
   function saverOn() { return !!(S.settings && S.settings.windowsillSaver); }
 
+  // WINDOWSILL_GFX_PAGE_V1（2026-10-21 她要的）：测速时试过的画面做法做成开关，放在情侣空间「设置与授权」里单独一页「窗台画面」，
+  // 她看哪个好用开哪个；挂板亮度的两条滑条也搬到这一页（相册卡片上不再占位置）。存在 S.settings.windowsillGfx，
+  // 改了以后回到窗台会重新摆一次书桌（画面开关要在窗台打开前定好）。默认值就是她在手机测速网页上选定的「清晰度 1.6、稳定 30 张」。
+  var GFX_DEF = {dpr: 1.6, zoom: 2.6, fps: 30, drop: true, ao: false, dof: false, liveShadow: false, softShadow: false, candleShadow: false, realLight: false};
+  var GFX_OPT = {dpr: [1.25, 1.6, 2], zoom: [0, 2.2, 2.6], fps: [30, 60]};
+  function gfx() {
+    var g = (S.settings && S.settings.windowsillGfx) || {}, out = {};
+    Object.keys(GFX_DEF).forEach(function (k) {
+      var v = g[k];
+      if (GFX_OPT[k]) out[k] = GFX_OPT[k].indexOf(+v) >= 0 ? +v : (k === 'dpr' && saverOn() ? 1.25 : GFX_DEF[k]);
+      else out[k] = typeof v === 'boolean' ? v : GFX_DEF[k];
+    });
+    return out;
+  }
+  function gfxKey() { return JSON.stringify(gfx()); }
+  var brightDirty = false;
+  function gfxSet(k, v) {
+    if (!S.settings) S.settings = {};
+    var g = S.settings.windowsillGfx || (S.settings.windowsillGfx = {});
+    if (k === 'reset') { delete S.settings.windowsillGfx; delete S.settings.windowsillSaver; if (S.couple) { S.couple.wallBright = 0; S.couple.wallBrightMisc = 0; } brightDirty = true; }
+    else if (GFX_OPT[k]) { if (GFX_OPT[k].indexOf(+v) >= 0) g[k] = +v; }
+    else if (k in GFX_DEF) g[k] = !gfx()[k];
+    save(); render();
+  }
+  function brightSet(k, v, done) {
+    v = Math.round(+v); if (!(v >= 0 && v <= 100)) return;
+    var el = document.getElementById('cwg-' + k); if (el) el.textContent = v ? v : '原样';
+    if (done && wallBright(k) !== v) { cp()[k] = v; brightDirty = true; save(); }
+  }
+  function gfxPage() {
+    var g = gfx();
+    var pills = function (k, list) {
+      return '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + list.map(function (o) {
+        var on = g[k] === o[0];
+        return '<span onclick="CoupleWindowsill.set(\'' + k + '\',' + o[0] + ')" style="padding:5px 10px;border-radius:14px;font-size:12px;cursor:pointer;white-space:nowrap;'
+          + (on ? 'background:#e89db5;color:#fff' : 'background:rgba(128,128,128,.18);color:inherit') + '">' + o[1] + '</span>';
+      }).join('') + '</span>';
+    };
+    var row = function (title, sub, right) { return '<div class="it"><span>' + title + (sub ? '<br><small style="color:#888">' + sub + '</small>' : '') + '</span>' + right + '</div>'; };
+    var sw = function (k, title, sub) { return row(title, sub, '<span class="sw ' + (g[k] ? 'on' : '') + '" onclick="CoupleWindowsill.set(\'' + k + '\')"></span>'); };
+    var slider = function (k, title, sub) {
+      var v = wallBright(k);
+      return '<div class="it" style="display:block"><div style="display:flex;justify-content:space-between"><span>' + title + '<br><small style="color:#888">' + sub + '</small></span><span id="cwg-' + k + '" style="color:#888;font-size:13px">' + (v ? v : '原样') + '</span></div>'
+        + '<input type="range" min="0" max="100" step="1" value="' + v + '" style="width:100%;margin-top:8px;accent-color:#e89db5" oninput="CoupleWindowsill.bright(\'' + k + '\',this.value)" onchange="CoupleWindowsill.bright(\'' + k + '\',this.value,1)"></div>';
+    };
+    var head = function (t) { return '<div style="margin:16px 18px 6px;font-size:12px;color:#888">' + t + '</div>'; };
+    return '<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">窗台画面</span><span class="r"></span></div>'
+      + '<div class="scroll" style="padding-bottom:30px">'
+      + head('画面（改了以后回到窗台，会重新摆一次书桌，等几秒）')
+      + '<div class="section" style="margin:0 12px">'
+      + row('清晰度', '平时看整个窗台时', pills('dpr', [[1.25, '柔和省电'], [1.6, '1.6 推荐'], [2, '更清楚']]))
+      + row('凑近时', '凑近某样东西时临时变清楚', pills('zoom', [[0, '不变'], [2.2, '2.2'], [2.6, '2.6 推荐']]))
+      + row('每秒画面', '稳定 30 张更顺、不容易发热', pills('fps', [[30, '稳定 30 张'], [60, '不限']]))
+      + sw('drop', '跑不动时自动降清晰度', '手机发热变慢时自己降一档，不卡')
+      + '</div>'
+      + head('效果（开了更好看，也更耗电、更容易发热）')
+      + '<div class="section" style="margin:0 12px">'
+      + sw('ao', '角落阴影细节', '缝隙、角落更有层次；测速时最耗电的一项')
+      + sw('dof', '远处虚化', '像相机一样，远处糊一点')
+      + sw('liveShadow', '影子跟着动', '每一张都重画影子；不开时影子只在太阳挪动时重画')
+      + sw('softShadow', '柔和影子边', '影子边缘更柔')
+      + sw('candleShadow', '蜡烛投影子', '蜡烛点着时在桌上投出影子')
+      + sw('realLight', '作者原来的面光', '窗口和电脑屏幕的光用作者原来的做法；不开时用省电的替代光')
+      + '</div>'
+      + head('挂板亮度（左边那块板，回到窗台就能看到）')
+      + '<div class="section" style="margin:0 12px">'
+      + slider('wallBright', '照片', '拍立得、明信片、三连拍的三格')
+      + slider('wallBrightMisc', '其他', '挂历、碎碎念便签、车票、纸胶带、花瓣')
+      + '</div>'
+      + '<div class="section" style="margin:16px 12px 0"><div class="it" style="justify-content:center;color:#e89db5" onclick="CoupleWindowsill.set(\'reset\')">恢复推荐设置</div></div>'
+      + '</div>';
+  }
+
   function mount() {
     if (holder) return;
     holder = document.createElement('div');
@@ -37,7 +110,8 @@
     holder.innerHTML = '<style>#cw-holder{position:absolute;inset:0;z-index:150;background:#0d0b0a}#cw-holder iframe{position:absolute;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);width:100%;height:calc(100% - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border:0;display:block;background:#0d0b0a}'
       + '#cw-wait{position:absolute;inset:0;z-index:1;background:#0d0b0a;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font:14px -apple-system,"PingFang SC",sans-serif;pointer-events:none;transition:opacity .35s}#cw-holder.shown #cw-wait{opacity:0}</style>'
       + '<div id="cw-wait">正在摆好书桌…</div>'
-      + '<iframe title="赴约 · 窗台" allow="autoplay" src="couple-windowsill/index.html' + (saverOn() ? '?saver=1' : '') + '"></iframe>';
+      + '<iframe title="赴约 · 窗台" allow="autoplay" src="couple-windowsill/index.html?g=' + encodeURIComponent(gfxKey()) + '"></iframe>';
+    holder.setAttribute('data-gfx', gfxKey());
     frame = holder.querySelector('iframe');
     // inside the phone screen, under the call screen, banners, modals, toasts and the remote-control layer (z-index 200 and up)
     (document.querySelector('.screen') || document.body).appendChild(holder);
@@ -221,13 +295,15 @@
 
   // 相册: five places on the board
   function wallPhotos() { var c = cp(); if (!Array.isArray(c.wallPhotos)) c.wallPhotos = []; while (c.wallPhotos.length < 5) c.wallPhotos.push(''); return c.wallPhotos; }
+  // 挂板亮度：她在窗台相册卡上拖的值（0 = 作者原样，最多 100），跟照片一起记在情侣空间里
+  function wallBright(k) { var v = +(S.couple || {})[k || 'wallBright']; return v >= 0 && v <= 100 ? Math.round(v) : 0; }
   function sendPhotos() {
     var raw = wallPhotos().slice(0, 5), keys = raw.filter(function (v) { return typeof isStoredImgRef === 'function' && isStoredImgRef(v); }).map(function (v) { return String(v).slice(4); });
     var finish = function (found) {
       post({type: 'windowsill:photos', list: raw.map(function (v) {
         if (typeof isStoredImgRef === 'function' && isStoredImgRef(v)) v = (found && found[String(v).slice(4)]) || (typeof storedImageDisplaySource === 'function' ? storedImageDisplaySource(v) : '');
         return typeof v === 'string' && v.indexOf('data:image/') === 0 ? v : '';
-      })});
+      }), bright: wallBright(), brightMisc: wallBright('wallBrightMisc')});
     };
     if (keys.length && typeof imgMany === 'function') imgMany(keys).then(finish, function () { finish({}); }); else finish({});
   }
@@ -253,7 +329,13 @@
       clearInterval(deskTimer); deskTimer = setInterval(function () { deskReport(); ensureWeather(); }, 30000);
     }
   }
-  function sync() { if (onWindowsill()) { if (holder && parked) unpark(); else mount(); } else park(); }
+  function sync() {
+    if (onWindowsill()) {
+      if (holder && holder.getAttribute('data-gfx') !== gfxKey()) { parked = false; clearTimeout(parkTimer); unmount(); }   // picture settings changed: set the desk up again
+      if (holder && parked) unpark(); else mount();
+      if (brightDirty && ready) { brightDirty = false; sendPhotos(); }
+    } else park();
+  }
   function fallBack(msg) { failed = true; parked = false; clearTimeout(parkTimer); unmount(); render(); if (msg && typeof toast === 'function') toast(msg); }
 
   window.addEventListener('message', function (e) {
@@ -285,8 +367,9 @@
   renderCouple = function () {
     var html = coreRenderCouple.apply(this, arguments);
     var c = cur();
+    if (c && c.list && c.gfx) return gfxPage();
     if (c && c.list) {
-      var bar = '<div class="section" style="margin:10px 12px 0"><div class="it"><span>窗台省电模式<br><small style="color:#888">画面稍微柔一点，手机不容易发热</small></span><span class="sw ' + (saverOn() ? 'on' : '') + '" onclick="S.settings.windowsillSaver=!S.settings.windowsillSaver;save();render()"></span></div></div>';
+      var bar = '<div class="section" style="margin:10px 12px 0"><div class="it" onclick="go(\'couple\',{list:1,gfx:1})"><span>窗台画面<br><small style="color:#888">清晰度、每秒张数、影子效果、挂板亮度</small></span><span style="color:#888">›</span></div></div>';
       return html.replace(/(<div class="scroll[^"]*"[^>]*>)/, '$1' + bar);
     }
     return failed ? html : '<div style="position:absolute;inset:0;background:#0d0b0a"></div>';
@@ -294,5 +377,5 @@
   var coreRender = render;
   render = function () { var r = coreRender.apply(this, arguments); try { sync(); } catch (e) {} return r; };
   document.addEventListener('visibilitychange', function () { if (document.hidden) park(); else sync(); });
-  window.CoupleWindowsill = {sync: sync, mounted: function () { return !!holder; }};
+  window.CoupleWindowsill = {sync: sync, mounted: function () { return !!holder; }, set: gfxSet, bright: brightSet};
 })();
