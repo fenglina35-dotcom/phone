@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1858'/);
-  assert.match(privateApp, /APP_VER='v1858 · 情侣空间弹框与配色'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1859'/);
+  assert.match(privateApp, /APP_VER='v1859 · 日期框不再跑出屏幕'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1858'/);
-    assert.match(html, /app\.js\?v=1858&r=v1858-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1859'/);
+    assert.match(html, /app\.js\?v=1859&r=v1859-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1858/);
-  assert.match(swift, /1\.0\.504 \(504\)/);
-  assert.match(bridge, /private static let build = "1\.0\.504 \(504\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 504;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.504;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1853 · 情侣空间弹框与配色'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1853'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1859/);
+  assert.match(swift, /1\.0\.505 \(505\)/);
+  assert.match(bridge, /private static let build = "1\.0\.505 \(505\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 505;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.505;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1854 · 日期框不再跑出屏幕'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1854'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

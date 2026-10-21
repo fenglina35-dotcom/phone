@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1853 · 情侣空间弹框与配色'/);
-  assert.match(app,/const url='sw\.js\?v=1853&r=v1853-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1853'/);
-  assert.match(html,/app\.js\?v=1853/);
-  assert.match(sw,/const BUILD='1853'/);
-  assert.match(sw,/north-shell-v1853-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1853/);
-  assert.match(repair,/小手机\.html\?v=1853/);
+  assert.match(app,/APP_VER='v1854 · 日期框不再跑出屏幕'/);
+  assert.match(app,/const url='sw\.js\?v=1854&r=v1854-owner-todo-report-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1854'/);
+  assert.match(html,/app\.js\?v=1854/);
+  assert.match(sw,/const BUILD='1854'/);
+  assert.match(sw,/north-shell-v1854-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1854/);
+  assert.match(repair,/小手机\.html\?v=1854/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.504;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 504;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.504 \(504\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.505;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 505;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.505 \(505\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

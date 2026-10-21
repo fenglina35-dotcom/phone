@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1853 · 情侣空间弹框与配色'/);
+assert.match(app, /APP_VER='v1854 · 日期框不再跑出屏幕'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,9 +14,9 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1853'/);
-assert.match(html, /sw\.js\?v=1853&r=v1853-owner-todo-report-1/);
-assert.match(html, /web-hotfix\.js\?v=1853&r=v1853-owner-todo-report-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1854'/);
+assert.match(html, /sw\.js\?v=1854&r=v1854-owner-todo-report-1/);
+assert.match(html, /web-hotfix\.js\?v=1854&r=v1854-owner-todo-report-1/);
 
 console.log("update prompt tests passed");
 

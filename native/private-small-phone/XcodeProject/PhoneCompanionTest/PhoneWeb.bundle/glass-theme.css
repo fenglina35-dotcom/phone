@@ -1206,3 +1206,10 @@ html body :is(#modal,#cfm).spy-monitor-modal{--so-accent:#ffbf43}html body #moda
 .wx-steps-icon.wx-steps-new,.wxlight .wx-steps-icon.wx-steps-new{background:#7ee571!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.05)!important;overflow:hidden}
 /* 底色是她自己挑的 #7EE571，夜间和白色主题都一样；图标放大 */
 .wx-steps-icon.wx-steps-new svg{width:92%!important;height:92%!important}
+
+/* DATE_INPUT_FIT_V1（2026-10-21 她发现：日期、时间这类系统框会被撑得比别的框长，跑出屏幕；小手机里很多地方都这样）：
+   iPhone 的原生日期框有自己的最小宽度、不认 width，去掉系统外观后才会老老实实跟别的输入框一样宽。 */
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week]){-webkit-appearance:none;appearance:none;box-sizing:border-box;min-width:0;min-inline-size:0;max-width:100%;max-inline-size:100%;overflow:hidden;line-height:1.35;text-align:left}
+.field input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week]){display:block;width:100%;min-height:40px}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-date-and-time-value{min-width:0;margin:0;text-align:left}
+input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-datetime-edit{padding:0;min-width:0}
