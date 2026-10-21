@@ -406,7 +406,7 @@ test('marriage state and one certificate per style are exposed in couple space',
   assert.match(js,/婚书收藏夹/);
   assert.match(js,/每种婚礼的婚书会各收藏一份/);
   assert.match(js,/function weddingOpenCertificateRecord\(cid,recordId\)/);
-  assert.match(app,/cp\.married\?'已结为夫妻 · '/);
+  assert.match(app,/cp\.married\?'已结为夫妻':'在一起'/);   // COUPLE_REDESIGN_V1: the header shows the status on its own line
   assert.match(app,/weddingCoupleCollectionHTML/);
   assert.match(css,/\.wedding-collection-row/);
 });

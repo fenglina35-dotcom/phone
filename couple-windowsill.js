@@ -54,7 +54,7 @@
       return '<span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + list.map(function (o) {
         var on = g[k] === o[0];
         return '<span onclick="CoupleWindowsill.set(\'' + k + '\',' + o[0] + ')" style="padding:5px 10px;border-radius:14px;font-size:12px;cursor:pointer;white-space:nowrap;'
-          + (on ? 'background:#e89db5;color:#fff' : 'background:rgba(128,128,128,.18);color:inherit') + '">' + o[1] + '</span>';
+          + (on ? 'background:#f0a9c1;color:#1a191c' : 'background:rgba(255,255,255,.07);color:#cfc7cb') + '">' + o[1] + '</span>';
       }).join('') + '</span>';
     };
     var row = function (title, sub, right) { return '<div class="it"><span>' + title + (sub ? '<br><small style="color:#888">' + sub + '</small>' : '') + '</span>' + right + '</div>'; };
@@ -66,7 +66,7 @@
     };
     var head = function (t) { return '<div style="margin:16px 18px 6px;font-size:12px;color:#888">' + t + '</div>'; };
     return '<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">窗台画面</span><span class="r"></span></div>'
-      + '<div class="scroll" style="padding-bottom:30px">'
+      + '<div class="scroll" id="couplescroll" style="padding-bottom:30px">' + (typeof COUPLE_CSS === 'string' ? COUPLE_CSS : '') + '<div class="cs-sub">'
       + head('画面（改了以后回到窗台，会重新摆一次书桌，等几秒）')
       + '<div class="section" style="margin:0 12px">'
       + row('清晰度', '平时看整个窗台时', pills('dpr', [[1.25, '柔和省电'], [1.6, '1.6 推荐'], [2, '更清楚']]))
@@ -89,7 +89,7 @@
       + slider('wallBrightMisc', '其他', '挂历、碎碎念便签、车票、纸胶带、花瓣')
       + '</div>'
       + '<div class="section" style="margin:16px 12px 0"><div class="it" style="justify-content:center;color:#e89db5" onclick="CoupleWindowsill.set(\'reset\')">恢复推荐设置</div></div>'
-      + '</div>';
+      + '</div></div>';
   }
 
   function mount() {
@@ -358,9 +358,10 @@
     var c = cur();
     if (c && c.list && c.gfx) return gfxPage();
     if (c && (c.list || (S.settings && S.settings.windowsillOff))) {   // with the switch off the old page shows it too, so it can be turned back on
-      var bar = '<div class="section" style="margin:10px 12px 0"><div class="it"><span>用 3D 窗台当首页<br><small style="color:#888">手机比较旧、打开会卡的话可以关掉，回到原来的情侣空间</small></span><span class="sw ' + (S.settings && S.settings.windowsillOff ? '' : 'on') + '" onclick="S.settings.windowsillOff=!S.settings.windowsillOff;save();render()"></span></div>'
-        + '<div class="it" onclick="go(\'couple\',{list:1,gfx:1})"><span>窗台画面<br><small style="color:#888">清晰度、每秒张数、影子效果、挂板亮度</small></span><span style="color:#888">›</span></div></div>';
-      return html.replace(/(<div class="scroll[^"]*"[^>]*>)/, '$1' + bar);
+      // COUPLE_REDESIGN_V1: both rows sit at the bottom of 甜蜜日常 (the slot is only on the card home page)
+      var bar = '<div class="cs-row" style="cursor:default"><div class="tx"><b class="serif">用 3D 窗台当首页</b><small>手机比较旧、打开会卡的话可以关掉，回到原来的情侣空间</small></div><span class="sw ' + (S.settings && S.settings.windowsillOff ? '' : 'on') + '" onclick="S.settings.windowsillOff=!S.settings.windowsillOff;save();render()"></span></div>'
+        + '<div class="cs-row" onclick="go(\'couple\',{list:1,gfx:1})"><span class="ic"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#e9e2e5" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 13l5-4 4 3 3-2 6 4"/><path d="M8 21h8"/></svg></span><div class="tx"><b class="serif">窗台画面</b><small>清晰度、每秒张数、影子效果、挂板亮度</small></div><span class="ar">›</span></div>';
+      return html.replace('<div id="cou_extra_slot"></div>', '<div id="cou_extra_slot">' + bar + '</div>');
     }
     return failed || (S.settings && S.settings.windowsillOff) ? html : '<div style="position:absolute;inset:0;background:#0d0b0a"></div>';
   };

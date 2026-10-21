@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1851 · 窗台画面与锁定时间'/);
-  assert.match(app,/const url='sw\.js\?v=1851&r=v1851-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1851'/);
-  assert.match(html,/app\.js\?v=1851/);
-  assert.match(sw,/const BUILD='1851'/);
-  assert.match(sw,/north-shell-v1851-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1851/);
-  assert.match(repair,/小手机\.html\?v=1851/);
+  assert.match(app,/APP_VER='v1852 · 情侣空间新装修'/);
+  assert.match(app,/const url='sw\.js\?v=1852&r=v1852-owner-todo-report-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1852'/);
+  assert.match(html,/app\.js\?v=1852/);
+  assert.match(sw,/const BUILD='1852'/);
+  assert.match(sw,/north-shell-v1852-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1852/);
+  assert.match(repair,/小手机\.html\?v=1852/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.502;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 502;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.502 \(502\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.503;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 503;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.503 \(503\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

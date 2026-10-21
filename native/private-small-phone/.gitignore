@@ -29,6 +29,9 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/**
+# Couple space redesign pictures (COUPLE_REDESIGN_V1) ship inside the private app.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/couple-space/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/couple-space/**
 # Sticker store packs (STICKER_STORE_V1) ship inside the private app.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/**

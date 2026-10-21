@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1851'){
+if(window.__NORTH_SHELL_BUILD__!=='1852'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1851 · 窗台画面与锁定时间';
+const APP_VER='v1852 · 情侣空间新装修';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2120,7 +2120,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1851&r=v1851-owner-todo-report-1';
+  const url='sw.js?v=1852&r=v1852-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4498,7 +4498,7 @@ function setTab(n){n=Math.max(1,Math.min(3,+n||1));_setTab=n;const pages=[1,2,3]
   const saveBtn=$('#setSaveButton');if(saveBtn)saveBtn.style.display=n===3?'none':'block';const sc=$('#settingsscroll');if(sc)sc.scrollTop=0;}
 function jumpToSection(id){const el=document.getElementById(id);if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(e){el.scrollIntoView(true);}}
 function settingsJump(tab,id){setTab(tab);setTimeout(()=>jumpToSection(id),60);}
-function coupleJump(tab,id){if(+tab===3){companionEnter(id);return;}couTab(tab);setTimeout(()=>jumpToSection(id),60);}
+function coupleJump(tab,id){if(+tab===3){companionEnter(id);return;}if(COUPLE_ID_SUB[id]){coupleOpen(COUPLE_ID_SUB[id],id);return;}couTab(tab);setTimeout(()=>jumpToSection(id),60);}
 function quickJumpBar(items){items=(items||[]).filter(x=>companionFeatureAvailable()||!/coupleJump\(3,/.test(String(x&&x[1]||'')));return `<div class="section settings-quick-jump" style="margin:0 0 10px;border-radius:12px;overflow:hidden"><div style="padding:10px 12px"><div style="font-size:12px;color:#888;margin-bottom:7px">快捷入口</div><div style="display:flex;flex-wrap:wrap;gap:6px">${items.map(x=>`<button class="minibtn" style="background:#24242a;color:#ddd;border:1px solid rgba(255,255,255,.08)" onclick="${x[1]}">${x[0]}</button>`).join('')}</div></div></div>`;}
 function settingsDataToolsHTML(){return `${quickJumpBar([['手机号账号',"settingsJump(3,'set_private_account')"],['手机授权',"settingsJump(3,'set_license')"],['桌面布局',"settingsJump(3,'set_layout')"],['AI记忆搬家',"settingsJump(3,'set_ai_memory_move')"],['备份',"settingsJump(3,'set_backup')"],['存储',"settingsJump(3,'set_storage')"]])}
     ${privatePhoneAccountSection()}
@@ -13734,10 +13734,10 @@ companionAutomationCandidate=function(c,st,now){return companionAutomationCandid
 const COMPANION_ENTRY_GATE_KEY='north-companion-entry-unlocked-v1';
 function companionEntryUnlocked(){try{return localStorage.getItem(COMPANION_ENTRY_GATE_KEY)==='1';}catch(_){return false;}}
 function companionEntryPasswordOK(value){return String(value||'').trim()==='206414';}
-function companionEnter(targetId){const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(companionEntryUnlocked()){couTab(3);if(target)setTimeout(()=>jumpToSection(target),60);return;}openModal(`<h3>伴生设备暂未公开</h3><div class="hint" style="line-height:1.7;margin-bottom:12px">功能仍在完善中，首次进入需要验证。验证成功后，这个浏览器以后不再询问。</div><div class="field"><label>进入密码</label><input id="companion_entry_password" type="password" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="请输入 6 位密码" onkeydown="if(event.key==='Enter')companionSubmitEntry('${target}')"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="companionSubmitEntry('${target}')">进入伴生设备</button></div>`);setTimeout(()=>{const el=$('#companion_entry_password');if(el)el.focus();},60);}
-function companionSubmitEntry(targetId){const el=$('#companion_entry_password'),value=el&&el.value;if(!companionEntryPasswordOK(value)){toast('密码不正确');if(el){el.value='';el.focus();}return;}try{localStorage.setItem(COMPANION_ENTRY_GATE_KEY,'1');}catch(_){}closeModal();couTab(3);const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(target)setTimeout(()=>jumpToSection(target),60);}
+function companionEnter(targetId){const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(companionEntryUnlocked()){if(target){coupleOpen('device',target);return;}couTab(3);return;}openModal(`<h3>伴生设备暂未公开</h3><div class="hint" style="line-height:1.7;margin-bottom:12px">功能仍在完善中，首次进入需要验证。验证成功后，这个浏览器以后不再询问。</div><div class="field"><label>进入密码</label><input id="companion_entry_password" type="password" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="请输入 6 位密码" onkeydown="if(event.key==='Enter')companionSubmitEntry('${target}')"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="companionSubmitEntry('${target}')">进入伴生设备</button></div>`);setTimeout(()=>{const el=$('#companion_entry_password');if(el)el.focus();},60);}
+function companionSubmitEntry(targetId){const el=$('#companion_entry_password'),value=el&&el.value;if(!companionEntryPasswordOK(value)){toast('密码不正确');if(el){el.value='';el.focus();}return;}try{localStorage.setItem(COMPANION_ENTRY_GATE_KEY,'1');}catch(_){}closeModal();const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(target){coupleOpen('device',target);return;}couTab(3);}
 let _couTab=1;
-function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t){t.style.background=on?'#ff6fa5':'#2c2c2e';t.style.color=on?'#fff':'#ccc';}});if(n===3)companionPollSnapshot(true);}
+function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t)t.setAttribute('data-on',on?'1':'0');});if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}if(n===3)companionPollSnapshot(true);}
 function coupleAlbumStore(){if(!S.couple)return[];if(!Array.isArray(S.couple.album))S.couple.album=[];return S.couple.album;}
 function coupleAlbumHidden(){if(!S.couple)return[];if(!Array.isArray(S.couple.albumHidden))S.couple.albumHidden=[];return S.couple.albumHidden;}
 async function coupleAlbumSaveRecent(c,text,category){if(typeof photoAlbumCoupleAllowed!=='function'||!photoAlbumCoupleAllowed(c))return false;const image=[...(msgsForAccount(c.id,'main')||[])].reverse().find(m=>m&&m.type==='image'&&m.src&&!m.pending&&!m._deleted);if(!image)return false;if(!image.id)image.id=uid();return photoAlbumRoleSave(c,image,text,category);}
@@ -13753,8 +13753,142 @@ function coupleAlbumUpload(){if(appLocked('album'))return;go('album');photoAlbum
 async function coupleAlbumRetry(id){const c=S.couple&&getC(S.couple.cid),item=coupleAlbumStore().find(x=>String(x.id)===String(id));if(!c||!item||!item.src||item.visionState==='pending')return;closeModal();toast('正在重新理解这张照片');const ok=await coupleAlbumDescribe(c,item,()=>visionDataURLSource(item.src,1200,.74));toast(ok?'角色已经能看到这张共同相册照片':'识图仍失败：'+String(item.visionError||'请检查图片理解线路').slice(0,90));coupleAlbumOpen();}
 async function coupleAlbumDelete(source,id){if(id==null){id=source;source='album';}source=String(source||'album');id=String(id||'');const item=(S.couple&&getC(S.couple.cid))&&coupleAlbumItems(getC(S.couple.cid)).find(x=>String(x.source)===source&&String(x.id)===id);if(!item||!await uiConfirm('从共同相册删除这一张照片？\n\n只会从共同相册隐藏这一张，不会删除微信聊天里的原图或其他照片。',{danger:true,yes:'删除这一张'}))return;if(source==='album'){const arr=coupleAlbumStore(),i=arr.findIndex(x=>String(x.id)===id);if(i>=0)arr.splice(i,1);}else{const key=source+':'+id,hidden=coupleAlbumHidden();if(!hidden.includes(key))hidden.push(key);if(hidden.length>500)hidden.splice(0,hidden.length-500);}await saveNowAsync();if($('#modal')&&$('#modal').classList.contains('show'))coupleAlbumOpen();else render();toast('已从共同相册删除这一张');}
 function coupleAlbumOpen(){openApp('album');}
+/* COUPLE_REDESIGN_V1（2026-10-21 她画的设计图）：情侣空间三页改成卡片首页——甜蜜日常 / 管控授权 / 伴生设备。
+   原来的每个区块（共同目标、纪念日、睡眠、报备、小账本、授权、禁言、钱包、限时、盯防、小黑屋、出门审批、登录微信、远程操控、伴生设备整页）
+   原样保留，点卡片进二级页 go('couple',{list:1,sub}) 显示，返回键回到卡片首页；coupleJump 和伴生入口按区块 id 找到对应二级页。
+   照片在 assets/couple-space/（Codex 生成），没有图片时用深色渐变，不影响功能。 */
+const COUPLE_SUBS={
+  goals:{t:'共同目标',tab:1,ids:['cou_goals']},anniv:{t:'纪念日',tab:1,ids:['cou_anniv','cou_startdate']},wedding:{t:'婚书收藏夹',tab:1,ids:['cou_wedding']},
+  sleep:{t:'睡眠',tab:1,ids:['cou_sleep']},report:{t:'报备',tab:1,ids:['cou_report']},behavior:{t:'行为小账本',tab:1,ids:['cou_behavior']},
+  tasks:{t:'任务设置',tab:1,ids:['cou_tasks']},screen:{t:'屏幕时长导入',tab:1,ids:[]},
+  all1:{t:'一起过日子',tab:1,ids:['cou_sleep','cou_report','cou_goals','cou_anniv','cou_startdate','cou_behavior','cou_wedding','cou_tasks']},
+  apps:{t:'应用与聊天',tab:2,ids:['cou_grant','cou_album','cou_watch']},wallet:{t:'钱包与限额',tab:2,ids:['cou_wallet','cou_limit']},
+  remote:{t:'远程与登录',tab:2,ids:['cou_wxlogin','cou_remote']},star:{t:'重点关注',tab:2,ids:['cou_star']},jail:{t:'小黑屋',tab:2,ids:['cou_jail']},
+  outpass:{t:'出门审批',tab:2,ids:['cou_outpass']},device:{t:'伴生设备',tab:3,ids:[]}};
+const COUPLE_ID_SUB={cou_goals:'goals',cou_anniv:'anniv',cou_wedding_collection:'wedding',cou_sleep:'sleep',cou_report:'report',cou_behavior:'behavior',cou_tasks:'tasks',
+  cou_shortcut_screen_time:'screen',cou_screen_cloud:'screen',cou_album:'apps',cou_grant:'apps',cou_gag_auth:'apps',cou_locks:'apps',cou_wallet:'wallet',cou_limit:'wallet',cou_star:'star',
+  cou_jail:'jail',cou_outpass:'outpass',cou_wxlogin:'remote',cou_remote:'remote'};
+function coupleOpen(sub,id){const d=COUPLE_SUBS[sub];if(!d)return;_couTab=d.tab;if(d.tab===3&&typeof companionPollSnapshot==='function'){try{_companionPanelHealthPending=true;}catch(_){}companionPollSnapshot(true);}go('couple',{list:1,sub});if(id)setTimeout(()=>jumpToSection(id),80);}
+function coupleNextAnniv(cp){const list=(cp&&cp.anniversaries||[]).filter(a=>a&&/^\d{4}-\d{2}-\d{2}$/.test(a.date||'')),t=new Date();t.setHours(0,0,0,0);let best=null;
+  list.forEach(a=>{const p=a.date.split('-').map(Number);let d=new Date(t.getFullYear(),p[1]-1,p[2]);if(d<t)d=new Date(t.getFullYear()+1,p[1]-1,p[2]);const left=Math.round((d-t)/86400e3);if(!best||left<best.left)best={title:a.title||'纪念日',left};});return best;}
+function coupleIcon(name,size,color){const z=size||22,s='stroke="'+(color||'currentColor')+'" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"',P={
+  grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
+  door:'<path d="M5 21V4.5L14 3v18"/><path d="M14 4.5h4.5V21"/><path d="M3 21h18"/><path d="M11 12h.01"/>',
+  bars:'<path d="M5 20V10"/><path d="M12 20V5"/><path d="M19 20v-7"/><path d="M3 20.5h18"/>',
+  sliders:'<path d="M6 4v16"/><path d="M12 4v16"/><path d="M18 4v16"/><circle cx="6" cy="9" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="18" cy="8" r="2"/>',
+  list:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h4"/>'};
+  return P[name]?'<svg viewBox="0 0 24 24" width="'+z+'" height="'+z+'" '+s+' style="vertical-align:middle;flex:none">'+P[name]+'</svg>':svgIc(name,z,color);}
+const COUPLE_CSS=`<style>
+.cs{color:#eee;padding-bottom:10px}.cs .serif{font-family:"Songti SC","STSong","Noto Serif SC","Source Han Serif SC",serif}
+.cs-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 14px 0;gap:6px}
+.cs-p{width:34%;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}.cs-p b{font-weight:500;font-size:17px;color:#f2ece8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cs-av{width:min(100px,26vw);height:min(100px,26vw);border-radius:50%;overflow:hidden;border:1px solid rgba(255,255,255,.28);box-shadow:0 8px 24px rgba(0,0,0,.5);flex:none}
+.cs-av .avatar,.cs-av img{width:100%!important;height:100%!important;border-radius:50%!important;margin:0!important;object-fit:cover;font-size:34px!important}
+.cs-mid{flex:1;min-width:0;text-align:center;padding-top:14px}.cs-mid .ln{display:flex;align-items:center;gap:6px;color:#e89db5}.cs-mid .ln i{flex:1;border-top:1px dashed rgba(255,255,255,.3)}
+.cs-mid small{display:block;color:#c9c0c4;font-size:12px;margin-top:4px}.cs-mid .n{font-size:52px;line-height:1.05;color:#f0a9c1;margin-top:6px}.cs-mid .n span{font-size:17px;color:#f2ece8;margin-left:4px}
+.cs-mid .since{font-size:12.5px;color:#c9c0c4;letter-spacing:.5px}.cs-cats{display:block;width:62%;max-width:260px;margin:4px auto 0;height:auto}
+.cs-tabs{display:flex;justify-content:space-around;margin:14px 8px 4px}.cs-tabs .minibtn{background:none!important;border:0!important;box-shadow:none!important;color:#a9a1a6!important;font-size:16px!important;padding:8px 6px 10px!important;position:relative;flex:none!important}
+.cs-tabs .minibtn[data-on="1"]{color:#f0a9c1!important}.cs-tabs .minibtn[data-on="1"]:after{content:"";position:absolute;left:4px;right:4px;bottom:0;height:3px;border-radius:3px;background:#f0a9c1}
+.cs-card{margin:12px 14px;border-radius:18px;overflow:hidden;background:#141315;border:1px solid rgba(255,255,255,.07);position:relative}
+.cs-hero{position:relative;padding:22px 20px 20px;min-height:178px;background-size:cover;background-position:right center;background-repeat:no-repeat}
+.cs-hero h2{margin:0;font-size:31px;font-weight:600;color:#f6efe9;letter-spacing:1px}.cs-hero p{margin:8px 0 0;color:#cdc4c8;font-size:13.5px}
+.cs-big{display:flex;align-items:baseline;gap:8px;margin-top:10px;color:#f2ece8;font-size:17px}.cs-big b{font-size:54px;color:#f0a9c1;font-weight:500;line-height:1}
+.cs-link{display:inline-block;margin-top:12px;color:#f2ece8;font-size:14px;cursor:pointer}.cs-link.pink{color:#f0a9c1}
+.cs-strip{display:flex;align-items:center;gap:14px;padding:16px 18px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}.cs-strip .tx{flex:1;min-width:0}.cs-strip .tx b{display:block;font-size:17px;font-weight:500;color:#f2ece8}.cs-strip .tx small{color:#a39aa0;font-size:12.5px}
+.cs-split{display:flex;border-top:1px solid rgba(255,255,255,.07)}.cs-split>div{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 8px;cursor:pointer;font-size:14px;color:#e9e2e5;min-width:0}.cs-split>div+div{border-left:1px solid rgba(255,255,255,.1)}
+.cs-split b{font-size:28px;color:#f0a9c1;font-weight:500}.cs-h{display:flex;justify-content:space-between;align-items:baseline;margin:24px 16px 10px}.cs-h h3{margin:0;font-size:24px;font-weight:600;color:#f6efe9}.cs-h span{color:#cfc7cb;font-size:13px;cursor:pointer}
+.cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 14px}.cs-half{position:relative;border-radius:16px;min-height:142px;padding:16px;overflow:hidden;background-color:#17151a;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.06);cursor:pointer;display:flex;flex-direction:column}
+.cs-half .t{display:flex;align-items:center;gap:10px;font-size:18px;color:#f6efe9}.cs-half small{display:block;margin-top:10px;color:#cdc4c8;font-size:12.5px;line-height:1.5}
+.cs-pill{align-self:flex-start;margin-top:auto;border:1.5px solid #f0a9c1;color:#f0a9c1;background:rgba(0,0,0,.25);border-radius:999px;padding:7px 16px;font-size:14px;cursor:pointer}
+.cs-chips{display:flex;flex-wrap:nowrap;white-space:nowrap;gap:5px;margin-top:14px;color:#ece6e8;font-size:13px}.cs-chips span{cursor:pointer}.cs-chips i{font-style:normal;color:#8f878c}
+.cs-row{display:flex;align-items:center;gap:16px;padding:16px 4px;margin:0 14px;border-top:1px solid rgba(255,255,255,.08);cursor:pointer}.cs-row .ic{width:44px;display:flex;justify-content:center}.cs-row .tx{flex:1;min-width:0}
+.cs-row .tx b{display:block;font-size:18px;font-weight:500;color:#f2ece8}.cs-row .tx small{color:#a39aa0;font-size:12.5px}.cs-row .r{color:#f0a9c1;font-size:15px}.cs-row .ar{color:#cfc7cb;font-size:20px}
+.cs-foot{display:flex;margin:6px 14px 0;border-top:1px solid rgba(255,255,255,.08)}.cs-foot>div{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 4px;color:#cfc7cb;font-size:13.5px;cursor:pointer;min-width:0;white-space:nowrap}.cs-foot>div+div{border-left:1px solid rgba(255,255,255,.12)}
+.cs-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f0a9c1;margin-right:8px;vertical-align:middle}.cs-stats{display:flex;border-top:1px solid rgba(255,255,255,.07)}.cs-stats>div{flex:1;text-align:center;padding:14px 4px 12px}.cs-stats>div+div{border-left:1px solid rgba(255,255,255,.1)}
+.cs-stats b{font-size:36px;color:#f0a9c1;font-weight:500}.cs-stats em{font-style:normal;font-size:18px;color:#f0a9c1}.cs-stats small{display:block;color:#cdc4c8;font-size:12.5px;margin-top:2px}
+#couplescroll{background:#000!important}.page:has(#couplescroll) .nav{background:#000!important;border-bottom:1px solid rgba(255,255,255,.05)!important;box-shadow:none!important}
+.cs-card,.cs-half{background-color:#141315}
+.cs-sub{padding-top:4px;color:#ece6e8}.cs-sub .section{background:#141315!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:18px!important;margin:12px 14px!important;box-shadow:none!important;color:#ece6e8!important;overflow:hidden}
+.cs-sub .section>div:first-child[style*="border-bottom"]{color:#f2ece8!important;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:17px!important;font-weight:500!important;letter-spacing:.5px!important;padding:15px 16px!important;border-bottom-color:rgba(255,255,255,.07)!important}
+.cs-sub .section>div:first-child[style*="border-bottom"]>svg{stroke:#f0a9c1}
+.cs-sub .it{border-color:rgba(255,255,255,.07)!important;color:#ece6e8!important;background:transparent!important}.cs-sub .it .v{color:#a39aa0!important}.cs-sub small{color:#9b9297!important}
+.cs-sub .sw{background:#4a474d!important;border-color:transparent!important}.cs-sub .sw.on{background:#f0a9c1!important;border-color:#f0a9c1!important}
+.cs-sub .minibtn{background:transparent!important;border:1px solid rgba(240,169,193,.85)!important;color:#f0a9c1!important;border-radius:999px!important;box-shadow:none!important}
+.cs-sub .btn.p,.cs-sub .btn.g{background:transparent!important;border:1.5px solid #f0a9c1!important;color:#f0a9c1!important;border-radius:999px!important;box-shadow:none!important}.cs-sub .btn.p svg{stroke:#f0a9c1}
+.cs-sub .btn.d{background:transparent!important;border:1.5px solid #ff5a6e!important;color:#ff5a6e!important;border-radius:999px!important;box-shadow:none!important}
+.cs-sub .bill{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.05)!important;color:#ece6e8!important}.cs-sub .empty{color:#8f878c!important}
+.cs-sub input[type=number],.cs-sub input[type=text],.cs-sub input[type=date],.cs-sub select{background:#2c2a2e!important;border:1px solid #3d3a3f!important;color:#ece6e8!important}
+#couplescroll .cs #coupage3{background:none!important;margin:0!important;padding:0!important}
+#couplescroll #coupage3.cs-sub{background:none!important;margin:0!important;padding:4px 0 30px!important}
+#couplescroll #coupage3.cs-sub>.section{background:#141315!important;width:auto!important;margin:12px 14px!important;border-radius:18px!important;box-shadow:none!important;border:1px solid rgba(255,255,255,.07)!important}
+#couplescroll #coupage3.cs-sub>.section:before{display:none}
+#couplescroll #coupage3.cs-sub>.section>div:first-child>span{font-size:16px!important;font-weight:500!important;font-family:"Songti SC","STSong","Noto Serif SC",serif}
+#couplescroll #coupage3.cs-sub .minibtn{background:transparent!important;border:1px solid rgba(240,169,193,.85)!important;color:#f0a9c1!important;border-radius:999px!important}
+.cs-danger{display:block;text-align:center;color:#ff5a6e;font-size:15px;padding:18px 0 6px;cursor:pointer}.cs-sub-note{margin:14px 16px 0;color:#9b9297;font-size:12.5px;line-height:1.6}
+#coupage1:not(.cs-sub-screen)>#cou_shortcut_screen_time,#coupage1:not(.cs-sub-screen)>#cou_screen_cloud{display:none}
+</style>`;
+function coupleImg(name,dir){return `background-image:linear-gradient(${dir||'90deg'},#141315 32%,rgba(20,19,21,.6) 58%,rgba(20,19,21,.05) 85%),url('assets/couple-space/${name}')`;}
+function coupleHalfImg(name){return `background-image:linear-gradient(160deg,rgba(20,19,21,.92) 18%,rgba(20,19,21,.45) 55%,rgba(20,19,21,.12)),url('assets/couple-space/${name}')`;}
+function coupleDash1(cp,c,bs){const na=coupleNextAnniv(cp),sl=S.me.sleep||{},rp=S.me.report||{},goals=(cp.goals||[]).length;
+  return `<div class="cs-card"><div class="cs-hero" style="${coupleImg('sweet-anniversary.jpg')}" onclick="coupleOpen('anniv')">
+      <h2 class="serif">我们的纪念</h2>${na?`<p>下一次纪念日 · ${esc(na.title)}</p><div class="cs-big">${na.left?`还有 <b class="serif">${na.left}</b> 天`:'<b class="serif" style="font-size:34px">就是今天</b>'}</div>`:`<p>还没有纪念日</p><div class="cs-big"><b class="serif" style="font-size:30px">添加一个</b></div>`}
+      <span class="cs-link">查看纪念日 ›</span></div>
+    <div class="cs-strip" onclick="coupleOpen('wedding')">${svgIc('book',34,'#e9e2e5')}<div class="tx"><b class="serif">婚书收藏夹</b><small>现代婚书 · 中式婚书 · 婚礼影集</small></div><span class="ar" style="color:#cfc7cb;font-size:20px">›</span></div></div>
+    <div class="cs-h"><h3 class="serif">一起过日子</h3><span onclick="coupleOpen('all1')">全部 ›</span></div>
+    <div class="cs-grid">
+      <div class="cs-half" style="${coupleHalfImg('sweet-sleep.jpg')}" onclick="coupleOpen('sleep')"><div class="t">${svgIc('moon',26,'#f2ece8')}<span class="serif">睡眠</span></div>
+        <small>${sl.active?'正在睡眠中 · 已睡 '+sleepDurTxt(Date.now()-sl.active):'今晚也要好好休息'}</small>
+        <span class="cs-pill" style="margin-top:14px" onclick="event.stopPropagation();${sl.active?'sleepEnd()':'sleepStart()'}">${sl.active?'我醒啦':'开始计时'}</span></div>
+      <div class="cs-half" style="${coupleHalfImg('sweet-report.jpg')}" onclick="coupleOpen('report')"><div class="t">${svgIc('location',26,'#f2ece8')}<span class="serif">报备</span></div>
+        ${rp.active?`<small>正在「${esc(rp.active.type)}」· 已 ${sleepDurTxt(Date.now()-rp.active.start)}</small><span class="cs-pill" style="margin-top:14px" onclick="event.stopPropagation();reportEnd()">我回来了</span>`
+        :`<div class="cs-chips">${['吃饭','出门','健身'].map(p=>`<span onclick="event.stopPropagation();reportStart('${p}')">${p}</span>`).join('<i>/</i>')}<i>/</i><span>更多</span></div>`}</div>
+    </div>
+    <div style="margin-top:14px"></div>
+    <div class="cs-row" onclick="coupleOpen('goals')"><span class="ic">${svgIc('check',34,'#e9e2e5')}</span><div class="tx"><b class="serif">共同目标</b><small>${goals?'已经约好 '+goals+' 件':'一起完成的小约定'}</small></div><span class="r" style="font-size:30px;font-weight:200" onclick="event.stopPropagation();coupleGoalModal()">＋</span></div>
+    <div class="cs-row" onclick="coupleOpen('behavior')"><span class="ic">${coupleIcon('list',34,'#e9e2e5')}</span><div class="tx"><b class="serif">行为小账本</b><small>记着 ${bs.n} 件小事</small></div><span class="r"><b class="serif" style="font-size:22px;font-weight:500">${bs.v}</b> 条记录 ›</span></div>
+    <div class="cs-foot"><div onclick="coupleOpen('tasks')">${svgIc('gear',22,'#cfc7cb')}任务设置</div><div onclick="coupleOpen('screen')">${coupleIcon('bars',22,'#cfc7cb')}屏幕时长导入</div></div>
+    <div id="cou_extra_slot"></div>`;}
+function coupleDash2(cp,c,locksHTML){const locks=cp.locks||{},lk=Object.keys(locks).filter(k=>LOCKABLE[k]).length;let ext=0;try{const st=typeof companionState==='function'?companionState():null;ext=(st&&st.apps||[]).filter(a=>a&&a.locked).length;}catch(_){}
+  const card=!cp.walletAuth?'未交给ta管':cp.cardFrozen?'已冻结':'正常';
+  return `<div class="cs-card"><div class="cs-hero" style="${coupleImg('rules-hero.jpg')}" onclick="coupleOpen('apps','cou_grant')">
+      <h2 class="serif">我们的约定</h2><p>每一项权限，都由你决定</p><span class="cs-link pink">管理授权 ›</span></div>
+    <div class="cs-split"><div onclick="coupleOpen('apps','cou_locks')">${coupleIcon('grid',30,'#e9e2e5')}<span>已锁应用 <b class="serif">${lk+ext}</b> 项</span></div><div onclick="coupleOpen('wallet')">${svgIc('card',30,'#f0a9c1')}<span>亲属卡 · ${card}</span>${cp.cardFrozen?svgIc('snow',24,'#f0a9c1'):''}</div></div></div>
+    ${locksHTML}
+    <div class="cs-h"><h3 class="serif">权限与边界</h3></div>
+    <div class="cs-grid">
+      <div class="cs-half" style="${coupleHalfImg('perm-chat.jpg')}" onclick="coupleOpen('apps')"><div class="t" style="flex-direction:column;align-items:flex-start;gap:12px">${svgIc('chat',30,'#f2ece8')}<span class="serif" style="font-size:20px">应用与聊天</span></div><small style="display:flex;justify-content:space-between">查看权限 · 聊天禁言<span>›</span></small></div>
+      <div class="cs-half" style="${coupleHalfImg('perm-wallet.jpg')}" onclick="coupleOpen('wallet')"><div class="t" style="flex-direction:column;align-items:flex-start;gap:12px">${svgIc('wallet',30,'#f2ece8')}<span class="serif" style="font-size:20px">钱包与限额</span></div><small style="display:flex;justify-content:space-between">零钱 · 亲属卡 · 使用时长<span>›</span></small></div>
+    </div>
+    <div style="margin-top:14px"></div>
+    <div class="cs-row" onclick="coupleOpen('remote')"><span class="ic">${svgIc('shield',34,'#e9e2e5')}</span><div class="tx"><b class="serif">远程与登录</b><small>微信登录 · 远程操控</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('star')"><span class="ic">${svgIc('star',34,'#e9e2e5')}</span><div class="tx"><b class="serif">重点关注</b><small>查看重点盯防名单</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('jail')"><span class="ic">${coupleIcon('door',34,'#e9e2e5')}</span><div class="tx"><b class="serif">小黑屋</b><small>授权 · 模型设置 · 历史记录</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('outpass')"><span class="ic">${svgIc('location',34,'#e9e2e5')}</span><div class="tx"><b class="serif">出门审批</b><small>发起申请与查看记录</small></div><span class="ar">›</span></div>
+    <div style="border-top:1px solid rgba(255,255,255,.08);margin:0 14px"></div>
+    <span class="cs-danger" onclick="askConfirm('解除情侣绑定？',()=>{S.couple=null;save();render()},{danger:true})">解除绑定</span>`;}
+function coupleDash3(){const st=companionState(),local=typeof companionLocalNativeAvailable==='function'&&companionLocalNativeAvailable(),ready=companionReady(st),bat=st.battery,h=st.health,loc=st.location,fp=st.footprints||[],apps=st.apps||[];
+  const on=st.linked||local,today=new Date().toDateString(),fpToday=fp.filter(f=>f&&f.ts&&new Date(f.ts).toDateString()===today).length;
+  const scr=ready&&st.screenTimeAvailable?companionDuration(st.screenTimeSec).replace(/(\d+)/g,'<b class="serif">$1</b>'):'<b class="serif">--</b>';
+  return `<div class="cs-card"><div class="cs-hero" style="${coupleImg('device-hero.jpg')}">
+      <h2 class="serif">陪在你身边</h2><p>真实 iPhone · ${st.transport==='local-native'||local?'本机原生直连':st.linked?'远程安全同步':'还没连接'}</p>
+      <div style="margin-top:12px;color:#ece6e8;font-size:14px"><span class="cs-dot" style="${on?'':'background:#777'}"></span>${on?'已连接':st.demo?'测试数据':'未连接'}</div>
+      ${on?`<span class="cs-pill" style="display:inline-block;margin-top:16px;padding:9px 26px" onclick="companionRequestSync()">读取设备</span>`:`<span class="cs-pill" style="display:inline-block;margin-top:16px;padding:9px 26px" onclick="coupleOpen('device','cou_companion_device')">去连接</span>`}</div>
+    <div class="cs-stats"><div><b class="serif">${bat?Math.round(bat.level*100):'--'}</b><em>%</em><small>电量</small></div><div style="color:#f2ece8;font-size:15px">${scr.replace(/<b class="serif">/g,'<b class="serif" style="font-size:36px;color:#f0a9c1;font-weight:500">')}<small>屏幕使用</small></div></div></div>
+    <div class="cs-h"><h3 class="serif">今天的小日常</h3><span onclick="coupleOpen('device','cou_companion_device')">查看概览 ›</span></div>
+    <div class="cs-grid">
+      <div class="cs-half" style="${coupleHalfImg('device-health.jpg')}" onclick="coupleOpen('device','cou_companion_wellness')"><div class="t">${svgIc('heart',24,'#f2ece8')}<span class="serif" style="font-size:17px">健康摘要</span></div>
+        <div style="margin-top:10px;color:#f2ece8;font-size:15px"><b class="serif" style="font-size:44px;color:#f0a9c1;font-weight:500">${h&&h.steps!=null?Math.round(h.steps):'--'}</b> 步</div><small style="margin-top:2px">${h&&h.heartRateBpm!=null?'心率 '+Math.round(h.heartRateBpm)+' 次/分':'等待健康摘要'}</small></div>
+      <div class="cs-half" style="${coupleHalfImg('device-map.jpg')}" onclick="coupleOpen('device','cou_companion_location')"><div class="t">${svgIc('location',24,'#f2ece8')}<span class="serif" style="font-size:17px">位置与足迹</span></div>
+        <div style="margin-top:14px;color:#f2ece8;font-size:15.5px" class="serif">${loc?esc(loc.place||'最近位置')+' · 误差约 '+Math.round(loc.accuracy||0)+' 米':'还没有位置'}</div><small>今日 ${fpToday} 个足迹点</small></div>
+    </div>
+    <div style="margin-top:14px"></div>
+    <div class="cs-row" onclick="coupleOpen('device','cou_companion_apps')"><span class="ic">${coupleIcon('grid',34,'#e9e2e5')}</span><div class="tx"><b class="serif">App 控制</b><small>${apps.length} 个应用 · 锁定与统一限额</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('device','cou_companion_automations')"><span class="ic">${svgIc('clock',34,'#e9e2e5')}</span><div class="tx"><b class="serif">主动查看规则</b><small>查看时段 · 低电量提醒 · 解锁通知</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('device','cou_companion_permissions')"><span class="ic">${svgIc('shield',34,'#e9e2e5')}</span><div class="tx"><b class="serif">角色访问权限</b><small>自主选择可访问的数据与操作</small></div><span class="ar">›</span></div>
+    <div class="cs-row" onclick="coupleOpen('device','cou_companion_audit')"><span class="ic">${coupleIcon('list',34,'#e9e2e5')}</span><div class="tx"><b class="serif">操作记录</b><small>命令回执 · 审计记录 · 后台通知</small></div><span class="ar">›</span></div>
+    <div class="cs-foot"><div onclick="companionHelp()">${coupleIcon('list',20,'#cfc7cb')}权限说明</div><div onclick="coupleOpen('device','cou_companion_scope')">${coupleIcon('sliders',20,'#cfc7cb')}统一管控方式</div><div style="cursor:default">最近读取 ${st.lastSync?hm(st.lastSync):'--'}</div></div>`;}
 function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.cid),privateCompanion=companionFeatureAvailable();if(!privateCompanion&&_couTab===3)_couTab=1;
-  const BG='background:linear-gradient(180deg,#181019 0%,#0c0a0e 45%,#000 100%)';
+  const BG='background:#000';
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r"></span></div>
     <div class="scroll" id="couplescroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
   const days=coupleDays(cp.startDate);
@@ -13765,53 +13899,38 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   const HD=(ic,t,col,right)=>`<div style="padding:13px 15px;display:flex;align-items:center;gap:9px;font-weight:600;color:${col};font-size:14px;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,.05)">${svgIc(ic,17,col)}<span style="flex:1">${t}</span>${right||''}</div>`;
   const SEC='class="section" style="margin:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#17151b"';
   const frame=a=>`<span style="display:inline-block;border-radius:18px;padding:2.5px;background:linear-gradient(135deg,${GOLD},${ROSE})">${av(a,'lg')}</span>`;
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
-    <div class="scroll" id="couplescroll" style="${BG}">
-      <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:${BANBG};box-shadow:0 16px 38px rgba(${PINKTH?'232,150,181,.4':WHITETH?'150,150,160,.25':'70,30,55,.45'}),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(${WHITETH?'0,0,0,.05':'255,255,255,'+(PINKTH?'.5':'.1')})">
-        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(${LIGHTTH?'255,255,255,.4':'232,176,120,.25'}),transparent 60%);pointer-events:none"></div>
-        <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:14px;position:relative">${frame(S.me.avatar)}<span style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">${svgIc('heart',26,PINKTH?'#ff7eb3':'#ffc1d4')}</span>${frame(c.avatar)}</div>
-        <div style="font-size:14.5px;letter-spacing:.5px;color:${BANTX};position:relative">${esc(S.me.name)} &amp; ${esc(c.remark||c.name)}</div>
-        <div style="font-size:46px;font-weight:800;margin:4px 0 2px;color:${BANBIG};letter-spacing:1px;position:relative;text-shadow:0 2px 12px rgba(${PINKTH?'232,150,181,.35':'0,0,0,.3'})">${days}<span style="font-size:15px;font-weight:400;opacity:.85"> 天</span></div>
-        <div style="font-size:11.5px;color:${BANSUB};opacity:.9;letter-spacing:1.5px;position:relative">${cp.married?'已结为夫妻 · ':''}相伴自 ${cp.startDate}</div>
-      </div>
-      <div style="display:flex;gap:6px;margin:0 12px 6px">
-        <button class="minibtn" id="coutab1" style="flex:1;min-width:0;padding:8px 4px;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:4px;${_couTab===1?'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff':'background:#2a2730;color:#bbb'}" onclick="couTab(1)">${svgIc('heart',13,_couTab===1?'#fff':'#bbb')}甜蜜日常</button>
-        <button class="minibtn" id="coutab2" style="flex:1;min-width:0;padding:8px 4px;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:4px;${_couTab===2?'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff':'background:#2a2730;color:#bbb'}" onclick="couTab(2)">${svgIc('shield',13,_couTab===2?'#fff':'#bbb')}管控授权</button>
-        ${privateCompanion?`<button class="minibtn" id="coutab3" style="flex:1;min-width:0;padding:8px 4px;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:4px;${_couTab===3?'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff':'background:#2a2730;color:#bbb'}" onclick="companionEnter()">${svgIc('phone',13,_couTab===3?'#fff':'#bbb')}伴生设备</button>`:''}</div>
-      <div style="margin:0 12px 8px">${quickJumpBar([['相册权限',"coupleJump(2,'cou_album')"],['共同目标',"coupleJump(1,'cou_goals')"],['纪念日',"coupleJump(1,'cou_anniv')"],['婚书收藏',"coupleJump(1,'cou_wedding_collection')"],['睡眠',"coupleJump(1,'cou_sleep')"],['报备',"coupleJump(1,'cou_report')"],['小账本',"coupleJump(1,'cou_behavior')"],['授权',"coupleJump(2,'cou_grant')"],['禁言',"coupleJump(2,'cou_gag_auth')"],['钱包',"coupleJump(2,'cou_wallet')"],['限时',"coupleJump(2,'cou_limit')"],['盯防',"coupleJump(2,'cou_star')"],['小黑屋',"coupleJump(2,'cou_jail')"],['出门审批',"coupleJump(2,'cou_outpass')"],['登录微信',"coupleJump(2,'cou_wxlogin')"],['远程操控',"coupleJump(2,'cou_remote')"],['伴生设备',"coupleJump(3,'cou_companion_device')"],['App控制',"coupleJump(3,'cou_companion_apps')"],['定位',"coupleJump(3,'cou_companion_location')"],['足迹',"coupleJump(3,'cou_companion_footprints')"],['操作记录',"coupleJump(3,'cou_companion_audit')"]])}</div>
-      <div id="coupage1" style="display:${_couTab===1?'block':'none'}">
-      <div id="cou_tasks" ${SEC}><div class="it"><span>布置任务<br><small>仅允许当前情侣布置任务，默认关闭</small></span><span class="sw ${coupleTasksEnabled(c)?'on':''}" onclick="coupleTasksToggle()"></span></div></div>
-      <div ${SEC}><div class="it" onclick="coupleSet()"><span style="display:flex;align-items:center;gap:9px">${svgIc('calendar',16,ROSE)}在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
-
-      <div id="cou_goals" ${SEC}>${HD('check','共同目标',ROSE,`<span class="minibtn" onclick="coupleGoalModal()">＋ 制定</span>`)}
-        <div style="padding:11px 13px 8px;color:#9b8f99;font-size:12px;line-height:1.65">可以自己设定，也可以在聊天或通话里请 ${esc(c.remark||c.name)} 每天监督。每项每天最多提醒一次，完成后当天不再重复。</div>${coupleGoalRows()}</div>
-      <div id="cou_anniv" ${SEC}>${HD('gift','纪念日',ROSE,`<span class="minibtn" onclick="addAnniv()">＋ 添加</span>`)}
-        ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
-      ${typeof window.weddingCoupleCollectionHTML==='function'?window.weddingCoupleCollectionHTML(cp,c,SEC,HD,ROSE,GOLD):''}
-      ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
+  /* COUPLE_REDESIGN_V1: card home pages; each old block below is unchanged and shows on its own page (cur().sub) */
+  const SUB0=(typeof cur==='function'&&cur()&&cur().sub)||'',SUB=COUPLE_SUBS[SUB0]&&(SUB0!=='device'||privateCompanion)?SUB0:'';if(SUB)_couTab=COUPLE_SUBS[SUB].tab;
+  const P={};
+  P.cou_tasks=`<div id="cou_tasks" ${SEC}><div class="it"><span>布置任务<br><small>仅允许当前情侣布置任务，默认关闭</small></span><span class="sw ${coupleTasksEnabled(c)?'on':''}" onclick="coupleTasksToggle()"></span></div></div>`;
+  P.cou_startdate=`<div id="cou_startdate" ${SEC}><div class="it" onclick="coupleSet()"><span style="display:flex;align-items:center;gap:9px">${svgIc('calendar',16,ROSE)}在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>`;
+  P.cou_goals=`<div id="cou_goals" ${SEC}>${HD('check','共同目标',ROSE,`<span class="minibtn" onclick="coupleGoalModal()">＋ 制定</span>`)}
+        <div style="padding:11px 13px 8px;color:#9b8f99;font-size:12px;line-height:1.65">可以自己设定，也可以在聊天或通话里请 ${esc(c.remark||c.name)} 每天监督。每项每天最多提醒一次，完成后当天不再重复。</div>${coupleGoalRows()}</div>`;
+  P.cou_anniv=`<div id="cou_anniv" ${SEC}>${HD('gift','纪念日',ROSE,`<span class="minibtn" onclick="addAnniv()">＋ 添加</span>`)}
+        ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>`;
+  P.cou_wedding=`${typeof window.weddingCoupleCollectionHTML==='function'?window.weddingCoupleCollectionHTML(cp,c,SEC,HD,ROSE,GOLD):''}`;
+  P.cou_sleep=`${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
         let h=`<div id="cou_sleep" ${SEC}>${HD('moon','睡眠计时',BLUE)}
         <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">${svgIc('sun',15,'#fff')} 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">${svgIc('moon',15,'#fff')} 我要睡了，开始计时</button>`}</div>`;
         if(recs.length){h+=recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
-        return h+`</div>`;})()}
-      ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
+        return h+`</div>`;})()}`;
+  P.cou_report=`${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
         let h=`<div id="cou_report" ${SEC}>${HD('location','报备 · 我去干嘛了',AMBER)}`;
         if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">结束 / 我回来了</button></div>`;}
         else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
         if(log.length){h+=log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
-        return h+`</div>`;})()}
-      ${(function(){const bs=behaviorStats(),lt=bs.latest;return `<div id="cou_behavior" ${SEC}>${HD('notebook','行为小账本',PUR,`<span class="minibtn" onclick="behaviorLedgerModal()">查看</span>`)}
+        return h+`</div>`;})()}`;
+  P.cou_behavior=`${(function(){const bs=behaviorStats(),lt=bs.latest;return `<div id="cou_behavior" ${SEC}>${HD('notebook','行为小账本',PUR,`<span class="minibtn" onclick="behaviorLedgerModal()">查看</span>`)}
         <div style="padding:10px 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
           <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ffd3e4;font-weight:800">${bs.n}</div><div style="font-size:12px;color:#999">记着的小事</div></div>
           <div style="border-radius:12px;background:rgba(255,255,255,.05);padding:10px;text-align:center"><div style="font-size:22px;color:#ff9fbd;font-weight:800">${bs.v}</div><div style="font-size:12px;color:#999">抓到的证据</div></div>
         </div>
         ${lt?`<div class="bill" style="border-radius:10px;margin:0 12px 12px"><div><b>${esc(lt.title)}</b><small>${esc((lt.promise||((lt.events&&lt.events[0]&&lt.events[0].text)||'')).slice(0,58))}</small></div><span class="v">›</span></div>`:`<div class="empty" style="padding:0 14px 12px">还没有记账</div>`}
-        <div class="it"><span>小账本启用</span><span class="sw ${bs.on?'on':''}" onclick="behaviorToggle()"></span></div></div>`;})()}
-      </div>
-      <div id="coupage2" style="display:${_couTab===2?'block':'none'}">
-<div id="cou_album" ${SEC}>${photoAlbumPermissionHTML()}</div>
-      ${typeof coupleWatchPermissionHTML==='function'?coupleWatchPermissionHTML():''}
-      ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks).filter(k=>LOCKABLE[k]),gk=Object.keys(gags);
+        <div class="it"><span>小账本启用</span><span class="sw ${bs.on?'on':''}" onclick="behaviorToggle()"></span></div></div>`;})()}`;
+  P.cou_album=`<div id="cou_album" ${SEC}>${photoAlbumPermissionHTML()}</div>`;
+  P.cou_watch=`${typeof coupleWatchPermissionHTML==='function'?coupleWatchPermissionHTML():''}`;
+  P.cou_grant=`${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks).filter(k=>LOCKABLE[k]),gk=Object.keys(gags);
         let h=`<div id="cou_grant" ${SEC}>${HD('lock','软件管控授权',ROSE)}
         ${Object.keys(LOCKABLE).map(k=>`<div class="it" data-couple-permission="grant:${k}"><span>${LOCKABLE[k]}</span><span class="sw ${g[k]?'on':''}" onclick="coupleGrant('${k}')"></span></div>`).join('')}</div>
         <div id="cou_gag_auth" ${SEC}>${HD('mute','允许ta禁言这些人的聊天',ROSE)}
@@ -13819,36 +13938,54 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
         if(lk.length||gk.length){h+=`<div id="cou_locks" ${SEC}>${HD('lock','ta锁住的（去微信里求ta解开）',RED)}
         ${lk.map(k=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('lock',15,'#fa5151')}${LOCKABLE[k]||k}</span><span class="v" style="color:#888">${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}</span></div>`).join('')}
         ${gk.map(cid=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('mute',15,'#fa5151')}和「${esc(gagKeyName(cid))}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`).join('')}</div>`;}
-        return h;})()}
-      ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wallet" ${SEC}>${HD('wallet','钱包 / 亲属卡 管控',GOLD)}
+        return h;})()}`;
+  P.cou_wallet=`${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wallet" ${SEC}>${HD('wallet','钱包 / 亲属卡 管控',GOLD)}
         <div class="it" data-couple-permission="walletAuth"><span>把钱包/亲属卡交给ta管</span><span class="sw ${cp.walletAuth?'on':''}" onclick="coupleWalletAuth()"></span></div>
-        ${cp.walletAuth?`<div class="it"><span style="color:#888">当前零钱</span><span class="v">¥${(+S.me.balance).toFixed(2)}（ta可扣）</span></div>${cp.cardFrozen?`<div class="it"><span style="color:#fa5151;display:flex;align-items:center;gap:8px">${svgIc('card',15,'#fa5151')}亲属卡已被ta冻结</span><span class="v" style="color:#888">求ta解冻</span></div>`:''}`:''}</div>`;})()}
-      ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
+        ${cp.walletAuth?`<div class="it"><span style="color:#888">当前零钱</span><span class="v">¥${(+S.me.balance).toFixed(2)}（ta可扣）</span></div>${cp.cardFrozen?`<div class="it"><span style="color:#fa5151;display:flex;align-items:center;gap:8px">${svgIc('card',15,'#fa5151')}亲属卡已被ta冻结</span><span class="v" style="color:#888">求ta解冻</span></div>`:''}`:''}</div>`;})()}`;
+  P.cou_limit=`${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
         let h=`<div id="cou_limit" ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}`;
         if(keys.length){h+=keys.map(k=>{const used=usedSecOf(k),lim=tl[k]?tl[k]*60+((S.me.appUsage&&S.me.appUsage.bonus&&S.me.appUsage.bonus[k])||0):0;const um=Math.floor(used/60),us=used%60;const usedTxt=um+'分'+String(us).padStart(2,'0')+'秒';
           return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
-        return h+`</div>`;})()}
-      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
-      ${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div id="cou_jail" ${SEC}>${HD('shield','终极惩罚 · 禁闭室（小黑屋）','#e0344a')}
+        return h+`</div>`;})()}`;
+  P.cou_star=`${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}`;
+  P.cou_jail=`${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div id="cou_jail" ${SEC}>${HD('shield','终极惩罚 · 禁闭室（小黑屋）','#e0344a')}
         <div class="it" data-couple-permission="jailAuth"><span>允许 ${nm} 关我小黑屋</span><span class="sw ${cp.jailAuth?'on':''}" onclick="coupleJailAuth()"></span></div>
         <div class="it"><span>禁闭室用辅助模型</span><span class="sw ${S.settings.jailAux?'on':''}" onclick="S.settings.jailAux=!S.settings.jailAux;save();render();toast(S.settings.jailAux?'禁闭室→辅助模型':'禁闭室→主模型')"></span></div>
         <div class="it"><span>小黑屋上下文条数</span><input type="number" min="20" max="200" value="${S.settings.jailHist||100}" onchange="S.settings.jailHist=Math.max(20,Math.min(200,+this.value||100));save();toast('小黑屋上下文：'+S.settings.jailHist+'条')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
         <div class="it"><span>小黑屋跳戏时重试次数</span><input type="number" min="0" max="3" value="${S.settings.jailRetry!=null?S.settings.jailRetry:1}" onchange="S.settings.jailRetry=Math.max(0,Math.min(3,+this.value||0));save();toast('小黑屋重试：'+S.settings.jailRetry+'次')" style="width:80px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
         <div class="it" onclick="go('jail')"><span style="display:flex;align-items:center;gap:8px">🕘 查看上一次小黑屋记录</span><span class="v">›</span></div>
         <div class="it" onclick="jailTest()"><span style="display:flex;align-items:center;gap:8px">${svgIc('flask',15,'#bbb')}测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
-        ${cl?`<div class="it"><span style="color:#9ec5fe;display:flex;align-items:center;gap:8px">${svgIc('snow',15,BLUE)}他还有情绪余温</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（哄他可提前）</span></div>`:''}</div>`;})()}
-      <div id="cou_outpass" ${SEC}>${HD('location','出门报备审批',BLUE)}
-        <div class="it" onclick="outpassRequest()"><span>发起出门申请</span><span class="v">›</span></div></div>
-      ${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wxlogin" ${SEC}>${HD('idcard','微信登录权限',PUR)}
-        <div class="it" data-couple-permission="wxLoginAuth"><span>允许 ${nm} 登录我的微信</span><span class="sw ${cp.wxLoginAuth?'on':''}" onclick="coupleWxLoginAuth()"></span></div></div>`;})()}
-      ${(function(){const nm=esc(c.remark||c.name),on=cp.remoteControlAuth!==false,auto=!!cp.remoteControlAutoApprove;return `<div id="cou_remote" ${SEC}>${HD('shield','远程操控小手机',RED)}
+        ${cl?`<div class="it"><span style="color:#9ec5fe;display:flex;align-items:center;gap:8px">${svgIc('snow',15,BLUE)}他还有情绪余温</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（哄他可提前）</span></div>`:''}</div>`;})()}`;
+  P.cou_outpass=`<div id="cou_outpass" ${SEC}>${HD('location','出门报备审批',BLUE)}
+        <div class="it" onclick="outpassRequest()"><span>发起出门申请</span><span class="v">›</span></div></div>`;
+  P.cou_wxlogin=`${(function(){const nm=esc(c.remark||c.name);return `<div id="cou_wxlogin" ${SEC}>${HD('idcard','微信登录权限',PUR)}
+        <div class="it" data-couple-permission="wxLoginAuth"><span>允许 ${nm} 登录我的微信</span><span class="sw ${cp.wxLoginAuth?'on':''}" onclick="coupleWxLoginAuth()"></span></div></div>`;})()}`;
+  P.cou_remote=`${(function(){const nm=esc(c.remark||c.name),on=cp.remoteControlAuth!==false,auto=!!cp.remoteControlAutoApprove;return `<div id="cou_remote" ${SEC}>${HD('shield','远程操控小手机',RED)}
         <div class="it" data-couple-permission="remoteControlAuth"><span>允许 ${nm} 发起远程操控申请</span><span class="sw ${on?'on':''}" onclick="coupleRemoteControlAuth()"></span></div>
-        <div class="it" data-couple-permission="remoteControlAutoApprove"><span>无需每次同意，允许 ${nm} 直接接管</span><span class="sw ${auto?'on':''}" onclick="coupleRemoteControlAutoApprove()"></span></div></div>`;})()}
-      <div style="padding:0 12px"><button class="btn d" style="display:flex;align-items:center;justify-content:center;gap:7px" onclick="askConfirm('解除情侣绑定？',()=>{S.couple=null;save();render()},{danger:true})">${svgIc('heartoff',16,'#fff')}解除绑定</button></div>
-      </div>
-      ${privateCompanion?`<div id="coupage3" style="display:${_couTab===3?'block':'none'}">${renderCompanionPage(c,SEC,HD)}</div>`:''}
-      <div style="height:20px"></div></div>`;}
+        <div class="it" data-couple-permission="remoteControlAutoApprove"><span>无需每次同意，允许 ${nm} 直接接管</span><span class="sw ${auto?'on':''}" onclick="coupleRemoteControlAutoApprove()"></span></div></div>`;})()}`;
+  const locksHTML=(function(){const locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks).filter(k=>LOCKABLE[k]),gk=Object.keys(gags);let h='';
+        if(lk.length||gk.length){h+=`<div id="cou_locks" ${SEC}>${HD('lock','ta锁住的（去微信里求ta解开）',RED)}
+        ${lk.map(k=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('lock',15,'#fa5151')}${LOCKABLE[k]||k}</span><span class="v" style="color:#888">${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}</span></div>`).join('')}
+        ${gk.map(cid=>`<div class="it"><span style="color:#eee;display:flex;align-items:center;gap:8px">${svgIc('mute',15,'#fa5151')}和「${esc(gagKeyName(cid))}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`).join('')}</div>`;}
+        return h;})();
+  if(SUB){const d=COUPLE_SUBS[SUB];return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${d.t}</span><span class="r"></span></div>
+    <div class="scroll" id="couplescroll" style="${BG}">${COUPLE_CSS}<div id="coupage${d.tab}" class="cs-sub cs-sub-${SUB}" style="display:block">${SUB==='device'?renderCompanionPage(c,SEC,HD):d.ids.map(id=>P[id]||'').join('')}${SUB==='screen'?'<div class="cs-sub-note">把 iPhone 快捷指令复制的屏幕使用记录粘贴到这里。如果上面是空的，说明这台设备还没有接好快捷指令。</div>':''}</div><div style="height:20px"></div></div>`;}
+  const fmtStart=String(cp.startDate||'').replace(/-/g,'.');
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
+    <div class="scroll" id="couplescroll" style="${BG}">${COUPLE_CSS}<div class="cs">
+      <div class="cs-head"><div class="cs-p"><span class="cs-av">${av(S.me.avatar,'lg')}</span><b class="serif">${esc(S.me.name)}</b></div>
+        <div class="cs-mid"><div class="ln"><i></i>${svgIc('heart',18,'#f0a9c1')}<i></i></div><small>${cp.married?'已结为夫妻':'在一起'}</small><div class="n serif">${days}<span>天</span></div><div class="since serif">相伴自 ${esc(fmtStart)}</div></div>
+        <div class="cs-p"><span class="cs-av">${av(c.avatar,'lg')}</span><b class="serif">${esc(c.remark||c.name)}</b></div></div>
+      <img class="cs-cats" src="assets/couple-space/header-cats.png" alt="" onerror="this.remove()">
+      <div class="cs-tabs">
+        <button class="minibtn" id="coutab1" data-on="${_couTab===1?1:0}" onclick="couTab(1)">甜蜜日常</button>
+        <button class="minibtn" id="coutab2" data-on="${_couTab===2?1:0}" onclick="couTab(2)">管控授权</button>
+        ${privateCompanion?`<button class="minibtn" id="coutab3" data-on="${_couTab===3?1:0}" onclick="companionEnter()">伴生设备</button>`:''}</div>
+      <div id="coupage1" style="display:${_couTab===1?'block':'none'}">${coupleDash1(cp,c,behaviorStats())}</div>
+      <div id="coupage2" style="display:${_couTab===2?'block':'none'}">${coupleDash2(cp,c,locksHTML)}</div>
+      ${privateCompanion?`<div id="coupage3" style="display:${_couTab===3?'block':'none'}">${_couTab===3?coupleDash3():''}</div>`:''}
+      <div style="height:20px"></div></div></div>`;}
 function coupleWalletAuth(){if(!S.couple)return;S.couple.walletAuth=!S.couple.walletAuth;if(!S.couple.walletAuth)S.couple.cardFrozen=false;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleFeatureReply(cid,featureEventNote('情侣权限变化',S.me.name+(S.couple.walletAuth?'刚把钱包/亲属卡的管控权交给你了。':'刚悄悄收回了钱包管控权。你立刻知道了；如果按你的性格不接受，可以申请远程操控，但仍要等ta本次同意。')+'按你人设自然反应。'),120);}
 function coupleRemoteControlAutoApprove(){if(!S.couple)return;S.couple.remoteControlAutoApprove=!S.couple.remoteControlAutoApprove;if(S.couple.remoteControlAutoApprove)S.couple.remoteControlAuth=true;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleFeatureReply(cid,featureEventNote('情侣权限变化',S.me.name+(S.couple.remoteControlAutoApprove?'刚在情侣空间打开了【无需每次同意，允许你直接远程接管】。这代表ta提前把这项权限交给你了。':'刚悄悄关闭了【无需每次同意】。以后你仍可申请远程操控，但开始前又要等ta当场点同意。你立刻知道了。')+'按你人设自然反应。'),120);}
 function coupleGrant(k){if(!S.couple)return;S.couple.grant=S.couple.grant||{};const was=!!S.couple.grant[k];S.couple.grant[k]=!was;
