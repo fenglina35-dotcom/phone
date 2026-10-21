@@ -534,7 +534,7 @@ v1844（她在 iPhone 15 上试 v1843：画质和电脑上不一样、动起来�
 停放（WINDOWSILL_KEEP_V1）：离开窗台 = park()（holder 隐藏、发 windowsill:pause，shell 的限速 rAF 把回调攒着不画），回来 unpark() 立即继续；离开满 10 分钟或 WebGL 被收回才真正 unmount。render() 只换 #app，窗台挂在 .screen 下不会被冲掉。
 网页版（v1848，COUPLE_WINDOWSILL_WEB_V1，2026-10-20 她说明作者同意）：网页入口 小手机.html 加载根目录 couple-windowsill.js（私人版外层的复制，改了称呼、健康提示、加开关 S.settings.windowsillOff），iframe 用根目录 couple-windowsill/（打包脚本和私人版同时输出、内容一样，测试会比对）。改外层时两份都要改（私人版 private-couple-windowsill.js 有她的名字 North，网页版不能有）。
 v1852 / 网页 v1849：凑近任何东西都切到 2.6（打包脚本 crisp 条件改为 !!focusKey，手机仍要翻过来），全景 1.6；相册照片 emissive 0.55；季节由她调、记在 S.settings.windowsillSeason（打包时在 setSeason 开口 __WS_SEASON_CHANGED 通知外层），不再跟月份。
-窗台画面页（v1853 / 网页 v1850，WINDOWSILL_GFX_PAGE_V1）：情侣空间「设置与授权」最上面「窗台画面」，go('couple',{list:1,gfx:1})，外层 gfxPage() 画，CoupleWindowsill.set / bright 改值；画面开关存 S.settings.windowsillGfx，经 iframe 地址 ?g=JSON 交给 shell.js（默认值仍是她选的 1.6、稳定30、省的影子和灯），holder 的 data-gfx 和当前设置不同就拆掉重摆；挂板亮度两条（照片 phBright 管 __WS_WALLPH 三块，其他 miscBright 管打包时收集的 __WS_BOARD_MISC：挂历、碎碎念、纸胶带、车票、花瓣），值随 windowsill:photos 发进去，用 emissiveMap=map 加自发光，0 = 作者原样。凑近清晰度走 window.__WS_ZOOM_PR。
+窗台画面页（v1856 / 网页 v1851，WINDOWSILL_GFX_PAGE_V1）：情侣空间「设置与授权」最上面「窗台画面」，go('couple',{list:1,gfx:1})，外层 gfxPage() 画，CoupleWindowsill.set / bright 改值；画面开关存 S.settings.windowsillGfx，经 iframe 地址 ?g=JSON 交给 shell.js（默认值仍是她选的 1.6、稳定30、省的影子和灯），holder 的 data-gfx 和当前设置不同就拆掉重摆；挂板亮度两条（照片 phBright 管 __WS_WALLPH 三块，其他 miscBright 管打包时收集的 __WS_BOARD_MISC：挂历、碎碎念、纸胶带、车票、花瓣），值随 windowsill:photos 发进去，用 emissiveMap=map 加自发光，0 = 作者原样。凑近清晰度走 window.__WS_ZOOM_PR。
 - 注意：shell.js 比 pet.js 先加载，帧图要等 DOMContentLoaded 再读。
 
 后续步骤（v1851 已做，见上面「桌面功能」）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。
@@ -546,3 +546,33 @@ v1852 / 网页 v1849：凑近任何东西都切到 2.6（打包脚本 crisp 条�
 2026-10-20：个人资料入口在空白账号正常；已保存的身份/衣物参考为idb引用且图片读不到时，roleImageStudioWarm每次读取结束都render，重新安排Warm而无限循环。网页版改为仅确实回填了至少一张图片缓存且仍是原账号本人/角色工作室时重画；读不到时保留引用及页面，不删除记录。私人包不改。
 
 回归在tests/role-image-studio.test.mjs：真实个人资料按钮、已有缺失身份参考，输入草稿后等待检查DOM和草稿保留；旧实现失败。另验正常读图仍刷新、账号切换后不刷新旧界面。仅修复已复现缺陷，不能断言已核实用户实际网页就是此原因。
+
+
+## 私人小手机与光遇的同一角色接入（SKY_ROLE_SYNC_V1，2026-10-20）
+
+- 只在 PhoneWeb.bundle 加载 private-sky-sync.js。精确匹配「虚空间」账号与「先生」角色，必须唯一；绑定持久化账号 ID、角色 ID，不靠名称持续路由。人设、关系、记忆、总结和聊天均按同一账号隔离，其他角色不读不写。
+- 云端只使用独立私人项目 qvuahlqimcfgeoetosnl（small-phone-companion-cloud，新加坡）。新增 phone_sky_roles / phone_sky_events 与 phone_sky_owner / phone_sky_device；沿用已有 owner 认证，电脑仅持有此角色的窄设备连接码。RLS 开启、匿名禁读表；不复用旧全量备份导入，不改推送、备份、机器人、原生控制接口。
+- 人设和现有记忆以手机为准。电脑旧角色数据在原 memory.json 的 previous_role_data 中保留但不进入新角色上下文；不产生额外源码/备份目录。电脑聊天列表只显示本地光遇对话，微信近期上下文存在独立 phone_role 中，只给模型读取。
+- 手机使用 lastRounds(msgs, S.settings.hist) 截取上下文，记忆检索遵守 onlineMemoryRecallLimits，0 必须保留；电脑不请求全备份、不每轮粘全部记忆。游戏、微信来源只作内部元数据；正常气泡不显示标签，自动/手动总结也知道游戏来源。游戏消息导入不执行 applyControlTags、不补发回复、不回放付款/动作。
+- 新的游戏消息通过过滤和去重后，才检查场景/版本。首次会话或手机资料变化才拉资料库；后续只做小响应状态检查和新记录上传。空闲、没有新游戏消息时不轮询云端；本地队列为空也不发请求。云端无此功能的定时调度、模型调用或常驻循环。
+- 私人 App 每次回前台检查一次，不结束游戏场景；实际回复微信时才切到 phone。游戏再有新消息才切到 sky。手机实际相关内容变化按 SHA256 比对后合并上传；普通保存、相同快照不反复上传。没有 setInterval 云端轮询。
+- 游戏事件有稳定 ID、原时间、会话 ID、本机持久 outbox、云端唯一约束与序号 ACK。手机先保存再发布 phoneCursor；电脑新学记忆在手机确认接收前不得被旧快照冲掉，确认后以手机完整记忆库为准，防止旧记忆复活。失败配对不改变电脑配置、记忆、人设或状态。
+- 回归：tests/private-sky-role-sync.test.mjs 实际运行组件与 PGlite SQL，覆盖唯一绑定、去重、后台来源不可见、账号切换、场景、空闲零请求、相同快照零写入、凭证与 RLS；tests/permanent-fix-guard.test.mjs 加私人接入继承项。游戏端 training_tools/test_phone_role_sync.py 验证实际模型构造、人设覆盖、回合/召回上限、0、旧历史隔离、离线队列与记忆确认。
+- 当前是私人 App 本地候选。云端已部署并在线事务验收/ROLLBACK，源码函数体哈希与部署一致（浏览器编辑器将 LF 变为 CRLF，按相同换行编码比较）。电脑后台 v41 已按管理员权限加载；手机组件尚未安装/配对，不能称真实先生已经接通。未提交、推送、升私人包版本或打包。
+
+2026-10-20 基线更正：用户确认当前私人版本1852；实核远程5ee8e315为网页1849/私人1852/iOS501。光遇候选合入该完整基线，版本1853，原生501/桥42与签名逐字保持。入口保留private-couple-windowsill并新增private-sky-sync，未覆盖新版通话标签、心率保留、聊天库防清空及素材。电脑最终源码121项回归通过；管理员最终重启被自动审批拒绝，运行进程尚未加载最后改动。打包与最终检查结果见维护记录。
+
+2026-10-20 SKY_ROLE_SYNC_V1 绑定规则更正（1854）：此前把用户说的“虚空间”直接推断成微信账号名，缺乏事实依据；1853 resolveBinding硬编码账号名称导致普通主微信不能配对，甚至可能偏向别的账号。已改读取当前S.me.active（默认main），仅在当前微信作用域唯一确认名称或备注为先生的角色，不查找/切换/新建账号，不跨账号回退；同名歧义仍拒绝。同步仍用绑定的accountId/roleId及原凭证，历史消息/记忆不迁移合并。新回归在旧实现两个场景失败，修正后通过。
+
+
+## 2026-10-20 共同生活语音触摸/查手机、私人真实时长与自主表情修复
+当前基线本地56b55b16含私人v1854/Sky当前微信配对，远端5ee8e315网页1849/私人1852/iOS501。用户明确要求修好检查最新后打包推送，明确Sky仅私人。候选网页1850/私人1855，原生501/桥42/签名保持。不得倒退用旧1830包或只取远端1852覆盖本地Sky；不修改Sky、原生采集或后台函数。
+COHAB_VOICE_TOUCH_ROUTE_V1：document捕获的touchstart/pointerdown统一匹配.off-narrate，把语音页触摸拦给了offNarrate，旧门禁直接CohabVoice.narr绕过触摸所以漏测。真实PointerEvent触摸路径旧实现cvNarr断言失败；修正按.cvr-dock路由到语音自身切换并防touch/pointer双触发，不动文字页原行为/玻璃材质。
+COHAB_VOICE_PHONE_ACTIONS_V1：callAI在当前共同生活语音中消费原cohabApplyPhoneTags协议，含原已授权微信登录（不挂语音）；普通通话路径保持。语音阅读页新增沿用cohabPhoneProgressHTML的实时状态容器，不重画正文。活跃共同生活语音的查看完成强制留当前共同生活渠道，经CohabVoice.inspection复用原callAI inspected通道、原TTS与消息存档，绑定账号/角色/session，当前句忙时等待，换号结束即取消。标签已排队时跳过普通意图再次排队，避免双查。初次完整门禁发现latest-channel可能路由到普通通话查看，结果继续生成原标签；补当前活跃语音优先与显式动作去重后，双端cvInspection验证动作消费/可见进度/真实结果进当前语音记录通过。真实屏幕查看写“全部逐App”不会扩大成全部手机数据/健康/定位。
+PRIVATE_MONITOR_REAL_USAGE_V1：仅私人原生环境的监控App时长展示用当前绑定角色已获准screenTime的真实companion快照，linked/非demo/当天/20分钟有效期/报告可用必须满足；0秒保留，不用内部S.me.appUsage补数；采集时间、系统总时长及明细暂不可用原因明确展示。手动刷新只请求device.snapshot的iPhone屏幕使用时间，返回复查S/账号/角色/原st/授权/解锁后才应用；不调用模型、不推进已读/每日完成标记。不移除私人时长管控或共享屏幕。网页保持内部已授权时长。双端旧监控行为/私人真实明细、0、过期/撤权、不替换内计时、窄屏、原生刷新通过，原生返回为受控边界，非iPhone实测。
+STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分为表情动作；普通回复默认原样输出又绕过splitChatBubbles，第一版只补归一仍在实际aiReply raw=true失败，因此在角色回复功能动作入口对明确有闭合边界的表情/表情包/发送表情标签统一归一并独立分行，两输出模式复用原aiPickSticker、文件夹与禁发表情授权。后台收件同样只把明确表情动作从本地已授权表情库转图片，不放开其他后台动作；残缺标签不递归。普通提到“表情包”的话不猜测转图，不编造新表情。用户未提供原始错误文字，以上是已复现格式，不能断言覆盖所有未知输出。两端实际未要求发表情的普通聊天、原样/整理输出、背景收件成图均通过。
+首轮全量4491项中3失败：2个隔离normTag夹具未加载新归一helper，1个旧源断言要求原deliveryActionSource入口形式。保留原外卖入口与嵌套标题解析，把归一放到原处理之后；夹具加载真实新增helper，无删断言，58项外卖回归通过。最终全量/核心/发布与包核验后补。未用buildSystem/myActivity mock，模型/原生/云边界受控；没有真实收费模型或真机TTS/屏幕采集验收。复用原树/脚本/证据目录，不新建源码副本或工作树，保留未归属mute-audio行，发布时排除。
+
+最终全量4499/4499、失败0/取消0通过；次轮两项仅是新增去重条件改变旧源查找串、诊断隔离夹具未载normalizeStickerTags，已在保持原门禁语义和全部断言下修正，55项定向通过。默认模式也是原样输出，真实aiReply和后台收件两模式表情图/禁用/残缺标签定向已补。语音完成仍保留原整理模式事实校验，本地事实对象不进入模型供应商参数。45份纯版本测试前向变换与原提交逐字相等，未放宽功能断言。最终独立核心第一次遇到已记载的globeQA调用次数偶发差异（卡片/信/内容均有），失败诊断原样保留；全量结束后独立重跑，未改水晶球生产代码或断言，结果后补。
+
+发布前最终验收：全量4499/4499，失败0/取消0；全量结束后独立重跑核心两端完整通过（cvNarr实际触摸、cvInspection动作消费/可见进度/真结果留语音、普通电话、授权撤权/已有记录/两模式/忙状态/持久化均通过）。NORTH_OWNER_TODO、NORTH_STICKER_FORMAT（未主动要求表情、两输出模式、后台收件、禁用和残缺标签）、NORTH_PHONE_MONITOR（网页内部源保持、私人原生源/采集时间/0/过期撤权不回退/刷新）两端全部通过，pageErrors=0；globeQA偶发失败诊断保留，独立重跑成功，生产代码和原断言不改，根因未确认。45份纯版本测试严格前向变换相等。原生501/桥42/签名和private-sky-sync.js逐字保持；公开HTML/app无Sky接入。当前候选网页1850/私人1855，用户本轮已授权打包推送，最终提交/线上/ZIP结果后补。

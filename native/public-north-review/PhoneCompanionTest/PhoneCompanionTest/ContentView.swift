@@ -15,6 +15,9 @@ extension ManagedSettingsStore.Name {
 }
 
 extension Notification.Name {
+    static let companionManualLocksDidChange = Notification.Name(
+        "companion.manual-locks-did-change"
+    )
     static let companionDailyLimitSettingsDidChange = Notification.Name(
         "companion.daily-limit-settings-did-change"
     )
@@ -215,7 +218,14 @@ struct ContentView: View {
             reloadDailyLimitSettingsFromSharedDefaults()
             refreshAuthorizationStatus()
             _ = sanitizeSelectionToIndividualApps()
-            applyManualLocks()
+            reloadManualLocksFromStore()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .companionManualLocksDidChange
+            )
+        ) { _ in
+            reloadManualLocksFromStore()
         }
         .onReceive(
             NotificationCenter.default.publisher(
@@ -226,6 +236,7 @@ struct ContentView: View {
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
+                reloadManualLocksFromStore()
                 reloadDailyLimitSettingsFromSharedDefaults()
                 refreshAuthorizationStatus()
             }
@@ -482,7 +493,11 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
 
             if locationManager.authorizationStatus == .notDetermined {
-                Button("允许定位") {
+                Text("位置信息用于显示当前位置和记录每日足迹。点击继续后，系统会询问是否允许访问位置。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button("继续") {
                     locationManager.requestWhenInUseAuthorization()
                 }
                 .buttonStyle(.borderedProminent)
@@ -490,7 +505,11 @@ struct ContentView: View {
             }
 
             if locationManager.authorizationStatus == .authorizedWhenInUse {
-                Button("允许后台持续定位") {
+                Text("后台定位用于在离开 App 后继续更新位置记录，并同步到你主动配对的角色控制端。点击继续后，你可以在系统提示中选择是否授权。")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Button("继续") {
                     locationManager.requestAlwaysAuthorization()
                 }
                 .buttonStyle(.borderedProminent)
@@ -682,6 +701,7 @@ struct ContentView: View {
     }
 
     private func reconcileSavedDataWithSelection() {
+        reloadManualLocksFromStore()
         lockedAppTokens.formIntersection(selection.applicationTokens)
         enabledDailyLimitTokens.formIntersection(
             selection.applicationTokens
@@ -697,6 +717,7 @@ struct ContentView: View {
     }
 
     private func toggleManualLock(for token: ApplicationToken) {
+        reloadManualLocksFromStore()
         if lockedAppTokens.contains(token) {
             lockedAppTokens.remove(token)
             lockStatusText = "已单独解除 1 个 App 的锁定"
@@ -714,16 +735,23 @@ struct ContentView: View {
             return
         }
 
-        lockedAppTokens = selection.applicationTokens
+        reloadManualLocksFromStore()
+        lockedAppTokens.formUnion(selection.applicationTokens)
         lockStatusText =
             "已锁定全部所选的 \(lockedAppTokens.count) 个 App"
         applyManualLocks()
     }
 
     private func unlockAllManuallyLockedApps() {
+        reloadManualLocksFromStore()
         lockedAppTokens.removeAll()
         lockStatusText = "已经解除全部手动锁定"
         applyManualLocks()
+    }
+
+    // PUBLIC_MANUAL_LOCK_STATE_V1: lifecycle refreshes never write cached UI state.
+    private func reloadManualLocksFromStore() {
+        lockedAppTokens = manualLockStore.shield.applications ?? []
     }
 
     private func applyManualLocks() {

@@ -2420,7 +2420,21 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 私人版心率：后台有之前的心率，App 里没有（HEALTH_KEEP_LAST_V1）。原生取「最新一条」不限时间，但手机锁着时 HealthKit 读不到，新的一份健康数据心率为空，App 整份替换就丢了。现在新一份里没有的心率、HRV、心电保留上一份及其记录时间。tests/companion-health-keep-last.test.mjs。真机待她看。
 - 窗台：凑近任何东西都切到清晰度 2.6（她在测速网页试过选的），全景 1.6；相册照片自带一点亮（emissive 0.55），不被屋里暗光压暗；季节不再跟月份，她在窗台上调的季节记在 S.settings.windowsillSeason，下次打开照用。
 
-2026-10-21 网页v1850 / 私人v1853 / iOS502：
+2026-10-19 公开North锁定数秒后自动解锁（PUBLIC_MANUAL_LOCK_STATE_V1，本地候选）：用户真机反馈先锁住又恢复可用；截图显示新快照由含锁变为未含锁，并另有后台同步等待超时。不能将超时直接认定为解锁根因。只读对照发现公开ContentView缓存lockedAppTokens，task加载时applyManualLocks把旧缓存写入与远程命令共用的默认ManagedSettingsStore；空缓存可清除新远程锁，旧有锁缓存也可复活远程已解锁状态。私人有相似结构，但此次仅获准参考，私人所有代码/后台/包保持不动。
+修复：公开页面task、回前台、远程变更通知只从store读锁态；单项、批量及显式选择变更先读取当前配置再修改。批量锁定合并当前集合，防止漏掉远程已有锁。远程120ms等待读回后保存当前store而非等待前集合，读回失败不回滚覆盖期间本机新操作；通知仅刷新页面。保持dailyLimit独立store、签名/版本/账号/数据与后台接口。未处理独立的同步超时或此前记录显示完成/详情失败问题，不宣称一并修复。
+旧HEAD通过现有测试内存读取，不还原文件；新增4项回归在旧ContentView失败，新实现通过。集合状态重放使用实际Swift helper中的集合赋值路径，证明旧缓存覆盖风险，不是Swift编译、Apple框架运行或本次设备根因的最终证明。Mac/Xcode编译及覆盖安装真机复测尚未完成。未提交、推送、部署、打包、升版；保留原未归属mute-audio行。
+2026-10-19 上述公开North候选最终本地验证：完整tests/*.test.mjs为4399/4399、0失败；公开管控/权限隔离/命令与永久守卫专项923/923；独立check_chat_authorized_phone两端真实HTML、原有权限和记录、两输出模式、可见送达、自动查看、忙状态释放和保存恢复通过，pageErrors=0。模型响应受控，不是收费服务或iPhone验收。首轮全量因当前进程未配置现有Playwright依赖路径而失败；设置现有运行时NODE_PATH后完整通过，未安装依赖或改生产代码凑绿。固定证据复用.codex_tmp/eight-chat/full-tests.log与eight-browser.log。git diff --check通过；仅公开两份Swift、公开README、两份既有测试及三份维护TXT为本轮改动，原有mute-audio行原样保护。无新增工作树/源码副本/临时文件或交付包，无可删除的本轮无用产物；未清理其他现场。未提交、推送、升版、部署或打包，Mac编译和真实手机持续锁定/解锁回归待做。
+
+2026-10-19 用户要求安装包并提交审核：本地继续准备公开North交付，未将源码测试通过当作可送审。核对已有North_公开版_1.0.1_Build13_定位授权文案修复_Mac源码包_2026-10-03.zip，SOURCE_STATE指向e4b33a530908fa3ae40465d2544f2b7b93c6eba4；当前树公开项目仍Build11且丢失Build13的两处中性定位说明/继续按钮及两份NSHealthUpdateUsageDescription。按旧包和准确提交恢复这些既有修复，保留主线已经授权的公开屏幕时长撤除；没有整份覆盖旧工程。公开五target十配置设本地候选Build14，marketing仍1.0.1，上传前必须核对ASC当前版本/最大build并按实际调整，不称14为线上最新。增加旧修复继承回归并更新原有版本/HealthKit断言；旧工程在这些继承检查失败，新候选定向20/20。保留Team/BundleID/AppGroup和私人全部文件。
+当前Windows没有Xcode，未发现已配置Mac SSH通道，已询问用户Mac接入方式。签名IPA、TestFlight上传与App Store审核尚未执行，不得用源码ZIP或旧包冒充新安装包。用户已授权打包/审核，但Mac/真机通道仍是缺失条件。
+
+2026-10-19 Build14交付准备最终检查：完整回归4400/4400、0失败；Build13继承专项及公开锁态20/20；此前独立双端核心门禁通过且共享聊天代码未变。Build13工程27项中24项内容归一后完全一致，只允许ContentView/CompanionSyncView/project.pbxproj三项差异，Team/BundleID/entitlements路径/marketing版本全部与旧包一致。将本轮11个明确路径单独做本地提交以生成准确提交树源码交接ZIP，不推送；受保护mute-audio行及私人目录不入提交。源码交接ZIP不是签名IPA；Mac编译、手机版本、持续拦截、ASC构建号和提交审核仍待接入核验。
+
+2026-10-20 基线偏旧：接入初用本地1830准备1831，用户确认当前1852，实核远程5ee8e315对应1852/iOS501。停止旧包，保存窄接入改动后合并最新版；完整资源/原生签名与新版修复继承验证，不用旧app.js整份覆盖。旧候选未生成ZIP、未推送。最终管理员重启被自动审批拒绝，运行进程加载状态如实保留待办。
+
+2026-10-20 光遇连接错误账号前提：用户质疑小手机微信为何还要切换虚空间，查明1853绑定函数把未经核实的名称当账号筛选条件。新增普通主微信和其他账号名称不能影响当前微信两项回归，旧代码失败；改为active/main加当前作用域唯一先生，944项定向通过。未更改云表/电脑凭证/后台，不额外调用模型；完整检查与交付结果后补。
+
+2026-10-21 网页v1851 / 私人v1856 / iOS502（合并另一台电脑的 v1853～v1855 之后）：
 - 共同生活里角色锁的 App 锁屏上没有解锁时间、到点也不会自己开（COHAB_LOCK_UNTIL_V1）。她说 10-16 专门做过；查 Bug 记录：ROLE_LOCK_UNTIL_V1 只接在 applyControlTags（聊天等）上，共同生活 / 线下用的是 cohabApplyPhoneTags 的 [共同生活锁定|App]，直接 companionDispatchRoleByText，从来不取时间，教角色的说明也没写时间。手机存档证实：10-21 02:50 先生在共同生活语音里锁了抖音（仅外置），S.couple.lockUntil 为空。修复：锁定标签先过 lockUntilPrepare 取出时间段，锁完用同一个 lockUntilCommit 记录并发 device.autoUnlock；没写时间时同聊天一样（角色的话→后台问一句→下一个早上7点）；说明改成必须带时间。回归 tests/cohab-lock-until.test.mjs 真跑 cohabApplyPhoneTags，旧代码 6 项全失败。
 - 锁定回执「屏蔽配置已写入；最终是否生效请以…为准」她看不懂，改成「抖音已经锁定」（LOCK_DONE_TEXT_V1，CompanionSyncView.swift，名字取 appAliases，取不到写「应用已经锁定」）。经她同意改私人原生。注意 tests/companion-native-resilience.test.mjs 读的是 native/phone-companion-v857 旧副本，不是私人包。
 - 窗台：她要把测速时试过的做法做成开关自己选（WINDOWSILL_GFX_PAGE_V1）。情侣空间「设置与授权」最上面一行「窗台画面」进独立一页：清晰度 1.25/1.6/2、凑近时 不变/2.2/2.6、每秒 稳定30/不限、跑不动自动降档、六个效果开关（角落阴影细节、远处虚化、影子跟着动、柔和影子边、蜡烛投影子、作者原来的面光）、挂板亮度两条（照片 / 其他：挂历、碎碎念、车票、纸胶带、花瓣，WINDOWSILL_BOARD_BRIGHT_V1，默认作者原样）、恢复推荐。存 S.settings.windowsillGfx（亮度在 S.couple.wallBright / wallBrightMisc），iframe 地址 ?g=JSON，shell.js 读了再定开关；设置变了回窗台时重新加载。旧的「窗台省电模式」并进清晰度（旧开关打开的仍按 1.25）。相册卡片上的亮度滑条去掉。

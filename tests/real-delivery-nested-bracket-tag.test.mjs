@@ -22,7 +22,7 @@ function functionSource(source,name){
 
 function runtime(source){
   const context={TAGWORDS:'(?:记住|内心|行程|账单|转账|改头像|改名|通知|发语音|换发型|换衣服|点外卖|真实外卖|代付|改卡片|加餐|购物|买东西)'};vm.createContext(context);
-  for(const name of ['deliveryActionSource','deliveryStructuredActionTags','deliveryIsolateStructuredActions','deliveryReplaceStructuredActions','normTag'])vm.runInContext(functionSource(source,name),context);
+  for(const name of ['normalizeStickerTags','deliveryActionSource','deliveryStructuredActionTags','deliveryIsolateStructuredActions','deliveryReplaceStructuredActions','normTag'])vm.runInContext(functionSource(source,name),context);
   return context;
 }
 

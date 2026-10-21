@@ -12,18 +12,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1830_iOS480_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1830_iOS480.zip"
+PREFIX = "SmallPhone_v1856_iOS501_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1856_iOS501.zip"
 
-WEB_VERSION = "1830"
+WEB_VERSION = "1856"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "ae94dc528153a4a411f9a16d5c03ed58bd8ba13f"
-PUBLIC_VERSION = "1827"
+MAIN_BASE_COMMIT = "56b55b163fc39bbb2a8c88cb745ec96940e2d5f2"
+PUBLIC_VERSION = "1851"
 EVIDENCE_ROOT = ROOT / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "full-tests.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1821_iOS480.zip"
-PREVIOUS_ZIP_SHA256 = "dd15491a1672d74f3acc73e483fb0ffc81302197d6d7453302fa98559e53f801"
-PREVIOUS_SOURCE = "710ed6c805a06013db3f5a32b80ead942f717f7d"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1854_iOS501.zip"
+PREVIOUS_ZIP_SHA256 = "f4783c32ae0908b64093dfefc74b60b486f5ab9853dbda9ee81cc29156414e27"
+PREVIOUS_SOURCE = "35df3db1175e52d48ecaa0f7d3b5041b1b981b70"
 
 
 class FolderArchive:
@@ -46,8 +46,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.480"
-BUILD = "480"
+MARKETING = "1.0.501"
+BUILD = "501"
 BRIDGE = "42"
 
 
@@ -95,13 +95,16 @@ def validate(files):
     for name in ("PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/CheckInShortcuts.swift", "PhoneCompanionTest/PhoneCompanionTest.entitlements", "PhoneCompanionTest/LocalPhoneWebView.swift", "请在Mac编译前先读.md"):
         assert name in files, name
     app = text(files[BUNDLE + "app.js"])
-    assert f"APP_VER='v{WEB_VERSION} · 角色日程到点自然报备'" in app
+    assert f"APP_VER='v{WEB_VERSION} · 语音查看与表情修复'" in app
     runtime = app + text(files[BUNDLE + "cohab-theater.js"]) + text(files[BUNDLE + "glass-theme.css"])
     for marker in ("ROLE_OWNER_TODO_REPORT_V1", "GRUDGE_JAIL_ANNOUNCE_V1", "roleJailAnnounced(decisionText)", "data-settings-appearance", "OFF_LAST_SESSION_V1", "CONTACT_PHOTO_DEL_V1", "APP_SOLID_MODAL_V1", "COHAB_GLASS_NO_COLOR_V1", "VOICE_SEND_DIAG_V1", "ROLE_LOCK_UNTIL_V1"):
         assert marker in runtime, marker
     assert "SETTINGS_BLACK_BLUE_V1" in text(files[BUNDLE + "glass-theme.css"])
+    assert "SKY_ROLE_SYNC_V1" in text(files[BUNDLE + "private-sky-sync.js"])
+    assert "setInterval(" not in text(files[BUNDLE + "private-sky-sync.js"]), "no idle cloud polling"
+    assert "NorthSkyRoleSync.preparePhone(c)" in app
     assert "DAILY_CHECKIN_V1" in text(files[BUNDLE + "phone-shortcuts.js"])
-    for name in ("private-cloud-backup.js", "cohab-theater.js", "task-notes.js", "license-gate.js", "delivery.js", "private-runtime-diagnostics.js"):
+    for name in ("private-cloud-backup.js", "cohab-theater.js", "task-notes.js", "license-gate.js", "delivery.js", "private-runtime-diagnostics.js", "private-sky-sync.js"):
         assert BUNDLE + name in files, name
     bridge = text(files["PhoneCompanionTest/PhoneNativeBridge.swift"])
     assert f"static let contractVersion = {BRIDGE}" in bridge
@@ -130,19 +133,20 @@ def main():
     commit = text(git("rev-parse", "HEAD")).strip()
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
-    assert f"APP_VER='v{PUBLIC_VERSION} · 角色日程到点自然报备'" in text(git("show", "HEAD:app.js"))
+    assert f"APP_VER='v{PUBLIC_VERSION} · 语音查看与表情修复'" in text(git("show", "HEAD:app.js"))
     files = committed_private_files()
     validate(files)
     base = committed_private_files(MAIN_BASE_COMMIT)
-    assert set(base) == set(files), "unexpected runtime/native file additions or removals"
-    reviewed = {BUNDLE + n for n in ("app.js", "glass-theme.css", "index.html", "小手机.html", "repair.html", "web-hotfix.js", "public-north-runtime.js")} | {"PhoneCompanionTest.xcodeproj/project.pbxproj", "请在Mac编译前先读.md", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}
-    changed = {n for n in files if files[n] != base[n]}
+    assert set(base) | {BUNDLE + "private-sky-sync.js"} == set(files), "unexpected runtime/native file additions or removals"
+    reviewed = {BUNDLE + n for n in ("app.js", "glass-theme.css", "index.html", "小手机.html", "repair.html", "web-hotfix.js", "public-north-runtime.js", "private-sky-sync.js", "cohab-theater.js")} | {"PhoneCompanionTest.xcodeproj/project.pbxproj", "请在Mac编译前先读.md", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}
+    changed = {n for n in files if n not in base or files[n] != base[n]}
     assert changed <= reviewed, "unreviewed private changes: " + str(sorted(changed - reviewed))
     def normalized_versions(body):
         return re.sub(r"MARKETING_VERSION = 1\.0\.\d+;", "MARKETING_VERSION = <version>;", re.sub(r"CURRENT_PROJECT_VERSION = \d+;", "CURRENT_PROJECT_VERSION = <build>;", text(body)))
     assert normalized_versions(files["PhoneCompanionTest.xcodeproj/project.pbxproj"]) == normalized_versions(base["PhoneCompanionTest.xcodeproj/project.pbxproj"]), "signing/build configuration changed"
     for name in ("PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"):
         assert files[name] == base[name], "unexpected native change: " + name
+    assert files[BUNDLE + "private-sky-sync.js"] == base[BUNDLE + "private-sky-sync.js"], "Sky must stay private and unchanged"
     del base
     assert file_hash(PREVIOUS_ZIP) == PREVIOUS_ZIP_SHA256
     with ZipFile(PREVIOUS_ZIP) as prior:
@@ -157,20 +161,22 @@ def main():
         assert not (set(manifest) - {"SOURCE_STATE.json"} - set(files)), "previous package files missing"
     log = text(TEST_LOG.read_bytes())
     match = re.search(r"pass (\d+)", log)
-    assert match and int(match[1]) >= 4393 and re.search(r"fail 0\b", log) and "cancelled 0" in log
+    assert match and int(match[1]) >= 4491 and re.search(r"fail 0\b", log) and "cancelled 0" in log
     browser = text((EVIDENCE_ROOT / "eight-chat/eight-browser.log").read_bytes())
     assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') >= 2
-    assert browser.count('"ownerTodo":true,"realEditor":true') >= 2
+    owner_browser = text((EVIDENCE_ROOT / "eight-chat/eight-browser.log").read_bytes())
+    assert owner_browser.count('"ownerTodo":true,"realEditor":true') >= 2
     state = {
         "sourceCommit": commit, "webSourceCommit": commit, "privateWeb": "v"+WEB_VERSION, "publicWeb": "v"+PUBLIC_VERSION,
         "marketingVersion": MARKETING, "build": BUILD, "bridge": BRIDGE, "packageKind": "Mac/Xcode committed-source overlay, not IPA",
         "mainBaseCommit": MAIN_BASE_COMMIT,
         "lastDeliveredPackage": {"name": PREVIOUS_ZIP.name, "sha256": PREVIOUS_ZIP_SHA256, "manifestSha256": sha256(manifest_bytes).hexdigest(), "sourceCommit": PREVIOUS_SOURCE},
         "inheritedValidation": {"sourceCommit": PREVIOUS_SOURCE, "validation": previous_state.get("validation", {})},
-        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-published-main-ae94dc52-private-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1"}),
-        "knownUnresolved": ["iOS480-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending"],
+        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-private-v1852-ios501-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1", "SKY_ROLE_SYNC_V1", "complete-private-v1854-package-inherited", "COHAB_VOICE_TOUCH_ROUTE_V1", "COHAB_VOICE_PHONE_ACTIONS_V1", "PRIVATE_MONITOR_REAL_USAGE_V1", "STICKER_EXPLICIT_FORMAT_V1"}),
+        "knownUnresolved": ["this-overlay-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending", "sky-role-pairing-and-game-to-phone-device-verification-pending"],
         "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "ownerTodoBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
         "ownerTodoBackend": {"private":47,"public":43,"deployedSeparately":True,"realDeviceVerified":False},
+        "skyRoleBackend": {"project": "qvuahlqimcfgeoetosnl", "marker": "SKY_ROLE_SYNC_V1", "deployed": True, "transactionTestsRolledBack": True, "cloudModelCalls": 0, "periodicPolling": False, "realRolePaired": False},
         "externalBackend": {"APNS_ENV_FALLBACK_V1": "already deployed separately; one real test sent and client acknowledged; not redeployed by this ZIP"},
         "intentionalExclusions": "historical native install docs; all runtime resources and notices included",
         "reviewedPrivateChanges": sorted(changed),

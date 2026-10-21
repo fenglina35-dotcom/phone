@@ -204,3 +204,20 @@ test('real companion sleep, steps, battery and screen-time facts are available t
   assert.match(functionSource('cohabPhoneTargets'),/iPhone全部数据/);
   assert.match(functionSource('cohabRunPhoneInspection'),/companionRoleAllFocus/);
 });
+
+test('screen-time request mentioning every App stays limited to screen-time scope',()=>{
+ const context=vm.createContext({String});vm.runInContext(functionSource('cohabPhoneTarget'),context);
+ assert.equal(context.cohabPhoneTarget('iPhone屏幕使用时间（总时长及全部逐 App 时长）',{}),'iPhone屏幕使用时间（总时长及全部逐App时长）');
+ assert.equal(context.cohabPhoneTarget('iPhone全部数据',{}),'iPhone全部数据');
+});
+test('private monitor consumes real iPhone rows, retains zero and refuses stale/internal substitution',()=>{
+ const st={linked:true,roleAccess:true,permissions:{screenTime:true},screenTimeAvailable:true,screenTimeMode:'per_app',usageDay:'today',usageGeneratedAt:Date.now(),screenTimeSec:91,apps:[{id:'a',name:'真实微信',usedSec:91},{id:'b',name:'真实抖音',usedSec:0}]};
+ const context=vm.createContext({S:{couple:{cid:'c'},me:{appUsage:{used:{browser:999}}}},privateNativeAppOn:()=>true,companionState:()=>st,companionUsageSnapshotFresh:x=>x.usageGeneratedAt>0,hm:()=> '12:01',spyMonitorDuration:n=>n+'秒'});vm.runInContext(functionSource('spyMonitorNativeUsage'),context);
+ assert.deepEqual(Array.from(context.spyMonitorNativeUsage({id:'c'}).usage,x=>[x.name,x.seconds]),[['真实微信',91],['真实抖音',0]]);
+ st.usageGeneratedAt=0;assert.equal(context.spyMonitorNativeUsage({id:'c'}).usage.length,0);st.usageGeneratedAt=Date.now();st.permissions.screenTime=false;assert.equal(context.spyMonitorNativeUsage({id:'c'}).usage.length,0);st.permissions.screenTime=true;assert.equal(context.spyMonitorNativeUsage({id:'other'}).usage.length,0);context.privateNativeAppOn=()=>false;assert.equal(context.spyMonitorNativeUsage({id:'c'}),null);
+});
+test('voice inspection completion uses the existing call engine once and cancels on account/session changes',async()=>{
+ const cv=readFileSync(new URL('../cohab-theater.js',import.meta.url),'utf8'),a=cv.indexOf('async function inspection('),b=cv.indexOf('\nwindow.CohabVoice=',a);assert(a>=0&&b>a);
+ const rows=[],state={},context=vm.createContext({S:state,actId:()=> 'main',_call:{id:'c',session:'s'},_callBusy:false,isActive:()=>true,msgs:()=>rows,sleep:async()=>{},callAI:async(note,opt)=>{assert.equal(note,'真实事实');assert.equal(opt.inspectionCompletion,true);rows.push({id:'new',_cs:'s',role:'assistant',content:'角色自然回应'});}});vm.runInContext(cv.slice(a,b),context);assert.equal(await context.inspection('真实事实'),true);assert.equal(rows.length,1);
+ context._callBusy=true;context.sleep=async()=>{context.S={};context._callBusy=false;};assert.equal(await context.inspection('真实事实'),false);assert.equal(rows.length,1);
+});

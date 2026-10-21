@@ -51,3 +51,9 @@ assert.match(source,/_memLimits=onlineMemoryRecallLimits\(\)/);
 assert.match(source,/selectRelevantMemory\(c,_memQuery,_memLimits\.total,_memLimits\)/);
 
 console.log('voice, imported memory, and sticker folder tests passed');
+
+// Actual text splitting must route explicit spontaneous sticker commands to the image consumer.
+for(const name of ['normalizeStickerTags','splitBubbles','chatLineChunks','splitChatBubbles'])if(source.includes('function '+name+'('))vm.runInContext(functionSource(name),sandbox);
+assert.deepEqual(Array.from(sandbox.splitChatBubbles('好呀。[表情包：偷笑]')),['好呀。','[表情|偷笑]']);
+assert.deepEqual(Array.from(sandbox.splitChatBubbles('【表情｜抱抱】')),['[表情|抱抱]']);
+assert.deepEqual(Array.from(sandbox.splitChatBubbles('我喜欢这个表情包。')),['我喜欢这个表情包。']);

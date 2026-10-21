@@ -18,9 +18,30 @@ import vm from 'node:vm';
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const WEB = 'app.js';
 
+test('public North local view cannot overwrite a remote lock with cached UI state', () => {
+  const publicDir = 'native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/';
+  const content = read(publicDir + 'ContentView.swift');
+  assert.match(content, /PUBLIC_MANUAL_LOCK_STATE_V1/);
+  assert.match(content, /private func reloadManualLocksFromStore\(\)\s*\{\s*lockedAppTokens = manualLockStore\.shield\.applications \?\? \[\]/);
+  const task = content.slice(content.indexOf('.task {'), content.indexOf('.onReceive(', content.indexOf('.task {')));
+  assert.match(task, /reloadManualLocksFromStore\(\)/);
+  assert.doesNotMatch(task, /applyManualLocks\(\)/);
+  assert.match(read(publicDir + 'CompanionSyncView.swift'), /name: \.companionManualLocksDidChange/);
+});
+
 test('private owner-pasted Screen Time records remain separate from native telemetry',()=>{for(const prefix of ['native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=read(prefix+'phone-shortcuts.js');for(const marker of ['window.PhoneScreenTimeImport','cou_shortcut_screen_time','roleAccess:p.consent',"source:'ios-shortcut'",'r.date!==day()','id.account===p.account'])assert(js.includes(marker));assert(!js.includes('st.screenTimeSec=value'));}});
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const PRIVATE = PRIVATE_DIR + 'app.js';
+test('private Sky role channel retains scoped pairing, hidden metadata and both entry points',()=>{
+ const source=read(PRIVATE_DIR+'private-sky-sync.js');
+ for(const marker of ['SKY_ROLE_SYNC_V1','resolveBinding','preparePhone','historyContent','sceneVersion','sentSignature'])assert(source.includes(marker));
+ for(const entry of ['index.html','小手机.html'])assert(read(PRIVATE_DIR+entry).includes('private-sky-sync.js?v=1'));
+ assert(source.includes("state.me&&state.me.active||'main'"));
+ assert(!source.includes("includes('虚空间')"));
+ assert(read(PRIVATE).includes('NorthSkyRoleSync.preparePhone(c)'));
+ assert(read(PRIVATE).includes("_ms[i]._skySource!=='sky'"));
+ assert(!read(WEB).includes('NorthSkyRoleSync.preparePhone(c)'));
+});
 const DELIVERY = 'delivery.js';
 const PRIVATE_DELIVERY = PRIVATE_DIR + 'delivery.js';
 
@@ -34,19 +55,19 @@ const count = (source, marker) => source.split(marker).length - 1;
 const PERMANENT_FIXES = [
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
-  {release:"web v1846 / private v1849",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
+  {release:"web v1846 / private v1851",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
   {release:"private v1850 / iOS499",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/shell.js",name:"窗台稳定每秒 30 张：影子只画一次、去阴影细节和景深、面光换便宜的光、玻璃保留（她在手机测速网页上选定）",marker:"WINDOWSILL_STEADY30_V1"},
   {release:"private v1851 / iOS500",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"窗台桌上的东西接小手机：碎碎念每天一次限字数、蜡烛先问再说晚安、真实天气、星星罐、他在哪、相册五张",marker:"WINDOWSILL_DESK_V1"},
   {release:"web v1848",scope:"web",least:1,file:"couple-windowsill.js",name:"网页版情侣空间首页也是 3D 赴约窗台（作者同意；称呼用户、可关掉）",marker:"COUPLE_WINDOWSILL_WEB_V1"},
-  {release:"web v1849 / private v1852",scope:"both",least:1,file:"app.js",name:"通话里也处理桌宠指令，不再把 [桌宠|开心] 当台词",marker:"CALL_DESKPET_TAG_V1"},
-  {release:"web v1849 / private v1852",scope:"both",least:1,file:"voice-expressive.js",name:"列表外的语气提示（如 [语气变低]）换成最近的已知提示，不露在台词里",marker:"VOICE_TONE_GUESS_V1"},
-  {release:"private v1853 / iOS502",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift",name:"锁定回执说「XX已经锁定」",marker:"LOCK_DONE_TEXT_V1"},
-  {release:"web v1850 / private v1853",scope:"both",least:1,file:"app.js",name:"共同生活 / 线下里角色锁 App 也带解锁时间，锁屏显示、到点自动解开",marker:"COHAB_LOCK_UNTIL_V1"},
-  {release:"web v1850 / private v1853",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/shell.js",name:"窗台左边挂板贴图亮度她自己用滑条调，默认作者原样",marker:"WINDOWSILL_BOARD_BRIGHT_V1"},
-  {release:"web v1850",scope:"web",least:1,file:"couple-windowsill/shell.js",name:"网页窗台左边挂板贴图亮度她自己调，默认作者原样",marker:"WINDOWSILL_BOARD_BRIGHT_V1"},
-  {release:"web v1850 / private v1853",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"情侣空间「窗台画面」单独一页：画面开关和挂板亮度",marker:"WINDOWSILL_GFX_PAGE_V1"},
-  {release:"web v1850",scope:"web",least:1,file:"couple-windowsill.js",name:"网页情侣空间「窗台画面」单独一页：画面开关和挂板亮度",marker:"WINDOWSILL_GFX_PAGE_V1"},
-  {release:"web v1849 / private v1852",scope:"both",least:1,file:"app.js",name:"新一份健康数据没有心率时保留上一份心率和记录时间",marker:"HEALTH_KEEP_LAST_V1"},
+  {release:"web v1851 / private v1852",scope:"both",least:1,file:"app.js",name:"通话里也处理桌宠指令，不再把 [桌宠|开心] 当台词",marker:"CALL_DESKPET_TAG_V1"},
+  {release:"web v1851 / private v1852",scope:"both",least:1,file:"voice-expressive.js",name:"列表外的语气提示（如 [语气变低]）换成最近的已知提示，不露在台词里",marker:"VOICE_TONE_GUESS_V1"},
+  {release:"private v1856 / iOS502",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift",name:"锁定回执说「XX已经锁定」",marker:"LOCK_DONE_TEXT_V1"},
+  {release:"web v1851 / private v1856",scope:"both",least:1,file:"app.js",name:"共同生活 / 线下里角色锁 App 也带解锁时间，锁屏显示、到点自动解开",marker:"COHAB_LOCK_UNTIL_V1"},
+  {release:"web v1851 / private v1856",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/shell.js",name:"窗台左边挂板贴图亮度她自己用滑条调，默认作者原样",marker:"WINDOWSILL_BOARD_BRIGHT_V1"},
+  {release:"web v1851",scope:"web",least:1,file:"couple-windowsill/shell.js",name:"网页窗台左边挂板贴图亮度她自己调，默认作者原样",marker:"WINDOWSILL_BOARD_BRIGHT_V1"},
+  {release:"web v1851 / private v1856",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"情侣空间「窗台画面」单独一页：画面开关和挂板亮度",marker:"WINDOWSILL_GFX_PAGE_V1"},
+  {release:"web v1851",scope:"web",least:1,file:"couple-windowsill.js",name:"网页情侣空间「窗台画面」单独一页：画面开关和挂板亮度",marker:"WINDOWSILL_GFX_PAGE_V1"},
+  {release:"web v1851 / private v1852",scope:"both",least:1,file:"app.js",name:"新一份健康数据没有心率时保留上一份心率和记录时间",marker:"HEALTH_KEEP_LAST_V1"},
   {release:"private v1841 / iOS490",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"私人版情侣空间首页是 3D 赴约窗台（不联网、可返回、设置与授权保留原内容、省电模式）",marker:"COUPLE_WINDOWSILL_V1"},
   {release:"web v1837 / private v1840",scope:"both",least:1,file:"wechat-me.js",name:"自己导入的表情包可设封面，名字自己写（导入不再用识图）",marker:"cover:ssImportCoverImg(st),items:"},
   {release:"private v1839 / iOS488",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift",name:"表情仓库从相册选图走原生选图器，动图保持会动",marker:"NATIVE_IMAGE_PICKER_V1"},
@@ -62,6 +83,10 @@ const PERMANENT_FIXES = [
   {release:"web v1832 / private v1835",scope:"both",least:1,file:"task-notes.js",name:"交作业/真心话发成小猫卡片，长内容折叠、点开卡片风格全文",marker:"TASK_DONE_CARD_V1"},
   {release:"web v1832 / private v1835",scope:"both",least:2,file:"app.js",name:"任务没做完第二天必受角色自己想的小惩罚，连续三天先通知再关小黑屋",marker:"TASK_PUNISH_V1"},
   {release:"web v1832 / private v1835",scope:"both",least:1,file:"app.js",name:"罚的任务有截止时间，过点没做完先通知再关小黑屋（没授权就再罚一次）",marker:"function taskPunishDeadline(c)"},
+  {release:"本轮修复",scope:"both",least:1,file:"app.js",name:"语音页触摸旁白不再切到文字页",marker:"COHAB_VOICE_TOUCH_ROUTE_V1"},
+  {release:"本轮修复",scope:"both",least:1,file:"app.js",name:"共同生活语音执行真实查看并原场景回应",marker:"COHAB_VOICE_PHONE_ACTIONS_V1"},
+  {release:"本轮修复",scope:"both",least:1,file:"app.js",name:"明确表情标签归一并独立为图片动作",marker:"STICKER_EXPLICIT_FORMAT_V1"},
+  {release:"本轮修复",scope:"both",least:1,file:"app.js",name:"私人监控沿用真实iPhone快照且不回退内部计时",marker:"PRIVATE_MONITOR_REAL_USAGE_V1"},
   {release:"本地候选",scope:"both",least:1,file:"app.js",name:"手动角色日程同步后台并自然报备，改删与账号隔离",marker:"ROLE_OWNER_TODO_REPORT_V1"},
   {release:"本地候选",scope:"both",least:1,file:"task-notes.js",name:"任务照片选择器挂载页面，异步选图绑定原任务与账号",marker:"PHOTO_TASK_PICKER_V2"},
   {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},

@@ -1486,12 +1486,10 @@ final class CompanionSyncService: ObservableObject {
             manualLockStore.shield.applications = tokens
             try await Task.sleep(nanoseconds: 120_000_000)
             guard (manualLockStore.shield.applications ?? []).contains(token) else {
-                manualLockStore.shield.applications = previousTokens.isEmpty
-                    ? nil
-                    : previousTokens
+                saveLockedTokens(manualLockStore.shield.applications ?? [])
                 throw CompanionSyncError.message("系统未确认锁定，未发送成功回执")
             }
-            saveLockedTokens(tokens)
+            saveLockedTokens(manualLockStore.shield.applications ?? [])
             return "真实 App 已锁定并由系统设置读回确认"
 
         case "unlock":
@@ -1507,10 +1505,10 @@ final class CompanionSyncService: ObservableObject {
                 tokens.isEmpty ? nil : tokens
             try await Task.sleep(nanoseconds: 120_000_000)
             guard !(manualLockStore.shield.applications ?? []).contains(token) else {
-                manualLockStore.shield.applications = previousTokens
+                saveLockedTokens(manualLockStore.shield.applications ?? [])
                 throw CompanionSyncError.message("系统未确认解锁，未发送成功回执")
             }
-            saveLockedTokens(tokens)
+            saveLockedTokens(manualLockStore.shield.applications ?? [])
             return "真实 App 已解锁并由系统设置读回确认"
 
         case "limit":
@@ -1715,6 +1713,10 @@ final class CompanionSyncService: ObservableObject {
     ) {
         if let data = try? JSONEncoder().encode(tokens) {
             UserDefaults.standard.set(data, forKey: lockedAppsKey)
+            NotificationCenter.default.post(
+                name: .companionManualLocksDidChange,
+                object: nil
+            )
         }
     }
 
