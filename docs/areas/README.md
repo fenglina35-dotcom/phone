@@ -584,3 +584,8 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 样式：全黑底 #000，卡片 #141315，粉色 #f0a9c1，标题用宋体类衬线字；照片 assets/couple-space/（两份，私人包要 .gitignore 例外）。二级页旧区块的外观只靠 .cs-sub 下的 CSS 覆盖。
 注意：核心检查要在 _couTab=2 的首页上看到「自动解锁」，所以 ta锁住的列表（locksHTML）留在管控授权首页。别的文件往 coupage1 开头插内容（屏幕时长面板）、往 cou_extra_slot 插窗台入口。
 弹框与颜色（v1858 / 网页 v1853）：couple 页弹框加 cs-modal（纯黑底粉色包边、不透明，COUPLE_MODAL_V1）；情侣空间不许出现黄色（COUPLE_NO_YELLOW_V1，GOLD/AMBER 已改粉，内联黄色用属性选择器盖掉）；右上角没有三个点；冻结用锁图标。
+
+## 微信「对方正在输入」、共同生活编辑删除、满八条小纸条（2026-10-21）
+- WX_TITLE_TYPING_V1：微信单聊顶上名字在他回复期间（#typing 存在时）显示「对方正在输入…」，聊天里不显示三个点；只靠 CSS :has，回复流程里 #typing 的增删不变。群聊、抖音私信、短信不变。
+- COHAB_MSG_EDIT_V1：共同生活点一句话弹「编辑 / 删除」（offMsgMenu），液态玻璃框；＋ 里的多选删除保留。
+- GRUDGE_JAIL_PIN_V1：记仇未解决满 8 条、当前情侣、授权开着、没在小黑屋时，微信和普通电话在最新一句后贴 roleGrudgeJailPin；共同生活不贴。

@@ -577,9 +577,9 @@ renderCohab=function(id){const d=cohabData(id);let html;if(d&&Array.isArray(d.ms
   if(typeof html==='string'&&/<div class="inputbar offinput[^"]*">/.test(html)){let acts='';html=html.replace(/<label class="cohab-theater-target">[\s\S]*?<\/label>/,m=>{acts+=m;return '';}).replace(/<button type="button" class="cohab-debug-reply[^"]*"[^>]*>[^<]*<\/button>/,m=>{acts+=m;return '';});if(acts)html=html.replace(/<div class="inputbar offinput[^"]*">/,m=>m+'<div class="cohab-float-acts">'+acts+'</div>');}
   if(typeof html==='string'){const sel=html.indexOf('class="offselect"');html=html.replace(/<button(?: type="button")? onclick="offSelToggle\(\)">(?:多选|取消)<\/button>/,(m,at)=>sel>=0&&at>sel?m:'');}
   return html;};}
-// 共同生活里点消息不再弹出「编辑 / 删除」（用户要求去掉，删除改用 ＋ 里的多选删除）；线下约会照旧。
-if(typeof offMsgMenu==='function'){const baseMsgMenu=offMsgMenu;
-offMsgMenu=function(id,mid){if(typeof _off!=='undefined'&&_off&&_off.mode==='cohab')return;return baseMsgMenu.apply(this,arguments);};}
+// COHAB_MSG_EDIT_V1（2026-10-21 她要求加回）：共同生活里点一句话，弹出「编辑 / 删除」，可以改内容、单独删这一句；
+// 弹框在共同生活里自动用下面 cohab-glass-modal 的液态玻璃磨砂材质。＋ 里的多选删除照旧保留。
+// （2026-10-18 她曾要求点消息不弹编辑/删除，这次改主意要回来。）
 if(typeof cohabSettingsPanel==='function'){const baseSettings=cohabSettingsPanel;
 cohabSettingsPanel=function(id,o){let html=baseSettings(id,o);const n=(o&&o.voiceLog||[]).length,row='<button type="button" class="cohab-memory-open" onclick="CohabVoice.log(\''+esc2(id)+'\')"><span>共同生活语音记录</span><small>'+(isActive(id)?'进行中 · ':'')+n+' 次 ›</small></button>',m=String(html).indexOf('cohabMemoryOpen('),k=m>=0?String(html).indexOf('</button>',m)+9:String(html).lastIndexOf('</div></details>');if(k>8)html=html.slice(0,k)+row+html.slice(k);return html;};}
 if(typeof offSay==='function'){const baseOffSay=offSay;

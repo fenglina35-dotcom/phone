@@ -14,13 +14,13 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1854 · 日期框不再跑出屏幕'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1854'/);
-  assert.match(sw,/BUILD='1854'/);
+  assert.match(app,/APP_VER='v1855 · 正在输入与记仇小纸条'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1855'/);
+  assert.match(sw,/BUILD='1855'/);
   assert.match(plist,/<string>1200<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 505;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.505;/g)||[]).length,12);
-  assert.match(native,/1\.0\.505 \(505\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 506;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.506;/g)||[]).length,12);
+  assert.match(native,/1\.0\.506 \(506\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{
