@@ -11,9 +11,9 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 const bundleInfo=read('../native/private-small-phone/Resources/PhoneWebBundleInfo.plist');
 
 test('private App version, bundled core and native status area are current',()=>{
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 503;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.503;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.503 \(503\)'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 504;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.504;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.504 \(504\)'/);
   assert.match(bundleInfo,/<string>1200<\/string>/);
   assert.match(root,/statusBarTheme\.color\)\s*\n\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
   assert.match(root,/case \.black:[\s\S]*return \.black/);

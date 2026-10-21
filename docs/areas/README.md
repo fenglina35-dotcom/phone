@@ -583,3 +583,4 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 代码：app.js 的 COUPLE_SUBS（二级页 → 显示哪些区块）、COUPLE_ID_SUB（区块 id → 二级页，coupleJump 用）、coupleOpen、coupleDash1/2/3、COUPLE_CSS；renderCouple 里 P.cou_xxx 是原来的区块，原样未改。二级页是 cur().sub，返回走 back()。
 样式：全黑底 #000，卡片 #141315，粉色 #f0a9c1，标题用宋体类衬线字；照片 assets/couple-space/（两份，私人包要 .gitignore 例外）。二级页旧区块的外观只靠 .cs-sub 下的 CSS 覆盖。
 注意：核心检查要在 _couTab=2 的首页上看到「自动解锁」，所以 ta锁住的列表（locksHTML）留在管控授权首页。别的文件往 coupage1 开头插内容（屏幕时长面板）、往 cou_extra_slot 插窗台入口。
+弹框与颜色（v1858 / 网页 v1853）：couple 页弹框加 cs-modal（纯黑底粉色包边、不透明，COUPLE_MODAL_V1）；情侣空间不许出现黄色（COUPLE_NO_YELLOW_V1，GOLD/AMBER 已改粉，内联黄色用属性选择器盖掉）；右上角没有三个点；冻结用锁图标。

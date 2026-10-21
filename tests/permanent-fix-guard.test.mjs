@@ -62,6 +62,8 @@ const PERMANENT_FIXES = [
   {release:"web v1851 / private v1852",scope:"both",least:1,file:"app.js",name:"通话里也处理桌宠指令，不再把 [桌宠|开心] 当台词",marker:"CALL_DESKPET_TAG_V1"},
   {release:"web v1851 / private v1852",scope:"both",least:1,file:"voice-expressive.js",name:"列表外的语气提示（如 [语气变低]）换成最近的已知提示，不露在台词里",marker:"VOICE_TONE_GUESS_V1"},
   {release:"web v1852 / private v1857",scope:"both",least:1,file:"app.js",name:"情侣空间按她的设计图改成三页卡片首页，旧功能都在二级页",marker:"COUPLE_REDESIGN_V1"},
+  {release:"web v1853 / private v1858",scope:"both",least:1,file:"app.js",name:"情侣空间弹框纯黑底粉色包边、不透明",marker:"COUPLE_MODAL_V1"},
+  {release:"web v1853 / private v1858",scope:"both",least:1,file:"app.js",name:"情侣空间里不出现黄色",marker:"COUPLE_NO_YELLOW_V1"},
   {release:"private v1856 / iOS502",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift",name:"锁定回执说「XX已经锁定」",marker:"LOCK_DONE_TEXT_V1"},
   {release:"web v1851 / private v1856",scope:"both",least:1,file:"app.js",name:"共同生活 / 线下里角色锁 App 也带解锁时间，锁屏显示、到点自动解开",marker:"COHAB_LOCK_UNTIL_V1"},
   {release:"web v1851 / private v1856",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/shell.js",name:"窗台左边挂板贴图亮度她自己用滑条调，默认作者原样",marker:"WINDOWSILL_BOARD_BRIGHT_V1"},

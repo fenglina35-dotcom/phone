@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1852'){
+if(window.__NORTH_SHELL_BUILD__!=='1853'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1852 · 情侣空间新装修';
+const APP_VER='v1853 · 情侣空间弹框与配色';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2120,7 +2120,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1852&r=v1852-owner-todo-report-1';
+  const url='sw.js?v=1853&r=v1853-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -13824,6 +13824,22 @@ const COUPLE_CSS=`<style>
 #couplescroll #coupage3.cs-sub>.section:before{display:none}
 #couplescroll #coupage3.cs-sub>.section>div:first-child>span{font-size:16px!important;font-weight:500!important;font-family:"Songti SC","STSong","Noto Serif SC",serif}
 #couplescroll #coupage3.cs-sub .minibtn{background:transparent!important;border:1px solid rgba(240,169,193,.85)!important;color:#f0a9c1!important;border-radius:999px!important}
+#modal.cs-modal,#cfm.cs-modal{background:rgba(0,0,0,.62)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#modal.cs-modal .sheet,#cfm.cs-modal .cfmbox{background:#000!important;background-image:none!important;border:1.5px solid #f0a9c1!important;box-shadow:0 18px 50px rgba(0,0,0,.65)!important;color:#ece6e8!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#modal.cs-modal .sheet:before,#modal.cs-modal .sheet:after,#cfm.cs-modal .cfmbox:before,#cfm.cs-modal .cfmbox:after{display:none!important}
+#modal.cs-modal .sheet h3,#cfm.cs-modal .cfmmsg{color:#f6efe9!important;-webkit-text-fill-color:#f6efe9}#modal.cs-modal .sheet :is(.hint,small,label,.empty){color:#a39aa0!important;-webkit-text-fill-color:#a39aa0}
+#modal.cs-modal .sheet :where(.section,.it,.bill,.avline,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea){background:#141315!important;background-image:none!important;border:1px solid rgba(240,169,193,.38)!important;color:#ece6e8!important;-webkit-text-fill-color:#ece6e8;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#modal.cs-modal .sheet .section{border-radius:14px!important;overflow:hidden}#modal.cs-modal .sheet .section .it{background:transparent!important;border-width:0 0 1px!important;border-radius:0!important}
+#modal.cs-modal .sheet :is(.btn,.minibtn,.section,input,select,textarea):before,#cfm.cs-modal .cfmb:before{display:none!important}
+#modal.cs-modal .sheet .btn,#cfm.cs-modal .cfmb{background:#141315!important;background-image:none!important;border:1.5px solid rgba(240,169,193,.55)!important;color:#ece6e8!important;-webkit-text-fill-color:#ece6e8;border-radius:999px!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+#modal.cs-modal .sheet .btn.p,#cfm.cs-modal .cfmb.p{background:#f0a9c1!important;border-color:#f0a9c1!important;color:#1a0f14!important;-webkit-text-fill-color:#1a0f14}
+#modal.cs-modal .sheet .btn.d,#cfm.cs-modal .cfmb.d{background:#000!important;border-color:#ff5a6e!important;color:#ff5a6e!important;-webkit-text-fill-color:#ff5a6e}
+#modal.cs-modal .sheet .minibtn{background:transparent!important;border:1px solid #f0a9c1!important;color:#f0a9c1!important;-webkit-text-fill-color:#f0a9c1;border-radius:999px!important}
+#modal.cs-modal .sheet .sw{background:#4a474d!important}#modal.cs-modal .sheet .sw.on{background:#f0a9c1!important}
+/* COUPLE_NO_YELLOW_V1: she does not want any yellow in the couple space */
+.cs-sub [style*="#e8b878"],.cs-sub [style*="#ffb83b"],.cs-sub [style*="#ffc078"],.cs-sub [style*="#ffd08a"],.cs-sub [style*="#e9d9c4"],.cs-sub [style*="#c59373"],.cs-sub [style*="#bd9678"],.cs-sub [style*="#b28e71"],#modal.cs-modal [style*="#e8b878"],#modal.cs-modal [style*="#ffb83b"],#modal.cs-modal [style*="#ffc078"],#modal.cs-modal [style*="#ffd08a"],#modal.cs-modal [style*="#e9d9c4"],#modal.cs-modal [style*="#c59373"],#modal.cs-modal [style*="#bd9678"],#modal.cs-modal [style*="#b28e71"]{color:#f0a9c1!important;-webkit-text-fill-color:#f0a9c1}
+.cs-sub svg[stroke="#e8b878"],.cs-sub svg[stroke="#ffb83b"],.cs-sub svg[stroke="#ffc078"],.cs-sub svg[stroke="#ffd08a"],.cs-sub svg[stroke="#e9d9c4"],.cs-sub svg[stroke="#c59373"],.cs-sub svg[stroke="#bd9678"],.cs-sub svg[stroke="#b28e71"],#modal.cs-modal svg[stroke="#e8b878"],#modal.cs-modal svg[stroke="#ffb83b"],#modal.cs-modal svg[stroke="#ffc078"],#modal.cs-modal svg[stroke="#ffd08a"],#modal.cs-modal svg[stroke="#e9d9c4"],#modal.cs-modal svg[stroke="#c59373"],#modal.cs-modal svg[stroke="#bd9678"],#modal.cs-modal svg[stroke="#b28e71"]{stroke:#f0a9c1}
+.cs-sub .wedding-collection-entry,.cs-sub .wedding-collection-row{border-color:rgba(240,169,193,.28)!important;background:#141315!important}.cs-sub .wedding-collection-row small,.cs-sub .wedding-collection-row>i,.cs-sub .wedding-photo-album-open i{color:#f0a9c1!important}.cs-sub .wedding-photo-album-open{border-top-color:rgba(240,169,193,.18)!important;background:transparent!important}.cs-sub .wedding-married-badge{border-color:rgba(240,169,193,.5)!important;background:rgba(240,169,193,.12)!important;color:#f0a9c1!important}
 .cs-danger{display:block;text-align:center;color:#ff5a6e;font-size:15px;padding:18px 0 6px;cursor:pointer}.cs-sub-note{margin:14px 16px 0;color:#9b9297;font-size:12.5px;line-height:1.6}
 #coupage1:not(.cs-sub-screen)>#cou_shortcut_screen_time,#coupage1:not(.cs-sub-screen)>#cou_screen_cloud{display:none}
 </style>`;
@@ -13852,7 +13868,7 @@ function coupleDash2(cp,c,locksHTML){const locks=cp.locks||{},lk=Object.keys(loc
   const card=!cp.walletAuth?'未交给ta管':cp.cardFrozen?'已冻结':'正常';
   return `<div class="cs-card"><div class="cs-hero" style="${coupleImg('rules-hero.jpg')}" onclick="coupleOpen('apps','cou_grant')">
       <h2 class="serif">我们的约定</h2><p>每一项权限，都由你决定</p><span class="cs-link pink">管理授权 ›</span></div>
-    <div class="cs-split"><div onclick="coupleOpen('apps','cou_locks')">${coupleIcon('grid',30,'#e9e2e5')}<span>已锁应用 <b class="serif">${lk+ext}</b> 项</span></div><div onclick="coupleOpen('wallet')">${svgIc('card',30,'#f0a9c1')}<span>亲属卡 · ${card}</span>${cp.cardFrozen?svgIc('snow',24,'#f0a9c1'):''}</div></div></div>
+    <div class="cs-split"><div onclick="coupleOpen('apps','cou_locks')" style="gap:7px">${coupleIcon('grid',26,'#e9e2e5')}<span style="white-space:nowrap">已锁应用 <b class="serif">${lk+ext}</b> 项</span></div><div onclick="coupleOpen('wallet')" style="gap:7px">${svgIc('card',26,'#f0a9c1')}<span style="white-space:nowrap;font-size:13.5px">亲属卡 · ${card}</span>${cp.cardFrozen?svgIc('lock',20,'#f0a9c1'):''}</div></div></div>
     ${locksHTML}
     <div class="cs-h"><h3 class="serif">权限与边界</h3></div>
     <div class="cs-grid">
@@ -13892,7 +13908,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r"></span></div>
     <div class="scroll" id="couplescroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
   const days=coupleDays(cp.startDate);
-  const ROSE='#e89db5',GOLD='#e8b878',BLUE='#9ec5fe',AMBER='#ffc078',RED='#ff6b81',PUR='#c5a6ff';
+  const ROSE='#e89db5',GOLD='#f0a9c1',BLUE='#9ec5fe',AMBER='#f0a9c1',RED='#ff6b81',PUR='#c5a6ff';   // COUPLE_NO_YELLOW_V1: no gold or amber here
   const PINKTH=S.me.theme==='pink',WHITETH=S.me.theme==='white',LIGHTTH=PINKTH||WHITETH;
   const BANBG=PINKTH?'linear-gradient(135deg,#ffc6da 0%,#ffd9e6 55%,#ffe7f0 100%)':WHITETH?'linear-gradient(135deg,#fbfbfd 0%,#f0f0f4 60%,#eaeaef 100%)':'linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%)';
   const BANTX=PINKTH?'#9c4f73':WHITETH?'#5a606e':'#f3e6ee',BANBIG=PINKTH?'#b8316e':WHITETH?'#4a4f5c':'#fff',BANSUB=PINKTH?'#bd7c9c':WHITETH?'#8a909c':'#e9d9c4';
@@ -13945,7 +13961,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   P.cou_limit=`${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
         let h=`<div id="cou_limit" ${SEC}>${HD('timer','软件使用时长 / 限额',AMBER)}`;
         if(keys.length){h+=keys.map(k=>{const used=usedSecOf(k),lim=tl[k]?tl[k]*60+((S.me.appUsage&&S.me.appUsage.bonus&&S.me.appUsage.bonus[k])||0):0;const um=Math.floor(used/60),us=used%60;const usedTxt=um+'分'+String(us).padStart(2,'0')+'秒';
-          return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
+          return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完</span>':(lim?'<span class="v" style="color:#f0a9c1!important">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
         return h+`</div>`;})()}`;
   P.cou_star=`${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div id="cou_star" ${SEC}>${HD('star',esc(c.remark||c.name)+' 重点盯防的人',GOLD)}${st.length?st.map(x=>`<div class="it"><span style="display:flex;align-items:center;gap:8px">${svgIc('star',15,GOLD)}${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}`;
@@ -13972,7 +13988,7 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
   if(SUB){const d=COUPLE_SUBS[SUB];return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${d.t}</span><span class="r"></span></div>
     <div class="scroll" id="couplescroll" style="${BG}">${COUPLE_CSS}<div id="coupage${d.tab}" class="cs-sub cs-sub-${SUB}" style="display:block">${SUB==='device'?renderCompanionPage(c,SEC,HD):d.ids.map(id=>P[id]||'').join('')}${SUB==='screen'?'<div class="cs-sub-note">把 iPhone 快捷指令复制的屏幕使用记录粘贴到这里。如果上面是空的，说明这台设备还没有接好快捷指令。</div>':''}</div><div style="height:20px"></div></div>`;}
   const fmtStart=String(cp.startDate||'').replace(/-/g,'.');
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r"></span></div>
     <div class="scroll" id="couplescroll" style="${BG}">${COUPLE_CSS}<div class="cs">
       <div class="cs-head"><div class="cs-p"><span class="cs-av">${av(S.me.avatar,'lg')}</span><b class="serif">${esc(S.me.name)}</b></div>
         <div class="cs-mid"><div class="ln"><i></i>${svgIc('heart',18,'#f0a9c1')}<i></i></div><small>${cp.married?'已结为夫妻':'在一起'}</small><div class="n serif">${days}<span>天</span></div><div class="since serif">相伴自 ${esc(fmtStart)}</div></div>
@@ -19390,7 +19406,7 @@ function solidAppOf(p){p=String(p||'');if(['off','offline'].includes(p))return '
 function solidPageIsLight(){try{if(typeof document==='undefined'||!document.elementFromPoint)return null;let e=document.elementFromPoint(6,Math.round((window.innerHeight||800)*0.45));if(e&&e.closest&&e.closest('#modal.show,#cfm.show'))return null;
   while(e&&e!==document.documentElement){const m=getComputedStyle(e).backgroundColor.match(/rgba?\(([^)]*)\)/);if(m){const p=m[1].split(',').map(Number),a=p.length>3?p[3]:1;if(a>0.5)return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}e=e.parentElement;}
   const b=getComputedStyle(document.body).backgroundColor.match(/rgba?\(([^)]*)\)/);if(b){const p=b[1].split(',').map(Number);return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}}catch(_){}return null;}
-function appSolidMark(m,p){if(!m)return;const organizer=(p==='spy'&&['todo','grudge','date','lifelog','watch'].includes(_spyApp))||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-organizer-modal'));m.classList.toggle('spy-organizer-modal',organizer);m.classList.toggle('spy-monitor-modal',organizer&&(_spyApp==='watch'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-monitor-modal'))));m.classList.toggle('spy-life-modal',organizer&&(_spyApp==='lifelog'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-life-modal'))));m.classList.toggle('spy-date-modal',organizer&&(_spyApp==='date'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-date-modal'))));m.classList.toggle('spy-grudge-modal',organizer&&(_spyApp==='grudge'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-grudge-modal'))));const app=solidAppOf(p),on=!!app,game=on&&(['gameshub','gs','drawguess','heartquiz','beadstudio','uc','wg','mgroom','tale','dread'].includes(p)||(m.id==='cfm'&&!!document.querySelector('#modal.show.gamehub-modal')));m.classList.toggle('family-bank-modal',['wxbank','wxfamily'].includes(p)||(p==='spy'&&typeof _spyApp!=='undefined'&&_spyApp==='bank')||(m.id==='cfm'&&!!document.querySelector('#modal.show.family-bank-modal')));m.classList.toggle('roleplay-modal',app==='roleplay'||(m.id==='cfm'&&!!document.querySelector('#modal.show.roleplay-modal')));m.classList.toggle('worldbook-modal',app==='worldbook'||(m.id==='cfm'&&!!document.querySelector('#modal.show.worldbook-modal')));m.classList.toggle('gamehub-modal',game);m.classList.toggle('dy-solid-modal',on);m.classList.toggle('dy-solid-dy',app==='douyin');m.classList.toggle('dy-solid-wx',app==='wechat');m.classList.toggle('dy-solid-pet',app==='pet');
+function appSolidMark(m,p){if(!m)return;m.classList.toggle('cs-modal',p==='couple');/* COUPLE_MODAL_V1: couple-space pop-ups are solid black with a pink edge */const organizer=(p==='spy'&&['todo','grudge','date','lifelog','watch'].includes(_spyApp))||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-organizer-modal'));m.classList.toggle('spy-organizer-modal',organizer);m.classList.toggle('spy-monitor-modal',organizer&&(_spyApp==='watch'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-monitor-modal'))));m.classList.toggle('spy-life-modal',organizer&&(_spyApp==='lifelog'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-life-modal'))));m.classList.toggle('spy-date-modal',organizer&&(_spyApp==='date'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-date-modal'))));m.classList.toggle('spy-grudge-modal',organizer&&(_spyApp==='grudge'||(m.id==='cfm'&&!!document.querySelector('#modal.show.spy-grudge-modal'))));const app=solidAppOf(p),on=!!app,game=on&&(['gameshub','gs','drawguess','heartquiz','beadstudio','uc','wg','mgroom','tale','dread'].includes(p)||(m.id==='cfm'&&!!document.querySelector('#modal.show.gamehub-modal')));m.classList.toggle('family-bank-modal',['wxbank','wxfamily'].includes(p)||(p==='spy'&&typeof _spyApp!=='undefined'&&_spyApp==='bank')||(m.id==='cfm'&&!!document.querySelector('#modal.show.family-bank-modal')));m.classList.toggle('roleplay-modal',app==='roleplay'||(m.id==='cfm'&&!!document.querySelector('#modal.show.roleplay-modal')));m.classList.toggle('worldbook-modal',app==='worldbook'||(m.id==='cfm'&&!!document.querySelector('#modal.show.worldbook-modal')));m.classList.toggle('gamehub-modal',game);m.classList.toggle('dy-solid-modal',on);m.classList.toggle('dy-solid-dy',app==='douyin');m.classList.toggle('dy-solid-wx',app==='wechat');m.classList.toggle('dy-solid-pet',app==='pet');
   if(!on){m.classList.remove('dy-solid-light');return;}
   const light=game||m.classList.contains('family-bank-modal')||m.classList.contains('worldbook-modal')||m.classList.contains('roleplay-modal')?false:app==='wechat'?!!(S&&S.me&&S.me.wxTheme==='white'):app==='douyin'||app==='pet'?false:solidPageIsLight();
   if(light!==null)m.classList.toggle('dy-solid-light',!!light);dySolidStyle();}

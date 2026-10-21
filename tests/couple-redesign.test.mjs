@@ -30,6 +30,14 @@ for (const file of ['app.js', PRIVATE + 'app.js']) {
     assert(s.includes("if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}"), 'the companion home fills in when its tab opens');
     assert(s.includes("const BG='background:#000';"), 'pure black, as she chose');
     assert(s.includes('#coupage1:not(.cs-sub-screen)>#cou_shortcut_screen_time,#coupage1:not(.cs-sub-screen)>#cou_screen_cloud{display:none}'), 'screen-time import lives on its own page');
+    // COUPLE_MODAL_V1 / COUPLE_NO_YELLOW_V1 (her follow-ups): solid black pop-ups with a pink edge, no yellow, no useless dots, a lock for the frozen card
+    assert(s.includes("function appSolidMark(m,p){if(!m)return;m.classList.toggle('cs-modal',p==='couple');"), 'couple pop-ups are marked');
+    assert(s.includes('#modal.cs-modal .sheet,#cfm.cs-modal .cfmbox{background:#000!important;background-image:none!important;border:1.5px solid #f0a9c1!important'), 'black with a pink edge, not see-through');
+    assert(s.includes("const ROSE='#e89db5',GOLD='#f0a9c1',BLUE='#9ec5fe',AMBER='#f0a9c1'"), 'no gold or amber');
+    assert(s.includes('.cs-sub .wedding-collection-row small,.cs-sub .wedding-collection-row>i,.cs-sub .wedding-photo-album-open i{color:#f0a9c1!important}'), 'the wedding collection is pink too');
+    assert(!body.includes("onclick=\"coupleSet()\">${svgIc('dots'"), 'no three dots top right');
+    assert(s.includes("<span style=\"white-space:nowrap;font-size:13.5px\">亲属卡 · ${card}</span>${cp.cardFrozen?svgIc('lock',20,'#f0a9c1'):''}"), 'one line, and a lock instead of the snowflake');
+    assert(s.includes(`(lim?'<span class="v" style="color:#f0a9c1!important">剩 '`), 'time left is pink');
   });
 }
 
