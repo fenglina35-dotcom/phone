@@ -3324,3 +3324,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-21 网页v1851 / 私人v1856 / iOS502（提交 8cc7c788，合并另一台电脑的 v1853～v1855）：WINDOWSILL_GFX_PAGE_V1 情侣空间「窗台画面」页（画面开关与挂板亮度两条）；COHAB_LOCK_UNTIL_V1 共同生活 / 线下锁 App 也带解锁时间；LOCK_DONE_TEXT_V1 锁定回执写「XX已经锁定」。全部测试 4513 项通过，核心聊天检查两遍通过；从干净提交编译 Release 成功，包内 APP_VER v1856、COHAB_LOCK_UNTIL_V1、WINDOWSILL_GFX_PAGE_V1、private-sky-sync.js 已核对，已装到她的 iPhone（devicectl 显示 1.0.502）。共同生活锁定的真机效果待她看。
 
 2026-10-21 网页v1852 / 私人v1857 / iOS503（提交 c1805414）：COUPLE_REDESIGN_V1 情侣空间按她的设计图重新装修（三页卡片首页、全黑底、二级页同主题、Codex 生成的十张图）。全部测试 4519 项通过，核心聊天检查两遍通过；电脑上逐个点过所有二级页和跳转；从干净提交编译 Release 成功，包内 APP_VER v1857、COUPLE_REDESIGN_V1、assets/couple-space 十张图已核对，已装到她的 iPhone（devicectl 显示 1.0.503）。手机上的实际样子待她看。
+
+2026-10-21 网页v1853 / 私人v1858 / iOS504（提交 dd29a3c3）：COUPLE_MODAL_V1 情侣空间弹框纯黑底粉色包边、不透明；COUPLE_NO_YELLOW_V1 不出现黄色；去掉右上角三个点；亲属卡冻结一行显示并用锁图标；剩余时长粉色。全部测试 4523 项通过，核心聊天检查两遍通过；从干净提交编译 Release 成功，包内 APP_VER v1858 与两个新标记已核对，已装到她的 iPhone（devicectl 显示 1.0.504）。
