@@ -589,3 +589,7 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - WX_TITLE_TYPING_V1：微信单聊顶上名字在他回复期间（#typing 存在时）显示「对方正在输入…」，聊天里不显示三个点；只靠 CSS :has，回复流程里 #typing 的增删不变。群聊、抖音私信、短信不变。
 - COHAB_MSG_EDIT_V1：共同生活点一句话弹「编辑 / 删除」（offMsgMenu），液态玻璃框；＋ 里的多选删除保留。
 - GRUDGE_JAIL_PIN_V1：记仇未解决满 8 条、当前情侣、授权开着、没在小黑屋时，微信和普通电话在最新一句后贴 roleGrudgeJailPin；共同生活不贴。
+
+## 出行日提示与小黑屋「说出口」（2026-10-22）
+- TRIP_DAY_WHO_V1 / TRIP_REMIND_DONE_V1：出行日系统提示按票上 people 写谁出行；机票、火车票的角色提醒在他真说出口（scheduleReply 回调为真）后才记 _reminded，每次打开最多请求一次、一天最多三次。
+- GRUDGE_JAIL_NATURAL_V1：roleJailAnnounced 原规则不变，另加 roleJailAnnouncedNatural（回复里提到小黑屋＋整句无否定无条件的进来了/门关了/跟我进/走吧）。GRUDGE_JAIL_FORGOT_TAG_V1：满八条、授权开着、当前情侣时，他说出口但没发指令，roleGrudgeJailForgotTag 补一条 [关小黑屋|…]，仍要先送达保存再进入。
