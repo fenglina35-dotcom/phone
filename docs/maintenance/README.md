@@ -3322,3 +3322,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 发布前最终验收：全量4499/4499，失败0/取消0；全量结束后独立重跑核心两端完整通过（cvNarr实际触摸、cvInspection动作消费/可见进度/真结果留语音、普通电话、授权撤权/已有记录/两模式/忙状态/持久化均通过）。NORTH_OWNER_TODO、NORTH_STICKER_FORMAT（未主动要求表情、两输出模式、后台收件、禁用和残缺标签）、NORTH_PHONE_MONITOR（网页内部源保持、私人原生源/采集时间/0/过期撤权不回退/刷新）两端全部通过，pageErrors=0；globeQA偶发失败诊断保留，独立重跑成功，生产代码和原断言不改，根因未确认。45份纯版本测试严格前向变换相等。原生501/桥42/签名和private-sky-sync.js逐字保持；公开HTML/app无Sky接入。当前候选网页1850/私人1855，用户本轮已授权打包推送，最终提交/线上/ZIP结果后补。
 
 2026-10-21 网页v1851 / 私人v1856 / iOS502（提交 8cc7c788，合并另一台电脑的 v1853～v1855）：WINDOWSILL_GFX_PAGE_V1 情侣空间「窗台画面」页（画面开关与挂板亮度两条）；COHAB_LOCK_UNTIL_V1 共同生活 / 线下锁 App 也带解锁时间；LOCK_DONE_TEXT_V1 锁定回执写「XX已经锁定」。全部测试 4513 项通过，核心聊天检查两遍通过；从干净提交编译 Release 成功，包内 APP_VER v1856、COHAB_LOCK_UNTIL_V1、WINDOWSILL_GFX_PAGE_V1、private-sky-sync.js 已核对，已装到她的 iPhone（devicectl 显示 1.0.502）。共同生活锁定的真机效果待她看。
+
+2026-10-21 网页v1852 / 私人v1857 / iOS503（提交 c1805414）：COUPLE_REDESIGN_V1 情侣空间按她的设计图重新装修（三页卡片首页、全黑底、二级页同主题、Codex 生成的十张图）。全部测试 4519 项通过，核心聊天检查两遍通过；电脑上逐个点过所有二级页和跳转；从干净提交编译 Release 成功，包内 APP_VER v1857、COUPLE_REDESIGN_V1、assets/couple-space 十张图已核对，已装到她的 iPhone（devicectl 显示 1.0.503）。手机上的实际样子待她看。
