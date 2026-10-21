@@ -3328,3 +3328,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-21 网页v1853 / 私人v1858 / iOS504（提交 dd29a3c3）：COUPLE_MODAL_V1 情侣空间弹框纯黑底粉色包边、不透明；COUPLE_NO_YELLOW_V1 不出现黄色；去掉右上角三个点；亲属卡冻结一行显示并用锁图标；剩余时长粉色。全部测试 4523 项通过，核心聊天检查两遍通过；从干净提交编译 Release 成功，包内 APP_VER v1858 与两个新标记已核对，已装到她的 iPhone（devicectl 显示 1.0.504）。
 
 2026-10-21 网页v1854 / 私人v1859 / iOS505（提交 a1a991e4）：DATE_INPUT_FIT_V1 日期时间框和其他框一样宽，不再跑出屏幕。全部测试 4527 项通过，核心聊天检查两遍通过；从干净提交编译 Release 成功，包内 APP_VER v1859、glass-theme.css 含 DATE_INPUT_FIT_V1 已核对，已装到她的 iPhone（devicectl 显示 1.0.505）。点日期框弹出选择器的真机效果待她看。
+
+2026-10-21 网页v1855 / 私人v1860 / iOS506（提交 7163a4dd）：WX_TITLE_TYPING_V1 微信顶上「对方正在输入…」；COHAB_MSG_EDIT_V1 共同生活点一句话可编辑、单独删除；GRUDGE_JAIL_PIN_V1 记仇满八条在微信和电话贴小纸条。全部测试 4550 项通过，核心聊天检查两遍通过；同一文件夹里另一会话未提交的电子宠物改动没有放进提交，编译时临时换回已提交的 pet-game.js，编完放回；包内 APP_VER v1860 与三个新标记已核对，已装到她的 iPhone（devicectl 显示 1.0.506）。真机效果待她看。
