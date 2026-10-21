@@ -2454,3 +2454,7 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-22 网页v1856 / 私人v1861 / iOS507：
 - 出行日提示与角色提醒（TRIP_DAY_WHO_V1、TRIP_REMIND_DONE_V1）：先生给她订的单人票（同行只有她），出行日系统提示却写「今天是和先生约好的出行日」——tvV2DayNotice 不看票上谁坐。改为按 people 写：只有她「今天是你的出行日（先生给你订的票）」、两人「和先生一起出行」、只有他「先生出行」。角色的出行提醒以前请求一发出就记 _reminded，没发成功（她当晚梯子没开）就再也不提醒；现在 scheduleReply 回调确认他真说出口才记，本次打开不重复，下次打开再试，一天最多三次。tests/trip-day-who.test.mjs 旧代码 6 项全失败。
 - 满八条他说了「进来了」「门关了」却没进小黑屋（GRUDGE_JAIL_NATURAL_V1、GRUDGE_JAIL_FORGOT_TAG_V1）：她 00:36 截图，小纸条起效、他也开口，但 roleJailAnnounced 要同一句、引号外同时有「小黑屋」和去/进/带；他引用了她的话「我进小黑屋跟你说清楚」（引号里）再说「进来了」「门关了，北」，判为没说出口，所以没进去、他却当她已经在里面。改为：这条回复里提到小黑屋（引号里也算），且有一整句不带否定/条件的「进来了/门关了/跟我进/走吧」就算说出口；威胁、条件、否认、只在内心都不算。她定：满八条、授权开着、当前情侣时，他说清楚了但忘发 [关小黑屋|…] 也照样进（微信和普通电话，不含共同生活）。tests/grudge-jail-natural.test.mjs 旧代码 6 项全失败。
+
+2026-10-22（web v1857 / private v1862 待发布）：
+- 满八条他说「进来吧」「先生替你开门。进来。」还是没进小黑屋（GRUDGE_JAIL_CONTEXT_V1）：她 01:20 截图。原因三个：1）roleJailAnnouncedNatural 要求这条回复里有「小黑屋」三个字，他前面一直在说，这两条没再提；2）「不管哪个，先生替你开门」里的「不」被当成否定；3）「进来。」「替你开门」不在认得的说法里。改为：满八条、授权开着、当前情侣时，两小时内最近 16 条聊天提到过小黑屋也算；补这几种说法；「不管/不论/无论」不算否定。拒绝、威胁、条件、问句、改天、内心照旧不算。tests/grudge-jail-natural.test.mjs 新增 3 项，旧代码截图那一项失败。permanent-fix-guard 里 roleJailAnnounced(decisionText) 的检查跟着改成 (decisionText,c)。真机未确认。
+- 一键清空所有数据后「我的形象工作室」打不开（CLEAR_ALL_KEEP_STUDIO_V1）：clearAllData 用 defState 重建 S.me 时没带账号列表，userImageStudioContact 找不到当前账号返回空，按钮无反应；重开 App 会建一个空账号，原来的形象照片和衣柜没了；角色的 imageStudio 也不在保留字段里。改为保留账号身份资料和 imageStudio（余额账单照清）、当前账号、角色 imageStudio，清完立刻 initAccounts。tests/clear-all-keeps-image-studio.test.mjs 旧代码 4 项全失败。她手机上已经清空掉的照片无法从程序里找回。

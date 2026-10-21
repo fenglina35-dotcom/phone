@@ -125,6 +125,8 @@ const PERMANENT_FIXES = [
   {release:"private v1861 / web v1856",scope:"both",least:1,file:"app.js",name:"出行日提示按真正坐车的人说（单人票不说和谁约好）",marker:"TRIP_DAY_WHO_V1"},
   {release:"private v1861 / web v1856",scope:"both",least:1,file:"app.js",name:"他说「进来了」「门关了」也算说出口拉她进小黑屋",marker:"GRUDGE_JAIL_NATURAL_V1"},
   {release:"private v1861 / web v1856",scope:"both",least:1,file:"app.js",name:"满八条他说清楚了但忘发暗号也进小黑屋",marker:"GRUDGE_JAIL_FORGOT_TAG_V1"},
+  {release:"private v1862 / web v1857",scope:"both",least:1,file:"app.js",name:"刚聊过小黑屋时他说「进来吧」「替你开门」也算拉她进去",marker:"GRUDGE_JAIL_CONTEXT_V1"},
+  {release:"private v1862 / web v1857",scope:"both",least:1,file:"app.js",name:"一键清空所有数据保留账号和形象工作室",marker:"CLEAR_ALL_KEEP_STUDIO_V1"},
   {release:"private v1861 / web v1856",scope:"both",least:1,file:"travel-flight-booking.js",name:"机票出行日角色真说出口才算提醒过",marker:"TRIP_REMIND_DONE_V1"},
   {release:"private v1861 / web v1856",scope:"both",least:1,file:"travel-train-booking.js",name:"火车票出行日角色真说出口才算提醒过",marker:"TRIP_REMIND_DONE_V1"},
   {release:"web v1804 / private v1807",scope:"both",least:1,name:"共同生活语音里让TA笑：用户这一轮的要求交给语音",marker:"COHAB_VOICE_ASK_V1"},
@@ -1932,6 +1934,6 @@ test('private current KFC category commitments retain action repair in both outp
 
 for(const file of [WEB,PRIVATE])test(file+': search, batched translation, group limits, summary perspective and role-WeChat repeat fixes stay present',()=>{const s=read(file);for(const marker of ['function wxSearchJump(','function chatJumpToMessage(','function roleTextTranslationFlush(','function groupTotalCap(','g.roleMsgMax=roleMax','function summaryPerspectiveIssue(','function hisCollapseRepeats('])assert(s.includes(marker),marker);});
 
-for(const file of [WEB,PRIVATE])test(file+': grudge jail requires role announcement before entry',()=>{const s=read(file);for(const marker of ['GRUDGE_JAIL_ANNOUNCE_V1','s+=roleGrudgeJailPrompt(c)','announcementSaved===true&&roleJailAnnounced(decisionText)','content=roleJailTakeTags(content,_appControlTags)','content=roleJailTakeTags(content,_callJailTags)','content=roleJailTakeTags(content,_spyJailTags)'])assert(s.includes(marker),marker);assert(!s.includes('if(!_natural&&_gn>=8'));});
+for(const file of [WEB,PRIVATE])test(file+': grudge jail requires role announcement before entry',()=>{const s=read(file);for(const marker of ['GRUDGE_JAIL_ANNOUNCE_V1','s+=roleGrudgeJailPrompt(c)','announcementSaved===true&&roleJailAnnounced(decisionText,c)','content=roleJailTakeTags(content,_appControlTags)','content=roleJailTakeTags(content,_callJailTags)','content=roleJailTakeTags(content,_spyJailTags)'])assert(s.includes(marker),marker);assert(!s.includes('if(!_natural&&_gn>=8'));});
 
 test('APNs environment recovery only follows an explicit BadDeviceToken rejection',()=>{const s=read('supabase/functions/phone-role-push/index.ts');assert(s.includes('APNS_ENV_FALLBACK_V1'));assert(s.includes('detail?.reason === "BadDeviceToken"'));assert(s.includes('if (alternate.ok) return'));});

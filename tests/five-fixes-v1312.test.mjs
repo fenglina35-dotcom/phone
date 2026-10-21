@@ -225,7 +225,7 @@ test('统一模式下记仇本真的发给角色，也真的落地', () => {
     assert.match(x, /maybeCollarIntent\(content,c\);maybeGrudgeResolve\(content,c,_call\.id\);/);
     /* 2026-10-18 明确授权：满8条必须处理，两种模式都先由角色开口，禁止条数直接关人。 */
     assert.match(x, /s\+=roleGrudgeJailPrompt\(c\)/);
-    assert.match(x, /announcementSaved===true&&roleJailAnnounced\(decisionText\)/);
+    assert.match(x, /announcementSaved===true&&roleJailAnnounced\(decisionText,c\)/);
     assert.doesNotMatch(x, /if\(!_natural&&_gn>=8/);
   }
 });

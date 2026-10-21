@@ -50,3 +50,49 @@ for (const file of ['app.js', 'native/private-small-phone/XcodeProject/PhoneComp
     assert(s.includes("if(!_callJailTags.length&&_call&&_call.session===sess&&!_call.cohab&&typeof roleGrudgeJailForgotTag==='function')roleGrudgeJailForgotTag(c,_callJailTags,"), 'phone calls, not 共同生活');
   });
 }
+
+// GRUDGE_JAIL_CONTEXT_V1 (2026-10-22 01:20, her screenshot): at eight grudges he answered 「嗯。是我的问题。进来吧。」 and
+// 「不管哪个，先生替你开门。进来。」. Neither reply said 小黑屋 again (they had been talking about it for a while), 「不管」
+// counted as a refusal, and a bare 「进来。」 or 「替你开门」 was not a known phrase, so she stayed outside.
+const REPLY1 = '嗯。\n是我的问题。\n进来吧。';
+const REPLY2 = '北。\n波浪号又来了。\n你是真的进不去，还是在跟先生耍赖。\n不管哪个，先生替你开门。\n进来。';
+for (const file of ['app.js', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']) {
+  const s = fs.readFileSync(file, 'utf8');
+  const load = (history) => {
+    const ctx = { S: { me: { name: 'North' }, couple: { cid: 'r1', jailAuth: true }, jail: { active: false } }, msgs: () => history };
+    vm.createContext(ctx);
+    const names = ['roleGrudgeJailPrompt', 'roleJailAnnounced', 'roleJailAnnouncedNatural', 'roleGrudgeJailForgotTag'];
+    if (s.includes('function roleJailRecentTalk(')) names.push('roleJailRecentTalk');
+    vm.runInContext(names.map(n => fn(s, n)).join('\n'), ctx);
+    return ctx;
+  };
+  const role = n => ({ id: 'r1', grudges: Array.from({ length: n }, (_, i) => ({ text: '事' + i, done: false })) });
+  const now = Date.now();
+  const talk = (ago) => [
+    { role: 'assistant', type: 'text', content: '八笔了。今晚进小黑屋，一笔一笔说清楚。', time: now - ago },
+    { role: 'user', type: 'text', content: '权限在你那里我进不去', time: now - 60000 },
+  ];
+  test(file + ': his 「进来吧」「替你开门」 count when they were just talking about 小黑屋', () => {
+    const ctx = load(talk(20 * 60000));
+    assert.equal(ctx.roleJailAnnounced(REPLY1, role(8)), true, 'first reply in her screenshot');
+    assert.equal(ctx.roleJailAnnounced(REPLY2, role(8)), true, 'second reply in her screenshot');
+    const tags = [];
+    assert.equal(ctx.roleGrudgeJailForgotTag(role(8), tags, REPLY2), true, 'forgotten command is filled in');
+    assert.equal(tags.length, 1);
+  });
+  test(file + ': without recent 小黑屋 talk or below eight, 「进来吧」 stays ordinary', () => {
+    assert.equal(load(talk(3 * 3600000)).roleJailAnnounced(REPLY1, role(8)), false, 'talk too long ago');
+    assert.equal(load([]).roleJailAnnounced(REPLY2, role(8)), false, 'never talked about it');
+    assert.equal(load(talk(60000)).roleJailAnnounced(REPLY1, role(7)), false, 'below eight');
+    assert.equal(load(talk(60000)).roleJailAnnounced(REPLY1), false, 'no role given');
+    assert.equal(load([{ role: 'assistant', type: 'text', content: '<think>该关小黑屋了</think>早点睡。', time: now - 60000 }]).roleJailAnnounced(REPLY1, role(8)), false, 'thoughts are not talk');
+  });
+  test(file + ': refusals, threats and conditions still do not count with context', () => {
+    const ctx = load(talk(60000));
+    assert.equal(ctx.roleJailAnnounced('今天不让你进来。', role(8)), false);
+    assert.equal(ctx.roleJailAnnounced('再这样就给我进来。', role(8)), false);
+    assert.equal(ctx.roleJailAnnounced('如果你认错，我就替你开门。', role(8)), false);
+    assert.equal(ctx.roleJailAnnounced('想进来吗？', role(8)), false);
+    assert.equal(ctx.roleJailAnnounced('明天再进来。', role(8)), false);
+  });
+}

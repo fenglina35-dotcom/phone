@@ -593,3 +593,9 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 ## 出行日提示与小黑屋「说出口」（2026-10-22）
 - TRIP_DAY_WHO_V1 / TRIP_REMIND_DONE_V1：出行日系统提示按票上 people 写谁出行；机票、火车票的角色提醒在他真说出口（scheduleReply 回调为真）后才记 _reminded，每次打开最多请求一次、一天最多三次。
 - GRUDGE_JAIL_NATURAL_V1：roleJailAnnounced 原规则不变，另加 roleJailAnnouncedNatural（回复里提到小黑屋＋整句无否定无条件的进来了/门关了/跟我进/走吧）。GRUDGE_JAIL_FORGOT_TAG_V1：满八条、授权开着、当前情侣时，他说出口但没发指令，roleGrudgeJailForgotTag 补一条 [关小黑屋|…]，仍要先送达保存再进入。
+- GRUDGE_JAIL_CONTEXT_V1（2026-10-22 01:20 她截图）：满八条时 roleJailRecentTalk 看两小时内最近 16 条聊天（他的和她的，去掉内心和隐藏指令）提到过小黑屋，就算这条回复说的是小黑屋；另认「进来。」「现在进来」「替你/给你开门」「门开了」，「不管/不论/无论」不算否定。roleJailAnnounced(text,c) 第二个参数是角色，所有调用处都要传；不传就不看前文。tests/grudge-jail-natural.test.mjs。
+
+## 一键清空所有数据保留形象工作室（CLEAR_ALL_KEEP_STUDIO_V1，2026-10-22）
+- 「我的形象工作室」挂在当前账号（S.me.accounts 里 id 等于 S.me.active 的那个）的 imageStudio 上，userImageStudioContact 找不到账号就返回空，按钮没反应。
+- clearAllData 现在保留每个账号的身份资料（id、名字、微信号、头像、人设、签名、城市、年龄、成年确认）和 imageStudio，余额账单照旧清掉；保留当前账号；角色保留字段加 imageStudio；清完立刻 initAccounts。图片清理按 S 里的引用保留，所以照片也留下。
+- 改清空时，凡是挂在账号或角色上的设定都要想一下该不该留。tests/clear-all-keeps-image-studio.test.mjs。

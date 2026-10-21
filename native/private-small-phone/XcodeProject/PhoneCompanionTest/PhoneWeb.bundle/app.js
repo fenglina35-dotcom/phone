@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1861'){
+if(window.__NORTH_SHELL_BUILD__!=='1862'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1861 · 出行提示与小黑屋';
+const APP_VER='v1862 · 小黑屋与清空数据';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -4760,7 +4760,7 @@ function clearPhoneFriendChatsKeepPeople(p,now){p=p||{};now=+now||Date.now();p.m
 function clearMusicChatsKeepLibrary(m){if(!m)return m;m.chat=[];m.session=null;return m;}
 // 一键清空所有数据：清掉聊天/活动痕迹，保留美化、真人关系和音乐库
 async function clearAllData(){
-  if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：角色聊天和记忆、真人私聊/群聊消息、一起听聊天、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等记录。\n会保留：全部美化、你和角色的人设头像、API设置、真人好友和群关系、音乐/歌词/封面/背景。\n\n清空后无法恢复！建议先「导出备份」。'))return;
+  if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：角色聊天和记忆、真人私聊/群聊消息、一起听聊天、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等记录。\n会保留：全部美化、你和角色的人设头像、形象工作室与衣柜、API设置、真人好友和群关系、音乐/歌词/封面/背景。\n\n清空后无法恢复！建议先「导出备份」。'))return;
   if(!await uiConfirm('最后确认：真的现在清空吗？\n点确定立刻开始，不可撤销。'))return;
   if(_bootImagesPromise)try{await _bootImagesPromise;}catch(_){}
   const old=S,fresh=defState(),now=Date.now(),beauty=beautyPackFrom(old),pf=old.me&&old.me.phoneFriend,music=old.music;
@@ -4768,7 +4768,11 @@ async function clearAllData(){
   const m=old.me||{};
   ['name','wxid','avatar','signature','persona','city'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
   ['widgets','theme','wxTheme','uiMaterial','appIconPack','appIconRim','statusBarColor','homeClockColor','homeDashboard','homeSweetie','homeVinylColor','glassWidgetAppearances','_glassAppearanceSchema','homeBg','lockBg','callBg','appLayout','homeLayout','appDock','homeReferenceAppSlots','appIcons','appIconTone','appTextTone','momentCover','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 全部主屏/微信外观
-  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle'];
+  /* CLEAR_ALL_KEEP_STUDIO_V1（2026-10-22 她说：一键清空所有数据后「我的形象工作室」打不开）：原来清空时整个账号列表被丢掉，我的形象工作室挂在当前账号上，按钮找不到账号就没反应；角色的形象工作室也没在保留字段里。现在保留每个账号的身份资料和形象工作室（余额、账单照旧清掉）、当前用的是哪个账号，以及每个角色的形象工作室。 */
+  const ACC_KEEP=['id','name','wxid','avatar','persona','signature','city','age','adultConsent','imageStudio'];
+  fresh.me.accounts=(Array.isArray(m.accounts)?m.accounts:[]).filter(a=>a&&typeof a==='object').map(a=>{const n={bills:[]};ACC_KEEP.forEach(k=>{if(a[k]!=null)n[k]=a[k];});return n;});
+  if(m.active)fresh.me.active=m.active;
+  const KEEP=['id','name','avatar','relation','wxid','signature','persona','city','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','power','voice','model','taskN','pinned','proactive','chatBg','bubbleStyle','imageStudio'];
   fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
   fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
   fresh.worldbookCategories=old.worldbookCategories||[];// 分类只整理查看，也随世界书一起保留
@@ -4776,6 +4780,7 @@ async function clearAllData(){
   if(music)fresh.music=clearMusicChatsKeepLibrary(music);// 歌曲、歌词、音频和音乐美化保留，只清聊天/当前会话
   S=fresh;
   try{mergeBeautyPack(beauty);}catch(_){}// 恢复所有美化字段，避免清空时遗漏壁纸/气泡/图标
+  try{initAccounts();}catch(_){}// 账号列表立刻整理好，形象工作室等按钮清空后马上能用
   try{delete _heavy.messages;_heavyReady.delete('messages');await imgDel('__messages');}catch(_){}
   if(pf){try{const key=pfMsgStoreKey();delete _heavy['pfMessages:'+key];_heavyReady.delete('pfMessages:'+key);await imgDel(key);}catch(_){}try{const key=pfGroupMsgStoreKey();delete _heavy['pfGroupMessages:'+key];_heavyReady.delete('pfGroupMessages:'+key);await imgDel(key);}catch(_){}}
   save();try{imgGC();}catch(_){}
@@ -17273,12 +17278,14 @@ function roleGrudgeJailPrompt(c){const n=(c.grudges||[]).filter(x=>!x.done).leng
    满8条时在微信和电话里，每次在她最新一句话后面再贴一张小纸条；怎么开口仍由他自己决定，说出口后才进入。共同生活不贴（她定的）。 */
 function roleGrudgeJailPin(c){if(!roleGrudgeJailPrompt(c))return '';const n=(c.grudges||[]).filter(x=>!x.done).length;return '\n\n# 小纸条：该算账了\n你的记仇小本本里有 '+n+' 笔还没解决，已经到了第8笔的线。这一轮由你自己开口，用你自己的话告诉'+S.me.name+'你要带ta进小黑屋，把这些事一件件谈清楚；说完再另起一行 [关小黑屋|你自己写的原因]。现在「可以先忍着」「别反复翻旧账」都不算数了。怎么说、什么语气都由你决定，不用固定台词。';}
 // GRUDGE_JAIL_ANNOUNCE_V1: command + delivered role announcement, never a count-driven jump.
-function roleJailAnnounced(text){let visible=String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ').replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');let before;do{before=visible;visible=visible.replace(/\[[^\[\]]*\]|【[^【】]*】/g,' ');}while(visible!==before);return visible.split(/[。！？!?\n；;]/).some(cl=>/(?:小黑屋|禁闭室|禁闭)/.test(cl)&&/(?:关|进|去|带|来|走|等着)/.test(cl)&&!/(?:不(?:会|能|想|打算|准备|用|必|要|许|准)?(?:把你|将你|带你|让你|你)?(?:关|带|进|去)|别(?:把你|带你|你)?(?:关|带|进|去)|没(?:有)?(?:决定|答应|同意)|再这样|再敢|如果|要是|除非|否则|不然|下次|以后|明天|待会|晚点|等你|考虑|也许|可能|要不要|想不想|是否|吗|么)/.test(cl))||(typeof roleJailAnnouncedNatural==='function'&&roleJailAnnouncedNatural(text));}
+function roleJailAnnounced(text,c){let visible=String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ').replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');let before;do{before=visible;visible=visible.replace(/\[[^\[\]]*\]|【[^【】]*】/g,' ');}while(visible!==before);return visible.split(/[。！？!?\n；;]/).some(cl=>/(?:小黑屋|禁闭室|禁闭)/.test(cl)&&/(?:关|进|去|带|来|走|等着)/.test(cl)&&!/(?:不(?:会|能|想|打算|准备|用|必|要|许|准)?(?:把你|将你|带你|让你|你)?(?:关|带|进|去)|别(?:把你|带你|你)?(?:关|带|进|去)|没(?:有)?(?:决定|答应|同意)|再这样|再敢|如果|要是|除非|否则|不然|下次|以后|明天|待会|晚点|等你|考虑|也许|可能|要不要|想不想|是否|吗|么)/.test(cl))||(typeof roleJailAnnouncedNatural==='function'&&roleJailAnnouncedNatural(text,c));}
 /* GRUDGE_JAIL_NATURAL_V1（2026-10-21 她截图：他说「你刚才自己说的“我进小黑屋跟你说清楚”」「进来了」「门关了，北」，程序却不认，没让她进）：
    这一条回复里提到过小黑屋（引号里的也算），又有一句不带否定、不带条件的「进来了 / 门关了 / 跟我进 / 走吧」，就算他说出口了。 */
-function roleJailAnnouncedNatural(text){const raw=String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ');let all=raw,before;do{before=all;all=all.replace(/\[[^\[\]]*\]|【[^【】]*】/g,' ');}while(all!==before);if(!/小黑屋|禁闭室|禁闭/.test(all))return false;const visible=all.replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');return visible.split(/[。！？!?\n；;]/).some(cl=>/(?:进来了|进来吧|进去了|进去吧|门关了|关上门|把门关|关门了|锁上门|带你进|跟我进|跟我走|走吧|这就进|现在就进)/.test(cl)&&!/(?:[没不别]|如果|要是|除非|否则|不然|下次|以后|明天|待会|晚点|等你|考虑|也许|可能|再这样|再敢|吗|么)/.test(cl));}
+/* GRUDGE_JAIL_CONTEXT_V1（2026-10-22 01:20 她截图）：满八条时他说「嗯。是我的问题。进来吧。」「不管哪个，先生替你开门。进来。」，这两条都没再说小黑屋三个字（前面一直在说），「不管」又被当成否定，她没进去。现在：满八条且两小时内最近16条聊天提到过小黑屋，也算说的是小黑屋；补「进来。」「现在进来」「替你/给你开门」「门开了」；「不管/不论/无论」不算否定。拒绝、威胁、条件、问句、改天照旧不算。 */
+function roleJailRecentTalk(c){if(!c||typeof msgs!=='function'||typeof roleGrudgeJailPrompt!=='function'||!roleGrudgeJailPrompt(c))return false;const now=Date.now();return (msgs(c.id)||[]).slice(-16).some(m=>{if(!m||(m.role!=='assistant'&&m.role!=='user')||m.type==='sys'||now-(+m.time||0)>7200000)return false;let t=String(m.content||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' '),b;do{b=t;t=t.replace(/\[[^\[\]]*\]/g,' ');}while(t!==b);return /小黑屋|禁闭室|禁闭/.test(t);});}
+function roleJailAnnouncedNatural(text,c){const raw=String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ');let all=raw,before;do{before=all;all=all.replace(/\[[^\[\]]*\]|【[^【】]*】/g,' ');}while(all!==before);if(!/小黑屋|禁闭室|禁闭/.test(all)&&!(typeof roleJailRecentTalk==='function'&&roleJailRecentTalk(c)))return false;const visible=all.replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');return visible.split(/[。！？!?\n；;]/).some(cl=>(/(?:进来了|进来吧|进去了|进去吧|门关了|关上门|把门关|关门了|锁上门|带你进|跟我进|跟我走|走吧|这就进|现在就进|现在进来|[替给帮]你开门|门开了)/.test(cl)||/^[\s，,]*(?:那就|现在|给我|就)?进来[\s~～…]*$/.test(cl))&&!/(?:[没不别]|如果|要是|除非|否则|不然|下次|以后|明天|待会|晚点|等你|考虑|也许|可能|再这样|再敢|吗|么)/.test(cl.replace(/不管|不论|无论/g,'')));}
 /* GRUDGE_JAIL_FORGOT_TAG_V1（她定的）：满八条、小黑屋授权开着、当前情侣时，他已经清楚说出口但忘了发 [关小黑屋|…]，也照样进去。 */
-function roleGrudgeJailForgotTag(c,tags,spoken){if(!c||!Array.isArray(tags)||tags.some(t=>/(?:关小黑屋|关禁闭|禁闭)/.test(t)))return false;if(!roleGrudgeJailPrompt(c)||!roleJailAnnounced(spoken))return false;tags.push('[关小黑屋|把记仇本上攒下的几件事一件件说清楚]');return true;}
+function roleGrudgeJailForgotTag(c,tags,spoken){if(!c||!Array.isArray(tags)||tags.some(t=>/(?:关小黑屋|关禁闭|禁闭)/.test(t)))return false;if(!roleGrudgeJailPrompt(c)||!roleJailAnnounced(spoken,c))return false;tags.push('[关小黑屋|把记仇本上攒下的几件事一件件说清楚]');return true;}
 function roleJailTakeTags(content,tags){return roleActionEnvelopeContent(content).replace(/[\[【]\s*(?:关小黑屋|关禁闭|禁闭)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,t=>{tags.push(t);return '';});}
 function roleAllLockAnnounced(text){const visible=String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');return visible.split(/[。！？!?\n；;]/).some(cl=>!/(?:明天|下次|以后|待会|晚点|等你|如果|要是|除非)/.test(cl)&&companionAllControlClauseAction(cl.replace(/锁起来|锁了/g,'锁上'))==='lock');}
 function applyControlTags(content,c,id,statedPwd,requestText,decisionText,announcementSaved){
@@ -17322,7 +17329,7 @@ function applyControlTags(content,c,id,statedPwd,requestText,decisionText,announ
     return '';});
   out=out.replace(/[\[【]\s*(关小黑屋|关禁闭|禁闭|原谅)\s*[\|｜:：]?\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{changed=true;const reason=(arg||'').replace(/[「」『』\x22\x27]/g,'').trim();
     if(act==='原谅'){emotionAfterForgive(c);}
-    else if(S.couple.jailAuth&&!(S.jail&&S.jail.active)&&announcementSaved===true&&roleJailAnnounced(decisionText)){const account=actId();setTimeout(()=>{if(actId()!==account||getC(c.id)!==c||c.deleted||c.blocked||!S.couple||S.couple.cid!==c.id||!S.couple.jailAuth||S.jail&&S.jail.active)return;enterJail(c.id,reason,false);},600);}
+    else if(S.couple.jailAuth&&!(S.jail&&S.jail.active)&&announcementSaved===true&&roleJailAnnounced(decisionText,c)){const account=actId();setTimeout(()=>{if(actId()!==account||getC(c.id)!==c||c.deleted||c.blocked||!S.couple||S.couple.cid!==c.id||!S.couple.jailAuth||S.jail&&S.jail.active)return;enterJail(c.id,reason,false);},600);}
     return '';});
   // 挂项圈/摘项圈（归属标记）
   out=out.replace(/[\[【]\s*(?:挂|换|改|戴|套|加|上)项圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{const title=collarRelationshipTitle(t);_collarTagFired=true;if(title){changed=true;S.me.collar={text:title,by:c.id,ts:Date.now()};}return '';});
@@ -18755,7 +18762,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
       if(_call.replyVoice&&!c.muted&&spoken){/* B站陪看、系统屏幕共享和私人版摄像头取流时保持原生识别持续开启：_callBusy 会丢弃角色回声，暂停识别会 setActive(false) 并让同一 AVAudioSession 上的视频预览短暂停顿。 */if(!callNativeSharedMediaAudioOn()&&!callNativeCameraMediaOn()&&!hfAudioPaused&&_callHF&&_callSR){hfAudioPaused=true;await callHFPauseForRoleAudio();}let shown=false;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();await speakWait(spoken,c,{cue:_speechRows[_ui].cue,interjection:_speechRows[_ui].interjection,perf:_speechRows[_ui].perf,inlineSound:_speechRows[_ui].inlineSound,ask:_speechRows[_ui].ask||'',prepared:_speechJobs[_ui],cacheMessage:video?callMsg:null,onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}const hasNextSpoken=_speechRows.slice(_ui+1).some(x=>x&&x.spoken);if(hasNextSpoken&&voicePauseMs(c)>0)await sleep(voicePauseMs(c));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if(!_callJailTags.length&&_call&&_call.session===sess&&!_call.cohab&&typeof roleGrudgeJailForgotTag==='function')roleGrudgeJailForgotTag(c,_callJailTags,msgs(c.id).filter(m=>!_callJailBefore.has(m.id)&&m.role==='assistant'&&m.type==='text'&&m._cs===sess).map(m=>m.content||'').join('\n'));
-    if(_callJailTags.length&&_call&&_call.session===sess&&!_callStateStale()){const spoken=msgs(c.id).filter(m=>!_callJailBefore.has(m.id)&&m.role==='assistant'&&m.type==='text'&&m._cs===sess).map(m=>m.content||'').join('\n');if(roleJailAnnounced(spoken)&&await persistWechatMessagesNow()){if(!_call||_call.session!==sess||_callStateStale())return;applyControlTags(_callJailTags.join('\n'),c,c.id,_statedPwd,'',spoken,true);}}
+    if(_callJailTags.length&&_call&&_call.session===sess&&!_callStateStale()){const spoken=msgs(c.id).filter(m=>!_callJailBefore.has(m.id)&&m.role==='assistant'&&m.type==='text'&&m._cs===sess).map(m=>m.content||'').join('\n');if(roleJailAnnounced(spoken,c)&&await persistWechatMessagesNow()){if(!_call||_call.session!==sess||_callStateStale())return;applyControlTags(_callJailTags.join('\n'),c,c.id,_statedPwd,'',spoken,true);}}
     if(_screenShareResumeDecision&&_call&&_call.session===sess&&callScreenShareOn())callScreenAutonomyApply(_screenShareResumeDecision);
     if((wantHang||wantWxLogin||wantRemoteControl)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':wantRemoteControl?'remotecontrol':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);else if(wantRemoteControl)setTimeout(()=>{if(!(typeof _call!=='undefined'&&_call))remoteControlRequest(cid||c.id);},1400);},900);
   }catch(e){try{console.warn('callAI failed',e);}catch(_){}if(!_callStateStale()&&_call){_call.lastError={at:Date.now(),message:String(e&&e.message||e||'unknown').slice(0,160)};const systemText=String(e&&e.callSystemText||'').trim();if(_videoVision&&!systemText){_call.sub=null;updateCallSub();callVideoVisionStatus('failed');}else{if(_videoVision)callVideoVisionStatus('failed');_call.sub={who:systemText?'system':'them',text:systemText||callFailureText(e)};updateCallSub();}}}
