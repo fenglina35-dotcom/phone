@@ -3343,3 +3343,4 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 
 2026-10-30 网页v1861 / 私人v1866 / iOS512（提交 0a354489）：OFF_MODEL_CONFIG_V1（单次约会模型、路线与诊断；私人版以前不传路线）、OFF_MODAL_GLASS_V1、WS_HEALTH_LAST_V1、SPY_REFRESH_COMPLETE_V1。全部测试 4730 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.512 (512)。真机效果待她回报；网页版查他手机刷新是否解决待她在网页上试。
 2026-10-30 网页v1862 / 私人v1867 / iOS513（提交 8c095c23）：PF_LOW_TRAFFIC_V1（真人好友默认省流量，好友页「实时接收消息」开关）、JAIL_CHOICE_HISTORY_V1、BIRTHDAY_ONLINE_V1、SPY_PARSE_LENIENT_V1。全部测试 4760 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15（第一次装时连接断开，重装一次成功）并读回 1.0.513 (513)。真机效果、生日当天实际祝福、对方网页版刷新未实测。
+2026-10-30 网页v1863 / 私人v1868 / iOS514（提交 c1fbbaf3）：LETTER_NO_REPEAT_V1（写信不照抄旧信、不重复发同一封；聊天用的来信提示没改）、SOCIAL_NOT_CHAT_V1（朋友圈和 X 不发微信里对她说的话）。全部测试 4776 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.514 (514)。群里那位用户的网页版效果、真机写信与发动态未实测。
