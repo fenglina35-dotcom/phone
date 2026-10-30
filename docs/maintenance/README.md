@@ -3342,3 +3342,4 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-30 网页v1860 / 私人v1865 / iOS511（提交 7a9b7fa8）：个人资料生日按钮可点；COHAB_VOICE_CHUNK_SUMMARY_V1、COHAB_VOICE_MODEL_V1、TTS_CALL_TIMEOUT_V1（每次 60 秒×3）、TTS_DOT_V1、COUPLE_REAL_LOCATION_V1、COMPANION_MULTI_BIND_V1。全部测试 4708 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.511 (511)。真机效果待她回报（语音小灯、长语音记忆、离家定位、多个关联）。
 
 2026-10-30 网页v1861 / 私人v1866 / iOS512（提交 0a354489）：OFF_MODEL_CONFIG_V1（单次约会模型、路线与诊断；私人版以前不传路线）、OFF_MODAL_GLASS_V1、WS_HEALTH_LAST_V1、SPY_REFRESH_COMPLETE_V1。全部测试 4730 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.512 (512)。真机效果待她回报；网页版查他手机刷新是否解决待她在网页上试。
+2026-10-30 网页v1862 / 私人v1867 / iOS513（提交 8c095c23）：PF_LOW_TRAFFIC_V1（真人好友默认省流量，好友页「实时接收消息」开关）、JAIL_CHOICE_HISTORY_V1、BIRTHDAY_ONLINE_V1、SPY_PARSE_LENIENT_V1。全部测试 4760 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15（第一次装时连接断开，重装一次成功）并读回 1.0.513 (513)。真机效果、生日当天实际祝福、对方网页版刷新未实测。
