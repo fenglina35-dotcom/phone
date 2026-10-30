@@ -599,3 +599,15 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 「我的形象工作室」挂在当前账号（S.me.accounts 里 id 等于 S.me.active 的那个）的 imageStudio 上，userImageStudioContact 找不到账号就返回空，按钮没反应。
 - clearAllData 现在保留每个账号的身份资料（id、名字、微信号、头像、人设、签名、城市、年龄、成年确认）和 imageStudio，余额账单照旧清掉；保留当前账号；角色保留字段加 imageStudio；清完立刻 initAccounts。图片清理按 S 里的引用保留，所以照片也留下。
 - 改清空时，凡是挂在账号或角色上的设定都要想一下该不该留。tests/clear-all-keeps-image-studio.test.mjs。
+
+## 聊天被拦住、小黑屋、记忆、剧场、外卖等第一批修复（2026-10-30）
+- SKY_SYNC_NO_BLOCK_V1（仅私人 app.js）：回复先生前 skyPrepareBeforeReply 调 NorthSkyRoleSync.preparePhone，失败接住、最多等 4 秒，超时后它在后台继续，迟到的失败也接住。以前直接 await，网络断开抛「Load failed」整轮回复放弃，诊断显示「未到模型请求阶段或已被其他流程接管」。任何回复前的附加步骤都不许让回复整轮失败。
+- TURN_ERROR_RECORD_V1（两份 request-diagnostics.js）：aiReply 的 catch 调 chatRequestDiagnostic('turnError',…) 把出错原文记到这一轮，诊断显示「还没请求模型就出错：…」。
+- JAIL_LATIN_NAME_V1：jailHasLatin/jailBadOutput/jailChineseOnly 带角色参数；她和角色名字、OK/App/iPhone 等不算英文；没有中文或英文词达 4 个才算坏回复；用不了时 toast 让她再说一句，不再塞固定台词。
+- MEMORY_MANUAL_ROLE_VIEW_V1：memoryManualAdd/memoryEditAt 按角色视角原文保存（rolePerspective），提示词列记忆用 memoryText。
+- THEATER_GUEST_BUDGET_V1：多人剧场其他角色 max 至少 offlineReplyBudget（与主角相同）。
+- FOOD_PLAN_LENIENT_V1：northRolePlan 份数默认 1、坏规格丢掉、一定搜角色点的名字，只有完全不可用才失败。
+- VISION_NO_SUPPORT_MSG_V1：visionErrKind 认出「不支持图片」返回 no_vision；visionPlainError 统一给聊天显示。
+- TRANSFER_NOTE_DETAIL_V1：转账详情收款时间下面加「附言」行（.wx-transfer-detail-note 可换行）。
+- MOMENT_LONG_TEXT_V1：cleanMomentBody 改 trimSentence(…,500)，生成 max 700（抖音 cleanDouyinBody 仍 140，未动）。
+- PHOTO_ALBUM_IMAGE_RETRY_V1：相册图片 onerror 调 photoAlbumImageRetry，按 data-album-ref 或 data-stored-src 重读一次。

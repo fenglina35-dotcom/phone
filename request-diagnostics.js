@@ -65,10 +65,12 @@
  const reasons={'empty-content':'接口正文字段为空','missing-content':'返回数据缺少聊天正文字段','alternate-format':'有其他格式字段，当前聊天解析未读取','non-string-content':'聊天正文字段不是字符串','sse':'收到流式数据，当前路径要求完整 JSON','invalid-json':'响应不是有效 JSON','empty-body':'HTTP 响应正文为空','body-read-failed':'响应正文读取失败'};
  function result(row,text){const size=typeof text==='string'?text.length:0;patch(row,{state:size?'returned':'empty',parsedChars:size,duration:Date.now()-(row&&row.at||Date.now()),reason:size?'已取得正文；是否显示需看聊天轮次结果':reasons[row&&row.format]||'解析后没有正文'});return text;}
  function error(row,e){if(!row||row.state==='failed')return;const status=Number(e&&e.status)||row.status||0,phase=row.failureStage||(row.state==='started'?'preparing':row.state==='reading'?'processing-response':'waiting-headers');patch(row,{state:'failed',status,errorCode:scrub(e&&e.code||''),errorName:scrub(e&&e.transportName||e&&e.name||''),rawError:scrub(e&&e.transportRaw||e&&e.raw||e&&e.message||e),failureStage:phase,timedOut:!!(e&&e.transportTimedOut),timeoutMs:Number(e&&e.transportTimeoutMs)||row.timeoutMs||0,failureVisibility:typeof document!=='undefined'?String(document.visibilityState||'unknown'):'unknown',reason:status>=400?'上游 HTTP 请求失败':e&&e.transportTimedOut?'本机等待超时，已中止请求':reasons[row.format]||'请求或回复处理抛出错误',error:scrub(e&&e.message||e),duration:Date.now()-row.at});}
+ /* TURN_ERROR_RECORD_V1（2026-10-30）：回复还没请求模型就出错时，把出错原文记到这一轮上，诊断里直接能看到原因，不必再截图。 */
+ function turnError(roleId,acc,message){all();const id=String(roleId==null?'':roleId),aid=String(acc||account());for(let i=rows.length-1;i>=0;i--){const row=rows[i];if(row.kind==='turn'&&row.roleId===id&&row.account===aid&&row.state==='preparing'){patch(row,{rawError:scrub(message)});return true;}}return false;}
  function finishTurn(turn,text,opt){
   const row=turn&&turn.requestDiagnostic;if(!row)return;
   const children=all().filter(item=>item.turnId===row.id),hasBody=children.some(item=>item.parsedChars>0);
-  patch(row,{state:opt&&opt.delivered?'handled':'not-visible',reason:opt&&opt.delivered?'本轮已有可见回复或合法功能处理':hasBody?'接口曾返回正文，但本轮未形成可见回复':children.length?'本轮未形成可见回复；请查看对应请求原因':'未到模型请求阶段或已被其他流程接管',duration:Date.now()-row.at,requests:children.length});
+  patch(row,{state:opt&&opt.delivered?'handled':'not-visible',reason:opt&&opt.delivered?'本轮已有可见回复或合法功能处理':hasBody?'接口曾返回正文，但本轮未形成可见回复':children.length?'本轮未形成可见回复；请查看对应请求原因':(row.rawError?'还没请求模型就出错：'+row.rawError:'未到模型请求阶段或已被其他流程接管'),duration:Date.now()-row.at,requests:children.length});
  }
  function list(id){return all().filter(row=>row.account===account()&&(id==null||row.roleId===String(id))).slice().reverse();}
  function escape(value){return String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
@@ -81,5 +83,5 @@
  async function copy(id){const text=report(id);try{await navigator.clipboard.writeText(text);toast('已复制故障诊断（不含正文和密钥）');}catch(_){openModal('<h3>请长按复制故障诊断</h3><textarea readonly style="width:100%;height:45vh">'+escape(text)+'</textarea><button class="btn g" onclick="closeModal()">关闭</button>');}}
  function button(id){return '<button class="btn g" style="margin:10px 0" onclick="NorthRequestDiagnostics.open('+escape(JSON.stringify(String(id)))+')">请求故障诊断 · 复制记录</button>';}
  function route(c){const row=list(c&&c.id).find(r=>r.kind==='request');if(!row)return null;const pending=['started','sent','reading'].includes(row.state),name=typeof CHAT_ROUTE_NAMES!=='undefined'&&CHAT_ROUTE_NAMES[row.routeIndex]||'实际请求路线';return{at:row.at,outcome:pending?'pending':row.state==='returned'?'success':'failed',routeName:name,actualRoute:name,slot:row.slot,actualSlot:row.slot,model:row.model,actualModel:row.model,status:row.status,reason:row.reason,messageCount:row.messageCount,requestChars:row.requestChars};}
- root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,finishTurn,list,report,open,copy,button,route};
+ root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,turnError,finishTurn,list,report,open,copy,button,route};
 })(globalThis);

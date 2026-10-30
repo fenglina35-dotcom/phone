@@ -1213,3 +1213,6 @@ input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])
 .field input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week]){display:block;width:100%;min-height:40px}
 input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-date-and-time-value{min-width:0;margin:0;text-align:left}
 input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])::-webkit-datetime-edit{padding:0;min-width:0}
+
+/* TRANSFER_NOTE_DETAIL_V1：转账详情的附言可以换行，长句完整显示 */
+.wx-transfer-detail-meta .wx-transfer-detail-note dd{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;text-align:left;font-variant-numeric:normal}

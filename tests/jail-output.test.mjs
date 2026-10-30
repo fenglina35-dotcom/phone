@@ -39,9 +39,10 @@ const context = vm.createContext({
   honestMoodText: (_c, text) => text,
   adjMood: (id, amount) => moodChanges.push([id, amount]),
   isRefusal: (text) => /as an ai|i cannot|system policy/i.test(text || ""),
+  S: { me: { name: "North" } },
 });
 
-for (const name of ["jailCleanHidden", "jailChineseOnly", "jailHasLatin", "jailBadOutput"]) {
+for (const name of ["jailCleanHidden", "jailAllowedLatin", "jailLatinStrip", "jailChineseOnly", "jailHasLatin", "jailBadOutput"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -63,6 +64,8 @@ const jailSystemText = functionSource("jailSystem");
 assert.match(jailSystemText, /规则教育模式/);
 assert.match(jailSystemText, /不包含伤害、恐吓或强迫/);
 assert.doesNotMatch(jailSystemText, /adultRoleRule/);
-assert.match(source, /if\(jailBadOutput\(r\)\)r='【房间里安静下来/);
+// JAIL_LATIN_NAME_V1 (2026-10-30): the canned 「房间里安静下来…」 line repeated three times in her 小黑屋, so an unusable reply now shows nothing and asks her to say it again.
+assert.doesNotMatch(source, /房间里安静下来/);
+assert.match(source, /toast\('这次没回上来，再说一句试试'\);return;/);
 
 console.log("jail output tests passed");

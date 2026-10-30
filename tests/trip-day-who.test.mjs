@@ -30,7 +30,7 @@ for (const base of ['', PRIVATE]) {
 
   for (const file of ['travel-flight-booking.js', 'travel-train-booking.js']) {
     test((base || 'web ') + file + ': the reminder only counts once he has really said it', () => {
-      const today = '2026-10-22', calls = [];
+      const _d = new Date(), today = _d.getFullYear() + '-' + String(_d.getMonth() + 1).padStart(2, '0') + '-' + String(_d.getDate()).padStart(2, '0'), calls = []; // the real date: past tickets are closed by the app's own clock
       const order = { id: 'o1', accountId: 'main', flightV2: true, railV2: true, status: 'upcoming', date: today, from: '苏州', to: '西安', dep: '08:00', arr: '11:00', no: 'SP1', cls: 'economy', adults: 1, children: 0, infants: 0, pax: 1, people: [{ id: 'me', name: '我' }], payer: 'ta', cid: 'r1', price: 500, knownRoleIds: ['r1'], departAt: new Date(2099, 0, 1).getTime() };
       const S = { me: { active: 'main', name: '我' }, contacts: [{ id: 'r1', name: '先生' }], travel: { trips: [order] }, settings: {} };
       const ctx = { S, globalThis: null, todayStr: () => today, getC: id => S.contacts.find(c => c.id === id), save() {}, actId: () => 'main', isMain: () => true, tvInit: () => S.travel,

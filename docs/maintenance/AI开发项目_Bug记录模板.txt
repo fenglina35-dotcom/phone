@@ -2458,3 +2458,13 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-22（web v1857 / private v1862 待发布）：
 - 满八条他说「进来吧」「先生替你开门。进来。」还是没进小黑屋（GRUDGE_JAIL_CONTEXT_V1）：她 01:20 截图。原因三个：1）roleJailAnnouncedNatural 要求这条回复里有「小黑屋」三个字，他前面一直在说，这两条没再提；2）「不管哪个，先生替你开门」里的「不」被当成否定；3）「进来。」「替你开门」不在认得的说法里。改为：满八条、授权开着、当前情侣时，两小时内最近 16 条聊天提到过小黑屋也算；补这几种说法；「不管/不论/无论」不算否定。拒绝、威胁、条件、问句、改天、内心照旧不算。tests/grudge-jail-natural.test.mjs 新增 3 项，旧代码截图那一项失败。permanent-fix-guard 里 roleJailAnnounced(decisionText) 的检查跟着改成 (decisionText,c)。真机未确认。
 - 一键清空所有数据后「我的形象工作室」打不开（CLEAR_ALL_KEEP_STUDIO_V1）：clearAllData 用 defState 重建 S.me 时没带账号列表，userImageStudioContact 找不到当前账号返回空，按钮无反应；重开 App 会建一个空账号，原来的形象照片和衣柜没了；角色的 imageStudio 也不在保留字段里。改为保留账号身份资料和 imageStudio（余额账单照清）、当前账号、角色 imageStudio，清完立刻 initAccounts。tests/clear-all-keeps-image-studio.test.mjs 旧代码 4 项全失败。她手机上已经清空掉的照片无法从程序里找回。
+
+2026-10-30（web v1858 / private v1863 待发布）她一次发来 21 项，第一批：
+- 先生聊天频繁「未到模型请求阶段或已被其他流程接管」、弹简短英文（SKY_SYNC_NO_BLOCK_V1）：读她手机 localStorage 的请求诊断，10-29 21:32～21:45 四轮 requests=0、耗时 2～12 秒，同期请求失败原文「Load failed」「Fetch is aborted」。私人 aiReply 在请求模型前 await NorthSkyRoleSync.preparePhone(c)（光遇同步，两三次云端请求，她的 skyRoleSync.enabled=true、roleId=先生）；断网时抛错，整轮回复被放弃。和 v1747 相册调用缺失函数同类：附加功能出错拦住聊天。改为失败接住、最多等 4 秒。另加 TURN_ERROR_RECORD_V1 把请求前出错原文记进诊断。tests/sky-sync-no-block.test.mjs 旧代码 4 项失败。她贴的另一份 v1857 记录来自别人的网页版，网页没有光遇，原因未查（下次出现时诊断会带出错原文）。
+- 小黑屋同一句固定台词反复出现（JAIL_LATIN_NAME_V1）：jailHasLatin 见任何英文字母就判坏回复并换成固定兜底；私人版她叫 North，叫名字即被换掉。tests/jail-latin-name.test.mjs 旧代码 4 项失败；tests/jail-output.test.mjs 原先断言固定兜底存在，正是她报的问题，改成断言不再有固定兜底。
+- 「我的」开头的角色记忆保存后变成 North 的（MEMORY_MANUAL_ROLE_VIEW_V1）：手动新增/编辑走 aboutMeNoteText 把「我」换成她名字；另发现提示词对 rolePerspective 记忆用 aboutMeNoteText 会输出 [object Object]。tests/memory-manual-role-view.test.mjs 旧代码 4 项失败。
+- 多人剧场其他角色秒失败（THEATER_GUEST_BUDGET_V1）：其他角色输出上限 max(240,气泡数×120)，主角为 offlineReplyBudget（她设 4096）。思考型模型上限太小会失败，判断为最可能原因，真机未确认；中转站显示的「客户端已停止等待」6 秒未找到对应的本地中止。
+- 角色点外卖「点餐需求未能解析」（FOOD_PLAN_LENIENT_V1）：以前修过的是别的阶段；这次是 planning 阶段格式过严（份数字符串等即失败）。tests/food-plan-lenient.test.mjs 旧代码 2 项失败。
+- 识图报错误导（VISION_NO_SUPPORT_MSG_V1）、转账附言看不到（TRANSFER_NOTE_DETAIL_V1）、朋友圈 140 字硬切（MOMENT_LONG_TEXT_V1）、相册「照片暂时无法显示」后不再重试（PHOTO_ALBUM_IMAGE_RETRY_V1，idb: 地址未入缓存即失败）：各自新测试旧代码失败。
+- tests/trip-day-who.test.mjs 车票日期写死 2026-10-22，过了那天程序按真实时钟关闭旧票，上次提交的代码同样 4 项失败；改用当天日期，未改程序。
+- 全量 4638 项除上面日期测试外通过；改日期后该文件通过。核心聊天普通/查岗预览两遍通过。读手机数据只用 devicectl copy from（核心存档、运行日志、localStorage），排查后删除副本。
