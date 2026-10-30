@@ -631,3 +631,11 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 更正 TTS_CALL_TIMEOUT_V1：她不接受「没声音直接跳过」。最终是每次请求最多 60 秒、到时间自动重试、最多 3 次，不按通话缩短。
 - TTS_DOT_V1：通话（renderCall 名字后）和共同生活语音（.cvr-title b 名字后）的小灯 .tts-dot；ttsArr 在通话中计数 _ttsPending，>0 时 .busy 红灯 1 秒一闪，否则绿灯常亮。她不要文字提示。
 - COMPANION_MULTI_BIND_V1：一个小手机 App 可以关联多个 iPhone App。companionBindExternal 只去掉同一个 iPhone App 的旧关联；companionDispatchBound 对每个关联调用 companionDispatchBoundOne，小手机那边只改一次（_skipInternal）。companionBindingForInternal 仍返回第一个，供只需要一个的地方用。
+
+## 单次约会模型配置、诊断与点开的框（OFF_MODEL_CONFIG_V1 / OFF_MODAL_GLASS_V1，2026-10-30）
+- 约会设定里有「对话模型」（主模型＝原规则 / 跟随微信角色 / 副模型）和「对话 API 路线」（跟随微信角色路线 / 路线一到四），存在 offData(id).settings；offReplyAux、offReplyRouteIndex。纠错候选仍 aux:true，走同一条路线。
+- 以前：网页版用 roleChatRouteIndex(c)+主模型；私人版 offAI 根本没传 routeIndex，用的是微信全局当前路线，角色单独设了路线时会走错——这是她说的「换了路线却走另一个」。现在两版都按设置走，默认跟随角色路线。
+- 每次请求带 cohabDiagnostic:{hostId:'off:'+id}，cohab-model-diagnostics.js 的 offModelDiagnosticOpen 读这些记录；app.js 里用 offModelDiagnosticShow 转接（onclick 检查要求函数在 app.js 里有）。
+- 单次约会里点开的框和共同生活一样套 cohab-glass-modal（cohabGlassSkin 不再要求 _off.mode==='cohab'）。
+- WS_HEALTH_LAST_V1（仅私人 private-couple-windowsill.js）：窗台热茶卡片以前只读 companionRoleDataState()（只在角色查手机那一会儿有值），平时永远「没同步过来」；现在回退到 companionState().health（保留上一次心率），并写「心率测于…」。
+- SPY_REFRESH_COMPLETE_V1：查他手机刷新的 chatAPI 加 complete:true，被长度上限截断时自动续写一次再解析。私人版同样加。网页版具体是哪个模型写不完未核实（两版代码相同，差在各自设置）。

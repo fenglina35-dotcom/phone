@@ -48,7 +48,7 @@ test('the role sees its own earlier files in its own file syntax', () => {
 test('phone inspection has room to finish, sends no mid-chat system role and says why it failed', () => {
   for (const [label, src] of BUILDS) {
     const spy = fn(src, 'spyRefresh');
-    assert.match(spy, /\{max:4000,aux:/, label + ': generation budget');
+    assert.match(spy, /\{max:4000,(?:complete:true,)?aux:/, label + ': generation budget'); // SPY_REFRESH_COMPLETE_V1 (2026-10-30): same 4000 budget, now with automatic continuation
     assert.doesNotMatch(spy, /_transferReceipt\?'system'/, label + ': no system role inside history');
     assert.match(spy, /toast\('生成失败：'\+\(_spyWhy\|\|'原因未知'\)/, label + ': failure reason shown');
   }

@@ -43,7 +43,7 @@ test('offline reply UI reports the real reason while preserving the conversation
   const off = functionSource('offAI');
   assert.match(off, /线下回复未生成：.*offlineReplyEmptyReason/);
   assert.match(off, /const reason=offlineReplyFailureReason\(e\)[\s\S]*线下回复失败：'\+reason/);
-  assert.match(off, /routeIndex=roleChatRouteIndex\(c\)[\s\S]*offlineReplyChatRequest\(req/,'single-date replies must use the route shown for that role');
+  assert.match(off, /routeIndex=offReplyRouteIndex\(c,o\)[\s\S]*offlineReplyChatRequest\(req/,'single-date replies must use the route shown for that role'); // OFF_MODEL_CONFIG_V1 (2026-10-30): the route comes from 约会设定; its default 跟随微信角色路线 is roleChatRouteIndex(c)
   assert.match(off, /roleInterceptDiagnosticTurnFailure\(_offAudit,e,\{reason\}\)/,'a failed request must remain inspectable without inventing a reply');
   assert.match(off, /原对话没有被改动/);
   assert.doesNotMatch(off, /线下回复暂时没有生成，原对话没有被改动/);

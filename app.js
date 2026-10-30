@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1860'){
+if(window.__NORTH_SHELL_BUILD__!=='1861'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1860 · 语音记忆与声音小灯';
+const APP_VER='v1861 · 单次约会模型与窗台心率';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2129,7 +2129,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1860&r=v1860-owner-todo-report-1';
+  const url='sw.js?v=1861&r=v1861-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5458,7 +5458,7 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
       +'"friends":["新加的好友及原因"]}';
     let ng=null,_sys='',_spyWhy='';try{_sys=buildSystem(c);}catch(_be){_sys=(c.persona||'')+'（你是'+(c.remark||c.name)+'）';}
     for(let _i=0;_i<4&&!ng;_i++){if(_i>0)await new Promise(r=>setTimeout(r,_i*500));
-      try{/* 这份 JSON 很长，会先思考的模型也把思考算进额度；1200 常写到一半被截断。 */const content=await chatAPI([{role:'system',content:_sys},...hist,{role:'user',content:prompt}],{max:4000,aux:!!(S.settings&&S.settings.spyAux)});
+      try{/* 这份 JSON 很长，会先思考的模型也把思考算进额度；1200 常写到一半被截断。 *//* SPY_REFRESH_COMPLETE_V1（2026-10-30 她截图：网页版查他手机刷新总报「模型没有按格式写完」，私人版正常）：这份手机数据很长，模型写满上限就被截成半段；这里以前没开写不完自动续写。 */const content=await chatAPI([{role:'system',content:_sys},...hist,{role:'user',content:prompt}],{max:4000,complete:true,aux:!!(S.settings&&S.settings.spyAux)});
         try{ng=parseObj(content);}catch(_p){try{ng=JSON.parse(stripJSON(content));}catch(_p2){ng=null;}}if(!ng||typeof ng!=='object'){ng=null;_spyWhy=String(content||'').trim()?'模型没有按格式写完（可能写太长被截断，或没有输出 JSON）':'模型返回了空内容';}}catch(_e){ng=null;_spyWhy=String(_e&&_e.message||_e||'请求失败').slice(0,120);}}
     if(!ng){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败：'+(_spyWhy||'原因未知')+'，再点一次刷新试试',5200);return;}
     // 合并：刷新【不清掉】已有的——余额/通讯录/日记历史/今日日程/他看到的我的动态都保留
@@ -11243,8 +11243,8 @@ async function offAI(note){let _lifeNoteDraft=null;const _rawOutput=typeof model
       const result=await cohabReplyCore(c,o,turn,current,replyMax,{inspectionOwner:'offAI',allowTravel:true});_cohabAuditResult=result;items=result.items;inspection=result.inspection||'';tripEvents=result.trips||[];travelErrors=result.travelErrors||[];_cohabAuditActionHandled=!!result._interceptActionHandled||tripEvents.length>0;if(travelErrors.length)_cohabAuditResult._interceptPartial=true;
       if(inspection){const runOpt={source:'reply-tag'},inspected=await cohabRunPhoneInspection(c.id,inspection,runOpt);if(inspected||runOpt._roleActionExecuted){_cohabAuditActionHandled=true;_cohabAuditResult._interceptActionHandled=true;roleInterceptDiagnosticTurnOutcome(_cohabAuditResult._interceptAudit,{handled:1,failed:0});if(!inspected)toast('这次查看已完成，但没有新的内容需要重复回应');}else{_cohabAuditResult._interceptPartial=true;roleInterceptDiagnosticTurnOutcome(_cohabAuditResult._interceptAudit,{handled:0,failed:1});toast('这次查看没有产生新的记录或暂时未完成');}}
     }else{
-      const hist=offlineHistoryMessages(o,offlineContextLimit(),{deferCurrent:true}),sys=offlineSystem(c,current+'\n'+turn),pin={role:'system',content:personaPin(c)+offlineFormatPin(c)},req=offlineRequestMessages(sys,hist,pin,turn,{unified:offlineWechatLiveOn()}),routeIndex=roleChatRouteIndex(c),auditOpt=(opt,stage)=>Object.assign({},opt,{routeIndex,allowSessionModel:true,roleInterceptAudit:_offAudit,roleInterceptStage:stage});
-      const rawReply=await offlineReplyChatRequest(req,auditOpt({aux:false,max:replyMax,temp:.75,unfilteredOutput:_rawOutput},'单次约会主候选'));let r=_rawOutput?modelUnfilteredText(rawReply):roleVisibleEnvelopeText(rawReply);
+      const hist=offlineHistoryMessages(o,offlineContextLimit(),{deferCurrent:true}),sys=offlineSystem(c,current+'\n'+turn),pin={role:'system',content:personaPin(c)+offlineFormatPin(c)},req=offlineRequestMessages(sys,hist,pin,turn,{unified:offlineWechatLiveOn()}),routeIndex=offReplyRouteIndex(c,o),auditOpt=(opt,stage)=>Object.assign({},opt,{routeIndex,allowSessionModel:true,roleInterceptAudit:_offAudit,roleInterceptStage:stage,cohabDiagnostic:{hostId:'off:'+c.id,actorName:c.remark||c.name||'角色',kind:'host'}});
+      const rawReply=await offlineReplyChatRequest(req,auditOpt({aux:offReplyAux(c,o),max:replyMax,temp:.75,unfilteredOutput:_rawOutput},'单次约会主候选'));let r=_rawOutput?modelUnfilteredText(rawReply):roleVisibleEnvelopeText(rawReply);
       if(!_off)return;
       for(let _ra=0;!_rawOutput&&_ra<3&&offlineRoleDrift(r);_ra++){const fixRaw=await chatAPI(offlineRepairMessages(c,o,turn,r,offlineRoleRepairPrompt(c,r)),auditOpt({aux:true,max:replyMax,temp:.72},'单次约会格式纠正候选')),fix=roleVisibleEnvelopeText(fixRaw);if(!_off)return;if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
       if(!_rawOutput&&offlineRoleDrift(r)&&offlineUnsafeRoleDrift(r))r='';
@@ -11389,12 +11389,18 @@ async function offEnd(id){const o=offData(id),endedMsgs=(o.msgs||[]).slice();if(
   const c=getC(id),full={session:o.session||uid(),startedAt:o.startedAt||Date.now(),loc:o.loc||'',when:o.when||'',daypart:o.daypart||'',msgs:endedMsgs},from=Math.max(0,Math.min(endedMsgs.length,+o.summaryCursor||0)),remaining=endedMsgs.slice(from),job=offSummarySourceRows({msgs:remaining}).length?offPrepareSummaryChunk(id,remaining,'final'):null;if(c){c._offlineHandoff=offCreateWechatHandoff(c,full);c._lastOfflineEnded={session:full.session,endedAt:c._offlineHandoff.endedAt,loc:full.loc,when:full.when,daypart:full.daypart};}o.lastSession={session:full.session,startedAt:full.startedAt,endedAt:Date.now(),loc:full.loc,when:full.when,daypart:full.daypart,msgs:endedMsgs.map(m=>Object.assign({},m))};offlineDeactivate(id,o,true);save();offQuit();toast(job?(mode==='single'?'剩余约会基础记忆已保存，正在整理…':'剩余约会内容已保存，正在拆分重点…'):'约会已结束，之前的分段总结均已保留');
   if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(full.loc||'外面')+'」的这次线下见面，已经回到微信聊天。这是本轮最新且必须先承接的真实事件，优先于结束前的旧微信话题；绝不能说ta一整天没回、一直没理你或质问为什么不回。你清楚记得刚才发生的事，请结合分开时的真实情形主动发消息：可以道别、关心ta后面的行程、回味刚才的某件事，或说出你现在的想念，必须符合你的人设和当时情境。如果是机场、车站等送别，就按真实行程关心，不要默认ta要回家。用普通微信文字，别用旁白【】，别提系统或总结。]');
   if(job){const result=await offSummarizeHistory(id,job.draft.id,false,mode);toast(result==='done'?(mode==='single'?'剩余约会记忆已保存':'剩余约会重点已拆分保存'):result==='fallback'?'详细总结暂未生成，基础记忆已保存，可重新总结':'详细总结失败，基础记忆和原记录都在，可重新总结');}}
+/* OFF_MODEL_CONFIG_V1（2026-10-30 她要求：单次约会加上和共同生活一样的模型配置和诊断，好知道实际用的是什么模型）：以前单次约会固定用角色路线的主模型，也看不到实际请求。现在「约会设定」里能选对话模型和对话 API 路线（默认仍是主模型 + 跟随微信角色路线，不改就和以前一样），纠错仍用这条路线的副模型；每次请求记进「模型与路线诊断」。 */
+function offReplySettings(o){o=o&&typeof o==='object'?o:{};const x=o.settings&&typeof o.settings==='object'&&!Array.isArray(o.settings)?o.settings:(o.settings={});x.replyModel=['main','role','aux'].includes(x.replyModel)?x.replyModel:'main';x.replyApiRoute=['follow','0','1','2','3'].includes(String(x.replyApiRoute))?String(x.replyApiRoute):'follow';return x;}
+function offReplyAux(c,o){const m=offReplySettings(o).replyModel;return m==='aux'||m==='role'&&!!c&&c.model==='aux';}
+function offReplyRouteIndex(c,o){const r=offReplySettings(o).replyApiRoute;if(r==='follow')return roleChatRouteIndex(c);const i=parseInt(r,10),n=typeof chatRoutesInit==='function'?chatRoutesInit().length:4;return Number.isInteger(i)&&i>=0&&i<n?i:roleChatRouteIndex(c);}
+function offSettingSet(id,key,value){const o=offData(id);if(!o)return;const x=offReplySettings(o);if(key==='replyModel'&&['main','role','aux'].includes(value))x.replyModel=value;else if(key==='replyApiRoute'&&['follow','0','1','2','3'].includes(String(value)))x.replyApiRoute=String(value);else return;save();toast('单次约会'+(key==='replyModel'?'对话模型':'对话路线')+'已更新');}
+function offModelDiagnosticShow(id){if(typeof window!=='undefined'&&typeof window.offModelDiagnosticOpen==='function')window.offModelDiagnosticOpen(id);else toast('诊断模块没有加载，请重开小手机');}
 function offSetting(id){const o=offData(id);
   openModal(`<h3>约会设定</h3>
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
    <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
    <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
-   <div class="field"><label>线下模型分工</label><div class="hint" style="padding:8px 0 0">单次约会保留原规则：正常回复用主模型、纠错优先副模型。共同生活跟随该角色在线上选择的主/副模型；角色选主模型且请求失败时，才按微信相同规则回退副模型。</div></div>
+   ${(()=>{const x=offReplySettings(o),opt=(v,cur,l)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`,sel='style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee"';return `<div class="field"><label>对话模型<small style="color:#888;display:block">单次约会正常回复用哪个模型；纠错仍用这条路线的副模型</small></label><select ${sel} onchange="offSettingSet('${id}','replyModel',this.value)">${opt('main',x.replyModel,'主模型（原来的规则）')}${opt('role',x.replyModel,'跟随微信角色')}${opt('aux',x.replyModel,'副模型')}</select></div><div class="field"><label>对话 API 路线<small style="color:#888;display:block">接口地址、Key 与模型组；只影响单次约会，不会切换微信</small></label><select ${sel} onchange="offSettingSet('${id}','replyApiRoute',this.value)">${opt('follow',x.replyApiRoute,'跟随微信角色路线')}${CHAT_ROUTE_NAMES.map((n,i)=>opt(String(i),x.replyApiRoute,n)).join('')}</select></div><button class="btn g" style="margin-bottom:10px" onclick="closeModal();offModelDiagnosticShow('${id}')">模型与路线诊断</button>`;})()}
    <div class="field"><label class="avline">单次约会同步到线上<span class="sw ${offlineWechatLiveOn()?'on':''}" onclick="offlineWechatLiveToggle(this)"></span></label><div class="hint" style="padding:8px 0 0">这个开关只管“一次性线下约会”。共同生活永远与微信、电话共用同一条连续上下文；两边可见记录和输出格式仍然分开，不会复制气泡。</div></div>
    <div class="field"><label class="avline">角色扮演软件使用副模型（不影响线下约会）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'角色扮演改用副模型':'角色扮演改用主模型')"></span></label></div>
    <div class="field"><label>上下文条数（双方消息合计）<small style="color:#888;display:block">线下本场按双方消息合计；进入约会前的微信/电话也按这个数量带入。越大越记得住、也越费API。默认30，范围10-80</small></label><input type="number" min="10" max="80" value="${S.settings.offHist||30}" onchange="S.settings.offHist=Math.max(10,Math.min(80,+this.value||30));save();toast('线下上下文：'+S.settings.offHist+'条')" style="width:90px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"></div>

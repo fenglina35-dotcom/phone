@@ -1,4 +1,4 @@
-当前私人源码v1865 / 网页v1860 / iOS511（1.0.511 (511)/build511）/桥42。长共同生活语音分段总结（COHAB_VOICE_CHUNK_SUMMARY_V1）、语音用共同生活模型（COHAB_VOICE_MODEL_V1）、语音请求有等待上限（TTS_CALL_TIMEOUT_V1）、声音小灯（TTS_DOT_V1）、真实定位（COUPLE_REAL_LOCATION_V1）、一个小手机 App 关联多个 iPhone App（COMPANION_MULTI_BIND_V1）、个人资料生日按钮可点。
+当前私人源码v1866 / 网页v1861 / iOS512（1.0.512 (512)/build512）/桥42。单次约会有自己的对话模型、路线和诊断（OFF_MODEL_CONFIG_V1，私人版以前不传路线）、点开的框同共同生活（OFF_MODAL_GLASS_V1）、窗台热茶显示上一次心率（WS_HEALTH_LAST_V1）、查他手机刷新自动续写（SPY_REFRESH_COMPLETE_V1）。
 当前私人源码v1851 / 网页v1848 / iOS500（1.0.500 (500)/build500）/桥42。网页版情侣空间首页也接上 3D 窗台（COUPLE_WINDOWSILL_WEB_V1，作者同意；称呼用户，可关掉）；私人版不变。
 当前私人源码v1851 / 网页v1847 / iOS500（1.0.500 (500)/build500）/桥42。WINDOWSILL_DESK_V1：窗台桌上的东西接小手机（碎碎念每天一次、蜡烛即晚安、真实天气、星星罐、他在哪、相册五张等），进出不重新读取，手机壳粉色。
 当前私人源码v1850 / 网页v1847 / iOS499（1.0.499 (499)/build499）/桥42。WINDOWSILL_STEADY30_V1：3D窗台重新启用，按她在测速网页选定的「新方案，清晰度1.6，稳定30张」：影子只画一次、去阴影细节和景深、影子边简单、蜡烛不投影、两盏面光换便宜的光，玻璃保留。

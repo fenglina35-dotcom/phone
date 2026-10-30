@@ -197,8 +197,11 @@
     cards.candle = {note: sleeping ? '你在睡觉（' + hhmm(sl.active) + ' 开始）。点上蜡烛，就是醒啦。' : '睡前吹灭蜡烛，就是跟' + name + '说晚安、开始记录睡眠。', go: sleeping ? '点上蜡烛（醒啦）' : '吹灭蜡烛（说晚安）'};
     var book = ((S.cinema && S.cinema.sessions) || []).filter(function (x) { return x && x.kind === 'book'; }).sort(function (a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); })[0];
     cards.book = {note: book ? '你们在读《' + clip(book.title, 16) + '》，' + (typeof cinemaProgressText === 'function' ? cinemaProgressText(book) : '') + '。' : '还没有一起读的书，去放映室挑一本。', go: '去共读'};
-    var st = typeof companionRoleDataState === 'function' ? companionRoleDataState() : null;
-    cards.mug = {note: st && st.health && typeof companionHealthSummary === 'function' ? clip(companionHealthSummary(st.health, true), 90) : '健康数据还没同步过来。', go: '看健康'};
+    /* WS_HEALTH_LAST_V1（2026-10-30 她说：窗台热茶一直显示没同步，很久没戴手表也该显示之前的心率）：以前只读角色正在查手机时的那份数据，平时永远是空的。
+       现在没有角色查看数据时，读平时存着的伴生健康数据（会保留上一次的心率），并写上心率测量时间。 */
+    var st = (typeof companionRoleDataState === 'function' && companionRoleDataState()) || (S.couple && typeof companionState === 'function' ? companionState() : null), hh = st && st.health;
+    var hrAt = hh && +hh.heartRateAt ? (typeof fmtDT === 'function' ? fmtDT(+hh.heartRateAt) : new Date(+hh.heartRateAt).toLocaleString()) : '';
+    cards.mug = {note: hh && typeof companionHealthSummary === 'function' ? clip(companionHealthSummary(hh, true), 80) + (hrAt ? '（心率测于 ' + hrAt + '）' : '') : '健康数据还没同步过来。', go: '看健康'};
     var unread = (S.mail || []).filter(function (m) { return m && !m.read; }).length;
     cards.letter = {note: unread ? '有 ' + unread + ' 封信还没拆，窗台上落了一只纸飞机。' : '信都拆过了。', go: '打开信箱'};
     cards.toys = {go: '去游戏大厅'};

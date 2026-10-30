@@ -589,7 +589,8 @@ if(typeof offSay==='function'){const baseOffSay=offSay;
 offSay=function(e){if(isActive()){toast('正在语音模式，先点「结束」再打字');return;}return baseOffSay.apply(this,arguments);};}
 
 // 从共同生活点开的页面打上 cohab-glass-modal，用上面的气泡材质；关掉时去掉，别的页面（微信、线下约会）不受影响。
-function cohabGlassSkin(){if(typeof _off==='undefined'||!_off||_off.mode!=='cohab'||typeof cur!=='function'||cur().p!=='off')return false;const c=getC(_off.id);return !!c&&typeof offTheme==='function'&&offTheme(c).skin!=='classic';}
+/* OFF_MODAL_GLASS_V1（2026-10-30 她要求）：单次约会里点开的框（约会设定、模型与路线诊断等）也用共同生活这一套玻璃框，两边不再一个颜色一个样；两边本来就共用同一个外观。 */
+function cohabGlassSkin(){if(typeof _off==='undefined'||!_off||typeof cur!=='function'||cur().p!=='off')return false;const c=getC(_off.id);return !!c&&typeof offTheme==='function'&&offTheme(c).skin!=='classic';}
 // 不包 openModal：有的页面（私人版「查看上一轮拦截内容」）拿的是最原始的 openModal，包不到。改成看着 #modal：一出现就按当前是不是共同生活决定加不加。
 function markModal(){if(!hasDom())return;['modal','cfm'].forEach(k=>{const m=document.getElementById(k);if(!m)return;const want=m.classList.contains('show')&&cohabGlassSkin();if(m.classList.contains('cohab-glass-modal')!==want)m.classList.toggle('cohab-glass-modal',want);});}
 function watchModal(){if(!hasDom()||typeof MutationObserver==='undefined')return;const m=document.getElementById('modal');if(m&&!m._cvWatch){m._cvWatch=true;new MutationObserver(markModal).observe(m,{attributes:true,attributeFilter:['class']});new MutationObserver(markModal).observe(document.getElementById('modalSheet')||m,{childList:true});}const f=document.getElementById('cfm');if(f&&!f._cvWatch){f._cvWatch=true;new MutationObserver(markModal).observe(f,{attributes:true,attributeFilter:['class']});}markModal();}

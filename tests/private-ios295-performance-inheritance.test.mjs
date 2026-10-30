@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1865'/);
-  assert.match(index, /app\.js\?v=1865&r=v1865-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1866'/);
+  assert.match(index, /app\.js\?v=1866&r=v1866-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1865 · 语音记忆与声音小灯'/);
+  assert.match(app, /APP_VER='v1866 · 单次约会模型与窗台心率'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.511 \(511\)/);
-  assert.match(bridge, /private static let build = "1\.0\.511 \(511\)"/);
+  assert.match(webview, /1\.0\.512 \(512\)/);
+  assert.match(bridge, /private static let build = "1\.0\.512 \(512\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 511;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.511;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1860 · 语音记忆与声音小灯'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1860'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 512;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.512;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1861 · 单次约会模型与窗台心率'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1861'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,7 +160,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.511 \(511\)/);
+  assert.match(mac, /1\.0\.512 \(512\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

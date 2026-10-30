@@ -2479,3 +2479,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 离家两三公里角色仍说在家（COUPLE_REAL_LOCATION_V1，她同意改）：情侣空间定位卡片正确（非家），共同生活提示把模拟「在家」称最高优先级；新加真实位置一句。
 - 第 12 项未改，见功能说明。全量 4692 项通过，核心聊天两遍通过。手机核心存档副本排查后删除。
 - 同日更正：通话语音 30 秒×2 次后只显示文字的做法被她否决（会以为声音坏了），改为每次 60 秒×3 次；另加红闪绿亮小灯（TTS_DOT_V1），她不要「正在生成」文字。第 12 项她说明有重复关联，改为一个小手机 App 可关联多个 iPhone App（COMPANION_MULTI_BIND_V1，原来是一对一顶掉）。tests/companion-device-control、companion-secure-sync 里检查函数内容的断言随函数拆分改查 companionDispatchBoundOne。全量 4708 项通过，核心聊天两遍通过。
+- 同日：单次约会走错路线（OFF_MODEL_CONFIG_V1）——私人版 offAI 不传路线，用微信全局当前路线；网页版固定角色路线主模型。按她要求加和共同生活一样的模型配置与诊断，默认仍是原规则。单次约会点开的框改成共同生活的玻璃框（OFF_MODAL_GLASS_V1）。tests/offline-cost-routing、v1128-backup-offline-release、offline-reply-diagnostics 中检查旧写法的断言改查 offReplyRouteIndex(c,o)/offReplyAux(c,o)。她要求以后修 bug 先查私人版。
+- 同日：窗台心率一直「没同步过来」（WS_HEALTH_LAST_V1，私人）——读的是只在角色查看期间有值的数据。网页版查他手机刷新报「模型没有按格式写完」（SPY_REFRESH_COMPLETE_V1）——长 JSON 被截断且没开自动续写；两版代码相同，判断为最可能原因，网页实际未复现。tests/ws-health-spy-refresh.test.mjs 旧代码 3 项失败。
