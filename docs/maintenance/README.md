@@ -3338,3 +3338,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-30 网页v1858 / 私人v1863 / iOS509（提交 e93c04c2）：SKY_SYNC_NO_BLOCK_V1 光遇同步失败不再拦住先生的回复；TURN_ERROR_RECORD_V1 请求前出错原文进诊断；JAIL_LATIN_NAME_V1、MEMORY_MANUAL_ROLE_VIEW_V1、THEATER_GUEST_BUDGET_V1、FOOD_PLAN_LENIENT_V1、VISION_NO_SUPPORT_MSG_V1、TRANSFER_NOTE_DETAIL_V1、MOMENT_LONG_TEXT_V1、PHOTO_ALBUM_IMAGE_RETRY_V1。全部测试 4638 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.509 (509)。真机效果待她回报；21 项里第二、三批未做。
 
 2026-10-30 网页v1859 / 私人v1864 / iOS510（提交 ba9d94ea）：ALARM_ROW_V1、VOICE_TUNE_ROW_V1、COHAB_TAP_ROUND_V1、HOME_GLASS_KEEP_V1、BIRTHDAY_V1、BIRTHDAY_PICKER_WHITE_V1，网页图标换私人版。全部测试 4664 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.510 (510)。截图已给她确认（电脑手机尺寸、测试数据）；第 4 项报备未修（等她同意模拟器访问），第三批未做。
+
+2026-10-30 网页v1860 / 私人v1865 / iOS511（提交 7a9b7fa8）：个人资料生日按钮可点；COHAB_VOICE_CHUNK_SUMMARY_V1、COHAB_VOICE_MODEL_V1、TTS_CALL_TIMEOUT_V1（每次 60 秒×3）、TTS_DOT_V1、COUPLE_REAL_LOCATION_V1、COMPANION_MULTI_BIND_V1。全部测试 4708 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.511 (511)。真机效果待她回报（语音小灯、长语音记忆、离家定位、多个关联）。
