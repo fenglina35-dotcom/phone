@@ -3334,3 +3334,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-22 网页v1856 / 私人v1861 / iOS507（提交 2745cda4）：TRIP_DAY_WHO_V1 出行日提示按票上谁坐；TRIP_REMIND_DONE_V1 角色真说出口才算提醒过；GRUDGE_JAIL_NATURAL_V1 他说「进来了」「门关了」也算说出口；GRUDGE_JAIL_FORGOT_TAG_V1 满八条忘发暗号也进小黑屋。全部测试 4572 项通过，核心聊天检查两遍通过；另一会话未提交的电子宠物改动没放进提交，编译时临时换回已提交的 pet-game.js 后放回；包内 APP_VER v1861 与新标记已核对，已装到她的 iPhone（devicectl 显示 1.0.507）。真机效果待她看。
 
 2026-10-22 网页v1857 / 私人v1862 / iOS508（提交 2d342c1a）：GRUDGE_JAIL_CONTEXT_V1 满八条且两小时内聊过小黑屋时，他说「进来吧」「替你开门」「进来」也算拉她进去，「不管」不算否定；CLEAR_ALL_KEEP_STUDIO_V1 一键清空所有数据保留账号、我的和角色的形象工作室，清完马上能打开。全部测试 4577 项通过，核心聊天检查普通和查岗预览两遍通过。本工作树干净，直接从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.508 (508)。真机效果待她回报；她之前清空掉的形象照片需重新上传。
+
+2026-10-30 网页v1858 / 私人v1863 / iOS509（提交 e93c04c2）：SKY_SYNC_NO_BLOCK_V1 光遇同步失败不再拦住先生的回复；TURN_ERROR_RECORD_V1 请求前出错原文进诊断；JAIL_LATIN_NAME_V1、MEMORY_MANUAL_ROLE_VIEW_V1、THEATER_GUEST_BUDGET_V1、FOOD_PLAN_LENIENT_V1、VISION_NO_SUPPORT_MSG_V1、TRANSFER_NOTE_DETAIL_V1、MOMENT_LONG_TEXT_V1、PHOTO_ALBUM_IMAGE_RETRY_V1。全部测试 4638 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.509 (509)。真机效果待她回报；21 项里第二、三批未做。
