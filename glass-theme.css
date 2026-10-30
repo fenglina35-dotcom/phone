@@ -868,7 +868,8 @@ html.north-glass-ui.north-shell-custom,html.north-glass-ui.north-shell-custom bo
 .wx-hide-conversation{position:absolute;right:0;top:0;bottom:0;width:128px;border:0;background:#62646b;color:#fff;font:400 14px/1.3 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
 .wx-conversation-front{position:relative;z-index:1;user-select:none;-webkit-user-select:none;background:var(--wx-row);transition:transform .18s ease;touch-action:pan-y}
 .wx-conversation-swipe.open .wx-conversation-front{transform:translateX(-128px)}
-.cohab-stage .cohab-tap-next{position:relative;margin:14px auto 20px;width:36px;height:36px;border-radius:0;border:0;background:transparent;color:#dce2ed;display:grid;place-items:center;padding:0;box-shadow:none;touch-action:manipulation;cursor:pointer}
+/* COHAB_TAP_ROUND_V1（2026-10-30 她要求）：「点一下出下一句」的箭头改成圆形玻璃气泡；液态玻璃按这里的圆角画镜片。 */
+.cohab-stage .cohab-tap-next{position:relative;margin:14px auto 20px;width:40px;height:40px;border-radius:20px;border:0;background:transparent;color:#dce2ed;display:grid;place-items:center;padding:0;box-shadow:none;touch-action:manipulation;cursor:pointer}
 .cohab-stage .cohab-tap-next::before,.cohab-stage .cohab-tap-next::after{content:none!important}
 .cohab-tap-next svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 @media(prefers-reduced-motion:reduce){.wx-conversation-front{transition:none}}
@@ -1202,3 +1203,28 @@ input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])
 
 /* TRANSFER_NOTE_DETAIL_V1：转账详情的附言可以换行，长句完整显示 */
 .wx-transfer-detail-meta .wx-transfer-detail-note dd{white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;text-align:left;font-variant-numeric:normal}
+
+/* ALARM_ROW_V1：闹钟列表行（深底粉字标签、绿色开关，都留在框里） */
+.bill.alarm-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;border-radius:12px!important;margin-bottom:8px!important;padding:12px 14px!important;box-sizing:border-box!important;overflow:hidden!important}
+.alarm-row .alarm-main{flex:1 1 auto;min-width:0;line-height:1.35}
+.alarm-row .alarm-main b{font-size:22px;font-weight:700;letter-spacing:.5px;margin-right:4px}
+.alarm-row .alarm-label{overflow-wrap:anywhere}
+.alarm-row .alarm-main small{display:block;margin-top:3px;opacity:.75}
+.alarm-row .alarm-tag{display:inline-block;vertical-align:2px;margin-left:4px;padding:2px 8px;border-radius:999px;font-size:11px;line-height:1.4;font-weight:600;background:#3d2531!important;color:#ff9cc4!important;border:1px solid #6b3a51}
+.alarm-row .alarm-ctl{flex:0 0 auto;display:flex;align-items:center;gap:12px}
+.alarm-row .alarm-sw{position:relative;flex:0 0 48px;width:48px;height:28px;padding:0;margin:0;border-radius:999px;border:1px solid #5b5b63;background:#3a3a40;cursor:pointer;-webkit-appearance:none;appearance:none;transition:background .2s,border-color .2s}
+.alarm-row .alarm-sw::after{content:"";position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:left .2s}
+.alarm-row .alarm-sw.on{background:#07c160;border-color:#07c160}
+.alarm-row .alarm-sw.on::after{left:22px}
+.alarm-row .alarm-del{flex:0 0 auto;width:28px;height:28px;padding:0;border:0;background:transparent;color:#fa5151;font-size:17px;line-height:28px;cursor:pointer}
+
+/* VOICE_TUNE_ROW_V1（2026-10-30 她截图：音色页这一行字叠在一起）：以前借用列表行样式 .it，放进弹框里和别的字重叠；改成独立的一行，文字在左、勾选框在右。 */
+.voice-tune-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;margin:6px 0 14px!important;padding:12px 14px!important;border-radius:12px!important;background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.1)!important;position:static!important;cursor:pointer}
+.voice-tune-row .voice-tune-text{flex:1 1 auto;min-width:0;display:block;line-height:1.4}
+.voice-tune-row .voice-tune-text b{display:block;font-size:15px;font-weight:600}
+.voice-tune-row .voice-tune-text small{display:block;margin-top:3px;font-size:12px;color:#8e8e93}
+.voice-tune-row input[type=checkbox]{flex:0 0 auto;width:22px;height:22px;margin:0;accent-color:#07c160}
+
+/* BIRTHDAY_PICKER_WHITE_V1（2026-10-30 她说：生日最右边的小日历是黑色的，改成白色）：生日框按深色显示，日历图标白色、大小和文字相配。 */
+#c_birthday,#wxprofile-birthday{color-scheme:dark}
+#c_birthday::-webkit-calendar-picker-indicator,#wxprofile-birthday::-webkit-calendar-picker-indicator{opacity:.9;width:18px;height:18px;margin-left:6px;cursor:pointer}

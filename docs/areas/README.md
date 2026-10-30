@@ -611,3 +611,12 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - TRANSFER_NOTE_DETAIL_V1：转账详情收款时间下面加「附言」行（.wx-transfer-detail-note 可换行）。
 - MOMENT_LONG_TEXT_V1：cleanMomentBody 改 trimSentence(…,500)，生成 max 700（抖音 cleanDouyinBody 仍 140，未动）。
 - PHOTO_ALBUM_IMAGE_RETRY_V1：相册图片 onerror 调 photoAlbumImageRetry，按 data-album-ref 或 data-stored-src 重读一次。
+
+## 第二批：闹钟、音色页、圆形箭头、主屏玻璃、网页图标、生日（2026-10-30）
+- ALARM_ROW_V1：闹钟列表行用 .alarm-row/.alarm-tag/.alarm-sw/.alarm-del（glass-theme.css 末尾），不再借用 .tag/.sw；开关是 button role=switch。
+- VOICE_TUNE_ROW_V1：音色页「API音色使用上面的语速和音调」改成 label.voice-tune-row，不再用列表行 .it（.it 在弹框里会和下一行重叠）。
+- COHAB_TAP_ROUND_V1：.cohab-tap-next 40×40、圆角 20px；液态玻璃按 borderTopLeftRadius 画镜片，写像素不要写百分比。
+- HOME_GLASS_KEEP_V1：lgResumeRedraw 在 visibilitychange/pageshow 时清 _lg.cache、清 #homeDesktop 镜片的 lgKey、复位 _lg.failed 再 lgSoon。
+- 网页图标：icon.png 换成私人版 AppIcon 缩到 512，小手机.html 里 icon.png?v=337（只改网页壳，私人原生图标不动）。
+- BIRTHDAY_V1：c.birthday（编辑角色性别下面，type=date）和 S.me.birthday（个人资料「生日」）；birthdayPrompt 分开写「你自己的生日」「她的生日，不是你的」；birthdayCareTick 在 checkCalendar 末尾：她生日当天、holidayCareWindow('生日') 内，开了主动消息的角色各一次——情侣角色走 holidayCare(…,{birthday,profile})（纪念日里已有生日就不重复），其他角色走 birthdayCare。一键清空保留两种生日。
+- 报备按钮（第 4 项）：电脑手机尺寸触屏模拟能正常开始报备，iPhone 模拟器 Safari 能打开页面，需她同意模拟器访问后实点，未修。

@@ -2468,3 +2468,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 识图报错误导（VISION_NO_SUPPORT_MSG_V1）、转账附言看不到（TRANSFER_NOTE_DETAIL_V1）、朋友圈 140 字硬切（MOMENT_LONG_TEXT_V1）、相册「照片暂时无法显示」后不再重试（PHOTO_ALBUM_IMAGE_RETRY_V1，idb: 地址未入缓存即失败）：各自新测试旧代码失败。
 - tests/trip-day-who.test.mjs 车票日期写死 2026-10-22，过了那天程序按真实时钟关闭旧票，上次提交的代码同样 4 项失败；改用当天日期，未改程序。
 - 全量 4638 项除上面日期测试外通过；改日期后该文件通过。核心聊天普通/查岗预览两遍通过。读手机数据只用 devicectl copy from（核心存档、运行日志、localStorage），排查后删除副本。
+
+2026-10-30 第二批（web v1859 / private v1864 待发布）：闹钟「仅一次」看不清、开关圆点出框（ALARM_ROW_V1）；音色页文字重叠（VOICE_TUNE_ROW_V1，.it 放进弹框）；共同生活方形箭头改圆（COHAB_TAP_ROUND_V1，圆角原为 0，镜片照圆角画）；主屏组件变黑（HOME_GLASS_KEEP_V1，镜片缓存画布切后台后被清空仍复用）；网页图标换私人版；新增生日（BIRTHDAY_V1）。tests/batch2-ui-birthday.test.mjs 14 项在上次提交的代码上全部失败、现在通过。报备按钮：Chromium 手机尺寸触屏实点正常，原因未找到，等 iPhone 模拟器实点。全量 4664 项通过（防丢清单一条标记位置写错已改），核心聊天两遍通过。截图：闹钟、音色页、转账附言、编辑角色生日、个人资料生日、共同生活圆形箭头。

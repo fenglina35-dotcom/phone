@@ -40,6 +40,7 @@ function renderWxProfile(){return `${WNav('个人资料')}<div class="scroll wxp
     <button type="button" class="wxprofile-row wxprofile-avatar-row" onclick="wxProfileAvatar()"><span>头像</span>${av(S.me.avatar,'sm')}<em aria-hidden="true">›</em></button>
     ${wxProfileRow('名字',S.me.name||'我',"wxProfileEdit('name')")}
     ${wxProfileRow('性别',S.me.gender||'保密',"wxProfileGender()")}
+    ${wxProfileRow('生日',(typeof birthdayLabel==='function'&&birthdayLabel(S.me.birthday))||'未设置',"wxProfileBirthday()")}
     ${wxProfileRow('地区',S.me.city||'未设置',"wxProfileEdit('city')")}
     ${wxProfileRow('手机号',wxProfilePhoneText(),"wxProfileEdit('phone')")}
     ${wxProfileRow('微信号',S.me.wxid||'未设置',"wxProfileEdit('wxid')")}
@@ -67,6 +68,9 @@ function wxProfileEdit(id){const f=WX_PROFILE_FIELDS[id];if(!f)return;const val=
 function wxProfileCommit(id){const f=WX_PROFILE_FIELDS[id],el=$('#wxprofile-edit');if(!f||!el)return;let val=String(el.value||'').trim();if(id==='name'&&!val)val='我';if(id==='wxid'&&!val)val=genWxid();S.me[f.key]=val;if(['name','city','wxid','signature','persona'].includes(id))syncActiveAccount();save();closeModal();render();toast(f.title+'已保存');}
 function wxProfileGender(){const cur=S.me.gender||'保密';openModal(`<h3>性别</h3>${['女','男','保密'].map(x=>`<button class="btn ${cur===x?'p':'g'}" style="margin-bottom:8px" onclick="wxProfileGenderSet('${x}')">${x}</button>`).join('')}<button class="btn g" onclick="closeModal()">取消</button>`);}
 function wxProfileGenderSet(v){S.me.gender=['女','男'].includes(v)?v:'保密';save();closeModal();render();toast('性别已保存');}
+/* BIRTHDAY_V1：我的生日，所有角色都能看到；到这一天开了主动消息的角色会来祝福。 */
+function wxProfileBirthday(){const v=typeof birthdayNorm==='function'?birthdayNorm(S.me.birthday):'';openModal(`<h3>我的生日</h3><div class="hint" style="margin-bottom:10px">所有角色都能看到你的生日；到这一天，开了主动消息的角色会来祝福你。</div><div class="field"><input id="wxprofile-birthday" type="date" value="${esc(v.length===10?v:'')}"></div><div class="btns"><button class="btn g" onclick="wxProfileBirthdaySet('')">清除</button><button class="btn p" onclick="wxProfileBirthdaySet(($('#wxprofile-birthday')||{}).value)">完成</button></div>`);}
+function wxProfileBirthdaySet(v){const n=typeof birthdayNorm==='function'?birthdayNorm(v):'';if(n)S.me.birthday=n;else delete S.me.birthday;save();closeModal();render();toast(n?'生日已保存':'生日已清除');}
 function wxProfileSave(){save();render();}
 
 function wxQrPayload(){const id=phoneFriendState().id,base=location.origin&&location.origin!=='null'?(location.origin+location.pathname):'https://smallphoneapp.com/';return base+(base.includes('?')?'&':'?')+'smallphone_friend='+encodeURIComponent(id);}
