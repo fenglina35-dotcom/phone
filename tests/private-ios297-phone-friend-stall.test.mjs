@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1861 · 单次约会模型与窗台心率'/);
+  assert.match(publicSource, /APP_VER='v1862 · 真人好友省流量与生日主动祝福'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

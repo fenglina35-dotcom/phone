@@ -117,7 +117,8 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/function offlineFocusActive\(\)\{if\(cohabSceneBlocksOnline\(\)\)return true/);
   assert.match(source,/function incomingCall\(id,kind,opt\).*roleOnlineProactiveBlocked\(id\)&&!\(cohabRestricted&&opt\.requestedByUser\)/s);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
-  assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
+  // BIRTHDAY_ONLINE_V1（2026-10-30）给这个函数加了 opt.ignoreBusy，只有她的生日祝福用来跳过「忙」，其余拦截不变。
+  assert.match(source,/function roleOnlineProactiveBlocked\(id(?:,opt)?\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
   assert.match(source,/伴生后台生成的普通文字消息仍可照常送到线上微信/);
   assert.match(source,/共同生活开启期间不得在没有当前命令时自行来电/);
   assert.match(functionSource('cohabToggle'),/c\.proactive\.enabled=true;c\.proactive\.serverPush=true;initiativeArm\(c\)/);

@@ -17,6 +17,8 @@ test('private 窗台 mug reads the stored health when no role is inspecting', ()
 for (const file of ['app.js', PB + 'app.js']) {
   test(file + ': 查他手机 refresh asks to finish a cut-off answer', () => {
     const s = fs.readFileSync(file, 'utf8');
-    assert(s.includes("{role:'user',content:prompt}],{max:4000,complete:true,aux:!!(S.settings&&S.settings.spyAux)})"));
+    // SPY_PARSE_LENIENT_V1（2026-10-30）把请求拆成 _spyMsgs + spyContinueJson，自动续写 complete:true 仍保留。
+    assert(s.includes("_spyMsgs=[{role:'system',content:_sys},...hist,{role:'user',content:prompt}]"));
+    assert(s.includes("let content=await chatAPI(_spyMsgs,{max:4000,complete:true,aux:_spyAuxOn})"));
   });
 }

@@ -6,7 +6,9 @@ import vm from 'node:vm';
 for (const [kind,path] of [['web','app.js'],['private','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']]) {
   test(`${kind} real-friend sync slows down while nothing is new and snaps back on activity`,()=>{
     const s=fs.readFileSync(path,'utf8'),a=s.indexOf('let _pfIdleSyncs=0;'),b=s.indexOf("if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('visibilitychange',()=>{if(!document.hidden)phoneFriendSyncActive();});",a);
-    assert.ok(a>0&&b>a);let page='home';const ctx={cur:()=>({p:page}),Math};vm.createContext(ctx);
+    assert.ok(a>0&&b>a);let page='home';
+    // PF_LOW_TRAFFIC_V1（2026-10-30）起，下面这套「越等越慢」的节奏只在打开「实时接收消息」时用；默认省流量节奏见 tests/pf-low-traffic.test.mjs。
+    const ctx={cur:()=>({p:page}),Math,S:{settings:{pfRealtime:true}},phoneFriendState:()=>({})};vm.createContext(ctx);
     vm.runInContext(s.slice(a,b)+';this.delay=phoneFriendPollDelay;this.active=phoneFriendSyncActive;this.idle=n=>{_pfIdleSyncs=n;};',ctx);
     assert.equal(ctx.delay(),30000,'其他页面起步 30 秒（原来 15 秒）');ctx.idle(20);assert.equal(ctx.delay(),180000,'最慢 3 分钟');
     page='wechat';assert.equal(ctx.delay(),30000);ctx.active();assert.equal(ctx.delay(),6000,'有动静立刻恢复');

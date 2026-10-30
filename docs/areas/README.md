@@ -639,3 +639,23 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 单次约会里点开的框和共同生活一样套 cohab-glass-modal（cohabGlassSkin 不再要求 _off.mode==='cohab'）。
 - WS_HEALTH_LAST_V1（仅私人 private-couple-windowsill.js）：窗台热茶卡片以前只读 companionRoleDataState()（只在角色查手机那一会儿有值），平时永远「没同步过来」；现在回退到 companionState().health（保留上一次心率），并写「心率测于…」。
 - SPY_REFRESH_COMPLETE_V1：查他手机刷新的 chatAPI 加 complete:true，被长度上限截断时自动续写一次再解析。私人版同样加。网页版具体是哪个模型写不完未核实（两版代码相同，差在各自设置）。
+
+## 真人好友的流量（PF_LOW_TRAFFIC_V1）
+
+现在：真人好友走 menkou 项目（所有用户共用）。默认省流量：
+- 同步间隔 phoneFriendPollDelay：真人好友聊天/群聊页 2.5～8 秒（不变）；好友列表页 30 秒；mgroom 页 30 秒～3 分钟（不变）；其他页面有好友/群/待处理申请时 5 分钟，什么都没有时 30 分钟。
+- 在线心跳（上传自己的资料和头像）：私人版 pfEnsureForSync、网页版 pfEnsure，只在真人好友相关页面（pfOnFriendPage）或打开实时接收时上传；第一次注册和主动改资料照常上传。
+- 线路探测 pfTransportRoute 缓存 30 分钟（失败会清空重探，所以安全）。
+- 真人好友页的「实时接收消息」开关（S.settings.pfRealtime，phoneFriendToggleRealtime）打开后恢复原来的节奏（其他页 30 秒～3 分钟、微信页 6～30 秒、心跳 1～2 分钟、探测 1 分钟）。
+
+踩坑：2026-10-30 查到 menkou 一小时 1.8 万次请求，大头是 phone_friend_sync（每次带全部好友头像）、upsert_profile 心跳、空查询 search 探测；停在微信页也一直在同步。服务器那边「头像没变就不重发」暂未做，先在客户端降频。切回前台只重置「越等越慢」，不会立刻同步。
+
+验证：tests/pf-low-traffic.test.mjs（两版，旧代码失败）；tests/v1732-friend-sync-backoff.test.mjs 改为在实时模式下检查原节奏。核对到：2026-10-30。
+
+## 小黑屋选项、生日主动祝福、查他手机刷新读取（2026-10-30）
+
+- JAIL_CHOICE_HISTORY_V1：jailChoose 把她点的答案存成 {who:'me',text:选项,choiceQ:题目}，jailAI 的历史里写成「（回答你的选择题「题目」）选项」；给角色的提示不再写出选项原文。jailEchoKey 去掉角色开头只是复述选项的那句（全是复述时至少留一句）。以前题目和答案都不进记录，角色只看到「她点了某某」就复述。
+- BIRTHDAY_ONLINE_V1：checkCalendar 里 birthdayCareTick 排在 `if(h<9)return;` 前面；情侣角色不看主动消息开关（普通角色仍要开）；roleOnlineProactiveBlocked(id,{ignoreBusy:true}) 只给生日跳过「忙」，roleBusyDeferReply 用 birthdayCareNote 不把生日祝福延后；切回前台 1.5 秒后检查一次。每个角色当天只发一次（_calFired）。线下见面、共同生活在一起、专注模式、通话中仍不发，结束后的下一次检查再发。
+- SPY_PARSE_LENIENT_V1：spyRefresh 先严格读，失败再 spyParseLoose（去 <think>、代码块、前后的话；被截断时 spyJsonRepair 切到最后一个完整位置并补齐括号）；JSON 没写完时 spyContinueJson 再接着写最多两次（每次 3000）；仍失败 spyFailWhy 说清是空内容/没写 JSON/只写了思考/写到一半/格式不对，spyRawKeep 留原话，查手机设置里出现「看模型原话」（spyRawShow）。原话只存在内存里，不保存不上传。
+
+验证：tests/jail-birthday-spy-1030.test.mjs（两版，旧代码 14 项全失败）。核对到：2026-10-30。
