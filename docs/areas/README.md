@@ -659,3 +659,11 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - SPY_PARSE_LENIENT_V1：spyRefresh 先严格读，失败再 spyParseLoose（去 <think>、代码块、前后的话；被截断时 spyJsonRepair 切到最后一个完整位置并补齐括号）；JSON 没写完时 spyContinueJson 再接着写最多两次（每次 3000）；仍失败 spyFailWhy 说清是空内容/没写 JSON/只写了思考/写到一半/格式不对，spyRawKeep 留原话，查手机设置里出现「看模型原话」（spyRawShow）。原话只存在内存里，不保存不上传。
 
 验证：tests/jail-birthday-spy-1030.test.mjs（两版，旧代码 14 项全失败）。核对到：2026-10-30。
+
+## 角色写信不重复、朋友圈和 X 不发微信里的话（2026-10-30）
+
+- LETTER_NO_REPEAT_V1：genLetter / genMoodLetter 的提示加 letterPastPrompt（今天的日期，信末日期只能写今天；他最近 3 封信的标题和开头）。genLetter 写完用 letterRepeatOf 和他写过的所有信比对（S.mail 里他的信和回信、发件箱里她回信时存的 originalLetter——所以收件箱删掉的旧信也算）：标题相同或两字片段重合 ≥60% 就重写一次，还像就返回 false（scanMail 把当天次数退回）。按心情拆信写不出来时不再塞固定的话，提示没拆开。
+- 原因：mail-outbox.js 的 mailInboxPrompt 每次请求都带上她最近 8 封来信，其中 originalLetter 和 myReply 是他旧信的全文；她回过某封信后，写信时角色照抄那封，连落款日期都抄。删收件箱那封没用，因为发件箱存着副本。**聊天用的 mailInboxPrompt 没有改**（她私人版聊天正常，不动聊天看到的内容；角色回信 mailReply 也另外带了原信全文）。
+- SOCIAL_NOT_CHAT_V1：roleMomentGenerate / roleTweetGenerate 的提示加 roleSocialPublicRule（公开动态，不是微信，不要接着聊、不要对她叮嘱或道晚安）；写出来用 roleSocialChatEcho 和他最近 30 条微信回复比对（整段或单句重合 ≥75%，或包含他说过的一整句），像就重写，两次都像就不发。不是逐字照搬、只是语气像聊天的情况挡不住，靠提示。聊天里角色自己发的 [发朋友圈|…] 指令不受影响。
+
+验证：tests/letter-social-repeat-1030.test.mjs（两版，旧代码 10 项失败；「聊天用的来信提示没有改」一项新旧都通过，守住不动聊天）。核对到：2026-10-30。

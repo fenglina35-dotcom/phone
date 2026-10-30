@@ -17,13 +17,13 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1867'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1867')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1868'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1868')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1867 · 真人好友省流量与生日主动祝福'/);
-  assert.match(publicApp,/APP_VER='v1862 · 真人好友省流量与生日主动祝福'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 513;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.513;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1868 · 写信不重复与动态不发聊天话'/);
+  assert.match(publicApp,/APP_VER='v1863 · 写信不重复与动态不发聊天话'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 514;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.514;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

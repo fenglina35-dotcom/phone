@@ -15,8 +15,8 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 test('private v1355 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1862[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1862&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1867[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1867[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1867&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1863[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1863&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1868[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1868[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1868&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -145,12 +145,12 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1867 · 真人好友省流量与生日主动祝福'/);
+  assert.match(privateApp,/const APP_VER='v1868 · 写信不重复与动态不发聊天话'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.513 \(513\)/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.514 \(514\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 513;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.513;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 514;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.514;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

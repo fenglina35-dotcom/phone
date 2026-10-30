@@ -168,6 +168,8 @@ const PERMANENT_FIXES = [
   {release:"private v1867 / web v1862",scope:"both",least:1,name:"小黑屋选项答案进记录，角色不再复述选项",marker:"JAIL_CHOICE_HISTORY_V1"},
   {release:"private v1867 / web v1862",scope:"both",least:1,name:"她生日当天打开 App 情侣角色主动祝福一次",marker:"BIRTHDAY_ONLINE_V1"},
   {release:"private v1867 / web v1862",scope:"both",least:1,name:"查他手机刷新放宽读取、多续写、失败留原话",marker:"SPY_PARSE_LENIENT_V1"},
+  {release:"private v1868 / web v1863",scope:"both",least:1,name:"角色写信不照抄旧信、不重复发同一封",marker:"LETTER_NO_REPEAT_V1"},
+  {release:"private v1868 / web v1863",scope:"both",least:1,name:"朋友圈和 X 不发微信里对她说的话",marker:"SOCIAL_NOT_CHAT_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"fish-mcp.js",name:"Fish 会员登录的请求有等待上限",marker:"TTS_CALL_TIMEOUT_V1"},
