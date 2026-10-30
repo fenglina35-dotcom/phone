@@ -365,11 +365,13 @@ function archive(o,rows,sess,begin,dur){const lines=lineRows(rows);
   lines.forEach(l=>{const item=hiddenItem(l,sess);o.msgSeq=Math.max(0,+o.msgSeq||0)+1;item.cohabSeq=o.msgSeq;o.msgs.push(item);l.hid=item.id;});
   if(lines.length)o.voiceLog.push({id:uid(),sess,start:begin,end:Date.now(),dur,lines});
   o.voiceLog=o.voiceLog.slice(-40);}
+/* COHAB_VOICE_CHUNK_SUMMARY_V1（2026-10-30 她说：语音结束回到微信，角色完全不记得；她手机上 10-25 那段 1054 句）：以前整段一次发给模型、只记一条最多 320 字的总结，太长时这一次请求还可能直接失败；共同生活打字是每几轮总结一次。现在长语音按每 80 句一段分别总结，每段一条记忆，短的仍是一条。 */
 async function summarize(c,rows,aid){const lines=spoken(rows);if(!c||lines.length<2||typeof chatAPI!=='function')return;
   const ul=typeof summaryUserLabel==='function'?summaryUserLabel(c,aid):(S.me&&S.me.name||'对方');
-  const text=lines.map(m=>(m.role==='user'?ul:c.name)+'：'+String(m.content||'').replace(/\s+/g,' ')).join('\n');
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和「'+ul+'」刚才在共同生活里面对面说的话：你们住在一起，此刻就在同一个空间里，这不是电话，也不是视频通话。请用第一人称把这段当面相处记成一段记忆：只记新发生的事情、重要的点和你的感受。用"我"指你自己('+c.name+')，只用「'+ul+'」称呼对方，禁止写“对方/ta/TA/那个人”。写3到5句（一两百字）、每句完整，直接写正文，别分点别带前缀，不要写括号里的语气说明，也不要提电话、视频、通话、镜头。'+(typeof perspRule==='function'?perspRule(c,aid):'')+(typeof IMP_INSTR!=='undefined'?IMP_INSTR:'')},{role:'user',content:text}],{max:600,temp:.45});
-    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,trimSentence(rt.text,320),rt.imp,'【共同生活语音】',aid);}}catch(_){}}
+  const CH=80,chunks=[];for(let i=0;i<lines.length;i+=CH)chunks.push(lines.slice(i,i+CH));if(chunks.length>1&&chunks[chunks.length-1].length<20){const tail=chunks.pop();chunks[chunks.length-1]=chunks[chunks.length-1].concat(tail);}
+  for(let k=0;k<chunks.length;k++){const text=chunks[k].map(m=>(m.role==='user'?ul:c.name)+'：'+String(m.content||'').replace(/\s+/g,' ')).join('\n'),many=chunks.length>1,label=many?'【共同生活语音·第'+(k+1)+'/'+chunks.length+'段】':'【共同生活语音】';
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和「'+ul+'」刚才在共同生活里面对面说的话：你们住在一起，此刻就在同一个空间里，这不是电话，也不是视频通话。请用第一人称把这段当面相处记成一段记忆：只记新发生的事情、重要的点和你的感受。用"我"指你自己('+c.name+')，只用「'+ul+'」称呼对方，禁止写“对方/ta/TA/那个人”。写3到5句（一两百字）、每句完整，直接写正文，别分点别带前缀，不要写括号里的语气说明，也不要提电话、视频、通话、镜头。'+(typeof perspRule==='function'?perspRule(c,aid):'')+(typeof IMP_INSTR!=='undefined'?IMP_INSTR:'')+(many?'这是这次当面相处的第'+(k+1)+'段（共'+chunks.length+'段），只记这一段里发生的事。':'')},{role:'user',content:text}],{max:600,temp:.45});
+    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,trimSentence(rt.text,320),rt.imp,label,aid);}}catch(_){}}}
 
 /* ---------- 给角色看的（callAI 在语音模式时调用） ---------- */
 function history(c,sess){const o=cohabData(c.id),out=(typeof cohabReplyHistory==='function'?cohabReplyHistory(c,o):[]).map(x=>({role:x.role,content:x.content}));
@@ -535,7 +537,7 @@ function paintReader(L){const c=getC(_call.id);if(!c)return;const old=document.g
   const hf=typeof _callHF!=='undefined'&&_callHF;
   L.innerHTML='<div class="offstage cvr-stage'+esc2(st.cls||'')+'" style="'+esc2(st.style||'')+'">'
    +'<div class="cvr-scroll" id="cvrScroll"><div class="cvr-body" id="cvrBody"></div></div>'
-   +'<header class="cvr-head"><button class="cvr-min cvr-glass" onclick="callMin()" aria-label="缩小">⤵︎</button><div class="cvr-title"><small>共同生活 · 语音</small><b>'+esc2(c.remark||c.name)+'</b></div><button class="cvr-end cvr-glass" onclick="hangupCall()" aria-label="结束语音模式，回到文字">结束</button></header>'
+   +'<header class="cvr-head"><button class="cvr-min cvr-glass" onclick="callMin()" aria-label="缩小">⤵︎</button><div class="cvr-title"><small>共同生活 · 语音</small><b>'+esc2(c.remark||c.name)+(typeof ttsDotHTML==='function'?ttsDotHTML():'')+'</b></div><button class="cvr-end cvr-glass" onclick="hangupCall()" aria-label="结束语音模式，回到文字">结束</button></header>'
    +'<div id="cvrInspection" style="position:absolute;top:82px;left:12px;right:12px;z-index:12" role="status"></div>'
    +'<button class="cvr-latest cvr-glass" id="cvrLatest" hidden onclick="CohabVoice.toLatest()">回到最新 ↓</button>'
    +'<button class="cvr-reply cvr-glass" onclick="CohabVoice.reply()">让TA回</button>'

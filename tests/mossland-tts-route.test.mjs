@@ -15,7 +15,7 @@ assert.match(app, /data-tts-route=/);
 assert.match(app, /ttsRoutes:\[\],ttsRouteActive:0/);
 assert.match(app, /\['https:\/\/api\.mosi\.cn\/v1','moss-tts','Mossland','mossland'\]/);
 assert.match(app, /provider==='mossland'/);
-assert.match(app, /provider==='mossland'[\s\S]*?externalTtsRelay\(tts,\{voice_id:vid,text:t\}\)/);
+assert.match(app, /provider==='mossland'[\s\S]*?externalTtsRelay\(tts,\{voice_id:vid,text:t\},opt&&opt\.timeoutMs\)/); // TTS_CALL_TIMEOUT_V1 (2026-10-30) passes the per-try time limit
 assert.match(relay, /delivery_method:'audio'/);
 assert.match(app, /operation:'list_voices'/);
 

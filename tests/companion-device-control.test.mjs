@@ -84,12 +84,12 @@ test('internal and external apps bind through distinct stable ids', () => {
   assert.equal(context.companionBindingForInternal(state, 'douyin').externalAppId, 'ios.token.douyin');
   assert.equal(context.companionBoundExternal(state, 'douyin').id, 'ios.token.douyin');
   assert.equal(context.companionBoundExternal(state, 'music'), null);
-  assert.match(functionSource('companionDispatchBound'), /binding\.externalAppId/);
-  assert.match(functionSource('companionDispatchBound'), /外置 App 尚未通过稳定 ID 完成关联/);
+  assert.match(functionSource('companionDispatchBoundOne'), /binding\.externalAppId/); // COMPANION_MULTI_BIND_V1 (2026-10-30): the per-link body moved to companionDispatchBoundOne; companionDispatchBound now sends to every linked iPhone App
+  assert.match(functionSource('companionDispatchBoundOne'), /外置 App 尚未通过稳定 ID 完成关联/);
 });
 
 test('a unified limit creates separate internal and external execution rules', () => {
-  const dispatch = functionSource('companionDispatchBound');
+  const dispatch = functionSource('companionDispatchBoundOne'); // COMPANION_MULTI_BIND_V1 (2026-10-30): the per-link body moved to companionDispatchBoundOne; companionDispatchBound now sends to every linked iPhone App
   const tags = functionSource('applyControlTags');
   assert.match(dispatch, /needsExternal=scope!==\x27internal\x27/);
   assert.match(dispatch, /needsInternal=scope!==\x27external\x27/);
@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1859 · 闹钟音色与生日'/);
+  assert.match(app, /const APP_VER='v1860 · 语音记忆与声音小灯'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -829,7 +829,7 @@ test('a synced external-only app is routed to the real iPhone without silent dua
 test('role control tags route external controls through the companion dispatcher; speech never does', () => {
   const tags = functionSource('applyControlTags');
   const confirm = functionSource('controlClaimConfirm');
-  const bound = functionSource('companionDispatchBound');
+  const bound = functionSource('companionDispatchBoundOne'); // COMPANION_MULTI_BIND_V1 (2026-10-30): the per-link body moved to companionDispatchBoundOne; companionDispatchBound now sends to every linked iPhone App
   assert.match(tags, /companionDispatchRoleByText\('lock'/);
   assert.match(tags, /companionDispatchRoleByText\('limit'/);
   assert.match(tags, /companionDispatchRoleByText\('unlock'/);

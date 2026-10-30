@@ -110,7 +110,7 @@ test('roles can refresh and inspect all external iPhone facts in one pass', () =
 
 test('a bound external action is enqueued only once', () => {
   const apply = functionSource('companionApplyAction');
-  const dispatch = functionSource('companionDispatchBound');
+  const dispatch = functionSource('companionDispatchBoundOne'); // COMPANION_MULTI_BIND_V1 (2026-10-30): the per-link body moved to companionDispatchBoundOne; companionDispatchBound now sends to every linked iPhone App
   assert.match(apply, /!st\.demo&&!opt\.skipLog\)companionSendCommand/);
   assert.equal((dispatch.match(/companionSendCommand\(/g) || []).length, 1);
 });

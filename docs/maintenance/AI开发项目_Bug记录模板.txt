@@ -2470,3 +2470,12 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 全量 4638 项除上面日期测试外通过；改日期后该文件通过。核心聊天普通/查岗预览两遍通过。读手机数据只用 devicectl copy from（核心存档、运行日志、localStorage），排查后删除副本。
 
 2026-10-30 第二批（web v1859 / private v1864 待发布）：闹钟「仅一次」看不清、开关圆点出框（ALARM_ROW_V1）；音色页文字重叠（VOICE_TUNE_ROW_V1，.it 放进弹框）；共同生活方形箭头改圆（COHAB_TAP_ROUND_V1，圆角原为 0，镜片照圆角画）；主屏组件变黑（HOME_GLASS_KEEP_V1，镜片缓存画布切后台后被清空仍复用）；网页图标换私人版；新增生日（BIRTHDAY_V1）。tests/batch2-ui-birthday.test.mjs 14 项在上次提交的代码上全部失败、现在通过。报备按钮：Chromium 手机尺寸触屏实点正常，原因未找到，等 iPhone 模拟器实点。全量 4664 项通过（防丢清单一条标记位置写错已改），核心聊天两遍通过。截图：闹钟、音色页、转账附言、编辑角色生日、个人资料生日、共同生活圆形箭头。
+
+2026-10-30 第三批（web v1860 / private v1865 待发布）：
+- 个人资料「生日」点不动：wxProfileBirthday 没挂到 window（wechat-me.js 是包起来的），上一版截图只看了样子没点。补挂并加通用检查；Chromium 手机尺寸实点能选日期并保存。
+- 共同生活语音回来微信不记得（COHAB_VOICE_CHUNK_SUMMARY_V1）：模拟场景下微信提示和回到微信的提醒都带着语音原话；读她手机核心存档：voiceLog 5 段（10-25 那段 1054 句），共同生活记录里隐藏条目为 0、记录只剩 10-27 以后（像是用过按日期删除）。根因：长语音只做一次总结、最多 320 字，超长时那次请求可能失败；改为每 80 句一段分别总结。tests/cohab-voice-chunk-summary.test.mjs 旧代码失败。
+- 共同生活设置路线四副模型、语音实际走主模型（COHAB_VOICE_MODEL_V1）：callAI 用角色路线，不看共同生活设置；也不进共同生活诊断（记为电话）。
+- 通话一句话卡好几分钟（TTS_CALL_TIMEOUT_V1）：她用 Fish 会员登录（fishmcp），请求无超时，每句最多三次；外置路线每次最长 190 秒。通话中改 30 秒×2 次。tests/fish-mcp-v1756.test.mjs、tests/mossland-tts-route.test.mjs、permanent-fix-guard 的 v1756 标记随新参数更新写法。
+- 离家两三公里角色仍说在家（COUPLE_REAL_LOCATION_V1，她同意改）：情侣空间定位卡片正确（非家），共同生活提示把模拟「在家」称最高优先级；新加真实位置一句。
+- 第 12 项未改，见功能说明。全量 4692 项通过，核心聊天两遍通过。手机核心存档副本排查后删除。
+- 同日更正：通话语音 30 秒×2 次后只显示文字的做法被她否决（会以为声音坏了），改为每次 60 秒×3 次；另加红闪绿亮小灯（TTS_DOT_V1），她不要「正在生成」文字。第 12 项她说明有重复关联，改为一个小手机 App 可关联多个 iPhone App（COMPANION_MULTI_BIND_V1，原来是一对一顶掉）。tests/companion-device-control、companion-secure-sync 里检查函数内容的断言随函数拆分改查 companionDispatchBoundOne。全量 4708 项通过，核心聊天两遍通过。

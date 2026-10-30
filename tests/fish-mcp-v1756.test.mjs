@@ -78,7 +78,7 @@ test('not logged in: a clear error instead of a silent failure; audio blocks and
 test('app: fishmcp provider needs no key and calls the module; the API Key path is untouched; both bundles ship it',()=>{
   for(const p of ['app.js',PRIVATE+'app.js']){const s=read(p);
     assert.match(s,/function ttsExternalOn\(t\)\{return !!\(t&&t\.base&&\(t\.key\|\|ttsProviderKind\(t\)==='fishmcp'\)\);\}/,p);
-    assert.match(s,/else if\(provider==='fishmcp'\)\{if\(typeof NorthFishMcp==='undefined'\)return \{err:'Fish 会员登录模块没有加载'\};return await NorthFishMcp\.speak\(\{text:t,voiceId:vid,model:tts\.model\}\);\}\n  else if\(provider==='fish'\)r=await externalTtsRelay\(tts,\{voice_id:vid,text:t\}\);/,p);
+    assert.match(s,/else if\(provider==='fishmcp'\)\{if\(typeof NorthFishMcp==='undefined'\)return \{err:'Fish 会员登录模块没有加载'\};return await NorthFishMcp\.speak\(\{text:t,voiceId:vid,model:tts\.model,timeoutMs:opt&&opt\.timeoutMs\}\);\}\n  else if\(provider==='fish'\)r=await externalTtsRelay\(tts,\{voice_id:vid,text:t\},opt&&opt\.timeoutMs\);/,p); // TTS_CALL_TIMEOUT_V1 (2026-10-30) added the per-try time limit
     assert.match(s,/\['fish','Fish Audio（API Key）'\],\['fishmcp','Fish 会员登录（用套餐点数）'\]/,p);
     assert.match(s,/\['https:\/\/api\.fish\.audio','drama-3','Fish Drama 3·会员点数','fishmcp'\]/,p);
     assert.match(s,/NorthFishMcp\.panel\(\(S\.settings\.tts\|\|\{\}\)\.provider\)/,p);

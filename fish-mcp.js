@@ -66,9 +66,11 @@ function logout(){ls.del(STORE);ls.del(PENDING);_session=null;_tools=null;return
 /* MCP（streamable HTTP + JSON-RPC）。服务端可能回 JSON，也可能回 SSE；两种都认。 */
 let _session=null,_tools=null,_rpcId=1;
 function parseSse(text,id){let found=null;for(const block of String(text||'').split(/\r?\n\r?\n/)){const data=block.split(/\r?\n/).filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trim()).join('\n');if(!data)continue;try{const j=JSON.parse(data);if(id==null||j.id===id)found=j;}catch(_){}}return found;}
+/* TTS_CALL_TIMEOUT_V1（2026-10-30 她说：电话里一句话要等好几分钟才跳下一句）：连 Fish 和下载音频以前没有等待上限，Fish 不回应就一直等，再乘上最多三次重试。现在每次请求最多等 _limitMs（通话中 30 秒，平时 60 秒）。 */
+let _limitMs=60000;function fetchLimit(url,init,ms){const ac=typeof AbortController==='function'&&typeof setTimeout==='function'?new AbortController():null,t=ac?setTimeout(()=>ac.abort(),Math.max(5000,+ms||_limitMs)):0;return fetch(url,Object.assign({},init||{},ac?{signal:ac.signal}:{})).finally(()=>{if(t&&typeof clearTimeout==='function')clearTimeout(t);});}
 async function rpc(method,params,notify,retried){const token=await accessToken(),id=notify?undefined:_rpcId++,body={jsonrpc:'2.0',method};if(params!==undefined)body.params=params;if(!notify)body.id=id;
   const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+token,'Mcp-Protocol-Version':PROTOCOL};if(_session)headers['Mcp-Session-Id']=_session;
-  const r=await fetch(MCP_VIA,{method:'POST',headers,body:JSON.stringify(body)});const sid=r.headers.get('Mcp-Session-Id');if(sid)_session=sid;
+  const r=await fetchLimit(MCP_VIA,{method:'POST',headers,body:JSON.stringify(body)});const sid=r.headers.get('Mcp-Session-Id');if(sid)_session=sid;
   if(r.status===401&&!retried){await accessToken(true);return rpc(method,params,notify,true);}
   if(r.status===404&&_session&&!retried&&method!=='initialize'){_session=null;await ensureSession();return rpc(method,params,notify,true);}
   if(notify)return null;const type=String(r.headers.get('Content-Type')||''),text=await r.text();let j=null;if(/event-stream/i.test(type))j=parseSse(text,id);else{try{j=JSON.parse(text);}catch(_){j=null;}}
@@ -89,9 +91,9 @@ function ttsTool(list){return list.find(t=>/^(?:text_to_speech|tts|generate_spee
 function argsFor(tool,text,voiceId,model){const props=(tool&&tool.inputSchema&&tool.inputSchema.properties)||{},has=k=>Object.prototype.hasOwnProperty.call(props,k),pick=(...ks)=>ks.find(has),a={};
   a[pick('text','input','content','script')||'text']=text;const vk=pick('reference_id','voice_id','voice','model_id');if(voiceId&&vk)a[vk]=voiceId;const mk=pick('model','backend','tts_model');if(model&&mk)a[mk]=model;const fk=pick('format','audio_format');if(fk)a[fk]='mp3';return a;}
 /* 生成一条语音，返回 {buf} 或 {err}，和原来的 _ttsOnce 一致 */
-async function speak(opt){try{const list=await tools(),tool=ttsTool(list);if(!tool)return {err:'Fish MCP 里没有找到语音生成工具'};const res=await call(tool.name,argsFor(tool,String(opt&&opt.text||''),opt&&opt.voiceId,opt&&opt.model)),au=audioFrom(res);
+async function speak(opt){if(opt&&+opt.timeoutMs>0)_limitMs=+opt.timeoutMs;try{const list=await tools(),tool=ttsTool(list);if(!tool)return {err:'Fish MCP 里没有找到语音生成工具'};const res=await call(tool.name,argsFor(tool,String(opt&&opt.text||''),opt&&opt.voiceId,opt&&opt.model)),au=audioFrom(res);
     if(!au)return {err:'Fish MCP 没有返回音频'};if(au.data){const bin=atob(au.data),buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);return {buf:buf.buffer};}
-    let r;if(/^https:\/\/([a-z0-9-]+\.)*fish\.audio\//i.test(au.url))r=await fetch(AUDIO_VIA,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+await accessToken()},body:JSON.stringify({url:au.url})});else r=await fetch(au.url);
+    let r;if(/^https:\/\/([a-z0-9-]+\.)*fish\.audio\//i.test(au.url))r=await fetchLimit(AUDIO_VIA,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+await accessToken()},body:JSON.stringify({url:au.url})});else r=await fetchLimit(au.url);
     if(!r.ok)return {err:'下载 Fish 音频失败（'+r.status+'）'};return {buf:await r.arrayBuffer()};}catch(e){return {err:String(e&&e.message||e)};}}
 
 /* 设置页「声音与通话」里的登录小面板（语音平台选「Fish 会员登录」时显示） */

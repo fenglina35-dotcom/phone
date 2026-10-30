@@ -620,3 +620,14 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 网页图标：icon.png 换成私人版 AppIcon 缩到 512，小手机.html 里 icon.png?v=337（只改网页壳，私人原生图标不动）。
 - BIRTHDAY_V1：c.birthday（编辑角色性别下面，type=date）和 S.me.birthday（个人资料「生日」）；birthdayPrompt 分开写「你自己的生日」「她的生日，不是你的」；birthdayCareTick 在 checkCalendar 末尾：她生日当天、holidayCareWindow('生日') 内，开了主动消息的角色各一次——情侣角色走 holidayCare(…,{birthday,profile})（纪念日里已有生日就不重复），其他角色走 birthdayCare。一键清空保留两种生日。
 - 报备按钮（第 4 项）：电脑手机尺寸触屏模拟能正常开始报备，iPhone 模拟器 Safari 能打开页面，需她同意模拟器访问后实点，未修。
+
+## 第三批：生日按钮、共同生活语音记忆与模型、通话语音等待、真实定位（2026-10-30）
+- 个人资料「生日」点不动：wechat-me.js 包在函数里，新函数要挂到 window；tests/batch2-ui-birthday.test.mjs 检查个人资料每一行调用的、在本文件里定义的函数都挂了。
+- COHAB_VOICE_CHUNK_SUMMARY_V1：共同生活语音结束时 summarize 按每 80 句一段分别总结（末段不足 20 句并入前段），每段一条「【共同生活语音·第k/n段】」记忆；短的仍一条。以前整段一次发、只留一条 320 字，她 10-25 那段 1054 句。原话隐藏条目仍写进共同生活记录，微信能看最近「上下文条数」条；按日期删除共同生活记录会连这些一起删（她现在只剩 10-27 以后），语音记录 voiceLog 不受影响。
+- COHAB_VOICE_MODEL_V1：callAI 在 _call.cohab 时用 cohabVoiceModelOpt（共同生活设置的回复模型；路线选了具体路线就用它，跟随时仍用角色微信路线）。单次约会没有自己的路线设置，跟着角色路线。
+- TTS_CALL_TIMEOUT_V1：ttsArr 通话中（_call.state active，含共同生活语音）每次 30 秒、最多 2 次，平时 60 秒；fish-mcp.js 的 rpc 和音频下载用 fetchLimit。以前外置每次最多 190 秒×3 次，会员登录完全不限时。
+- COUPLE_REAL_LOCATION_V1：companionRealAwayFact——情侣角色、定位授权开、定位 30 分钟内、设了家且不在家时，在 cohabWechatPrompt、roleOnlineLiveStateText、cohabSystem 的共同生活状态后写明她的真实位置。
+- 第 12 项虚拟 App 关联变回去：她手机上 11 个关联都对得上 iPhone App；一个小手机 App 只能关联一个 iPhone App，再关联别的会顶掉前一个。原因未确认，未改，等她说具体是哪个 App、变成什么。
+- 更正 TTS_CALL_TIMEOUT_V1：她不接受「没声音直接跳过」。最终是每次请求最多 60 秒、到时间自动重试、最多 3 次，不按通话缩短。
+- TTS_DOT_V1：通话（renderCall 名字后）和共同生活语音（.cvr-title b 名字后）的小灯 .tts-dot；ttsArr 在通话中计数 _ttsPending，>0 时 .busy 红灯 1 秒一闪，否则绿灯常亮。她不要文字提示。
+- COMPANION_MULTI_BIND_V1：一个小手机 App 可以关联多个 iPhone App。companionBindExternal 只去掉同一个 iPhone App 的旧关联；companionDispatchBound 对每个关联调用 companionDispatchBoundOne，小手机那边只改一次（_skipInternal）。companionBindingForInternal 仍返回第一个，供只需要一个的地方用。

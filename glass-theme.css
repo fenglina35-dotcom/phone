@@ -1228,3 +1228,9 @@ input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])
 /* BIRTHDAY_PICKER_WHITE_V1（2026-10-30 她说：生日最右边的小日历是黑色的，改成白色）：生日框按深色显示，日历图标白色、大小和文字相配。 */
 #c_birthday,#wxprofile-birthday{color-scheme:dark}
 #c_birthday::-webkit-calendar-picker-indicator,#wxprofile-birthday::-webkit-calendar-picker-indicator{opacity:.9;width:18px;height:18px;margin-left:6px;cursor:pointer}
+
+/* TTS_DOT_V1：通话和共同生活语音名字右边的小灯——生成声音时红灯一闪一闪，生成好了绿灯常亮 */
+.tts-dot{display:inline-block;width:8px;height:8px;margin-left:7px;border-radius:50%;vertical-align:middle;position:relative;top:-1px;background:#30d158;box-shadow:0 0 6px rgba(48,209,88,.75);transition:background .2s,box-shadow .2s}
+.tts-dot.busy{background:#ff453a;box-shadow:0 0 7px rgba(255,69,58,.85);animation:ttsDotBlink 1s ease-in-out infinite}
+@keyframes ttsDotBlink{0%,100%{opacity:1}50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.tts-dot.busy{animation-duration:2s}}

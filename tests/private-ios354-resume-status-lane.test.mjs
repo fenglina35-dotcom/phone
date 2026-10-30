@@ -38,18 +38,18 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1864 · 闹钟音色与生日'/);
+  assert.match(app,/APP_VER='v1865 · 语音记忆与声音小灯'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1864'/);
-    assert.match(html,/app\.js\?v=1864&r=v1864-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1865'/);
+    assert.match(html,/app\.js\?v=1865&r=v1865-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.510 \(510\)/);
-  assert.match(bridge,/private static let build = "1\.0\.510 \(510\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 510;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.510;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1859 · 闹钟音色与生日'/);
+  assert.match(webView,/1\.0\.511 \(511\)/);
+  assert.match(bridge,/private static let build = "1\.0\.511 \(511\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 511;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.511;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1860 · 语音记忆与声音小灯'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

@@ -72,3 +72,15 @@ for (const [app, css, me] of [['app.js', 'glass-theme.css', 'wechat-me.js'], [PB
     assert(w.includes("wxProfileRow('生日'") && w.includes('function wxProfileBirthdaySet('));
   });
 }
+
+// WX_PROFILE_EXPORT_V1 (2026-10-30, her report: 个人资料 → 生日 did nothing): wechat-me.js is wrapped in a function, and
+// wxProfileBirthday was never put on window, so the row's onclick threw. Every function a 个人资料 row calls must be on window.
+for (const file of ['wechat-me.js', PB + 'wechat-me.js']) {
+  test(file + ': every 个人资料 row handler is reachable from the page', () => {
+    const w = fs.readFileSync(file, 'utf8');
+    const handlers = [...w.matchAll(/wxProfileRow\('[^'\n]*',[^\n]*?,"(\w+)\(/g)].map(m => m[1]);
+    assert(handlers.includes('wxProfileBirthday'));
+    for (const h of new Set(handlers)) if (w.includes('function ' + h + '(')) assert(w.includes('window.' + h + '=' + h), h + ' is defined inside wechat-me.js, so it must be on window');
+    assert(w.includes('window.wxProfileBirthdaySet=wxProfileBirthdaySet'), 'the 完成 button handler too');
+  });
+}
