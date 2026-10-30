@@ -667,3 +667,11 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - SOCIAL_NOT_CHAT_V1：roleMomentGenerate / roleTweetGenerate 的提示加 roleSocialPublicRule（公开动态，不是微信，不要接着聊、不要对她叮嘱或道晚安）；写出来用 roleSocialChatEcho 和他最近 30 条微信回复比对（整段或单句重合 ≥75%，或包含他说过的一整句），像就重写，两次都像就不发。不是逐字照搬、只是语气像聊天的情况挡不住，靠提示。聊天里角色自己发的 [发朋友圈|…] 指令不受影响。
 
 验证：tests/letter-social-repeat-1030.test.mjs（两版，旧代码 10 项失败；「聊天用的来信提示没有改」一项新旧都通过，守住不动聊天）。核对到：2026-10-30。
+
+## 查他手机走角色线路、朋友圈不发拒绝回答（2026-10-30）
+
+- SPY_ROLE_ROUTE_V1（她定的规则）：查他手机刷新、续写和日记用 spyRouteOpt(c,useAux)：routeIndex=roleChatRouteIndex(c)（角色独立路线，没设就是默认路线，和聊天一致），independentRoleModel:true；「查他手机·刷新用副模型」开着就用这条线路的副模型，没填副模型就用它的主模型。以前不传线路，用设置里当前选中那条线路的副模型，角色单独配线路时对不上（群里用户：设了副模型，站子记录却是主模型）。
+- SOCIAL_NO_REFUSAL_V1：roleMomentGenerate / roleTweetGenerate 写出来是拒绝回答（isRefusal，比如 I can't discuss that）就重写一次，还拒绝就不发。模型拒绝本身是对方人设内容触发了模型安全限制，程序管不了。
+
+验证：tests/spy-route-social-refusal-1030.test.mjs（两版，旧代码全失败）。核对到：2026-10-30。
+- ROLE_ALBUM_SAVED_V1（她要求）：查他手机里的「图库」（photo-album.js 的 renderRolePhotoAlbum，读 photoAlbumRoleLikedRows）以前只收他点过赞的照片；现在他用 [存共同相册] 收藏的（row.savedBy 是他）也收进来。大图里的红心只给点过赞的（photoAlbumRoleLiked）。她自己上传、他没收藏也没点赞的照片不放。旧的文字相册 spyAlbumHTML 已不用，别改错地方。验证：tests/spy-route-social-refusal-1030.test.mjs 末尾一项（两版，旧代码失败）。

@@ -107,6 +107,7 @@ for (const [label, file] of Object.entries(FILES)) {
   test(`${label}：查他手机失败会留下模型原话，设置里能看`, () => {
     assert.match(src, /spyRawKeep\(id,content,_spyWhy\)/);
     assert.match(src, /row\('看模型原话'/);
-    assert.match(src, /content=await spyContinueJson\(_spyMsgs,content,_spyAuxOn\)/);
+    // SPY_ROLE_ROUTE_V1 起续写带上角色线路 _spyRoute
+    assert.match(src, /content=await spyContinueJson\(_spyMsgs,content,_spyRoute\)/);
   });
 }

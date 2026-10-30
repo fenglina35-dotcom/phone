@@ -19,6 +19,7 @@ for (const file of ['app.js', PB + 'app.js']) {
     const s = fs.readFileSync(file, 'utf8');
     // SPY_PARSE_LENIENT_V1（2026-10-30）把请求拆成 _spyMsgs + spyContinueJson，自动续写 complete:true 仍保留。
     assert(s.includes("_spyMsgs=[{role:'system',content:_sys},...hist,{role:'user',content:prompt}]"));
-    assert(s.includes("let content=await chatAPI(_spyMsgs,{max:4000,complete:true,aux:_spyAuxOn})"));
+    // SPY_ROLE_ROUTE_V1（2026-10-30）又把线路和副模型收进 _spyRoute（角色自己的线路），complete:true 仍保留。
+    assert(s.includes("let content=await chatAPI(_spyMsgs,Object.assign({max:4000,complete:true},_spyRoute))"));
   });
 }

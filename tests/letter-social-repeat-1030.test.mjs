@@ -89,7 +89,7 @@ for (const [label, file] of Object.entries(FILES)) {
     assert.equal(await ctx.roleMomentGenerate({ id: 'r1', name: '你哥' }), '加班到深夜，路过便利店买了两罐热咖啡，一罐留给明天的自己。');
     assert.match(firstPrompt, /这是公开动态，不是微信/);
     assert.match(grab(src, 'roleTweetGenerate'), /roleSocialPublicRule\(\)/);
-    assert.match(grab(src, 'roleTweetGenerate'), /roleSocialChatEcho\(c,text\)\)\)\{/);
+    assert.match(grab(src, 'roleTweetGenerate'), /roleSocialChatEcho\(c,text\)\)/);
   });
 
   test(`${label}：聊天回复用的来信提示没有改`, () => {
