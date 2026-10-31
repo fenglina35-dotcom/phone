@@ -3347,3 +3347,4 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-10-30 网页v1864 / 私人v1869 / iOS515（提交 d3145c9b）：SPY_ROLE_ROUTE_V1（查他手机走角色自己的线路与副模型）、SOCIAL_NO_REFUSAL_V1（朋友圈和 X 不发拒绝回答）、ROLE_ALBUM_SAVED_V1（他手机图库收他收藏和点过赞的照片）。全部测试 4788 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.515 (515)。真机图库、群里用户的网页版效果未实测。
 2026-10-31 网页v1865 / 私人v1870 / iOS516（提交 2c4aad36）：MODEL_CALL_LEDGER_V1（网络连接里的全部调用记录、副模型使用清单；自带切换的功能只标去哪切；漏登记新功能测试报错）。全部测试 4807 项通过，核心聊天检查两遍通过。从已提交代码编译 Release，devicectl 第一次装时连接断开，重装成功并读回 1.0.516 (516)。真机上的调用记录与清单未实测。
 2026-10-31 网页v1866（私人 v1870 / iOS516 不变，提交 ccf2f7bc）：PUBLIC_NORTH_BIND_REPAIR_V1 公开 North 虚拟 App 关联不再变回去，只改 public-north-runtime.js。全部测试 4811 项通过，核心聊天检查两遍通过。线上 app.js 读回 v1866，线上 public-north-runtime.js 带修复标记。公开版用户的真实效果未实测。
+2026-10-31 网页v1867 / 私人v1871 / iOS517（提交 f0a16807）：MAIL_FORWARD_GUARD_V1 信箱文件没加载时转发信件不再卡住聊天。全部测试 4817 项通过，核心聊天检查两遍通过。线上 app.js 读回 v1867；从已提交代码编译 Release，devicectl 装到她 iPhone 15 并读回 1.0.517 (517)。群里那位用户的实际效果未确认。
