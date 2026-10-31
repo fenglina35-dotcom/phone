@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1871'){
+if(window.__NORTH_SHELL_BUILD__!=='1872'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1871 · 生活抓拍第二版';
+const APP_VER='v1872 · 照片不再变成文字';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2287,7 +2287,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1871&r=v1871-owner-todo-report-1';
+  const url='sw.js?v=1872&r=v1872-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -16022,7 +16022,7 @@ async function roleServerPushApplyAction(c,line,rowId,base){line=String(line||''
   else if(/^[\[【]心动审判[\]】]$/.test(line))roleGameInvite(c.id,'heartquiz');
   else return false;
   const created=list.slice(before);created.forEach((msg,i)=>{if(!msg)return;msg._rolePushId=rowId;msg._rolePushPart=i;msg._serverProactive=true;if(!msg.time)msg.time=base+i*900;});save();return created.length>0;}
-function roleServerPushParts(c,body){/* STICKER_EXPLICIT_FORMAT_V1: background receipts use the same authorized local sticker pool, without executing other tags. */if(/[\[【]\s*(?:表情包|发送表情包|发送表情|发表情包|表情)\s*[|｜:：]\s*[^\[\]【】\n]{1,120}[\]】]/.test(String(body||''))){const normalized=normalizeStickerTags(body),out=[];for(const piece of normalized.split(/(\[表情\|[^\]]*\])/g)){const tag=piece.match(/^\[表情\|([^\]]*)\]$/);if(tag){const sticker=!c.noSticker&&aiPickSticker(tag[1],c);if(sticker)out.push({type:'sticker',img:sticker.img,meaning:sticker.meaning});}else if(piece.trim())out.push(...roleServerPushParts(c,piece));}return out;}if(roleReplyEnglishOnly(body))return[];if(typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered())return modelUnfilteredLines(body).filter(line=>!roleServerPushActionTag(line)).flatMap(line=>modelUnfilteredMessages(modelUnfilteredThoughtTags(line,c),c));if(roleServerPushUnsafeBody(body))return[];const max=Math.max(1,Math.min(10,+c.msgMax||4)),out=[];for(const line of splitChatBubbles(roleServerPushNormalizeBody(c,body),max)){if(roleServerPushActionTag(line))continue;for(const msg of lineToMsgs(line,c)){if(out.length>=max)break;if(msg&&['text','image','location'].includes(msg.type))out.push(msg);}if(out.length>=max)break;}return out;}
+function roleServerPushParts(c,body){/* STICKER_EXPLICIT_FORMAT_V1: background receipts use the same authorized local sticker pool, without executing other tags. */if(/[\[【]\s*(?:表情包|发送表情包|发送表情|发表情包|表情)\s*[|｜:：]\s*[^\[\]【】\n]{1,120}[\]】]/.test(String(body||''))){const normalized=normalizeStickerTags(body),out=[];for(const piece of normalized.split(/(\[表情\|[^\]]*\])/g)){const tag=piece.match(/^\[表情\|([^\]]*)\]$/);if(tag){const sticker=!c.noSticker&&aiPickSticker(tag[1],c);if(sticker)out.push({type:'sticker',img:sticker.img,meaning:sticker.meaning});}else if(piece.trim())out.push(...roleServerPushParts(c,piece));}return out;}if(roleReplyEnglishOnly(body))return[];if(typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered())return (typeof mergePhotoIntroLines==='function'&&typeof rawPhotoLine==='function'?mergePhotoIntroLines(modelUnfilteredLines(body)).map(rawPhotoLine):modelUnfilteredLines(body)).filter(line=>!roleServerPushActionTag(line)).flatMap(line=>modelUnfilteredMessages(modelUnfilteredThoughtTags(line,c),c));if(roleServerPushUnsafeBody(body))return[];const max=Math.max(1,Math.min(10,+c.msgMax||4)),out=[];const _pushLines=splitChatBubbles(roleServerPushNormalizeBody(c,body),max);for(const raw of (typeof mergePhotoIntroLines==='function'?mergePhotoIntroLines(_pushLines):_pushLines)){const line=typeof normalizeImageLine==='function'?normalizeImageLine(raw):raw;if(roleServerPushActionTag(line))continue;for(const msg of lineToMsgs(line,c)){if(out.length>=max)break;if(msg&&['text','image','location'].includes(msg.type))out.push(msg);}if(out.length>=max)break;}return out;}
 function roleServerPushHandoffAlreadyVisible(c,body,rowAt){if(!c)return false;const incoming=roleServerPushParts(c,body);if(!incoming.length||incoming.some(m=>!m||!['text','voice'].includes(m.type)||!msgToText(m)))return false;const at=+rowAt||Date.now(),local=(msgs(c.id)||[]).filter(m=>m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&msgToText(m)&&Math.abs((+m.time||0)-at)<=10*60000).map(m=>replyDedupNorm(msgToText(m))),wanted=incoming.map(m=>replyDedupNorm(msgToText(m)));if(!wanted.every(Boolean)||local.length<wanted.length)return false;for(let i=0;i<=local.length-wanted.length;i++){let same=true;for(let j=0;j<wanted.length;j++)if(local[i+j]!==wanted[j]){same=false;break;}if(same)return true;}return false;}
 function roleServerPushReceiptRows(){const cutoff=Date.now()-30*86400000,rows=Array.isArray(S._rolePushReceipts)?S._rolePushReceipts:[];S._rolePushReceipts=rows.filter(x=>x&&x.id&&(+x.at||0)>=cutoff).slice(-400);return S._rolePushReceipts;}
 function roleServerPushReceiptHas(id){id=String(id||'');return !!id&&roleServerPushReceiptRows().some(x=>String(x.id)===id);}
@@ -17698,16 +17698,29 @@ const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\
 function parsePayCardLine(line){let s=(''+(line||'')).trim(),m=s.match(/^[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+([0-9]+(?:\.[0-9]{1,2})?)\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]$/);if(!m)return null;return {kind:m[1],type:m[1]==='红包'?'redpacket':'transfer',amount:+m[2]||0,note:(m[3]||'').trim()};}
 function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
 function sanitizeRolePhotoScene(t){return String(t||'').replace(/(?:露出|展示|看清|拍清|要看|看看)?\s*(?:完整)?\s*(?:正脸|侧脸|脸部|面部|五官)|露脸|看镜头/g,'手机完全遮住脸').replace(/对镜自拍|镜子自拍|镜中自拍|自拍/g,'手机完全遮住脸的对镜自拍').replace(/手机完全遮住脸(?:手机完全遮住脸)+/g,'手机完全遮住脸').replace(/\s+/g,' ').trim();}
+/* PHOTO_LINE_RECOVER_V1：她说角色发照片常常变成文字——模型没写 [图片|…]，而是写「我发了一张照片，书房台灯下……」「（发了一张照片：……）」
+   「【照片】……」「给你拍了张照片：……」，或者第一行「我发了一张照片」、第二行才写画面。以前只认「……照片，画面是……」一种，后台服务器发来的消息更是一种都不认。
+   现在这些写法都认回 [图片|描述]；描述太短、是问句或只是聊天（「我发了张照片你看到没？」「给你看看」）就仍当文字。 */
+const PHOTO_INTRO_RE=/^(?:我\s*)?(?:刚\s*|刚刚\s*)?(?:给你|向你|跟你)?\s*(?:又\s*)?(?:发|发送|发了|发来|发过去|拍|拍了|拍下|拍下了|传了|甩了)\s*(?:一|1)?\s*(?:张|个|幅)?\s*(?:照片|图片|相片|自拍|图)(?:\s*(?:给你|过去|过来))?/;
+const PHOTO_LABEL_RE=/^[\s,，。；;:：—\-~～]*(?:画面是|画面为|画面里是|画面：|画面:|内容是|描述是|照片是|照片里是|照片里|图片是|图里是|拍的是|上面是)\s*[:：]?\s*/;
+function photoLineUnwrap(s){let t=String(s||'').trim();for(let k=0;k<2;k++){const m=t.match(/^(?:（([\s\S]*)）|\(([\s\S]*)\)|\*([\s\S]*)\*)$/);if(!m)break;t=String(m[1]||m[2]||m[3]||'').trim();}return t;}
+function photoDescLooksReal(d){d=String(d||'').trim();return d.length>=6&&!/^[\[【]/.test(d)&&!/[？?]\s*$/.test(d)&&!/(吗|没|呢|吧|嘛|啊|呀)[。！!～~…]*\s*$/.test(d)&&!/^(?:给你看|你看|看看|看到|给你瞧|收到)/.test(d);}
+function photoIntroRest(line){let t=photoLineUnwrap(line);const tag=t.match(/^[\[【（(*]\s*((?:我\s*)?(?:刚\s*)?(?:给你|向你)?(?:发|发了|发来|拍了|给你拍了)[^\]】）)*]{0,8}(?:照片|图片|相片|自拍)|照片|图片|相片|自拍)\s*[\]】）)*]\s*([\s\S]*)$/);if(tag)return {rest:tag[2].replace(/^[\s,，。；;:：—\-~～]+/,'').trim(),labeled:false,wrapped:true};const m=t.match(PHOTO_INTRO_RE);if(!m)return null;let rest=t.slice(m[0].length);const lab=rest.match(PHOTO_LABEL_RE);if(lab)rest=rest.slice(lab[0].length);else rest=rest.replace(/^[\s,，。；;:：—\-~～*]+/,'');return {rest:rest.replace(/\*+\s*$/,'').trim(),labeled:!!lab,wrapped:t!==String(line||'').trim()};}
 function normalizeImageLine(line){
   let s=(line||'').trim(),m;if(!s)return s;
   m=s.match(/^[\[【]\s*(图片|照片|自拍)\s*[\|｜:：]\s*([\s\S]*?)[\]】]$/);
   if(m)return '[图片|'+cleanPhotoDescText(m[2])+']';
   m=s.match(/^[\[【]\s*(?:我\s*)?(?:给你|向你)?(?:发|发送|发了|发来|拍|拍了)\s*(?:一张|张|个)?\s*(?:照片|图片|自拍)(?:\s*[,，。；;:：]\s*(?:画面是|画面为|内容是|描述是|照片是|图片是))?\s*[:：]?\s*([\s\S]*?)[\]】]$/);
-  if(m)return '[图片|'+cleanPhotoDescText(m[1])+']';
-  m=s.match(/^(?:我\s*)?(?:给你|向你)?(?:发|发送|发了|发来|拍|拍了)\s*(?:一张|张|个)?\s*(?:照片|图片|自拍)(?:\s*[,，。；;:：]\s*(?:画面是|画面为|内容是|描述是|照片是|图片是))\s*[:：]?\s*([\s\S]*)$/);
-  if(m&&m[1]&&m[1].trim().length>8)return '[图片|'+cleanPhotoDescText(m[1])+']';
+  if(m&&m[1].trim())return '[图片|'+cleanPhotoDescText(m[1])+']';
+  const r=photoIntroRest(s);
+  if(r&&r.rest&&((r.labeled||r.wrapped)?r.rest.length>=4&&!/[？?]\s*$/.test(r.rest):photoDescLooksReal(r.rest)))return '[图片|'+cleanPhotoDescText(r.rest)+']';
   return s;
 }
+/* 第一行只写「我发了一张照片」「[发了一张照片]」，画面写在下一行：并成一张照片 */
+/* 「原话不过滤」一直开着（modelOutputUnfiltered 恒为 true），角色回复和后台消息都走原样显示，只认行首的 [图片|…]；这里只把确实是「发了照片+画面」的整行换成标签，别的话一个字不动 */
+function rawPhotoLine(line){const t=normalizeImageLine(String(line==null?'':line).trim());return /^\[图片\|[^\]]+\]$/.test(t)?t:line;}
+function photoIntroOnly(line){const r=photoIntroRest(line);return !!r&&(!r.rest||/^(?:给你看看|给你看|你看看|你看|看看)[。！!～~…]*$/.test(r.rest));}
+function mergePhotoIntroLines(lines){const out=[];lines=Array.isArray(lines)?lines:[];for(let i=0;i<lines.length;i++){const line=lines[i],next=lines[i+1];if(photoIntroOnly(line)&&next!=null&&photoDescLooksReal(photoLineUnwrap(next))){out.push('[图片|'+cleanPhotoDescText(photoLineUnwrap(next))+']');i++;continue;}out.push(line);}return out;}
 function isPhotoPromptFragment(line){
   const s=(line||'').trim();if(!s||s.length>160)return false;
   return /(低头|侧影|背影|逆光|遮挡|脸看不清|不露正脸|自然光|无文字水印|真实照片|照片质感|俯拍|手持感|构图|镜头|光线|背景|不换背景|水印|自拍|男友视角)/.test(s)&&!/[吗呢吧呀哦哈？?！!]/.test(s);
@@ -18072,9 +18085,9 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(typeof NorthMarketBusiness!=='undefined'&&typeof NorthMarketBusiness.filterClaims==='function')content=NorthMarketBusiness.filterClaims(c,content);
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     const _playerCalendarResult=await calPlayerConsume(content,c,replyToken);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=_playerCalendarResult.text;if(_playerCalendarResult.changed)_replyAuditHandled=true;const _roleCalendarResult=await roleCalConsume(content,c,replyToken);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=_roleCalendarResult.text.replace(/\[日程受邀提醒作用域\|[^\]]*\]/g,'');if(_roleCalendarResult.changed)_replyAuditHandled=true;
-    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),_roleFiles=roleFileExtract(content),lines=(content=normalizeStickerTags(_roleFiles.text).replace(/(\[表情\|[^\]]*\])/g,'\n$1\n'),_rawOutput?modelUnfilteredLines(content):splitChatBubbles(content,30));_replyAuditFinal=_replyCandidate;if(splitChatBubbles(content,60).length>lines.length)_replyAuditPartial=true;let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
+    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),_roleFiles=roleFileExtract(content),lines=(content=normalizeStickerTags(_roleFiles.text).replace(/(\[表情\|[^\]]*\])/g,'\n$1\n'),(typeof mergePhotoIntroLines==='function'?mergePhotoIntroLines:(x=>x))(_rawOutput?modelUnfilteredLines(content):splitChatBubbles(content,30)));_replyAuditFinal=_replyCandidate;if(splitChatBubbles(content,60).length>lines.length)_replyAuditPartial=true;let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
     for(let i=0;i<lines.length;i++){
-      let line=_rawOutput?lines[i]:cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hiddenThoughtTags=[...String(line||'').matchAll(/[\[【]\s*(内心|心情(?!值))\s*(?:[|｜:：]\s*)?([^\]】]*)\s*[\]】]/g)],hadHiddenThought=hiddenThoughtTags.length>0,hiddenThoughtFailed=hiddenThoughtTags.some(match=>match[1]!==(_naturalOn?'内心':'心情')||!String(match[2]||'').trim());line=_rawOutput?modelUnfilteredThoughtTags(line,c):stripHiddenThoughtTags(line,c);if(hadHiddenThought){save();if(hiddenThoughtFailed)_replyAuditPartial=true;else _replyAuditHandled=true;}if(!line)continue;if(_rawOutput){const _tagOnly=String(line).trim();if(!_tagOnly)continue;/* 原文模式也要执行控制指令：只把整行就是一个方括号标签的行去空格并规整，普通文字保持原样。 */if(/^\[[^\[\]\r\n]*\]$/.test(_tagOnly))line=normTag(_tagOnly);}
+      let line=_rawOutput?(typeof rawPhotoLine==='function'?rawPhotoLine(lines[i]):lines[i]):cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hiddenThoughtTags=[...String(line||'').matchAll(/[\[【]\s*(内心|心情(?!值))\s*(?:[|｜:：]\s*)?([^\]】]*)\s*[\]】]/g)],hadHiddenThought=hiddenThoughtTags.length>0,hiddenThoughtFailed=hiddenThoughtTags.some(match=>match[1]!==(_naturalOn?'内心':'心情')||!String(match[2]||'').trim());line=_rawOutput?modelUnfilteredThoughtTags(line,c):stripHiddenThoughtTags(line,c);if(hadHiddenThought){save();if(hiddenThoughtFailed)_replyAuditPartial=true;else _replyAuditHandled=true;}if(!line)continue;if(_rawOutput){const _tagOnly=String(line).trim();if(!_tagOnly)continue;/* 原文模式也要执行控制指令：只把整行就是一个方括号标签的行去空格并规整，普通文字保持原样。 */if(/^\[[^\[\]\r\n]*\]$/.test(_tagOnly))line=normTag(_tagOnly);}
       if(!_rawOutput&&_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;_replyAuditPartial=true;continue;}
       if(!_rawOutput&&_initiativeNoLocation&&/^[\[【]\s*位置(?:\s*[|｜:：]|\s*[\]】])/.test(line)){_replyAuditPartial=true;continue;}
       if(!_rawOutput&&photoTail>0&&isPhotoPromptFragment(line)){photoTail--;_replyAuditPartial=true;continue;}

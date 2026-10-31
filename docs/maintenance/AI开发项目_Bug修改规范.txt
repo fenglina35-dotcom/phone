@@ -1892,3 +1892,4 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 给生图加「开关后一定换写法」的功能（ROLE_PHOTO_CANDID_V1）：不能只在出图函数里看角色设置——没开形象的聊天照片不带角色；要同时在照片说明里打标记、在出图函数里收口删除旧写法，并用经过真实 genImage 的测试检查最终发出的文字。
 - 新加或加长的设置页（ROLE_FEATURES_KEEP_SCROLL_V1）要确认它在 renderScrollTarget 里；不在名单里的页面，后台任何一次 render() 都会把它弹回顶部。电脑上滑动复现不出时，滑下去后手动 render() 一次来复现。
 - 写生图说明时（ROLE_PHOTO_CANDID_V2）：真实感靠真实场景、自然光和手机质感，不要要求虚焦、手抖、噪点；不要让模型拍「影子、膝盖边缘」这类它不擅长的局部；人设里的外貌要整句带入，不要只截开头。别人写的提示词文档如注明禁止转载，不能原文放进公开代码。
+- 改角色回复的解析（PHOTO_LINE_RECOVER_V1）：modelOutputUnfiltered() 恒为 true，真实回复和后台消息都走原样显示路径；只改 normalizeImageLine 那条路不会生效。验证要用假模型走完整 aiReply / roleServerPushParts，不能只测单个整理函数。
