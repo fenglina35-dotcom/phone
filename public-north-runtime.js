@@ -55,7 +55,12 @@ window.NorthPublicRuntime=(()=>{
   st.battery=facts.battery?{...facts.battery,ts:facts.battery.generatedAt}:null;
   st.health=facts.health?{steps:facts.health.availability==='reported'?facts.health.steps:null,ts:facts.health.generatedAt,source:'HealthKit 步数'}:null;
   st.location=facts.location?{...facts.location,ts:facts.location.generatedAt}:null;st.footprints=facts.footprints.map(x=>({...x,ts:x.generatedAt}));
-  if(!facts.linked){st.bindings=[];st.roleAccess=false;st.backgroundConsent={};}
+  /* PUBLIC_NORTH_BIND_REPAIR_V1（2026-10-31 她说：私人版虚拟 App 关联真实 App 已经不会变回去，公开版还会）：
+     以前这里直接用新的 App 列表顶掉旧的，从不按名字/外置编号把关联接回去（私人版每次读回都调用 companionRepairBindings），
+     North 那边 App 编号一变关联就对不上；读到一次「没连上」还会把关联全部清空。现在和私人版一样：没连上只暂停角色权限、保留关联；
+     连上时先从本机备份补回空掉的关联，再按名字/外置编号接回去。只改公开版这个文件，私人包里那份不动。 */
+  if(!facts.linked){st.roleAccess=false;st.backgroundConsent={};}
+  else{if(typeof companionBindingBackupRestore==='function')companionBindingBackupRestore(st);if(typeof companionRepairBindings==='function')companionRepairBindings(st,[...oldApps.values()]);}
   companionApplyHomeLocation(st);return true;
  }
  function prompt(c){

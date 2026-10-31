@@ -687,3 +687,10 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 辅助模型那段提示字改成指向这个清单。
 
 验证：tests/model-call-ledger.test.mjs（两版，旧代码 12 项全失败）；真开两版截图检查过记录、明细、线路配置、清单。核对到：2026-10-31。
+
+## 公开 North：虚拟 App 关联真实 App 不再变回去（PUBLIC_NORTH_BIND_REPAIR_V1，2026-10-31）
+
+- 公开版（网页 + 公开 North App）读回手机状态走 public-north-runtime.js 的 apply()，它接管了 companionState。以前 apply 直接用新 App 列表顶掉旧的，不像私人版那样调用 companionRepairBindings 按名字/外置编号把关联接回去；North 那边 App 编号一变，关联就对不上，看起来像「变回去」。读到一次 linked=false 还会把 st.bindings 全清空。
+- 现在：没连上只暂停 roleAccess 和后台授权、保留关联；连上时先 companionBindingBackupRestore（关联空了才从本机备份补），再 companionRepairBindings(st, 旧 App 列表)。和私人版 companionApplyServerPayloadV7 的做法一致。
+- 只改根目录 public-north-runtime.js；私人包里那份同名文件不动（私人原生环境里它不生效）。
+- 验证：tests/public-north-bind-repair.test.mjs（编号变了接回去、没连上不清空，旧代码失败；另守私人包那份没动）。核对到：2026-10-31。

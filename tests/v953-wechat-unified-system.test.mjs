@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1865 · 调用记录与副模型清单'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1865'/);
-assert.match(sw,/BUILD='1865'/);
+assert.match(source,/APP_VER='v1866 · 公开版关联不再变回去'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1866'/);
+assert.match(sw,/BUILD='1866'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 516;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1.0.516;/g)||[]).length,12);
 
