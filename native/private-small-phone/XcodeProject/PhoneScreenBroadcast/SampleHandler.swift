@@ -74,9 +74,18 @@ final class SampleHandler: RPBroadcastSampleHandler {
             key: RPVideoSampleOrientationKey as CFString,
             attachmentModeOut: nil
         ) as? NSNumber,
-           let orientation = CGImagePropertyOrientation(
+           let reported = CGImagePropertyOrientation(
                rawValue: value.uint32Value
            ) {
+            // ReplayKit's two landscape values turn the frame the opposite way under
+            // CIImage.oriented, so landscape pictures came out upside down (seen on
+            // 2026-10-31 while watching a show with K). Swap them; portrait is unchanged.
+            let orientation: CGImagePropertyOrientation
+            switch reported {
+            case .left: orientation = .right
+            case .right: orientation = .left
+            default: orientation = reported
+            }
             input = input.oriented(orientation)
         }
         let orientedExtent = input.extent.integral
@@ -138,6 +147,9 @@ final class SampleHandler: RPBroadcastSampleHandler {
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        // Tells the cloud this picture is already upright (older builds sent landscape ones
+        // upside down, and the cloud turns those round).
+        request.setValue("1", forHTTPHeaderField: "X-Upright")
         request.setValue(String(Int64(now * 1000)), forHTTPHeaderField: "X-Captured-Ms")
         request.setValue(
             String(defaults?.integer(forKey: "screenShare.sequence.v1") ?? 0),

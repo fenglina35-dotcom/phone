@@ -249,3 +249,11 @@ test('the broadcast panel still opens after SwiftUI rebuilds the web view (2026-
   assert.match(coordinator,/private static func firstButton\(in view: UIView\) -> UIButton\?/);
   assert.match(coordinator,/guard let button = Self\.firstButton\(in: broadcastPicker\) else \{ return false \}/);
 });
+
+test('landscape frames are turned upright, and the cloud is told so (2026-10-31)',()=>{
+  // ReplayKit's .left/.right turn the frame the opposite way under CIImage.oriented: swap them.
+  assert.match(handler,/case \.left: orientation = \.right\s*case \.right: orientation = \.left\s*default: orientation = reported/);
+  assert.match(handler,/input = input\.oriented\(orientation\)/);
+  // Older builds sent landscape pictures upside down and the cloud turns those; this one says it need not.
+  assert.match(handler,/request\.setValue\("1", forHTTPHeaderField: "X-Upright"\)/);
+});
