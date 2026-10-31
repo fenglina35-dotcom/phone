@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1868'){
+if(window.__NORTH_SHELL_BUILD__!=='1869'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1868 · 外卖编单与电量提醒';
+const APP_VER='v1869 · Fish登录与语音条';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2157,10 +2157,19 @@ if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=load
 let _curAudio=null,_curSrc=null;
 function stopBufSource(reason){const s=_curSrc;if(!s)return;try{s.__northStopped=reason||'replaced';s.stop();}catch(e){}if(_curSrc===s)_curSrc=null;}
 function volMul(){const v=(S.settings&&S.settings.volume!=null)?S.settings.volume:1;return Math.max(0,Math.min(3,v));}
-function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const active=_curAudio,vol=volMul();
+/* VOICE_BAR_FOLLOWS_AUDIO_V1：语音条的动画跟着声音走。以前点了以后按估算时长停，最长 9 秒，声音没放完语音条就不动了。
+   现在点语音时记下要动的那一条（voiceBarWant），声音真正开始放时动起来（voiceBarStart），放完、暂停、出错或被别的声音顶掉时停（voiceBarStop）。
+   兜底：超过 70 秒没有收到结束事件也停。 */
+let _voiceBarWant='',_voiceBarOn='',_voiceBarSafety=0;
+function voiceBarSel(id){return '[data-vid="'+String(id||'').replace(/["\\]/g,'')+'"]';}
+function voiceBarStop(){clearTimeout(_voiceBarSafety);_voiceBarWant='';if(_voiceBarOn){const on=_voiceBarOn;_voiceBarOn='';try{document.querySelectorAll(on).forEach(e=>e.classList.remove('playing'));}catch(_){}}}
+function voiceBarWant(id){voiceBarStop();_voiceBarWant=id?voiceBarSel(id):'';}
+function voiceBarStart(){if(!_voiceBarWant)return;_voiceBarOn=_voiceBarWant;_voiceBarWant='';try{document.querySelectorAll(_voiceBarOn).forEach(e=>e.classList.add('playing'));}catch(_){}clearTimeout(_voiceBarSafety);_voiceBarSafety=setTimeout(voiceBarStop,(VOICE_MAX_SECONDS+10)*1000);}
+function voiceBarActive(id){return !!id&&_voiceBarOn===voiceBarSel(id);}
+function playUrl(url){if(_curAudio&&_voiceBarOn){const want=_voiceBarWant;voiceBarStop();_voiceBarWant=want;}try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const active=_curAudio,vol=volMul();try{active.addEventListener('playing',()=>{if(_curAudio===active)voiceBarStart();});['ended','pause','error'].forEach(ev=>active.addEventListener(ev,()=>{if(_curAudio===active)voiceBarStop();}));}catch(_){}
   try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
   try{const p=_curAudio.play();if(p&&typeof p.catch==='function')p.catch(async()=>{if(_curAudio!==active)return;try{const ab=await audioDataToBuf(url),buf=await decodeBuf(ab);if(buf)await playBuf(buf);}catch(_){}});}catch(_){} }
-async function playBuf(buf){ensureAudio();if(!_audio||!buf)return false;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_audio.state!=='running')return false;stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;return true;}catch(e){return false;}}
+async function playBuf(buf){ensureAudio();if(!_audio||!buf)return false;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_audio.state!=='running')return false;stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>{if(_curSrc===s||!_curSrc)voiceBarStop();};s.start();_curSrc=s;voiceBarStart();return true;}catch(e){return false;}}
 function voiceAudioKey(m){const x=m&&String(m.audio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
 function voiceAudioExpired(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
 function clearVoiceAudio(m){try{const k=voiceAudioKey(m);if(k)imgDel('__audio_'+k);}catch(_){}if(m){try{if(/^blob:/i.test(String(m._aurl||'')))URL.revokeObjectURL(m._aurl);}catch(_){}delete m.audio;delete m.audioTs;delete m._aurl;delete m._ttsFailAt;}}
@@ -2229,38 +2238,42 @@ async function decodeBuf(ab){if(!ab)return null;try{initAudio();if(!_audio)retur
 async function speak(text,o){const v=o?getVoice(o):null;
   if(ttsApiOn(o)){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf)return await playBuf(buf);if(ab)await ttsRefundAudio(ab,'tts-decode-failed');return false;}
   const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),o),o);if(!t||!('speechSynthesis'in window))return false;
-  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}speechSynthesis.cancel();speechSynthesis.speak(u);return true;}catch(e){return false;}}
+  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}u.onstart=()=>voiceBarStart();u.onend=u.onerror=()=>voiceBarStop();speechSynthesis.cancel();speechSynthesis.speak(u);return true;}catch(e){voiceBarStop();return false;}}
 async function speakMsg(m,o){const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(m.audio){const u=await audioPlayableUrl(m.audio);if(u){playUrl(u);return;}}
   if(m._aurl){playUrl(m._aurl);return;}
-  if(ttsApiOn(o)){const url=await warmVoiceMsg(m,o);if(url){const u=await audioPlayableUrl(url);if(u)playUrl(u);return;}return;}
+  if(ttsApiOn(o)){const url=await warmVoiceMsg(m,o);if(url){const u=await audioPlayableUrl(url);if(u){playUrl(u);return;}}voiceBarStop();return;}
   speak(m.content,o);}
-function voiceTtsPending(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl&&(m._ttsTask||m._ttsLoading));}
+/* VOICE_TAP_RETRY_V1：“正在生成”只认这一页里真的在跑的生成。以前 _ttsLoading/_ttsTask 会跟着聊天存下来，生成失败或中途关掉小手机后一直留着，之后点语音条程序以为还在生成，什么都不做，空语音再也点不出声。 */
+const _voiceWarmLive=new Set();
+function voiceTtsPending(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl&&(m._ttsTask instanceof Promise||!!m.id&&_voiceWarmLive.has(m.id)));}
 function refreshVoiceBubble(m){if(!m||!m.id)return;const el=document.querySelector('[data-vid="'+m.id+'"]');if(!el)return;
-  const loading=voiceTtsPending(m),dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.content||'')),de=el.querySelector('.vdur');el.classList.toggle('loading',loading);el.classList.toggle('queued',!!m._playWhenReady);el.setAttribute('aria-busy',loading?'true':'false');el.style.minWidth=Math.min(60+dur*8,200)+'px';if(de)de.textContent=dur+'″';}
+  const loading=voiceTtsPending(m),dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.content||'')),de=el.querySelector('.vdur');el.classList.toggle('loading',loading);el.classList.toggle('queued',!!m._playWhenReady);el.classList.toggle('playing',voiceBarActive(m.id));el.setAttribute('aria-busy',loading?'true':'false');el.style.minWidth=Math.min(60+dur*8,200)+'px';if(de)de.textContent=dur+'″';}
 function warmVoiceMsg(m,o){
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn(o))return m&&m._aurl;
-  if(m._ttsTask)return m._ttsTask;
-  if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000)return null;
+  if(m._ttsTask instanceof Promise)return m._ttsTask;delete m._ttsTask;
+  if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000&&!((+(typeof window!=='undefined'&&window.__northFishLoginAt)||0)>m._ttsFailAt)){delete m._ttsLoading;refreshVoiceBubble(m);return null;}/* FISH_LOGIN_KEEP_V1：刚重新登录 Fish 就不用等，点一下立刻重新生成 */
   m._ttsLoading=true;refreshVoiceBubble(m);
   m._ttsTask=(async()=>{try{const _vxOn=typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.on();if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.normalize(m))save();if(_vxOn){try{if(await NorthVoiceExpressive.direct(m,o))save();}catch(_){}}/* 语音导演：再做一次表演标注，失败就用行内提示 */if(_vxOn&&(m.voicePerf||m.voiceAsk||m.voiceDirected))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk,m.voiceDirected);/* 带小提示的念法交给下一次同一正文的合成；发声仍读 m.content，语言锁照常生效 */let ab=await ttsArr(m.content,o,{cue:m.voiceCue});let _mime='audio/mpeg';
     if(ab){try{const dec=await decodeBuf(ab);if(!dec){await ttsRefundAudio(ab,'tts-decode-failed');m._ttsFailAt=Date.now();return null;}if(dec.duration>VOICE_MAX_SECONDS+.25){await ttsRefundAudio(ab,'tts-over-60-seconds');m.type='text';m.showText=true;m.dur=0;m._ttsFailAt=Date.now();save();if(cur().p==='chat')render();toast('这条语音超过60秒，已改用文字显示');return null;}m.dur=Math.max(1,Math.min(VOICE_MAX_SECONDS,Math.ceil(dec.duration)));/* 3D 贴耳：开关打开时把语音条渲染成双耳立体声；失败就用原来的音频 */if(_vxOn){const bin=await NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content);if(bin){ab=bin;_mime='audio/wav';m.voice3d=true;}}const du=audioBufToDataUrl(ab,_mime);if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;m.audioTs=Date.now();}catch(_){m.audio=du;m.audioTs=Date.now();}}m._aurl=URL.createObjectURL(new Blob([ab],{type:_mime}));delete m._ttsFailAt;return m.audio||m._aurl;}catch(e){}}
-    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){playUrl(u);const el=document.querySelector('[data-vid="'+m.id+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}}refreshVoiceBubble(m);}return x;});
+    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){voiceBarWant(m.id);playUrl(u);}refreshVoiceBubble(m);}return x;});
   return m._ttsTask;}
 const _voiceWarmQueues=new Map();
 function scheduleVoiceWarm(m,o,progressive){
   if(!m||m.type!=='voice')return;
-  if(!progressive){setTimeout(()=>warmVoiceMsg(m,o),80);return;}
+  const live=m.id;if(live)_voiceWarmLive.add(live);const done=()=>{if(live)_voiceWarmLive.delete(live);if(!m.audio&&!m._aurl&&!(m._ttsTask instanceof Promise)){delete m._ttsLoading;refreshVoiceBubble(m);}};
+  if(!progressive){setTimeout(()=>{Promise.resolve().then(()=>warmVoiceMsg(m,o)).catch(()=>null).finally(done);},80);return;}
   const key=String(o&&o.id||'chat');let task;
-  task=Promise.resolve(_voiceWarmQueues.get(key)).catch(()=>null).then(()=>warmVoiceMsg(m,o)).finally(()=>{if(_voiceWarmQueues.get(key)===task)_voiceWarmQueues.delete(key);});
+  task=Promise.resolve(_voiceWarmQueues.get(key)).catch(()=>null).then(()=>warmVoiceMsg(m,o)).finally(()=>{done();if(_voiceWarmQueues.get(key)===task)_voiceWarmQueues.delete(key);});
   _voiceWarmQueues.set(key,task);
 }
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   if(voiceTtsPending(m))return;
-  const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
+  if(m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl){delete m._ttsFailAt;delete m._ttsLoading;delete m._ttsTask;}
+  voiceBarWant(mid);
   speakMsg(m,m.role==='user'?S.me:getC(owner));}
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
@@ -2274,7 +2287,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1868&r=v1868-owner-todo-report-1';
+  const url='sw.js?v=1869&r=v1869-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -13379,7 +13392,7 @@ function renderPhoneIMsg(num,sk,arr,x){
       const dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.text||'')),
         loading=typeof voiceTtsPending==='function'&&voiceTtsPending(m);
       return `<div class="imsg-row ${m.from==='me'?'me':'them'}" data-chat-motion-row="${esc(naturalMotionRowKey(m))}">${tick}<div class="imsg-col">`
-        +`<div class="imsg-b imsgv${loading?' loading':''}${m._playWhenReady?' queued':''}" data-mid="${m.id}" data-vid="${m.id}"`
+        +`<div class="imsg-b imsgv${loading?' loading':''}${m._playWhenReady?' queued':''}${voiceBarActive(m.id)?' playing':''}" data-mid="${m.id}" data-vid="${m.id}"`
         +` aria-busy="${loading?'true':'false'}" onclick="${sel?tap:`phVoiceTap('${esc(num)}','${m.id}','${esc(sk)}')`}">`
         +`<i><span class="imsgv-wave"><i></i><i></i><i></i><i></i></span><span class="imsgv-dur">${dur}″</span></i></div>`
         +(m.showText?`<div class="imsg-vtext" onclick="${tap}">${esc(m.text||'')}`
@@ -13588,11 +13601,7 @@ function phVoiceTap(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id
   const x=phFind(num),c=x&&x.kind==='role'?getC(x.id):null;
   try{audioUnlock();}catch(_){}
   if(typeof voiceTtsPending==='function'&&voiceTtsPending(m)){m._playWhenReady=true;refreshVoiceBubble(m);warmVoiceMsg(m,c);return;}
-  speakMsg(m,c);
-  const el=document.querySelector(`.imsg-b[data-mid="${mid}"]`);
-  if(el){el.classList.add('playing');
-    setTimeout(()=>{const e2=document.querySelector(`.imsg-b[data-mid="${mid}"]`);if(e2)e2.classList.remove('playing');},
-      Math.min(9000,(m.dur||3)*1000+600));}
+  voiceBarWant(mid);speakMsg(m,c);
   if(!m.showText){m.showText=true;save();render();}}
 function phSmsMenu(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id===mid),bad=m&&m.img&&m.visionState!=='success';
   openModal(`<h3>短信操作</h3>${m&&m.img&&m.imgDesc?`<div class="hint" style="text-align:left">ta看到的画面：${esc(m.imgDesc)}</div>`:''}<div class="btns">${bad?`<button class="btn imblue" onclick="phSmsRetryVision('${esc(num)}','${mid}','${esc(sk||'')}')">重新看这张图</button>`:''}<button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
@@ -16242,7 +16251,7 @@ function buildPart(c,m,me){
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">${svgIc('money',30,'#fff')}</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">${svgIc('refresh',30,'#fff')}</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
   if(m.type==='voice'){if(typeof NorthVoiceExpressive!=='undefined')NorthVoiceExpressive.normalize(m);const dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.content||'')),wide=Math.min(60+dur*8,200),loading=voiceTtsPending(m);
-    return `<div class="bubble voiceb${loading?' loading':''}${m._playWhenReady?' queued':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();vtoggle('${m.id}')">${_bi}<span class="vwave"><i></i><i></i><i></i><i></i></span><span class="vdur">${dur}″</span></div>${m.showText?`<div class="vtext" style="${voiceTranslationLook(c,me)}">${esc(m.trans||m.content)}</div>`:''}${quoteBar(c,m)}`;}
+    return `<div class="bubble voiceb${loading?' loading':''}${m._playWhenReady?' queued':''}${voiceBarActive(m.id)?' playing':''}${_bl.cls}" style="min-width:${wide}px;${_bl.css}" data-vid="${m.id}" aria-busy="${loading?'true':'false'}" onclick="event.stopPropagation();vtoggle('${m.id}')">${_bi}<span class="vwave"><i></i><i></i><i></i><i></i></span><span class="vdur">${dur}″</span></div>${m.showText?`<div class="vtext" style="${voiceTranslationLook(c,me)}">${esc(m.trans||m.content)}</div>`:''}${quoteBar(c,m)}`;}
   if(m.type==='sticker'){const stk=storedImageDisplaySource(m.img);return `<div class="stickermsg">${isImg(stk)?`<img src="${stk}">`:''}${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){if(typeof familyMonthlyCardHTML==='function')return familyMonthlyCardHTML(m,c);const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -16265,9 +16274,9 @@ function buildPart(c,m,me){
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
   if(voiceTtsPending(m)){m._playWhenReady=true;refreshVoiceBubble(m);warmVoiceMsg(m,m.role==='user'?S.me:getC(owner));return;}
-  speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
+  voiceBarWant(mid);speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
   const el=document.querySelector('[data-vid="'+mid+'"]');
-  if(el){el.classList.add('playing');setTimeout(()=>{const e2=document.querySelector('[data-vid="'+mid+'"]');if(e2)e2.classList.remove('playing');},Math.min(9000,(m.dur||3)*1000+600));
+  if(el){
     if(!m.showText){m.showText=true;save();const wrap=el.parentNode,c=getC(owner),me=m.role==='user';if(wrap&&!wrap.querySelector('.vtext'))wrap.insertAdjacentHTML('beforeend','<div class="vtext" style="'+voiceTranslationLook(c,me)+'">'+esc(m.content||'')+(m.trans?'<br><span>译：'+esc(m.trans)+'</span>':'')+'</div>');}}}
 const EMOJIS=['😀','😄','😅','😂','🥲','😊','😍','🥰','😘','😋','😜','🤪','😎','🥳','😏','😴','🤤','😭','😢','😤','😡','🥺','🙄','😬','😳','🥹','😱','🤔','🫡','🤗','🤭','😶','🙃','👍','👎','👌','🙏','👏','🤝','💪','🫶','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💕','💞','💯','🔥','✨','🎉','🌸','🐱','🍰','☕','🍻','🎀'];
 let _stkBusy=false;
@@ -18433,7 +18442,7 @@ function recallMsg(cid,mid){const list=msgs(cid);const i=list.findIndex(x=>x.id=
 function editMsg(cid,mid){const m=msgs(cid).find(x=>x.id===mid);if(!m)return;if(m.role==='assistant'&&m.type==='voice'){editVoiceMessage(cid,mid);return;}
   openModal(`<h3>编辑消息</h3><div class="field"><textarea id="em_t" rows="3">${esc(m.content)}</textarea></div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var v=$('#em_t').value;var mm=msgs('${cid}').find(x=>x.id==='${mid}');mm.content=v;save();closeModal();render();})()">保存</button></div>`);}
-function editVoiceMessage(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='voice')return;if(m._ttsTask||m._ttsLoading){toast('这条语音还在生成，请稍等');return;}const info=textToVoiceInfo(m.content,c),cost=ttsUseRelay(c)?'重新生成成功后会重新扣 '+info.points+' 点；原来已生成的点数不退回。':ttsApiOn(c)?'重新生成会再次调用这个角色选择的外置语音路线。':'使用系统语音，不扣AI点数。';
+function editVoiceMessage(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid);if(!c||!m||m.role!=='assistant'||m.type!=='voice')return;if(voiceTtsPending(m)){toast('这条语音还在生成，请稍等');return;}const info=textToVoiceInfo(m.content,c),cost=ttsUseRelay(c)?'重新生成成功后会重新扣 '+info.points+' 点；原来已生成的点数不退回。':ttsApiOn(c)?'重新生成会再次调用这个角色选择的外置语音路线。':'使用系统语音，不扣AI点数。';
   openModal(`<h3>编辑角色语音</h3><div class="hint">可以只修改文字后保存，也可以立即用当前音色重新生成。重新生成的语音按新内容重新计费，旧语音不会重复使用。</div><div class="field"><label>语音内容（最多${VOICE_MAX_CHARS}字）</label><textarea id="evm_t" rows="5">${esc(m.content||'')}</textarea></div><div class="hint" style="color:#ffb0c8">${esc(cost)}</div><div class="btns"><button class="btn g" onclick="saveVoiceMessageEdit('${cid}','${mid}',false)">只保存文字</button><button class="btn p" onclick="saveVoiceMessageEdit('${cid}','${mid}',true)">保存并重新生成</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 async function saveVoiceMessageEdit(cid,mid,regenerate){const c=getC(cid),m=msgs(cid).find(x=>x.id===mid),el=$('#evm_t');if(!c||!m||!el||_textToVoiceBusy.has(mid))return;const text=String(el.value||'').trim(),info=textToVoiceInfo(text,c);if(!text){toast('语音内容不能为空');return;}if(info.tooLong){toast('语音超过'+VOICE_MAX_CHARS+'字，请缩短后再生成');return;}_textToVoiceBusy.add(mid);clearVoiceAudio(m);m.content=text;m.dur=voiceEstimatedSeconds(text);m.voiceCue=ttsAutoCue(text,c)||'';m.edited=true;delete m._ttsFailAt;save();closeModal();if(cur().p==='chat'&&cur().id===cid)render();
   if(!regenerate){_textToVoiceBusy.delete(mid);toast('文字已保存；下次点语音会按新内容重新生成');return;}

@@ -45,7 +45,7 @@ async function begin(){const redirect=redirectUri(),client=await clientFor(redir
   const q=new URLSearchParams({response_type:'code',client_id:client,redirect_uri:redirect,code_challenge:challengeFor(verifier),code_challenge_method:'S256',scope:'mcp',state,resource:MCP}),url=AUTH+'?'+q.toString();
   if(webPage())location.href=url;else root.open(url,'_blank');return url;}
 
-function saveToken(j,client,redirect){const prev=ls.get(STORE)||{};const tok={access:j.access_token,refresh:j.refresh_token||prev.refresh||'',exp:Date.now()+Math.max(60,(+j.expires_in||3600)-60)*1000,client,redirect,at:prev.at||Date.now(),team:j.team_name||j.team||prev.team||''};ls.set(STORE,tok);return tok;}
+function saveToken(j,client,redirect){const prev=ls.get(STORE)||{};const tok={access:j.access_token,refresh:j.refresh_token||prev.refresh||'',exp:Date.now()+Math.max(60,(+j.expires_in||3600)-60)*1000,client,redirect,at:prev.at||Date.now(),team:j.team_name||j.team||prev.team||''};ls.set(STORE,tok);try{root.__northFishLoginAt=Date.now();}catch(_){}return tok;}
 /* 第二步：用授权码换凭证。网页版回到本页自动调用；私人 App 由用户粘贴授权码后调用。粘贴的内容可以是授权码本身，也可以是带 code= 的整段网址。 */
 async function finish(input,state){const p=ls.get(PENDING);if(!p)throw new Error('没有进行中的 Fish 登录，请重新点「登录 Fish」');let code=String(input||'').trim();
   const m=code.match(/[?&#]code=([^&#\s]+)/);if(m){const sm=code.match(/[?&#]state=([^&#\s]+)/);if(sm&&!state)state=decodeURIComponent(sm[1]);code=decodeURIComponent(m[1]);}
@@ -57,9 +57,16 @@ async function handleRedirect(){if(!webPage())return false;let q;try{q=new URLSe
   try{history.replaceState(null,'',location.pathname+location.hash);}catch(_){}
   try{await finish(code,state);try{refreshPanel();}catch(_){}if(typeof toast==='function')toast('Fish 已登录，语音会用会员点数生成');return true;}catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),5200);return false;}}
 
-async function refresh(tok){const r=await fetch(TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:tok.refresh,client_id:tok.client,resource:MCP}).toString()}),j=await readJson(r);
-  if(!r.ok||!j.access_token){if(r.status===400||r.status===401)ls.del(STORE);throw new Error(failText(r,j,'Fish 登录已过期，请重新登录'));}return saveToken(j,tok.client,tok.redirect);}
-async function accessToken(force){let tok=ls.get(STORE);if(!tok||!tok.access)throw new Error('还没有登录 Fish（声音与通话 → Fish 接入方式 → 登录 Fish）');if(force||Date.now()>=tok.exp){if(!tok.refresh)throw new Error('Fish 登录已过期，请重新登录');tok=await refresh(tok);}return tok.access;}
+/* FISH_LOGIN_KEEP_V1：Fish 每换一次新凭证就作废旧的续期凭证。以前几条语音同时到期会一起去换，第一条换成功，
+   后面拿旧凭证的被拒（400），程序就把整个登录删掉，连刚换到的新凭证也删了，她只好重新登录。
+   现在同一时间只换一次，其他请求等它的结果；被拒时如果本机已经存着更新的凭证就直接用；
+   只有 Fish 明确说这个续期凭证作废了、而且本机没有更新的，才算真的需要重新登录。网络出错一律不删登录。 */
+let _refreshing=null;
+async function refreshOnce(tok){const r=await fetch(TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:tok.refresh,client_id:tok.client,resource:MCP}).toString()}),j=await readJson(r);
+  if(!r.ok||!j.access_token){const now=ls.get(STORE);if(now&&now.access&&now.refresh!==tok.refresh)return now;const dead=(r.status===400||r.status===401)&&/invalid_grant|invalid_token|expired|revoked|invalid_client/i.test(JSON.stringify(j||{}));if(dead&&now&&now.refresh===tok.refresh)ls.del(STORE);throw new Error(failText(r,j,dead?'Fish 登录已失效，请到 声音与通话 里重新登录 Fish':'Fish 登录暂时续不上（网络或 Fish 繁忙），稍后会自动再试，不用重新登录'));}
+  return saveToken(j,tok.client,tok.redirect);}
+function refresh(tok){if(!_refreshing)_refreshing=refreshOnce(tok).finally(()=>{_refreshing=null;});return _refreshing;}
+async function accessToken(force,used){let tok=ls.get(STORE);if(!tok||!tok.access)throw new Error('还没有登录 Fish（声音与通话 → Fish 接入方式 → 登录 Fish）');if(force&&used&&tok.access!==used&&Date.now()<tok.exp)return tok.access;if(force||Date.now()>=tok.exp){if(!tok.refresh)throw new Error('Fish 登录已失效，请到 声音与通话 里重新登录 Fish');tok=await refresh(tok);}return tok.access;}
 function status(){const tok=ls.get(STORE),p=ls.get(PENDING);return {loggedIn:!!(tok&&tok.access),since:tok&&tok.at||0,team:tok&&tok.team||'',pending:!!p,redirect:redirectUri(),web:webPage()};}
 function logout(){ls.del(STORE);ls.del(PENDING);_session=null;_tools=null;return true;}
 
@@ -71,7 +78,7 @@ let _limitMs=60000;function fetchLimit(url,init,ms){const ac=typeof AbortControl
 async function rpc(method,params,notify,retried){const token=await accessToken(),id=notify?undefined:_rpcId++,body={jsonrpc:'2.0',method};if(params!==undefined)body.params=params;if(!notify)body.id=id;
   const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+token,'Mcp-Protocol-Version':PROTOCOL};if(_session)headers['Mcp-Session-Id']=_session;
   const r=await fetchLimit(MCP_VIA,{method:'POST',headers,body:JSON.stringify(body)});const sid=r.headers.get('Mcp-Session-Id');if(sid)_session=sid;
-  if(r.status===401&&!retried){await accessToken(true);return rpc(method,params,notify,true);}
+  if(r.status===401&&!retried){await accessToken(true,token);return rpc(method,params,notify,true);}
   if(r.status===404&&_session&&!retried&&method!=='initialize'){_session=null;await ensureSession();return rpc(method,params,notify,true);}
   if(notify)return null;const type=String(r.headers.get('Content-Type')||''),text=await r.text();let j=null;if(/event-stream/i.test(type))j=parseSse(text,id);else{try{j=JSON.parse(text);}catch(_){j=null;}}
   if(!r.ok&&!(j&&j.error))throw new Error('Fish MCP 请求失败（'+r.status+(text?' · '+text.slice(0,120):'')+'）');if(!j)throw new Error('Fish MCP 没有返回结果');if(j.error)throw new Error('Fish MCP：'+String(j.error.message||JSON.stringify(j.error)).slice(0,160));return j.result;}

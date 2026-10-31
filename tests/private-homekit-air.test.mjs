@@ -48,7 +48,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1872/);
+  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1873/);
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -186,9 +186,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1872 · 外卖编单与电量提醒'/);
-  assert.match(webView,/1\.0\.518 \(518\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 518;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.518;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1868 · 外卖编单与电量提醒'/);
+  assert.match(privateApp,/APP_VER='v1873 · Fish登录与语音条'/);
+  assert.match(webView,/1\.0\.519 \(519\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 519;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.519;/g)||[]).length,12);
+  assert.match(read('app.js'),/APP_VER='v1869 · Fish登录与语音条'/);
 });

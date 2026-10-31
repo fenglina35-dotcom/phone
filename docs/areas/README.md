@@ -48,6 +48,8 @@
 
 踩坑：fish-oauth.html 在 /phone/ 下，访问过网页版的 Safari 会被 sw.js 用缓存外壳顶替（实机看到小手机登录页、没有授权码），sw.js 必须对它直接走网络（v1758）。踩坑：直连 Fish MCP 会被 Origin 拦下，CORS 预检通过不代表请求能用，必须带真实凭证实测。挑语音工具时曾把 speech_to_text 误当成生成工具，现在排除 to_text/stt/asr/transcri/clone/list。MCP 回包可能是 JSON 也可能是 SSE，两种都解析；会话号 Mcp-Session-Id 失效（404）时重新 initialize。
 
+踩坑（2026-10-31，FISH_LOGIN_KEEP_V1）：她说会员登录「每一回莫名其妙就掉」。Fish 的凭证约一小时过期，续期时 Fish 会作废旧的续期凭证（轮换）。以前几条语音同时到期会一起去续：第一条成功，其余拿旧凭证被拒 400，refresh 一看到 400/401 就 ls.del(STORE)，把刚换到的新凭证也删了。现在 refresh 同一时间只发一次（_refreshing），其余等结果；被拒时本机若已有更新的凭证就直接用；只有 Fish 回 invalid_grant 之类、而且本机还是同一个续期凭证时才删登录；网络出错一律不删。rpc 遇 401 时若本机已有别的请求换来的新凭证，直接用它重试。saveToken 记 window.__northFishLoginAt，warmVoiceMsg 的 15 秒失败冷却遇到刚登录或刚续上就不等，点语音条立刻重生成。同一天她手机上 Fish 登录页显示「打不开网页」：电脑上同一地址正常打开，是手机连不上 fish.audio（同天 jina 也超时），不是链接坏了；第一次登录必须能打开 Fish 网站。续期仍直连 api.fish.audio，可选改走自己的中转（要改 worker 并重新部署，未做）。验证：tests/fish-login-keep.test.mjs（几条同时续期，旧代码登录被删、失败）。
+
 验证：2026-10-16 用户 Plus 团队（My Team，250000 点）经中转实测：余额查询成功，「你好呀」生成扣 9 点、音频 11KB 下载成功。services/phone-license-relay/worker.test.mjs 锁中转白名单；tests/fish-mcp-v1756.test.mjs（PKCE 对照 Node crypto、粘贴登录、MCP 会话与 SSE、音频提取、两包一致、app 钩子与 Key 模式不变）；permanent-fix-guard v1756 条目。真实账号登录与生成需在有会员的 Fish 团队上实测。核对到：2026-10-16。
 
 ## 角色订票进聊天记忆
@@ -729,3 +731,15 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 现在：编单时严格卡片做不出来，就用 northRoleLooseFoodCard 按角色写的名字、店名、价格（没写就 28 元）编一张模拟卡片；多样东西分属不同店也合成一张卡。真人下单在挑商品、核对规格这一步没过（stage 为 selection / planning），没付款的话也改为编一单。
 - 不改的：网络、超时、接口出错照旧如实报失败（老测试 never converts network errors to virtual orders 守着，让她能重试真实下单）；余额不够、付款中或结果不确定、她分享的真人店铺（catalogOnly）照旧提示。
 - 验证：tests/north-market-social-orders.test.mjs 新增 3 条（NORTH_ROLE_TEST_OLD=1 跑旧代码 6 项失败）。
+
+## 生成失败的空语音点一下就重新生成（VOICE_TAP_RETRY_V1，2026-10-31）
+
+- 她说：Fish 登录掉了以后角色语音听不了，也没法重新生成。语音开始生成时会给消息打 _ttsLoading / _ttsTask，这两个字段会跟着聊天存下来（_ttsTask 存成 {}）。生成失败、中途关掉小手机，标记就留着；playVoice 看 voiceTtsPending 为真直接返回，编辑语音也说「还在生成」，空语音再也点不出声。
+- 现在：voiceTtsPending 只认这一页里真的在跑的生成（_ttsTask 是 Promise，或 scheduleVoiceWarm 排队中的 _voiceWarmLive）。warmVoiceMsg 遇到旧的 {} 任务对象就丢掉；失败冷却里提前返回时撤掉生成中标记。她亲手点空语音时清掉失败冷却，立刻重新生成；真的正在生成的不会重复发起。
+- 验证：tests/voice-tap-retry.test.mjs（存过再读回的空语音，旧代码点了没反应、失败）。
+
+## 语音条放完才静止（VOICE_BAR_FOLLOWS_AUDIO_V1，2026-10-31）
+
+- 她说：角色语音没放完，语音条就不动了。以前点语音时给语音条加 playing，再按 min(9 秒, 估算时长+0.8 秒) 定时去掉，和声音真实播放无关。
+- 现在：点语音（playVoice、聊天语音条、短信语音）和生成好后自动播放都先 voiceBarWant(id)；playUrl 的 audio 收到 playing 才 voiceBarStart，ended / pause / error 或被别的 playUrl 顶掉就 voiceBarStop；Web Audio 兜底（playBuf）用 onended，系统朗读用 onstart/onend；生成失败没声音可放也停。兜底 70 秒没结束事件也停。重新画聊天时语音条模板和 refreshVoiceBubble 按 voiceBarActive 保持在动。
+- 验证：tests/voice-bar-follows-audio.test.mjs（假音频：开始才动、放完才停、出错或被顶掉停，旧代码失败）。没在真手机上听过长语音。

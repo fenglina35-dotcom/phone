@@ -90,7 +90,7 @@ test('点一下就放，放完把原文和翻译留在下面', () => {
   assert.match(fn, /audioUnlock\(\)/, 'iOS 必须在这一下点击里同步解锁音频，晚了就没声');
   assert.match(fn, /voiceTtsPending\(m\)\)\{m\._playWhenReady=true/, '还在生成就排队，好了自动放');
   assert.match(fn, /speakMsg\(m,c\)/, '复用微信那个播放器');
-  assert.match(fn, /el\.classList\.add\('playing'\)/, '放的时候波形要动');
+  assert.match(fn, /voiceBarWant\(mid\);speakMsg\(m,c\)/, '放的时候波形要动（VOICE_BAR_FOLLOWS_AUDIO_V1：跟着声音动，放完才停）');
   assert.match(fn, /if\(!m\.showText\)\{m\.showText=true;save\(\);render\(\);\}/, '放过一次就把文字留下');
 });
 
