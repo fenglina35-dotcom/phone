@@ -188,6 +188,8 @@ const PERMANENT_FIXES = [
   {release:"private v1873 / web v1869",scope:"both",least:1,name:"生成失败的空语音点一下就重新生成",marker:"VOICE_TAP_RETRY_V1"},
   {release:"private v1873 / web v1869",scope:"both",least:1,name:"语音条放完才静止",marker:"VOICE_BAR_FOLLOWS_AUDIO_V1"},
   {release:"private v1874 / web v1870",scope:"both",least:1,name:"角色拍照风格：生活抓拍·不露脸（开了绝不走手机挡脸旧写法）",marker:"ROLE_PHOTO_CANDID_V1"},
+  {release:"private v1875 / web v1871",scope:"both",least:1,name:"角色功能页往下滑不再弹回顶部",marker:"ROLE_FEATURES_KEEP_SCROLL_V1"},
+  {release:"private v1875 / web v1871",scope:"both",least:1,name:"生活抓拍第二版：人设长相身材带入、四种构图、不再拍糊",marker:"ROLE_PHOTO_CANDID_V2"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"fish-mcp.js",name:"Fish 会员登录的请求有等待上限",marker:"TTS_CALL_TIMEOUT_V1"},

@@ -43,7 +43,7 @@ function world(src, role) {
     rolePhotoContextRequest: () => '', rolePhotoLatestUserImageRequest: () => '', rolePhotoSceneOnlyRequest: () => false, rolePhotoClothesOnlyRequest: () => false,
   });
   vm.runInContext(candidModule(src) + fnSource(src, 'rolePhotoPromptLocked') + fnSource(src, 'genImage')
-    + ';this.gen=genImage;this.candidPrompt=rolePhotoCandidPrompt;this.on=rolePhotoCandidOn;', ctx);
+    + ';this.gen=genImage;this.candidPrompt=rolePhotoCandidPrompt;this.on=rolePhotoCandidOn;this.look=typeof rolePhotoCandidLook===\'function\'?rolePhotoCandidLook:null;', ctx);
   return { ctx, sent };
 }
 
@@ -81,10 +81,30 @@ for (const [label, file] of [['web', 'app.js'], ['private', PRIV + 'app.js']]) {
       assert.match(p, /手白、修长、骨节分明/);
       seen.add(p.match(/【本张构图】(.{0,6})/)[1]);
     }
-    assert.ok(seen.size >= 5, '构图要换着来，不能每张一样：' + [...seen].join('|'));
-    assert.match(ctx.candidPrompt(role, '拍一下你的手', { test: true }), /【本张构图】只拍他的手/);
+    assert.ok(seen.size >= 4, '构图要换着来，不能每张一样：' + [...seen].join('|'));
+    assert.match(ctx.candidPrompt(role, '拍一下你的手', { test: true }), /【本张构图】手部特写/);
   });
 
+
+  test(label + ' candid v2: the persona looks (handsome, muscular) reach the photo even when written late, face details become one handsome line', () => {
+    const persona = '他是公司的总经理，平时话不多，对下属很严厉，但对她很温柔，喜欢在深夜加班后给她打电话，偶尔会抽烟，烟味很淡。他长相非常帅，眉眼深邃，鼻梁高挺。身高188，宽肩窄腰，身材很壮，有明显的腹肌和胸肌。手很大，骨节分明，手背有青筋。';
+    const role = { id: 'r1', name: '先生', photoStyle: 'candid', persona };
+    const { ctx } = world(src, role);
+    assert.ok(ctx.look, '缺少 rolePhotoCandidLook');
+    const look = ctx.look(role);
+    assert.match(look, /^长相非常帅气精致/);
+    assert.match(look, /身高188，宽肩窄腰，身材很壮，有明显的腹肌和胸肌/);
+    assert.match(look, /骨节分明/);
+    assert.doesNotMatch(look, /眉眼|鼻梁/, '写五官的句子不直接带进去，免得去画脸');
+    const p = ctx.candidPrompt(role, '在办公室加班', { test: true, shot: 'torso' });
+    assert.match(p, /身材很壮/);
+    assert.match(p, /strikingly handsome/);
+    assert.match(p, /muscular build/);
+    assert.match(p, /stubby fingers/);
+    assert.doesNotMatch(p, /虚焦|手抖|噪点|不端正|imperfect framing/, '不再要求拍糊');
+    assert.match(ctx.candidPrompt(role, '在办公室加班，喝咖啡', { test: true }), /【本张构图】/, '咖啡这类东西拍他拿着，不变成空镜');
+    assert.match(ctx.candidPrompt(role, '窗外的夜景', { test: true }), /ZERO PEOPLE/, '夜景照旧只拍景色');
+  });
   test(label + ' candid off: the original behaviour is untouched (so switching off really rolls back)', async () => {
     const role = { id: 'r1', name: '先生' };
     const { ctx, sent } = world(src, role);

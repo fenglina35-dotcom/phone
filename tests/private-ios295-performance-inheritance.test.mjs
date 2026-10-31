@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(index, /app\.js\?v=1874&r=v1874-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1875'/);
+  assert.match(index, /app\.js\?v=1875&r=v1875-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1874 · 生活抓拍拍照风格'/);
+  assert.match(app, /APP_VER='v1875 · 生活抓拍第二版'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.520 \(520\)/);
-  assert.match(bridge, /private static let build = "1\.0\.520 \(520\)"/);
+  assert.match(webview, /1\.0\.521 \(521\)/);
+  assert.match(bridge, /private static let build = "1\.0\.521 \(521\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 520;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.520;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1870 · 生活抓拍拍照风格'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1870'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 521;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.521;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1871 · 生活抓拍第二版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1871'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,7 +160,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.520 \(520\)/);
+  assert.match(mac, /1\.0\.521 \(521\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
