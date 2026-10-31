@@ -87,7 +87,7 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/没有上传正面或侧面身份参考时，即使选了允许露脸，也会自动按“不允许露脸”执行/);
   assert.match(source,/function imageGenerateReferenceEdit\(/);
   assert.match(source,/input_fidelity','high'/);
-  assert.match(source,/genOptions:roleImageStudioForScene\(cch,/);
+  assert.match(source,/genOptions:(?:rolePhotoCandidOn\(cch\)\?\{[^}]*\}:)?roleImageStudioForScene\(cch,/,'聊天照片照常带形象工作室设置（ROLE_PHOTO_CANDID_V1 开启时先走生活抓拍）');
   assert.match(source,/genImage\(prompt,\{roleId:c\.id,accountId:photoAccount\}\)/);
   assert.match(source,/roleImageStudioOutfitEdit/);
   assert.match(source,/>仅替换图片<\//,`${name}: the edit modal exposes a dedicated image-only action`);

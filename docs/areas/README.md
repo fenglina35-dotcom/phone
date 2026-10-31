@@ -743,3 +743,12 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 她说：角色语音没放完，语音条就不动了。以前点语音时给语音条加 playing，再按 min(9 秒, 估算时长+0.8 秒) 定时去掉，和声音真实播放无关。
 - 现在：点语音（playVoice、聊天语音条、短信语音）和生成好后自动播放都先 voiceBarWant(id)；playUrl 的 audio 收到 playing 才 voiceBarStart，ended / pause / error 或被别的 playUrl 顶掉就 voiceBarStop；Web Audio 兜底（playBuf）用 onended，系统朗读用 onstart/onend；生成失败没声音可放也停。兜底 70 秒没结束事件也停。重新画聊天时语音条模板和 refreshVoiceBubble 按 voiceBarActive 保持在动。
 - 验证：tests/voice-bar-follows-audio.test.mjs（假音频：开始才动、放完才停、出错或被顶掉停，旧代码失败）。没在真手机上听过长语音。
+
+## 角色拍照风格：生活抓拍·不露脸（ROLE_PHOTO_CANDID_V1，2026-11-01）
+
+- 她说：角色每张露本人的照片都是拿手机拍照挡脸，太死板；不想露脸，想要手、身体局部、背影、侧影这类真实鲜活的随手拍。没开角色形象时旧写法在三层推向手机挡脸：charImgPrompt 的构图锁和「人物构图优先选：手机完全遮脸的自拍/对镜自拍」；sanitizeRolePhotoScene 把描述里的「自拍」改成「手机完全遮住脸的对镜自拍」、「露脸」改成「手机完全遮住脸」；genImage 最后的英文 hidden 规则要求 phone fully covering the face、尽量别裁掉头。聊天照片在没开形象时 genOptions 为 null，genImage 根本不知道是哪个角色（这就是以前「开了开关还走旧写法」那类岔子的来源）。
+- 现在：角色功能 → 聊天与主动 →「发送图片频率」下面新增「拍照风格：生活抓拍·不露脸」开关（c.photoStyle='candid'，默认关），开启后出现「身体特征」（c.photoBody，只写手、身材、常穿的衣服，最多 300 字，多行输入框）和「试拍一张」（rolePhotoCandidTest，只弹预览，不进聊天，每次扣一次生图）。
+- 开启后的照片说明由 rolePhotoCandidPrompt 单独生成，不经过 charImgPrompt 的旧段落和 sanitizeRolePhotoScene；每张从手部特写、身体局部、背影、逆光侧影、他的视角、影子倒影里挑一种（描述里点名了就用点名的）；带上身体特征、场景逻辑锁、男性人物锁和真实感说明。
+- 保险有三层：聊天照片 genOptions 一定带 roleId 和 photoStyle:'candid'；照片说明开头带标记【拍照风格·生活抓拍不露脸】；genImage 只要设置项、标记、角色开关任一命中，就把 faceMode 换成 'candid'（新的英文 CANDID 规则，不靠任何东西挡脸、不对镜自拍），并用 rolePhotoCandidStrip 把正文里残留的旧写法整句删掉（聊天里存着的旧照片说明重试时也一样）。聊天模型的说明（buildSystem 的遮脸硬规则、roleImageStudioRoleLine）开启时换成生活抓拍说明。朋友圈 / X 配图走 genImage 带 roleId，同样被换掉。关掉开关，所有路径与原来逐字一致。
+- 没改：形象工作室开启且允许露脸的角色，开启生活抓拍后仍不露脸，但形象参考图照样带上；婚礼游戏的照片有自己的写法，不受这个开关影响。
+- 验证：tests/role-photo-candid.test.mjs（经真实 genImage：开了以后哪怕给旧照片说明，发出去的文字里旧写法为 0；只有标记没有角色也认得；80 次至少 5 种构图；关掉与原来一致；旧代码全失败）。私人版真实页面：开关、身体特征保存、试拍弹窗都正常，截住发给出图平台的文字，旧写法 0 处。真实出图效果要她用自己的生图路线试拍确认。

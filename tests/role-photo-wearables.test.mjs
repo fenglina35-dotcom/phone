@@ -48,6 +48,8 @@ const promptContext=vm.createContext({
   rolePhotoPeoplePolicy:()=>'',
   roleVisualIdentity:()=>'',
 });
+/* ROLE_PHOTO_CANDID_V1：没开生活抓拍的角色照常走原来的写法 */
+vm.runInContext(functionSource(app,'rolePhotoCandidOn'),promptContext);
 for(const name of ['rolePhotoClothesOnlyRequest','rolePhotoWearableKind','rolePhotoOutfitRequest','rolePhotoSceneOnlyRequest','rolePhotoLatestUserImageRequest','rolePhotoContextRequest','charImgPrompt']){
   vm.runInContext(functionSource(app,name),promptContext);
 }
