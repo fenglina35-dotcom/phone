@@ -1,7 +1,7 @@
 /* Local metadata only. This observer never retries, changes a reply, or uploads diagnostics. */
 (function(root){
  'use strict';
- const KEY='north-request-diagnostics-v1',MAX=80,previews=new Map();
+ const KEY='north-request-diagnostics-v1',MAX=200,previews=new Map();
  let rows=[],loaded=false,sequence=0;
  function account(){try{return String(actId()||'main');}catch(_){return 'main';}}
  function scrub(value){
@@ -17,9 +17,9 @@
  function begin(messages,opt){
   const audit=opt.roleInterceptAudit,owner=audit&&audit.c;
   let count=0;try{count=JSON.stringify(messages||[]).length;}catch(_){}const turnId=audit&&audit.requestDiagnostic&&audit.requestDiagnostic.id||'',attempt=Math.max(1,Number(opt.diagnosticAttempt)|| (turnId?all().filter(item=>item.kind==='request'&&item.turnId===turnId).length+1:1));
-  return add({kind:'request',roleId:String(owner&&owner.id||opt.diagnosticRoleId||''),account:String(audit&&audit.channel==='online'?audit.account||account():account()),channel:String(audit&&audit.channel||opt.diagnosticChannel||'other'),turnId,operationId:scrub(opt.diagnosticOperationId||turnId),attempt,stage:scrub(opt.roleInterceptStage||''),visibility:typeof document!=='undefined'?String(document.visibilityState||'unknown'):'unknown',state:'started',reason:'请求准备中',messageCount:Array.isArray(messages)?messages.length:0,requestChars:count,rawMode:!!opt.unfilteredOutput,slot:opt.aux?'副模型':'主模型',routeIndex:Number.isInteger(opt.routeIndex)?opt.routeIndex:null});
+  return add({kind:'request',roleId:String(owner&&owner.id||opt.diagnosticRoleId||''),account:String(audit&&audit.channel==='online'?audit.account||account():account()),channel:String(audit&&audit.channel||opt.diagnosticChannel||'other'),turnId,operationId:scrub(opt.diagnosticOperationId||turnId),attempt,stage:scrub(opt.roleInterceptStage||''),visibility:typeof document!=='undefined'?String(document.visibilityState||'unknown'):'unknown',state:'started',reason:'请求准备中',messageCount:Array.isArray(messages)?messages.length:0,requestChars:count,rawMode:!!opt.unfilteredOutput,slot:opt.aux?'副模型':'主模型',routeIndex:Number.isInteger(opt.routeIndex)?opt.routeIndex:null,feature:scrub(opt.diagnosticFeature||''),featureKey:String(opt.diagnosticFeatureKey||'').slice(0,80)});/* MODEL_CALL_LEDGER_V1：记下是哪个功能调用的 */
  }
- function configured(row,opt,config,relay){let origin='';try{origin=new URL(config&&config.base||'').origin;}catch(_){}patch(row,{endpointOrigin:scrub(origin),timeoutMs:Math.max(10000,Math.min(190000,+opt.timeout||190000))});patch(row,{model:scrub(opt.model||config&&config.model||''),slot:opt.aux?'副模型':'主模型',maxTokens:Number(opt.max||config&&config.maxTokens)||900,temperature:Number(opt.temp!=null?opt.temp:config&&config.temp)||0.8,transport:relay?'relay':'external-chat',state:'sent',reason:'已发起请求，等待响应'});}
+ function configured(row,opt,config,relay){let origin='';try{origin=new URL(config&&config.base||'').origin;}catch(_){}patch(row,{endpointOrigin:scrub(origin),timeoutMs:Math.max(10000,Math.min(190000,+opt.timeout||190000))});if(row&&row.routeIndex==null&&Number.isInteger(opt._diagRoute))patch(row,{routeIndex:opt._diagRoute});patch(row,{model:scrub(opt.model||config&&config.model||''),slot:opt.aux?(opt._auxMissing?'副模型没填·用主模型':'副模型'):'主模型',maxTokens:Number(opt.max||config&&config.maxTokens)||900,temperature:Number(opt.temp!=null?opt.temp:config&&config.temp)||0.8,transport:relay?'relay':'external-chat',state:'sent',reason:'已发起请求，等待响应'});}
  function data(row,value){
   const choice=value&&value.choices&&value.choices[0],message=choice&&choice.message,content=message&&message.content;
   let format='missing-content';if(typeof content==='string')format=content.trim()?'text':'empty-content';else if(content!=null)format='non-string-content';else if(value&&(value.output_text!=null||value.candidates||value.content))format='alternate-format';
@@ -72,6 +72,8 @@
   const children=all().filter(item=>item.turnId===row.id),hasBody=children.some(item=>item.parsedChars>0);
   patch(row,{state:opt&&opt.delivered?'handled':'not-visible',reason:opt&&opt.delivered?'本轮已有可见回复或合法功能处理':hasBody?'接口曾返回正文，但本轮未形成可见回复':children.length?'本轮未形成可见回复；请查看对应请求原因':(row.rawError?'还没请求模型就出错：'+row.rawError:'未到模型请求阶段或已被其他流程接管'),duration:Date.now()-row.at,requests:children.length});
  }
+ function listAll(){return all().filter(row=>row.account===account()).slice().reverse();}
+ function preview(id){return previews.get(String(id))||'';}
  function list(id){return all().filter(row=>row.account===account()&&(id==null||row.roleId===String(id))).slice().reverse();}
  function escape(value){return String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
  function report(id){return JSON.stringify({schema:1,note:'仅本机故障元数据；不含请求正文、响应片段或 API Key。returned 不等于聊天已显示。',records:list(id).slice(0,24)},null,2);}
@@ -83,5 +85,5 @@
  async function copy(id){const text=report(id);try{await navigator.clipboard.writeText(text);toast('已复制故障诊断（不含正文和密钥）');}catch(_){openModal('<h3>请长按复制故障诊断</h3><textarea readonly style="width:100%;height:45vh">'+escape(text)+'</textarea><button class="btn g" onclick="closeModal()">关闭</button>');}}
  function button(id){return '<button class="btn g" style="margin:10px 0" onclick="NorthRequestDiagnostics.open('+escape(JSON.stringify(String(id)))+')">请求故障诊断 · 复制记录</button>';}
  function route(c){const row=list(c&&c.id).find(r=>r.kind==='request');if(!row)return null;const pending=['started','sent','reading'].includes(row.state),name=typeof CHAT_ROUTE_NAMES!=='undefined'&&CHAT_ROUTE_NAMES[row.routeIndex]||'实际请求路线';return{at:row.at,outcome:pending?'pending':row.state==='returned'?'success':'failed',routeName:name,actualRoute:name,slot:row.slot,actualSlot:row.slot,model:row.model,actualModel:row.model,status:row.status,reason:row.reason,messageCount:row.messageCount,requestChars:row.requestChars};}
- root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,turnError,finishTurn,list,report,open,copy,button,route};
+ root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,turnError,finishTurn,list,listAll,preview,report,open,copy,button,route};
 })(globalThis);

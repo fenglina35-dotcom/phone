@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1869'){
+if(window.__NORTH_SHELL_BUILD__!=='1870'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1869 · 查他手机线路与他收藏的照片';
+const APP_VER='v1870 · 调用记录与副模型清单';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1513,10 +1513,146 @@ function chatModelTypeError(model,label){model=String(model||'').trim();return c
 function chatModelAssertText(model,label){const msg=chatModelTypeError(model,label);if(!msg)return;const e=new Error(msg);e.code='chat-model-is-tts';throw e;}
 function chatRequestDiagnostic(event,...args){try{if(typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics[event]==='function')return NorthRequestDiagnostics[event](...args);}catch(_){}return null;}
 async function chatReadDiagnosticResponse(res,row,stream,timeout){if(typeof NorthRequestDiagnostics!=='undefined')return NorthRequestDiagnostics.read(res,row,{stream:!!stream,timeout});if(stream&&res.ok)throw new Error('流式读取模块尚未加载，请更新后重试');return res.json().catch(()=>null);}
-async function chatAPI(messages,opt){opt=opt||{};messages=roleMoodScopeMessages(messages,opt);const _requestDiag=chatRequestDiagnostic('begin',messages,opt);try{if(!opt.independentRoleModel&&gameModelSessionPage())opt.aux=gameModelUseAux();else if(!opt.independentRoleModel&&chatRouteSessionPage()&&!opt.allowSessionModel)opt.aux=false;const fixedRoute=chatRequestRoute(opt.routeIndex);let a=fixedRoute?chatMainCopy(fixedRoute):S.settings.chat;
+/* MODEL_CALL_LEDGER_V1（2026-10-31 她要求）：「网络连接」最下面加「全部调用记录」和「副模型使用清单」。
+   每次模型请求在 chatAPI 入口按调用它的函数认出是哪个功能（下表），记进请求诊断（哪个功能、哪个角色、哪条线路、主/副、模型、结果）。
+   清单里每个功能一个开关：打开用副模型、关掉用主模型；开关一开始就是原来的做法，没拨过的功能行为完全不变（S.settings.modelFeatureAux 只存拨过的）。
+   微信聊天、通话、共同生活、单次约会跟角色自己的主/副模型设置走，不放开关；主模型失败后改用副模型的补救照旧。表里没有的函数记成「其他（函数名）」。
+   每行：[功能键, 中文名, 分组, 原来用副模型(0/1/'spy'=跟查他手机开关/'game'=跟游戏开关), 1=放进清单的开关 或 一句「在哪里切换」（功能自己已有主/副切换的不放开关，避免两处打架）, 调用它的函数名…（同名函数写成 文件名:函数名）]
+   新加会调用模型的功能必须在这里登记一行，tests/model-call-ledger.test.mjs 会扫两版代码，漏登记就报错。 */
+const MODEL_FEATURES=[
+ ['wechat','微信聊天','聊天与通话',0,'在角色资料「主模型 / 副模型」切换','aiReply','wechatPrimaryReply','wechatRoleRepair'],
+ ['call','通话','聊天与通话',0,'跟角色资料「主模型 / 副模型」','callChatWithRetry'],
+ ['cohab','共同生活','聊天与通话',0,'在共同生活设置「对话模型」切换','cohabRoleChat'],
+ ['offline','单次约会','聊天与通话',0,'在单次约会「约会设定」的「对话模型」切换','offAI'],
+ ['wechat_group','微信群聊','微信',0,1,'groupRoleReplyItems','groupBatchReplyItems'],
+ ['wx_nearby','附近的人','微信',1,1,'wxNearbyRefresh'],
+ ['friend_request','新好友申请','微信',0,1,'createFriendRequest'],
+ ['translate','角色消息翻译','微信',1,1,'roleTextTranslationRun','app.js:ask'],
+ ['alter','角色小号回复','微信',0,1,'alterReply'],
+ ['pursuit','被拉黑后想办法联系','微信',0,1,'pursuitDecide','pursuitForce'],
+ ['pf_group','真人好友群里的角色','微信',0,1,'pf-group-role.js:reply'],
+ ['spy_refresh','查他手机·刷新','查他手机','spy','在 设置→角色、时间与消息「查他手机·刷新用副模型」切换','spyRefresh','spyContinueJson'],
+ ['spy_diary','查他手机·日记','查他手机','spy','跟「查他手机·刷新用副模型」一起切换','roleDiaryGenerateDay'],
+ ['spy_view','查他手机·他发现你在看','查他手机',0,1,'doSpyViewCore'],
+ ['spy_friend','查他手机·他微信好友的回复','查他手机',0,1,'aiHisFriendReply'],
+ ['wx_login','登录角色微信','查他手机',0,1,'wxLoginSession','wxLoginEnsureRequestedRemark'],
+ ['moment_post','朋友圈·角色自己发','朋友圈与 X',0,1,'roleMomentGenerate'],
+ ['moment_react','朋友圈·角色给你点赞评论','朋友圈与 X',0,1,'momentRequestRoleReaction'],
+ ['moment_reply','朋友圈·角色回复你的评论','朋友圈与 X',0,1,'reactToComment'],
+ ['moment_exchange','朋友圈·角色之间互相回复','朋友圈与 X',0,1,'momentRunRoleExchange'],
+ ['social_regen','朋友圈和 X·重写重复内容','朋友圈与 X',0,1,'roleSocialRegenerateText'],
+ ['social_image','朋友圈和 X·配图构思','朋友圈与 X',0,1,'roleSocialVisualPlan'],
+ ['x_role_post','X·角色发推','朋友圈与 X',0,1,'roleTweetGenerate'],
+ ['x_role_comment','X·角色评论推文','朋友圈与 X',1,1,'reactToTweet','xRegenerateRoleComment'],
+ ['x_role_reply','X·角色回复评论','朋友圈与 X',1,1,'xCommentReply','xRoleReplyToNetizen'],
+ ['x_net_posts','X·网友和博主的推文','朋友圈与 X',1,1,'genNetTweets','genUserTweet'],
+ ['x_bloggers','X·博主搜索','朋友圈与 X',1,1,'genBloggers'],
+ ['x_net_comments','X·网友评论','朋友圈与 X',1,1,'xRefreshComments'],
+ ['x_dm','X·私信','朋友圈与 X',1,1,'genNetDM','xDMReply'],
+ ['dy_role_post','抖音·角色发作品','抖音',0,1,'roleDouyinGenerate'],
+ ['dy_content','抖音·评论区和网友','抖音',1,1,'dyAuxGen','dyGenCommentsCore','dyApplyGenerate'],
+ ['dy_role_reply','抖音·角色回复和私信','抖音',1,1,'dyCharReplyComment','dyDMReply'],
+ ['dy_group','抖音·群聊','抖音',1,1,'dyGroupReplyRun'],
+ ['shop','商城·搜索和商品','购物与外卖',1,1,'shopSearch','northAIShopPage'],
+ ['shop_cs','商城·客服','购物与外卖',1,1,'shopCSReply'],
+ ['shop_role','商城·角色回复你的询问','购物与外卖',0,1,'northShopPostQueryReply'],
+ ['food','外卖·搜索','购物与外卖',1,1,'foodSearch'],
+ ['food_role','外卖·角色帮你点单','购物与外卖',0,1,'commerce-ui.js:northRoleModel'],
+ ['shop_stock','共同店铺·缺货提醒','购物与外卖',0,1,'commerce-ui.js:northBusinessRoleRefresh'],
+ ['couple_spend','情侣消费·他的反应','购物与外卖',1,1,'coGen','coAskHim','coApproveHis','coRejectHis'],
+ ['letter','信箱·角色写信','信箱与任务',0,1,'genLetter'],
+ ['letter_mood','信箱·按心情拆信','信箱与任务',0,1,'genMoodLetter'],
+ ['letter_reply','信箱·角色回信','信箱与任务',0,1,'mail-outbox.js:mailReply'],
+ ['tasks','任务便签·布置任务','信箱与任务',0,1,'genTasks'],
+ ['task_notes','任务便签·小猫和水晶球的信','信箱与任务',0,1,'task-notes.js:writeLine','task-notes.js:writeLetter'],
+ ['jail','小黑屋·对话','线下与剧情',0,'在情侣空间「禁闭室用辅助模型」切换','jailAI'],
+ ['jail_summary','小黑屋·结束总结','线下与剧情',0,1,'summarizeJail'],
+ ['rp','角色扮演·对话','线下与剧情',0,'在单次约会设置「角色扮演软件使用副模型」切换','rpAI'],
+ ['rp_setup','角色扮演·开局和结束存档','线下与剧情',0,1,'rpCreateInviteFromAI','rpEnd'],
+ ['cinema','一起看电影','线下与剧情',0,1,'cinemaRoleReply','cinemaEnd'],
+ ['theater','共同生活小剧场','线下与剧情',0,1,'cohab-theater.js:cohabTheaterGuestWechat','cohab-theater.js:cohabTheaterSummarizeEpisode','cohab-theater.js:cohabTheaterActorItems','cohab-theater.js:summarize'],
+ ['wedding','婚礼','线下与剧情',0,1,'weddingInvitationIntroLine','weddingGenerateArrivalLine','weddingGenerate','weddingGenerateChinese','weddingAfterMessage'],
+ ['cozy','温馨小家·对话','线下与剧情',0,1,'cozySay'],
+ ['pixel_home','像素小屋','线下与剧情',0,1,'pixelHomePlan','pixelHomeApplyDaily'],
+ ['game_hub','游戏大厅','游戏','game','在游戏大厅右上角的模型按钮切换','gsKick','gsReply'],
+ ['undercover','谁是卧底','游戏','game','跟游戏大厅右上角的模型按钮','ucStart','ucBotDescs','ucAIDesc','ucVotePhase'],
+ ['draw_guess','你画我猜','游戏','game','跟游戏大厅右上角的模型按钮','dgEnsureChineseSpeech','dgGenerateRoleDrawing','dgAskRoleGuess','dgSubmitGuess','dgRoleHint','dgGuideRole'],
+ ['word_guess','你描述我猜','游戏','game','跟游戏大厅右上角的模型按钮','wgRound','wgAIGuess'],
+ ['heart_quiz','心动测验','游戏','game','跟游戏大厅右上角的模型按钮','heartQuizGenerate','heartQuizGenerateRoleLine'],
+ ['mini_drama','小剧场房间','游戏','game','跟游戏大厅右上角的模型按钮','mgrBuildDrama','mgrRoleTurn'],
+ ['dread','恐怖游戏和规则怪谈','游戏',0,1,'dreadGM','taleGen','taleGM'],
+ ['phone_sim','电话·陌生号码通话','电话与短信',0,1,'phSimFirstRoleLine','phSimFirstBlockedLine','phSimBlockedReply','phSimReply'],
+ ['voicemail','电话·语音留言','电话与短信',0,1,'phAddRoleVoicemail'],
+ ['sms','短信','电话与短信',0,1,'phRoleSmsReply','phAutoSmsReply','phRoleAliasReply','phRoleSpoofSmsReply'],
+ ['wechat_summary','微信·聊天记忆总结','后台判断与记忆',0,'在 设置→角色、时间与消息「微信自动总结模型」切换','maybeSummarize','manualWechatSummary'],
+ ['call_summary','通话·结束后总结','后台判断与记忆',0,1,'summarizeCall'],
+ ['cohab_summary','共同生活·总结','后台判断与记忆',0,'在共同生活设置「总结模型」切换','cohabSummarize'],
+ ['offline_summary','单次约会·总结','后台判断与记忆',0,'在 设置→角色、时间与消息「线下约会总结模型」切换','offSummaryPreparedText','offSummarySinglePoint','offSummaryVerifyDrafts','offSummarizeHistory'],
+ ['grudge','记仇·和好了没有','后台判断与记忆',1,1,'maybeGrudgeResolve'],
+ ['collar','项圈印记判断','后台判断与记忆',1,1,'maybeCollarIntent'],
+ ['control_apps','管控·对上 App 名字','后台判断与记忆',1,1,'controlResolveUnknownApps'],
+ ['control_confirm','管控·确认锁定','后台判断与记忆',0,1,'controlClaimConfirm'],
+ ['lock_until','锁定·定解锁时间','后台判断与记忆',0,1,'lockUntilAsk'],
+ ['remote','远程操作','后台判断与记忆',0,1,'remoteControlModelCall'],
+ ['followup','以后要做的事·记下提醒','后台判断与记忆',1,1,'maybeFollowup'],
+ ['relation','角色之间关系变化','后台判断与记忆',1,1,'relAfterScene','relAutoLink'],
+ ['ta_mood','记录 ta 今天的心情','后台判断与记忆',1,1,'recordTaMood'],
+ ['alarm','闹钟·到点提醒','提醒与节日',1,1,'alarmPrepareCompanionText'],
+ ['holiday','节日祝福','提醒与节日',0,1,'holidayGreet'],
+ ['remind','日程提醒','提醒与节日',0,1,'remindEvent'],
+ ['album_comment','相册·角色留言','提醒与节日',0,1,'photoAlbumGenerateComment'],
+ ['watch','重点关注·他看到你在做什么','提醒与节日',0,1,'coupleWatchReact'],
+ ['shortcut','快捷指令·突然查岗','提醒与节日',0,1,'phone-shortcuts.js:generate'],
+ ['browser','浏览器·联网搜索整理','工具',1,1,'browserSearch','browserModelSearch'],
+ ['travel','旅行攻略和酒店助手','工具',1,1,'travel-guide.js:assist','travel-hotel.js:assist'],
+ ['support','小手机客服','工具',1,1,'wxSupportAsk'],
+ ['gen_character','生成角色','工具',0,1,'genCharacter'],
+ ['voice_direct','语音情绪标注','工具',0,1,'voice-expressive.js:direct'],
+ ['robot_voice','机器人语音·翻译','工具',0,1,'private-robot-voice.js:preparePacket','private-robot-voice.js:prepareMessage']
+];
+const MODEL_FEATURE_SKIP=new Set(['chatAPI','aiGen','dyAuxChat','offlineReplyChatRequest','offlineForegroundRequest','request','chatResultText','modelFeatureOf','modelFeatureFrames','Promise','anonymous','eval','global code','module code','asyncFunctionResume','promiseReactionJob','']);
+let _modelFeatureIndex=null,_modelFeatureSeenMap=null,_modelLedgerFilter={feature:'',route:'',failed:false};
+function modelFeatureIndex(){if(_modelFeatureIndex)return _modelFeatureIndex;const byFn={},byKey={};MODEL_FEATURES.forEach(r=>{const info={key:r[0],label:r[1],group:r[2],def:r[3],toggle:r[4]===1,where:typeof r[4]==='string'?r[4]:''};byKey[r[0]]=info;r.slice(5).forEach(n=>{byFn[n]=info;});});return _modelFeatureIndex={byFn,byKey};}
+function modelFeatureFrames(stack){return String(stack||'').split('\n').map(line=>{line=line.trim();let name='',file='',m=line.match(/^at\s+(?:async\s+)?([^\s(]+)\s+\((.*)\)$/);if(m){name=m[1];file=m[2];}else if((m=line.match(/^at\s+(.*)$/)))file=m[1];else if((m=line.match(/^([^@]*)@(.*)$/))){name=m[1];file=m[2];}name=String(name||'').replace(/^async\*/,'').replace(/^.*[.\/]/,'');file=String(file||'').replace(/[?#].*$/,'').replace(/:\d+(?::\d+)?\)?$/,'').replace(/^.*\//,'');return{name,file};}).filter(f=>f.name||f.file);}
+function modelFeatureOf(opt){opt=opt||{};const idx=modelFeatureIndex();
+ if(opt.roleInterceptPurpose==='length-continuation'&&opt.diagnosticFeatureKey){const info=idx.byKey[opt.diagnosticFeatureKey],base=info?info.label:String(opt.diagnosticFeature||'其他').replace(/（接着写）$/,'');return Object.assign({key:opt.diagnosticFeatureKey,group:'其他',def:0,toggle:false},info||{},{label:base+'（接着写）'});}
+ let frames=[];try{frames=modelFeatureFrames(new Error().stack);}catch(_){}
+ const cont=frames.some(f=>f.name==='chatResultText'||f.name==='spyContinueJson');let first='';
+ for(const f of frames){if(MODEL_FEATURE_SKIP.has(f.name))continue;const hit=idx.byFn[f.file+':'+f.name]||idx.byFn[f.name];if(hit)return Object.assign({},hit,{label:hit.label+(cont?'（接着写）':'')});if(!first&&f.name)first=f.name;}
+ return{key:first?'fn:'+first:'',label:first?'其他（'+first+'）':'其他',group:'其他',def:0,toggle:false};}
+function modelFeatureOverride(key){const m=S.settings&&S.settings.modelFeatureAux;return m&&Object.prototype.hasOwnProperty.call(m,key)?(m[key]?'aux':'main'):'';}
+function modelFeatureSeenMap(){if(!_modelFeatureSeenMap){try{_modelFeatureSeenMap=JSON.parse(localStorage.getItem('north-model-feature-seen')||'{}')||{};}catch(_){_modelFeatureSeenMap={};}}return _modelFeatureSeenMap;}
+/* 记下这个功能原来（没拨开关时）用的是主还是副；见过一次主模型就算主模型（有的功能只在主模型失败后才用副模型补救）。 */
+function modelFeatureSeen(key,aux){const m=modelFeatureSeenMap(),next=m[key]===false?false:!!aux;if(m[key]===next)return;m[key]=next;try{localStorage.setItem('north-model-feature-seen',JSON.stringify(m));}catch(_){}}
+function modelFeatureDefaultAux(info){if(!info)return false;if(info.def==='spy')return !!(S.settings&&S.settings.spyAux);if(info.def==='game')return typeof gameModelUseAux==='function'&&!!gameModelUseAux();const seen=modelFeatureSeenMap();return Object.prototype.hasOwnProperty.call(seen,info.key)?!!seen[info.key]:!!info.def;}
+function modelFeatureUsesAux(info){const ov=info&&modelFeatureOverride(info.key);return ov?ov==='aux':modelFeatureDefaultAux(info);}
+function modelFeatureApply(feature,opt){if(!feature||!feature.toggle||!feature.key)return;modelFeatureSeen(feature.key,!!opt.aux);const ov=modelFeatureOverride(feature.key);if(ov)opt.aux=ov==='aux';}
+function modelFeatureChangedCount(){const m=S.settings&&S.settings.modelFeatureAux;return m?Object.keys(m).length:0;}
+function modelFeatureToggle(key,el){const info=modelFeatureIndex().byKey[key];if(!info||!info.toggle)return;const next=!modelFeatureUsesAux(info);S.settings.modelFeatureAux=S.settings.modelFeatureAux||{};if(next===modelFeatureDefaultAux(info))delete S.settings.modelFeatureAux[key];else S.settings.modelFeatureAux[key]=next;save();if(el){el.classList.toggle('on',modelFeatureUsesAux(info));const tag=el.parentNode&&el.parentNode.querySelector('[data-mf-tag]');if(tag)tag.textContent=modelFeatureOverride(key)?'已改':'';}const n=document.getElementById('mfChanged');if(n)n.textContent=modelFeatureChangedCount()?'已改 '+modelFeatureChangedCount()+' 项':'全部是原来的做法';}
+function modelFeatureReset(){if(S.settings)delete S.settings.modelFeatureAux;save();modelFeatureListOpen();toast('已全部恢复成原来的做法');}
+function modelFeatureListOpen(){const idx=modelFeatureIndex(),groups=[],seen={};MODEL_FEATURES.forEach(r=>{const info=idx.byKey[r[0]];if(!seen[info.group]){seen[info.group]=[];groups.push([info.group,seen[info.group]]);}seen[info.group].push(info);});
+ const html=groups.map(([g,items])=>'<div style="margin:14px 0 6px;font-size:12px;color:#8e8e93">'+esc(g)+'</div>'+items.map(info=>{if(!info.toggle)return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid rgba(127,127,127,.18)"><span style="flex:1;min-width:0">'+esc(info.label)+'</span><span style="font-size:12px;color:#8e8e93;text-align:right;max-width:52%">'+esc(info.where||'不能切换')+'</span></div>';const on=modelFeatureUsesAux(info),hint='';return '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border-bottom:1px solid rgba(127,127,127,.18)"><span style="flex:1;min-width:0">'+esc(info.label)+(hint?'<small style="display:block;color:#8e8e93;font-weight:400">'+esc(hint)+'</small>':'')+'</span><span style="display:flex;align-items:center;gap:8px;flex:none"><small data-mf-tag style="color:#ff9f0a">'+(modelFeatureOverride(info.key)?'已改':'')+'</small><span class="sw '+(on?'on':'')+'" onclick="modelFeatureToggle(\''+info.key+'\',this)"></span></span></div>';}).join('')).join('');
+ const n=modelFeatureChangedCount();
+ openModal('<h3>副模型使用清单</h3><div class="hint">打开＝这个功能用副模型，关掉＝用主模型。开关一开始的位置就是原来的做法，没拨过的功能和以前完全一样。这条线路没填副模型时，打开了也用主模型。功能里本来就有主/副切换的（比如游戏大厅、查他手机、角色扮演、小黑屋、各种总结），不在这里放开关，右边写着去哪里切换；主模型失败后改用副模型再试一次的补救照旧保留。</div><div id="mfChanged" style="font-size:12px;color:#ff9f0a;margin-top:6px">'+(n?'已改 '+n+' 项':'全部是原来的做法')+'</div><div style="max-height:46vh;overflow:auto;margin-top:4px">'+html+'</div><div class="btns"><button class="btn g" onclick="modelFeatureReset()">全部恢复默认</button><button class="btn p" onclick="closeModal()">好了</button></div>');}
+function modelLedgerRows(){return typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.listAll==='function'?NorthRequestDiagnostics.listAll().filter(r=>r&&r.kind==='request'):[];}
+function modelLedgerRouteName(i){i=parseInt(i,10);return Number.isInteger(i)&&typeof CHAT_ROUTE_NAMES!=='undefined'&&CHAT_ROUTE_NAMES[i]?CHAT_ROUTE_NAMES[i]:'线路未记录';}
+function modelLedgerRoleName(id){const c=id&&typeof getC==='function'?getC(id):null;return c?(c.remark||c.name||''):'';}
+function modelLedgerSeconds(ms){ms=+ms||0;return ms<1000?'不到 1 秒':(Math.round(ms/100)/10)+' 秒';}
+function modelLedgerState(r){return r.state==='returned'?['成功','#30d158']:r.state==='failed'?['失败','#ff453a']:r.state==='empty'?['没有正文','#ff9f0a']:['还在等','#8e8e93'];}
+function modelLedgerRoutesHTML(){const rs=chatRoutesInit(),act=Math.max(0,parseInt(S.settings.chatRouteActive,10)||0);return rs.map((r,i)=>{if(!r||!(r.base||r.model))return '';const users=(S.contacts||[]).filter(c=>c&&!c.deleted&&!c.isPhoneFriend&&roleChatRouteIndex(c)===i).map(c=>c.remark||c.name).filter(Boolean);return '<div style="background:rgba(127,127,127,.12);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:13px;line-height:1.6"><b>'+esc(modelLedgerRouteName(i))+(i===act?' · 默认线路':'')+'</b><div>主模型：'+esc(r.model||'没填')+'</div><div>副模型：'+esc(r.aux&&r.aux.model?r.aux.model:'没填（用主模型）')+'</div><div style="color:#8e8e93">'+(users.length?'用这条线路的角色：'+esc(users.join('、')):'没有角色在用这条线路')+'</div></div>';}).join('')||'<p class="hint">还没有填好的线路。</p>';}
+function modelLedgerFilterSet(k,v){_modelLedgerFilter[k]=k==='failed'?!!v:String(v||'');modelLedgerOpen();}
+function modelLedgerOpen(){const all=modelLedgerRows(),f=_modelLedgerFilter,feats=[...new Set(all.map(r=>(r.feature||'其他').replace(/（接着写）$/,'')))],routes=[...new Set(all.map(r=>r.routeIndex).filter(x=>x!=null))];
+ const list=all.filter(r=>(!f.feature||(r.feature||'其他').replace(/（接着写）$/,'')===f.feature)&&(f.route===''||String(r.routeIndex)===f.route)&&(!f.failed||r.state==='failed'));
+ const sel='padding:6px 8px;border-radius:8px;font-size:13px;max-width:48%';
+ const filters='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><select style="'+sel+'" onchange="modelLedgerFilterSet(\'feature\',this.value)"><option value="">全部功能</option>'+feats.map(x=>'<option value="'+esc(x)+'"'+(f.feature===x?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select><select style="'+sel+'" onchange="modelLedgerFilterSet(\'route\',this.value)"><option value="">全部线路</option>'+routes.map(x=>'<option value="'+esc(String(x))+'"'+(f.route===String(x)?' selected':'')+'>'+esc(modelLedgerRouteName(x))+'</option>').join('')+'</select><label style="font-size:13px;display:flex;align-items:center;gap:4px"><input type="checkbox"'+(f.failed?' checked':'')+' onchange="modelLedgerFilterSet(\'failed\',this.checked)">只看失败</label></div>';
+ const rows=list.slice(0,150).map(r=>{const st=modelLedgerState(r),role=modelLedgerRoleName(r.roleId);return '<div onclick="modelLedgerDetail(\''+esc(r.id)+'\')" style="cursor:pointer;border-bottom:1px solid rgba(127,127,127,.2);padding:9px 2px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px">'+esc(r.feature||'其他')+'</b><span style="color:'+st[1]+';font-size:13px;white-space:nowrap">'+st[0]+'</span></div><div style="font-size:12px;color:#8e8e93;line-height:1.5;overflow-wrap:anywhere">'+esc(fmtDT(r.at))+(role?' · '+esc(role):'')+' · '+esc(modelLedgerRouteName(r.routeIndex))+' · '+esc(r.slot||'')+' · '+esc(r.model||'模型未记录')+(r.duration!=null&&r.state!=='started'?' · '+modelLedgerSeconds(r.duration):'')+'</div>'+(r.state==='failed'?'<div style="font-size:12px;color:#ff453a;overflow-wrap:anywhere">'+esc(r.rawError||r.error||r.reason||'')+'</div>':'')+'</div>';}).join('');
+ openModal('<h3>全部调用记录</h3><div class="hint">只在这台手机上记最近 200 次模型调用，不上传，密钥自动隐藏。点一条看明细。</div>'+filters+'<div style="max-height:56vh;overflow:auto"><details style="margin:4px 0 8px"><summary style="font-weight:600">当前线路配置</summary>'+modelLedgerRoutesHTML()+'</details>'+(rows||'<p class="hint">'+(all.length?'没有符合筛选的记录。':'还没有记录。更新后下一次调用模型就会出现在这里。')+'</p>')+'</div><div class="btns"><button class="btn g" onclick="modelFeatureListOpen()">副模型使用清单</button><button class="btn p" onclick="closeModal()">关闭</button></div>');}
+function modelLedgerDetail(id){const r=modelLedgerRows().find(x=>x.id===id);if(!r)return;const st=modelLedgerState(r),role=modelLedgerRoleName(r.roleId),line=(k,v)=>v===''||v==null?'':'<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(127,127,127,.15);font-size:13px"><span style="color:#8e8e93;min-width:5.5em">'+esc(k)+'</span><span style="overflow-wrap:anywhere">'+esc(String(v))+'</span></div>',prev=typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.preview==='function'?NorthRequestDiagnostics.preview(r.id):'';
+ openModal('<h3>'+esc(r.feature||'其他')+'</h3>'+line('时间',fmtDT(r.at))+line('结果',st[0]+(r.state==='failed'&&r.reason?'：'+r.reason:''))+line('角色',role)+line('线路',modelLedgerRouteName(r.routeIndex))+line('主/副',r.slot)+line('请求的模型',r.model)+line('实际回复的模型',r.responseModel)+line('接口域名',r.endpointOrigin)+line('HTTP',r.status||'')+line('耗时',r.duration!=null?modelLedgerSeconds(r.duration):'')+line('输入/输出',(r.inputTokens!=null||r.outputTokens!=null)?(r.inputTokens!=null?r.inputTokens:'?')+' / '+(r.outputTokens!=null?r.outputTokens:'?')+' token':'')+line('请求长度',r.requestChars?r.requestChars+' 字符':'')+line('返回正文',r.bodyChars!=null?r.bodyChars+' 字符':'')+line('结束原因',r.finishReason)+line('原始错误',r.rawError||r.error)+line('第几次',r.attempt)+line('小手机版本',r.version)+(prev?'<details style="margin-top:8px"><summary>本机响应片段</summary><pre style="white-space:pre-wrap;font-size:12px">'+esc(prev)+'</pre></details>':'')+'<div class="btns"><button class="btn g" onclick="modelLedgerOpen()">返回列表</button><button class="btn p" onclick="closeModal()">关闭</button></div>');}
+async function chatAPI(messages,opt){opt=opt||{};const _modelFeature=typeof modelFeatureOf==='function'?modelFeatureOf(opt):null;if(_modelFeature){opt.diagnosticFeatureKey=_modelFeature.key;opt.diagnosticFeature=_modelFeature.label;}messages=roleMoodScopeMessages(messages,opt);const _requestDiag=chatRequestDiagnostic('begin',messages,opt);try{if(!opt.independentRoleModel&&gameModelSessionPage())opt.aux=gameModelUseAux();else if(!opt.independentRoleModel&&chatRouteSessionPage()&&!opt.allowSessionModel)opt.aux=false;if(_modelFeature&&typeof modelFeatureApply==='function')modelFeatureApply(_modelFeature,opt);const fixedRoute=chatRequestRoute(opt.routeIndex);opt._diagRoute=fixedRoute?parseInt(opt.routeIndex,10):Math.max(0,parseInt(S.settings&&S.settings.chatRouteActive,10)||0);let a=fixedRoute?chatMainCopy(fixedRoute):S.settings.chat;
   const pendingAux=opt.aux?(fixedRoute?fixedRoute.aux:S.settings.aux):null,guardModel=opt.model||((pendingAux&&pendingAux.model)||a.model);chatModelAssertText(guardModel,opt.aux?'辅助模型':'聊天模型');
 
-  if(opt.aux){const x=fixedRoute?fixedRoute.aux:S.settings.aux;if(x&&x.model)a=Object.assign({},a,{base:x.base||a.base,key:x.key||a.key,model:x.model});}
+  if(opt.aux){const x=fixedRoute?fixedRoute.aux:S.settings.aux;if(x&&x.model)a=Object.assign({},a,{base:x.base||a.base,key:x.key||a.key,model:x.model});else opt._auxMissing=true;}
   if(!a.base||!a.key)throw new Error('还没设置聊天 API（去 设置→API）');
   const _thinkingPlan=typeof roleThinkingRequest==='function'?roleThinkingRequest(messages,opt,a):null;
   chatRequestDiagnostic('configured',_requestDiag,_thinkingPlan?Object.assign({},opt,{max:_thinkingPlan.body.max_tokens}):opt,a,false);
@@ -4477,7 +4613,7 @@ window.addEventListener('pageshow',privatePhoneCloudWake);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)privatePhoneCloudWake();});
 function settingsDataToolsSafeHTML(){try{return settingsDataToolsHTML();}catch(e){return `<div class="section" id="set_license"><div style="padding:14px;color:#ffb3c8;font-weight:600">授权与数据暂时读取失败</div><div class="hint" style="padding:0 14px 14px">设置页仍然停留在这里，数据没有被删除。请返回后重试；若持续出现，请刷新小手机。</div></div>`;}}
 const SETTINGS_CATEGORIES={
-  network:{title:'网络连接',subtitle:'聊天 API、辅助模型与联网搜索',color:'#55c2ff',color2:'#087cf0',tab:1,ids:['set_chat','set_aux','set_search']},
+  network:{title:'网络连接',subtitle:'聊天 API、辅助模型、联网搜索与调用记录',color:'#55c2ff',color2:'#087cf0',tab:1,ids:['set_chat','set_aux','set_search','set_modeldiag']},
   vision:{title:'图片与识别',subtitle:'摄像头识图、图片理解与 AI 真图',color:'#cf69f3',color2:'#8b3fd1',tab:1,ids:['set_vision','set_image']},
   voice:{title:'声音与通话',subtitle:'语音合成、声线与通话声音',color:'#ffbd45',color2:'#f08000',tab:1,ids:['set_tts']},
   behavior:{title:'角色、时间与消息',subtitle:'角色行为、时区、主动联系与通知',color:'#ff6b88',color2:'#e92f58',tab:2,ids:['set_prefs']},
@@ -4616,7 +4752,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testMain()">测试主模型</button></div><div id="testC" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section" id="set_aux"><div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:#6c5ce7"><span>辅助模型（省钱·给次要功能用）</span><button type="button" class="minibtn" onclick="chatRouteSaveCurrent()" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7">保存</button></div>
-      <div class="hint" style="padding:0 14px">只有【微信聊天 · 朋友圈 · 信箱】用主模型；其余全用这个便宜的辅助模型：游戏、购物刷新、外卖、X的所有内容、查他手机、联网搜索等。只填「模型名」就行，地址/Key留空会自动复用上面的聊天模型。不填模型名=全部都用主模型。</div>
+      <div class="hint" style="padding:0 14px">给次要功能用，可以省钱。哪些功能用副模型，在本页最下面「副模型使用清单」里逐个开关：打开用副模型，关掉用主模型；一开始的开关位置就是原来的做法。微信聊天、通话、共同生活、单次约会跟角色自己的「主模型 / 副模型」设置走。只填「模型名」就行，地址/Key 留空会自动用上面聊天模型的。不填模型名＝所有功能都用主模型。</div>
       <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><div style="display:flex;gap:6px"><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型" style="flex:1"><button class="minibtn" onclick="fetchModels('s_xbase','s_xkey','s_xmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
         <div class="field"><label>API Key(可选)</label><input id="s_xkey" type="password" value="${esc((S.settings.aux||{}).key||'')}" placeholder="留空=同聊天"></div></div>
@@ -4631,6 +4767,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div class="field" style="padding:0 14px 10px"><label>API Key</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="jina_xxx"></div>`}
       <div class="btns" style="padding:4px 14px 6px"><button class="btn g" onclick="testSE()">测试联网</button></div><div id="testSE" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
+    <div class="section" id="set_modeldiag"><div style="padding:12px 14px;font-weight:600;color:#0a84ff">调用记录与副模型清单</div><div class="hint" style="padding:0 14px">看每一次模型调用是哪个功能、哪个角色、哪条线路、主模型还是副模型、成没成功；也可以逐个功能决定用主模型还是副模型。</div><div class="it" onclick="modelLedgerOpen()" style="cursor:pointer"><span>全部调用记录</span><span class="v">›</span></div><div class="it" onclick="modelFeatureListOpen()" style="cursor:pointer"><span>副模型使用清单</span><span class="v">${typeof modelFeatureChangedCount==='function'&&modelFeatureChangedCount()?'已改 '+modelFeatureChangedCount()+' 项 ':''}›</span></div></div>
     <div class="section" id="set_vision"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">图片理解 · 聊天模型优先</div>
       <div class="hint" style="padding:0 14px;line-height:1.65">默认直接让当前聊天模型看图片，不需要另外填写识图 API。下面只配置备用识图：聊天模型成功时绝不会调用备用；只有明确没收到图片或请求失败后才会按顺序接管，不会同时看两次。相同接口、Key 和模型会自动去重。</div>
       <div class="field" style="padding:0 14px"><label>备用识图接口地址（选填）</label><input id="s_vbase" value="${esc(v.base||'')}" placeholder="留空=不配置外置备用"></div>

@@ -18,22 +18,22 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1864 · 查他手机线路与他收藏的照片'/);
+  assert.match(app,/APP_VER='v1865 · 调用记录与副模型清单'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1864-roleplay-studio-1/);
-  assert.match(html,/sw\.js\?v=1864&r=v1864-owner-todo-report-1/);
+  assert.match(html,/north-sw-reloaded-1865-roleplay-studio-1/);
+  assert.match(html,/sw\.js\?v=1865&r=v1865-owner-todo-report-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
   for(const key of ['network','vision','voice','behavior','appearance','media','data'])assert.match(app,new RegExp(`${key}:\\{title:`));
-  assert.match(app,/网络连接'.*聊天 API、辅助模型与联网搜索/s);
+  assert.match(app,/网络连接'.*聊天 API、辅助模型(?:与联网搜索|、联网搜索与调用记录)/s /* MODEL_CALL_LEDGER_V1 (2026-10-31) added 调用记录 to the subtitle */);
   assert.match(app,/function settingsHomeHTML/);
   assert.match(app,/function settingsCategoryApply/);
   assert.match(app,/function settingsLineIcon\(key\)/);
   assert.match(app,/<svg viewBox="0 0 24 24"/);
   assert.doesNotMatch(app,/icon:'[⌁◉◖●✦▶⌘]'/);
-  assert.match(app,/ids:\['set_chat','set_aux','set_search'\]/);
+  assert.match(app,/ids:\['set_chat','set_aux','set_search'(?:,'set_modeldiag')?\]/); // MODEL_CALL_LEDGER_V1 adds the 调用记录 section at the bottom
   assert.match(html,/\.ios-settings-group/);
   assert.match(html,/\.ios-settings-row/);
   assert.match(html,/\.ios-settings-search/);

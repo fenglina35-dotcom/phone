@@ -675,3 +675,15 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 
 验证：tests/spy-route-social-refusal-1030.test.mjs（两版，旧代码全失败）。核对到：2026-10-30。
 - ROLE_ALBUM_SAVED_V1（她要求）：查他手机里的「图库」（photo-album.js 的 renderRolePhotoAlbum，读 photoAlbumRoleLikedRows）以前只收他点过赞的照片；现在他用 [存共同相册] 收藏的（row.savedBy 是他）也收进来。大图里的红心只给点过赞的（photoAlbumRoleLiked）。她自己上传、他没收藏也没点赞的照片不放。旧的文字相册 spyAlbumHTML 已不用，别改错地方。验证：tests/spy-route-social-refusal-1030.test.mjs 末尾一项（两版，旧代码失败）。
+
+## 调用记录与副模型使用清单（MODEL_CALL_LEDGER_V1，2026-10-31）
+
+现在：设置 →「网络连接」最下面「调用记录与副模型清单」。
+- 全部调用记录（modelLedgerOpen）：读 request-diagnostics.js 的 listAll()，本机最近 200 次模型请求，每条有功能名、角色、线路、主/副（副模型没填时写「副模型没填·用主模型」）、模型、结果、耗时；可按功能、线路、只看失败筛选；点开 modelLedgerDetail 看明细；顶部可展开「当前线路配置」（每条线路的主/副模型和在用的角色）。
+- 功能名：chatAPI 入口 modelFeatureOf 读调用栈，按 MODEL_FEATURES 表（函数名 → 功能）认；同名函数写成「文件名:函数名」；表里没有的记成「其他（函数名）」。写不完自动接着写（chatResultText / spyContinueJson）标「（接着写）」。加了新的调用模型的功能，就往表里加一行。
+- 副模型使用清单（modelFeatureListOpen）：每个功能一个开关，打开用副模型、关掉用主模型；只把拨过的存进 S.settings.modelFeatureAux，没拨过的按原来的做法（modelFeatureSeen 记下原来用的是主还是副，见过主模型就算主模型；查他手机跟 spyAux、游戏跟 gameUseAux）。开关在 chatAPI 里排在游戏/线路页面规则之后生效（modelFeatureApply）。
+- 功能自己已有主/副切换的不放开关，表里第 5 项写一句「在哪里切换」（她 2026-10-31 定的：里面能切换的不要加）：微信聊天、通话、共同生活、单次约会、查他手机（刷新/日记，设置→角色、时间与消息）、微信/共同生活/单次约会的总结、游戏大厅那组游戏（游戏大厅右上角按钮）、角色扮演对话（单次约会设置 offAux）、小黑屋对话（情侣空间 jailAux）。清单里残留的旧设置对这些不起作用。主模型失败后改用副模型的补救照旧。
+- 漏登记检查：tests/model-call-ledger.test.mjs 扫两版所有调用 chatAPI/aiGen/dyAuxChat/offlineReplyChatRequest 的地方，包住它的函数不在表里就报错（发布前必过），并检查两版功能表一模一样。加新的调用模型的功能时，在两版 app.js 的 MODEL_FEATURES 里加一行。
+- 辅助模型那段提示字改成指向这个清单。
+
+验证：tests/model-call-ledger.test.mjs（两版，旧代码 12 项全失败）；真开两版截图检查过记录、明细、线路配置、清单。核对到：2026-10-31。
