@@ -694,3 +694,9 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 现在：没连上只暂停 roleAccess 和后台授权、保留关联；连上时先 companionBindingBackupRestore（关联空了才从本机备份补），再 companionRepairBindings(st, 旧 App 列表)。和私人版 companionApplyServerPayloadV7 的做法一致。
 - 只改根目录 public-north-runtime.js；私人包里那份同名文件不动（私人原生环境里它不生效）。
 - 验证：tests/public-north-bind-repair.test.mjs（编号变了接回去、没连上不清空，旧代码失败；另守私人包那份没动）。核对到：2026-10-31。
+
+## 信箱文件没加载时聊天不卡死（MAIL_FORWARD_GUARD_V1，2026-10-31）
+
+- 群里用户：情侣角色聊天和生成 X 全部报「mailForwardHistory is not defined」，请求故障诊断写「还没请求模型就出错」。mailForwardHistory / mailForwardCard 写在 mail-outbox.js 里，app.js 的 msgToText 和聊天卡片直接调用（2026-10-04 起），没检查在不在。那个文件在他手机上没加载成功（多半是网页更新途中打开或网络断了一下；正常加载时两版都有这个函数），聊天里只要有一封转发的信，整理聊天记录就抛错，聊天、X、朋友圈全卡住。
+- 现在两处都先 typeof 检查；不在时 msgToText 用 mailForwardFallbackText（主题、发件人、正文），卡片显示「转发信件：主题」。
+- 验证：tests/mail-forward-guard.test.mjs（旧代码失败）；真浏览器里让 mail-outbox.js 返回空，旧代码复现同样报错，新代码两版聊天记录、角色说明、聊天页都正常。核对到：2026-10-31。
