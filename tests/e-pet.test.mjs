@@ -195,3 +195,60 @@ assert.match(html,/pet-game\.js\?v=1867/);
 assert.match(sw,/pet-game\.js\?v='\+BUILD/);
   assert.match(sw,/pet-room-v1\.webp/);
 });
+
+
+async function petPrivacyFixture(source=pet){
+ const {default:vm}=await import('node:vm');
+ const c={account:'main',S:{me:{name:'测试自己'},contacts:[{id:'lover',name:'情侣'},{id:'friend',name:'普通角色'}],couple:{cid:'lover'}},messages:[],modal:'',renders:0,saves:0,confirmResult:true,saveResult:true};
+ Object.assign(c,{window:{addEventListener(){}},getC:id=>c.S.contacts.find(r=>r.id===id),isMain:()=>c.account==='main',actId:()=>c.account,esc:x=>String(x??''),save:()=>c.saves++,saveNowAsync:async()=>c.saveResult,render:()=>c.renders++,toast:t=>c.messages.push(t),openModal:html=>c.modal=html,closeModal:()=>c.modal='',uiConfirm:async()=>c.confirmResult,confirm:()=>c.confirmResult,cur:()=>({p:'pet'}),setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){}});
+ vm.createContext(c);vm.runInContext(source,c);
+ const x=c.petRoot();x.pets=[c.petDefault('cat','保密猫'),c.petDefault('dog','小伙伴')];x.activeId=x.pets[0].id;x.sharedRoleId='lover';return c;
+}
+
+test('only the current couple role receives pet state and can become a co-carer',async()=>{
+ const c=await petPrivacyFixture(),x=c.petRoot(),lover=c.getC('lover'),friend=c.getC('friend');
+ assert.equal(c.petRolePrompt(friend),'','ordinary roles must receive no pet names or state');
+ assert.match(c.petRolePrompt(lover),/保密猫/);
+ const before=x.sharedRoleId;c.petSetRole('friend');assert.equal(x.sharedRoleId,before,'a direct setter cannot invite another role');
+ c.petInviteRole();assert(!c.modal.includes("petSetRole('friend')"));assert(c.modal.includes("petSetRole('lover')"));
+ x.sharedRoleId='friend';assert.equal(c.petRole(),null,'old non-couple invitations no longer authorize care');
+ c.S.couple.cid='friend';assert.equal(c.petRolePrompt(lover),'','the previous couple loses state access immediately');
+ c.account='alt';assert.equal(c.petRolePrompt(friend),'','another account must not receive the main couple pet state');
+});
+
+test('deleting a pet requires confirmation, clears its pair link and keeps other belongings',async()=>{
+ const c=await petPrivacyFixture(),x=c.petRoot(),first=x.pets[0],other=x.pets[1];first.mateId=other.id;other.mateId=first.id;
+ assert.equal(typeof c.petDelete,'function');const coins=x.coins,food=JSON.stringify(x.inventory);
+ c.confirmResult=false;await c.petDelete(first.id);assert.equal(x.pets.length,2);
+ c.confirmResult=true;await c.petDelete(first.id);assert.equal(x.pets.length,1);assert.equal(x.pets[0].id,other.id);assert.equal(other.mateId,'');assert.equal(x.activeId,other.id);assert.equal(x.coins,coins);assert.equal(JSON.stringify(x.inventory),food);
+ await c.petDelete(other.id);assert.equal(x.pets.length,0);assert.equal(x.activeId,'');assert.equal(c.petRolePrompt(c.getC('lover')),'');
+});
+
+test('failed pet deletion is rolled back and switching accounts cancels confirmation',async()=>{
+ const c=await petPrivacyFixture(),x=c.petRoot(),id=x.activeId;c.saveResult=false;
+ await c.petDelete(id);assert(x.pets.some(p=>p.id===id),'failed storage must keep the pet');assert.equal(x.activeId,id);
+ c.uiConfirm=async()=>{c.account='alt';return true;};c.saveResult=true;await c.petDelete(id);assert.equal(x.pets.length,2);
+});
+
+
+test('private pet module enforces the same couple-only gate',async()=>{
+ const source=readFileSync(join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/pet-game.js'),'utf8');
+ assert.equal(source,pet);
+ const c=await petPrivacyFixture(source);assert.equal(c.petRolePrompt(c.getC('friend')),'');assert.match(c.petRolePrompt(c.getC('lover')),/保密猫/);
+});
+
+test('real web and private pages hide pet status from other roles and delete through the care book',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path');
+ const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://127.0.0.1:8778')return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1))),ok=f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile();return route.fulfill({status:ok?200:404,body:ok?fs.readFileSync(f):'',contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':f.endsWith('.png')?'image/png':'text/html'});});
+  await page.goto('http://127.0.0.1:8778/'+(priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  const proof=await page.evaluate(async()=>{S.me.locked=false;S.settings.sound=false;await northEnsureComponent('pet');const lover=S.contacts[0],friend=S.contacts[1];S.couple=Object.assign(S.couple||{},{cid:lover.id});const x=petRoot();x.pets=[petDefault('cat','保密宠物甲'),petDefault('dog','保密宠物乙')];x.pets.forEach(p=>{p.revealed=true;});x.activeId=x.pets[0].id;x.sharedRoleId=lover.id;x.pets[0].mateId=x.pets[1].id;x.pets[1].mateId=x.pets[0].id;x.logs=[];openPetGame();return{partner:buildSystem(lover).includes('保密宠物甲'),other:buildSystem(friend).includes('保密宠物甲'),coins:x.coins};});
+  assert.equal(proof.partner,true);assert.equal(proof.other,false);
+  await page.getByRole('button',{name:/手册/}).click();await page.getByRole('button',{name:'删除这只宠物',exact:true}).click();await page.locator('#cfmNo').click();assert.equal(await page.evaluate(()=>petRoot().pets.length),2);
+  await page.getByRole('button',{name:'删除这只宠物',exact:true}).click();await page.locator('#cfmYes').click();await page.waitForFunction(()=>petRoot().pets.length===1&&!_petDeleteBusy);
+  const left=await page.evaluate(()=>({name:petActive().name,mate:petActive().mateId,coins:petRoot().coins}));assert.deepEqual(left,{name:'保密宠物乙',mate:'',coins:proof.coins});
+  await page.getByRole('button',{name:/手册/}).click();await page.getByRole('button',{name:'删除这只宠物',exact:true}).click();await page.locator('#cfmYes').click();await page.waitForFunction(()=>petRoot().pets.length===0&&!_petDeleteBusy);assert(await page.getByText('领养你的').count());assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});

@@ -53,6 +53,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"pending",scope:"both",least:1,file:"pet-game.js",name:"宠物状态与共同照顾仅向当前情侣开放",marker:"PET_COUPLE_ONLY_V1"},
+  {release:"pending",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
   {release:"web v1846 / private v1851",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
