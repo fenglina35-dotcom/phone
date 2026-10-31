@@ -10,6 +10,14 @@
 
 Mac 上应打开 `PhoneCompanionTest/PhoneCompanionTest.xcodeproj`。提交新构建前，先按本目录 `审核提交说明.md` 完成服务端、账号、真机和 Review Notes 检查。
 
+## 当前上架版本（核对到2026-10-31）
+
+- App Store Connect 里 North（App ID 6799794068）的 iOS 版本 **1.0.2（Build 14）状态为「可分发」**，已通过审核。
+- 上架包是 Mac 上 2026-10-18 17:41 的存档 `~/Library/Developer/Xcode/Archives/2026-10-18/PhoneCompanionTest 18-10-2026, 17.41.xcarchive`。17:36 先用 1.0.1 打包，被退回「版本号必须高于已通过的 1.0.1」，改成 1.0.2 重打。
+- 打包源码是 `~/Downloads/North_公开版_Build14_锁态修复_待Mac编译源码包_2026-10-19`（其 SOURCE_STATE.json 记 sourceCommit `b0f5ff83`）。与本目录逐文件比对：所有源码相同，只差十处 `MARKETING_VERSION`（包里 1.0.2，本目录 1.0.1）和 Xcode 自动生成的 `xcshareddata` 方案文件。所以**本目录就是上架版代码**，在这里改即可。
+- 下一次提交必须用比 1.0.2 高的版本号（如 1.0.3）和更大的 Build（如 15），五个 target 的十份配置一起改。
+- 公开版与私人小手机的主 Bundle ID 相同（`com.qianyi.PhoneCompanionTest`）：公开版**不得**用 devicectl 装到她自己的 iPhone，否则会覆盖私人版。她已确认不在自己手机上装公开版测试；测试用 TestFlight 或其他设备。
+
 ## 手动与远程锁态（核对到2026-10-19）
 
 `CompanionSyncService`和本机`ContentView`共用默认`ManagedSettingsStore`及`savedLockedApplicationTokens`。页面的`@State`只是显示缓存，不能代表最新锁态。`PUBLIC_MANUAL_LOCK_STATE_V1`要求页面加载、回前台、收到远程变更通知时只调用`reloadManualLocksFromStore`读取配置，不写回屏蔽设置。用户主动单项/批量操作及选择变更先读最新状态，再执行原有操作；每日限额仍使用独立的dailyLimit store。
