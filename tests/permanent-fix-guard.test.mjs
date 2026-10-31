@@ -53,8 +53,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"pending",scope:"both",least:1,file:"pet-game.js",name:"宠物状态与共同照顾仅向当前情侣开放",marker:"PET_COUPLE_ONLY_V1"},
-  {release:"pending",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
+  {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"宠物状态与共同照顾仅向当前情侣开放",marker:"PET_COUPLE_ONLY_V1"},
+  {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
   {release:"web v1846 / private v1851",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
@@ -181,6 +181,9 @@ const PERMANENT_FIXES = [
   {release:"private v1870 / web v1865",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/request-diagnostics.js",name:"调用记录标明是哪个功能调用的",marker:"MODEL_CALL_LEDGER_V1"},
   {release:"web v1866",scope:"web",least:1,file:"public-north-runtime.js",name:"公开 North 虚拟 App 关联不再变回去",marker:"PUBLIC_NORTH_BIND_REPAIR_V1"},
   {release:"private v1871 / web v1867",scope:"both",least:1,name:"信箱文件没加载时聊天不卡死（转发信件）",marker:"MAIL_FORWARD_GUARD_V1"},
+  {release:"private v1872 / web v1868",scope:"both",least:1,name:"角色微信设置弹窗三个按钮分开不粘连",marker:"HIS_WX_SETTINGS_GAP_V1"},
+  {release:"private v1872 / web v1868",scope:"both",least:1,name:"电量低提醒同一次没电只发一次（手机与服务器互认）",marker:"BATTERY_REMIND_ONCE_V1"},
+  {release:"private v1872 / web v1868",scope:"both",least:1,file:"commerce-ui.js",name:"角色点外卖店里没有就编一单，不报未通过校验",marker:"ROLE_FOOD_INVENT_FALLBACK_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"fish-mcp.js",name:"Fish 会员登录的请求有等待上限",marker:"TTS_CALL_TIMEOUT_V1"},

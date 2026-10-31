@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1867 · 转发信件不再卡住聊天'/);
-  assert.match(app,/const url='sw\.js\?v=1867&r=v1867-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1867'/);
-  assert.match(html,/app\.js\?v=1867/);
-  assert.match(sw,/const BUILD='1867'/);
-  assert.match(sw,/north-shell-v1867-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1867/);
-  assert.match(repair,/小手机\.html\?v=1867/);
+  assert.match(app,/APP_VER='v1868 · 外卖编单与电量提醒'/);
+  assert.match(app,/const url='sw\.js\?v=1868&r=v1868-owner-todo-report-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1868'/);
+  assert.match(html,/app\.js\?v=1868/);
+  assert.match(sw,/const BUILD='1868'/);
+  assert.match(sw,/north-shell-v1868-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1868/);
+  assert.match(repair,/小手机\.html\?v=1868/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.517;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 517;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.517 \(517\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.518;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 518;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.518 \(518\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

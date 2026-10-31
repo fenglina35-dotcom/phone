@@ -285,7 +285,7 @@ test('local manual unlock events stay visible without a rewrite or repeated mode
   assert.match(localGate, /manualUnlockReplyGuard\(id,replyAccount,note,content,c\)/);
   assert.doesNotMatch(localGate, /manualUnlockReplyRepairPrompt/);
   assert.match(localGate, /const _ordinaryRepeat=ordinaryReplyRepeatInfo[\s\S]{0,80}if\(_ordinaryRepeat&&!_manualUnlockNote\)/);
-  assert.match(localGate, /initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)&&!_manualUnlockNote/);
+  assert.match(localGate, /\(initiativeNoteActive\(note\)\|\|companionAutomationNoteActive\(note\)\)&&initiativeRecentlyRepeated\(id,content\)&&!_manualUnlockNote/);
   assert.match(localGate, /if\(got&&manualUnlockReplyActive\(note\)\)manualUnlockReplyRemember/);
   const preGenerationGate = functionSource('companionAutomationMaybeSend');
   assert.doesNotMatch(preGenerationGate, /manualUnlockEventRedundant/);

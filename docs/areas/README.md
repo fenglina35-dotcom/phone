@@ -709,3 +709,23 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 群里用户：情侣角色聊天和生成 X 全部报「mailForwardHistory is not defined」，请求故障诊断写「还没请求模型就出错」。mailForwardHistory / mailForwardCard 写在 mail-outbox.js 里，app.js 的 msgToText 和聊天卡片直接调用（2026-10-04 起），没检查在不在。那个文件在他手机上没加载成功（多半是网页更新途中打开或网络断了一下；正常加载时两版都有这个函数），聊天里只要有一封转发的信，整理聊天记录就抛错，聊天、X、朋友圈全卡住。
 - 现在两处都先 typeof 检查；不在时 msgToText 用 mailForwardFallbackText（主题、发件人、正文），卡片显示「转发信件：主题」。
 - 验证：tests/mail-forward-guard.test.mjs（旧代码失败）；真浏览器里让 mail-outbox.js 返回空，旧代码复现同样报错，新代码两版聊天记录、角色说明、聊天页都正常。核对到：2026-10-31。
+
+## 角色微信设置弹窗按钮分开（HIS_WX_SETTINGS_GAP_V1，2026-10-31）
+
+- 登录角色微信后「我 → 设置」弹窗里「退出登录 / 无痕退出 / 取消」三个按钮直接排着，.btn 没有外边距，看起来三块粘在一起。现在和别的弹窗一样放进 `<div class="btns" style="flex-direction:column;gap:8px">`。两版 app.js 的 hisWxSettings 都改。
+- 验证：tests/battery-remind-once-and-exit-gap.test.mjs（旧代码失败）；在私人版真实页面里打开弹窗，按钮间距量出来是 8 像素，截图给她看过。
+
+## 电量低提醒同一次没电只发一次（BATTERY_REMIND_ONCE_V1，2026-10-31）
+
+- 她截图：情侣角色 11:05 和 11:25 各发了一遍一字不差的「宝宝，5%了……」。电量 5% 提醒有两套：手机里的 companionAutomationMaybeSend（同一次没电一次，充电或回到 10% 以上算结束），后台服务器 phone-role-push（一天一次，看手机同步上来的 criticalBatteryLow）。两边互相不认得对方发过的：服务器先发了，手机打开后照样再发；手机发了还没同步上去，服务器也可能再发。而且电量这类设备提醒的说明不是以「这是一次【主动消息】」开头，没走 initiativeRecentlyRepeated 那道「不许照抄」检查，模型照抄上一轮就原样发出。
+- 现在：快照里电量回到 10% 以上或充电时记 criticalBatteryOkAt；服务器发来的消息记下 _rolePushTrigger。手机准备发电量提醒前，聊天里若已有这次没电期间服务器发的电量提醒就不发；收服务器电量提醒时，若手机这次已经提醒过就丢掉，否则记作已提醒。设备提醒也走「不许照抄」检查，被拦下的照样算已处理（不会每轮重新调模型）。
+- 规则（她确认过）：同一次没电只提醒一次；充上电或回到 10% 以上后又没电，会再提醒；服务器那边仍一天最多一次，同一天第二次没电只有小手机开着时才提醒。
+- 服务器代码没改（它本来就看 criticalBatteryLow 和照抄检查），不用重新部署。
+- 验证：tests/battery-remind-once-and-exit-gap.test.mjs（旧代码失败）。没在真手机上等到电量 5% 实测。
+
+## 角色点外卖店里没有就编一单（ROLE_FOOD_INVENT_FALLBACK_V1，2026-10-31）
+
+- 她截图：角色要点「南瓜款和幽灵款」两个蛋糕，聊天里出现「外卖暂时没有下单成功：商品或规格方案未通过校验」。编单那条路（northRoleVirtualReceipt）很严：两样东西分属两家模拟店、或者写的价格规格对不上本机菜单，northRoleFoodCard 返回空，整单失败；真人菜单里有相关商品但模型挑不出合规方案，也直接失败。
+- 现在：编单时严格卡片做不出来，就用 northRoleLooseFoodCard 按角色写的名字、店名、价格（没写就 28 元）编一张模拟卡片；多样东西分属不同店也合成一张卡。真人下单在挑商品、核对规格这一步没过（stage 为 selection / planning），没付款的话也改为编一单。
+- 不改的：网络、超时、接口出错照旧如实报失败（老测试 never converts network errors to virtual orders 守着，让她能重试真实下单）；余额不够、付款中或结果不确定、她分享的真人店铺（catalogOnly）照旧提示。
+- 验证：tests/north-market-social-orders.test.mjs 新增 3 条（NORTH_ROLE_TEST_OLD=1 跑旧代码 6 项失败）。

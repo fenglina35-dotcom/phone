@@ -165,7 +165,7 @@ assert.equal(repeatContext.repeated('r1','刚下班，路上买了束花。'),fa
 repeatedMessages.push({role:'user',type:'text',content:'那你想听什么？',time:Date.now()-1000});
 assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天最开心的一件事。'),false,'the duplicate guard must not invent a replacement line or block unrelated speech');
 assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user text must not be treated as a prior assistant reply');
-assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
+assert.match(source,/\(initiativeNoteActive\(note\)\|\|companionAutomationNoteActive\(note\)\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/独立新事件/,'local proactive contact must be framed as a new event');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/主动关心；门店=你决定的一家具体门店；商品=你决定的全部具体商品/,'a role may autonomously order unpaid food only through a complete current structured action');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
