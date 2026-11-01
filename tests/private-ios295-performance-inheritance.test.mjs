@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root = process.cwd();
 const project = path.join(root, 'native/private-small-phone/XcodeProject');
@@ -47,18 +48,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1878'/);
-  assert.match(index, /app\.js\?v=1878&r=v1878-private-package-1/);
+  assert.match(index, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{PRIV}'`));
+  assert.match(index, vre(String.raw`app\.js\?v={PRIV}&r=v{PRIV}-private-package-1`));
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1878 · 卡片与联网备用'/);
+  assert.match(app, vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.524 \(524\)/);
-  assert.match(bridge, /private static let build = "1\.0\.524 \(524\)"/);
+  assert.match(webview, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(bridge, vre(String.raw`private static let build = "1\.0\.{IOS} \({IOS}\)"`));
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.524;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1874'/);
+  assert.equal((pbx.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g')) || []).length, 12);
+  assert.equal((pbx.match(vre(String.raw`MARKETING_VERSION = 1\.0\.{IOS};`, 'g')) || []).length, 12);
+  assert.match(publicApp, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(publicEntry, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{WEB}'`));
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,7 +161,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.524 \(524\)/);
+  assert.match(mac, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

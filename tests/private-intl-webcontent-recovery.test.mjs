@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -160,6 +161,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1878 · 卡片与联网备用';/);
+  assert.match(app, vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}';`));
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

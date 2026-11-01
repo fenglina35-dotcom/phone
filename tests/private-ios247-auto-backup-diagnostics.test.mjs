@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const privateProject = path.resolve(
   import.meta.dirname,
@@ -230,9 +231,9 @@ test('native recovery UI stays outside WebKit and carries the private 385 identi
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.524 \(524\)'/);
+  assert.match(webView, vre(String.raw`__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.{IOS} \({IOS}\)'`));
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(bridge, /private static let build = "1\.0\.524 \(524\)"/);
+  assert.match(bridge, vre(String.raw`private static let build = "1\.0\.{IOS} \({IOS}\)"`));
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

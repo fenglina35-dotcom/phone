@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const read = path => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 const app = read('../app.js');
@@ -11,10 +12,10 @@ const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('v929 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 524;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.524;/);
+  assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(html, vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(project, vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`));
+  assert.match(project, vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`));
   assert.match(bridge, /contractVersion = 42/);
 });
 

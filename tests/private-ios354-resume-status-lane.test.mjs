@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
@@ -38,18 +39,18 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1878 · 卡片与联网备用'/);
+  assert.match(app,vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1878'/);
-    assert.match(html,/app\.js\?v=1878&r=v1878-private-package-1/);
+    assert.match(html,vre(String.raw`window\.__NORTH_SHELL_BUILD__='{PRIV}'`));
+    assert.match(html,vre(String.raw`app\.js\?v={PRIV}&r=v{PRIV}-private-package-1`));
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.524 \(524\)/);
-  assert.match(bridge,/private static let build = "1\.0\.524 \(524\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1874 · 卡片与联网备用'/);
+  assert.match(webView,vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(bridge,vre(String.raw`private static let build = "1\.0\.{IOS} \({IOS}\)"`));
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
+  assert.match(publicApp,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

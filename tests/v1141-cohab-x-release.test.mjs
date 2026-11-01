@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
@@ -13,15 +14,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1874'/);
-  assert.match(app, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(shell, /app\.js\?v=1874&r=v1874-owner-todo-report-1/);
-  assert.match(sw, /const BUILD='1874'/);
-  assert.match(sw, /v1874-owner-todo-report-1/);
-  assert.match(hotfix, /v1874-owner-todo-report-1/);
-  assert.match(index, /小手机\.html\?v=1874/);
-  assert.match(repair, /小手机\.html\?v=1874/);
+  assert.match(app, vre(String.raw`__NORTH_SHELL_BUILD__!=='{WEB}'`));
+  assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(shell, vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(shell, vre(String.raw`app\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
+  assert.match(sw, vre(String.raw`const BUILD='{WEB}'`));
+  assert.match(sw, vre(String.raw`v{WEB}-owner-todo-report-1`));
+  assert.match(hotfix, vre(String.raw`v{WEB}-owner-todo-report-1`));
+  assert.match(index, vre(String.raw`小手机\.html\?v={WEB}`));
+  assert.match(repair, vre(String.raw`小手机\.html\?v={WEB}`));
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

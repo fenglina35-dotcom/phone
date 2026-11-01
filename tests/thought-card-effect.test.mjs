@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const app=readFileSync(join(root,'app.js'),'utf8');
@@ -91,6 +92,6 @@ test('the preview and offline shell load the hidden-card effect',()=>{
   assert.match(preview,/opening:'我攒了一些没来得及说的话/);
   assert.match(preview,/frameCount:100/);
   assert.match(preview,/我没有时时刻刻说想你，但我一直在想你/);
-assert.match(html,/thought-card-effects\.js\?v=1874/);
+assert.match(html,vre(String.raw`thought-card-effects\.js\?v={WEB}`));
   assert.match(sw,/thought-card-effects\.js\?v='\+BUILD/);
 });

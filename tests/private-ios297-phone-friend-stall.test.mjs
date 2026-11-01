@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root = process.cwd();
 const bundle = path.join(root, 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle');
@@ -89,6 +90,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1874 · 卡片与联网备用'/);
+  assert.match(publicSource, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

@@ -793,3 +793,9 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 量过：两个 app.js 各约 4.9MB、两万多行，97% 一模一样，以前每次修改都要两边各写一遍。现在源码放在 src/app/（42 个小文件，按顺序，每个以里面第一个函数命名，manifest.json 记顺序），scripts/build_app.py 把它们拼成两个 app.js：两版相同的行只存一份，不同的约 260 处在同一位置用 //@@ web / //@@ private / //@@ end 并排写。
 - 改代码：改 src/app 下的小文件 → python3 scripts/build_app.py → 两个 app.js 一起更新，一起提交。直接改了 app.js 时用 --import 收回（拼回必须一字节不差才写）。tests/app-source-build.test.mjs 跑 --check。bump_version.py 先 --check、改完自动 --import。
 - 实际加载的仍是两个 app.js，安装包、网页缓存、加载顺序都没变。小文件的分段和命名是按行数自动切的，以后可以再按功能重新分组。
+
+## 测试共用工具和自动读版本号（2026-11-01）
+
+- 量过：562 个测试文件里 188 个各自写了一份「取函数」小工具，51 个文件共 199 处写死了当前版本号，每次升版本号要改 60 多个文件。
+- 现在：tests/_helpers.mjs 提供 read（FIX_TEST_OLD=1 时读 HEAD 旧代码）、fnSource、PRIV_DIR、BUNDLES，以及从程序本身读出的当前版本 REL（web / private / ios / 两个标签）和 vre(String.raw`…{WEB}…`)。50 个测试文件的 198 处写死版本号改成 REL / vre（自动转换；iOS 构建号只在 1.0.N、(N)、VERSION = N 这类写法里替换，\u 编码和 HTTP 状态码 524 不碰）。版本号故意改错一处时，这些测试照样报错。升版本号要改的文件从 63 个降到 13 个。
+- 这次会话新写的 8 个测试改用共用工具；更早的测试不批量改，改到哪个区域顺手换。permanent-fix-guard 里的历史版本标签是档案，不改。

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const read=path=>fs.readFileSync(new URL(path,import.meta.url),'utf8');
 const app=read('../app.js');
@@ -13,21 +14,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(app,/const url='sw\.js\?v=1874&r=v1874-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(html,/app\.js\?v=1874/);
-  assert.match(sw,/const BUILD='1874'/);
-  assert.match(sw,/north-shell-v1874-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1874/);
-  assert.match(repair,/小手机\.html\?v=1874/);
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(app,vre(String.raw`const url='sw\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1'`));
+  assert.match(html,vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(html,vre(String.raw`app\.js\?v={WEB}`));
+  assert.match(sw,vre(String.raw`const BUILD='{WEB}'`));
+  assert.match(sw,vre(String.raw`north-shell-v{WEB}-owner-todo-report-1`));
+  assert.match(index,vre(String.raw`小手机\.html\?v={WEB}`));
+  assert.match(repair,vre(String.raw`小手机\.html\?v={WEB}`));
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.524 \(524\)'/);
+  assert.equal((xcode.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
+  assert.equal((xcode.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.match(webView,vre(String.raw`__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.{IOS} \({IOS}\)'`));
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

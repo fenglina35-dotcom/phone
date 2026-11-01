@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import { REL, vre } from './_helpers.mjs';
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
@@ -24,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1874 · 卡片与联网备用'/);
+assert.match(source, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);render\(\);toast\('正在清除本机大聊天库和后台旧上下文/);
 assert.match(source, /await persistWechatMessagesNow\(\)/);

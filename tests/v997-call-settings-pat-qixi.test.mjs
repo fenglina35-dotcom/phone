@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
@@ -18,11 +19,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1874-roleplay-studio-1/);
-  assert.match(html,/sw\.js\?v=1874&r=v1874-owner-todo-report-1/);
+  assert.match(html,vre(String.raw`north-sw-reloaded-{WEB}-roleplay-studio-1`));
+  assert.match(html,vre(String.raw`sw\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

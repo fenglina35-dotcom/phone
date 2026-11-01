@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const effect=readFileSync(join(root,'gift-effects.js'),'utf8');
@@ -129,7 +130,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=1874/);
+  assert.match(html,vre(String.raw`gift-effects\.js\?v={WEB}`));
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(sw,/gift-effects\|thought-card-effects/,'optional gift and thought-card scripts must be served from the offline cache');
   assert.match(html,/\.giftcard-simple\{[^}]*width:210px/,'the gift card must retain its layout even before the effect script executes');

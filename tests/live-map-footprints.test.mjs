@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
@@ -66,6 +67,6 @@ assert.match(html, /\.lmroutes path/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmzones"/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmroutes"/);
 assert.match(source, /\{n:'长春',country:'中国'[\s\S]*?a:\['长春','吉林','吉林长春','CGQ','Changchun'\]\}/);
-assert.match(html, /app\.js\?v=1874/);
+assert.match(html, vre(String.raw`app\.js\?v={WEB}`));
 
 console.log('live map footprint tests passed');

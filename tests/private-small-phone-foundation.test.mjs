@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -31,8 +32,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.524 \(524\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.524 \(524\)'/);
+  assert.match(webView, vre(String.raw`__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.{IOS} \({IOS}\)'`));
+  assert.match(webView, vre(String.raw`\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.{IOS} \({IOS}\)'`));
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
@@ -48,7 +49,7 @@ test('private shell and bundled script use the same strict boot identity', () =>
   );
   const shellBuild = privateHTML.match(/window\.__NORTH_SHELL_BUILD__='(\d+)'/)?.[1];
   const scriptBuild = privateApp.match(/window\.__NORTH_SHELL_BUILD__!==\'(\d+)\'/)?.[1];
-  assert.equal(shellBuild, '1878');
+  assert.equal(shellBuild, `${REL.private}`);
   assert.equal(scriptBuild, shellBuild);
   assert.match(privateHTML, new RegExp(`app\\.js\\?v=${shellBuild}\\b`));
 });
@@ -62,7 +63,7 @@ test('private boot repair link points to a bundled non-destructive recovery page
   );
   assert.match(privateHTML, /replace\(\/\[\^\/\]\*\$\/,'repair\.html'\)/);
   assert.match(privateRepair, /location\.replace\(target\(\)\)/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1878/);
+  assert.match(privateRepair, vre(String.raw`index\.html\?repair=1&v={PRIV}`));
   assert.doesNotMatch(privateRepair, /localStorage\.(?:clear|removeItem)/);
   assert.doesNotMatch(privateRepair, /indexedDB\.deleteDatabase/);
 });
@@ -157,8 +158,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 524;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.524;/);
+  assert.match(project, vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`));
+  assert.match(project, vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`));
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'

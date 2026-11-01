@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { REL, vre } from './_helpers.mjs';
 
 const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1874 · 卡片与联网备用'/);
+assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,9 +15,9 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1874'/);
-assert.match(html, /sw\.js\?v=1874&r=v1874-owner-todo-report-1/);
-assert.match(html, /web-hotfix\.js\?v=1874&r=v1874-owner-todo-report-1/);
+assert.match(html, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{WEB}'`));
+assert.match(html, vre(String.raw`sw\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
+assert.match(html, vre(String.raw`web-hotfix\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
 
 console.log("update prompt tests passed");
 

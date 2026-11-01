@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
@@ -11,7 +12,7 @@ const script=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Ph
 test('private v1178 loads diagnostic parity between app core and theater extension',()=>{
   for(const file of ['index.html','小手机.html']){
     const html=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+file);
-    assert.match(html,/app\.js\?v=1878[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1878&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1878/);
+    assert.match(html,vre(String.raw`app\.js\?v={PRIV}[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v={PRIV}&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v={PRIV}`));
   }
   assert.doesNotMatch(read('小手机.html'),/private-reply-intercept\.js/);
 });

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
@@ -116,8 +117,8 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 524/);
-  assert.match(project,/MARKETING_VERSION = 1.0.524/);
+  assert.match(project,vre(String.raw`CURRENT_PROJECT_VERSION = {IOS}`));
+  assert.match(project,vre(String.raw`MARKETING_VERSION = 1.0.{IOS}`));
 });
 
 test('private iOS camera preview keeps one media session across recognized sentences',()=>{

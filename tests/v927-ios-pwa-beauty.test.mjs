@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf8');
@@ -8,10 +9,10 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1874'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g) || []).length, 12);
+  assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(html, vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g')) || []).length, 12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g')) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {

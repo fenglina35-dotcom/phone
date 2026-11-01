@@ -2033,3 +2033,4 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-11-01 CARD_LINE_RECOVER_V1 / SEARCH_MODEL_FALLBACK_V1：聊天卡片写歪时仍能认出（金额带符号、单独骰子、卡片与话同一行）；联网搜索 jina 连不上时自动改用聊天模型并注明。两版 app.js 同改。
 2026-11-01 新增 scripts/bump_version.py：发布时把网页、私人、iOS 版本号各加 1 的通用工具（支持只升网页、只看不改），tests/bump-version-tool.test.mjs 保证它一直能跑。
 \n2026-11-01 维护改进第一步：两个 app.js 改由 src/app 小文件拼出（scripts/build_app.py），两版相同代码只存一份；功能和加载方式不变。
+2026-11-01 维护改进第二步：tests/_helpers.mjs 共用测试工具；测试里写死的当前版本号改成自动读取，升版本号要改的文件从 63 个降到 13 个。

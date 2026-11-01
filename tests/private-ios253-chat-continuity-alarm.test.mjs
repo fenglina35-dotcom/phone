@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -124,14 +125,14 @@ test('private entries carry diagnostics 336 and every iOS target carries build 3
   assert.equal(index, alias);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.524 \(524\)/);
-  assert.match(bridge, /1\.0\.524 \(524\)/);
+  assert.match(webView, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(bridge, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length,
+    (project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g')) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1.0.524;/g) || []).length,
+    (project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g')) || []).length,
     12
   );
 });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const app=readFileSync(join(root,'app.js'),'utf8');
@@ -186,8 +187,8 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=1874/);
-assert.match(html,/pet-game\.js\?v=1874/);
+assert.match(html,vre(String.raw`pet-game\.css\?v={WEB}`));
+assert.match(html,vre(String.raw`pet-game\.js\?v={WEB}`));
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);

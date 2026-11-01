@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const nativeRoot=path.join(root,'native','private-small-phone');
@@ -214,8 +215,8 @@ test('a verified manual unlock notifies the role without turning a manual lock i
 test('private release identity is iOS 399 while public web advances independently',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.524 \(524\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 524/);
-  assert.match(project,/MARKETING_VERSION = 1.0.524/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1874\'/);
+  assert.match(webView,vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(project,vre(String.raw`CURRENT_PROJECT_VERSION = {IOS}`));
+  assert.match(project,vre(String.raw`MARKETING_VERSION = 1.0.{IOS}`));
+  assert.match(read('app.js'),vre(String.raw`__NORTH_SHELL_BUILD__!==\'{WEB}\'`));
 });

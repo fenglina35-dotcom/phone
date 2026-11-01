@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const hotfix=fs.readFileSync(new URL('../web-hotfix.js',import.meta.url),'utf8');
@@ -86,10 +87,10 @@ test('web-only login expires at the visible deadline even while AI processing is
 });
 
 test('the web shell and service worker require the hotfix while private files stay outside its entry path',()=>{
-  assert.match(shell,/web-hotfix\.js\?v=1874&r=v1874-owner-todo-report-1/);
-  assert.match(hotfix,/sw\.js\?v=1874&r=v1874-owner-todo-report-1/);
+  assert.match(shell,vre(String.raw`web-hotfix\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
+  assert.match(hotfix,vre(String.raw`sw\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
   assert.match(worker,/kind:'hotfix'/);
-  assert.match(worker,/north-shell-v1874-owner-todo-report-1/);
+  assert.match(worker,vre(String.raw`north-shell-v{WEB}-owner-todo-report-1`));
   assert.doesNotMatch(source,/__NORTH_WEB_HOTFIX__/);
   assert.doesNotMatch(privateApp,/__NORTH_WEB_HOTFIX__/,'the private runtime does not embed the web-only repair');
   assert.doesNotMatch(privateShell,/web-hotfix\.js/,'the private package does not load the web-only repair');

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
@@ -14,13 +15,13 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(sw,/BUILD='1874'/);
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(html,vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(sw,vre(String.raw`BUILD='{WEB}'`));
   assert.match(plist,/<string>1200<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
-  assert.match(native,/1\.0\.524 \(524\)/);
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
+  assert.match(native,vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

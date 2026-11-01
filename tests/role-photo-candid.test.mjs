@@ -2,26 +2,11 @@
 // 设 FIX_TEST_OLD=1 时读取 HEAD 里的旧代码，用来确认这些测试在修复前会失败。
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import vm from 'node:vm';
-import cp from 'node:child_process';
+import { read, fnSource, PRIV_DIR } from './_helpers.mjs';
 
-const PRIV = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const read = (file) => process.env.FIX_TEST_OLD
-  ? cp.execFileSync('git', ['show', 'HEAD:' + file], { encoding: 'utf8', maxBuffer: 64e6 })
-  : fs.readFileSync(file, 'utf8');
+const PRIV = PRIV_DIR;
 
-function fnSource(src, name) {
-  const start = src.indexOf(`function ${name}(`);
-  assert.notEqual(start, -1, `missing ${name}`);
-  const head = src.lastIndexOf('async ', start) === start - 6 ? start - 6 : start;
-  let depth = 0, opened = false;
-  for (let i = start; i < src.length; i += 1) {
-    if (src[i] === '{') { depth += 1; opened = true; }
-    if (src[i] === '}') { depth -= 1; if (opened && depth === 0) return src.slice(head, i + 1); }
-  }
-  throw new Error(`unterminated ${name}`);
-}
 function candidModule(src) {
   const start = src.indexOf('/* ROLE_PHOTO_CANDID_V1');
   assert.notEqual(start, -1, '缺少 ROLE_PHOTO_CANDID_V1');

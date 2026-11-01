@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
@@ -17,13 +18,13 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1878'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1878')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,vre(String.raw`window\.__NORTH_SHELL_BUILD__='{PRIV}'`));
+    assert.ok(html.indexOf(`private-cloud-backup.js?v=${REL.private}`)>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1878 · 卡片与联网备用'/);
-  assert.match(publicApp,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
+  assert.match(privateApp,vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
+  assert.match(publicApp,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const app=readFileSync(join(root,'app.js'),'utf8');
@@ -81,9 +82,9 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
 test('v914 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(html,/app\.js\?v=1874/);
-  assert.match(sw,/BUILD='1874'/);
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(html,vre(String.raw`app\.js\?v={WEB}`));
+  assert.match(sw,vre(String.raw`BUILD='{WEB}'`));
 });
 
 test('service worker activation never reloads the active app page',()=>{

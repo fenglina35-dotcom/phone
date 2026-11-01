@@ -21,6 +21,10 @@
   whenever a session ran tests. Do not launch test browsers around it without muting them.
 - `scripts/run_tests_mac.sh` runs the whole suite; pass test files to run some of them;
   `scripts/run_tests_mac.sh --check scripts/check_chat_authorized_phone.cjs` runs a check script.
+- New tests import shared helpers from `tests/_helpers.mjs`: `read` (honours `FIX_TEST_OLD=1` to read HEAD for the
+  must-fail-on-old-code check), `fnSource`, `PRIV_DIR`, `BUNDLES`, and the current versions `REL` / `vre()`.
+  Never hard-code the current web, private or iOS version in a test: use `REL.web`, `REL.private`, `REL.ios`, or
+  `vre(String.raw\`app\.js\?v={WEB}\`)`. Historical release labels in `tests/permanent-fix-guard.test.mjs` stay as written.
 - Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not
   commit it.
 

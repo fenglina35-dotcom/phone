@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const app=read('app.js');
@@ -101,8 +102,8 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 
 test('shared call and memory sources stay synchronized during the scoped web-only import repair',()=>{
   const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
-  assert.equal(webVersion,1874,'the scoped browser release must keep its assigned web version');
-  assert.equal(privateVersion,1878,'the private bundle must carry the release identity assigned to it this round');
+  assert.equal(webVersion,REL.web,'the scoped browser release must keep its assigned web version');
+  assert.equal(privateVersion,REL.private,'the private bundle must carry the release identity assigned to it this round');
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }

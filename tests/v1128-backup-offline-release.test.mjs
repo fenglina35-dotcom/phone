@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root=process.cwd();
 const read=name=>fs.readFileSync(path.join(root,name),'utf8');
@@ -27,15 +28,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1874\'/);
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(shell,/app\.js\?v=1874&r=v1874-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1874/);
-  assert.match(repair,/小手机\.html\?v=1874/);
-  assert.match(worker,/const BUILD='1874'/);
-  assert.match(worker,/north-shell-v1874-owner-todo-report-1/);
-  assert.match(hotfix,/sw\.js\?v=1874&r=v1874-owner-todo-report-1/);
+  assert.match(app,vre(String.raw`__NORTH_SHELL_BUILD__!==\'{WEB}\'`));
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(shell,vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(shell,vre(String.raw`app\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
+  assert.match(index,vre(String.raw`小手机\.html\?v={WEB}`));
+  assert.match(repair,vre(String.raw`小手机\.html\?v={WEB}`));
+  assert.match(worker,vre(String.raw`const BUILD='{WEB}'`));
+  assert.match(worker,vre(String.raw`north-shell-v{WEB}-owner-todo-report-1`));
+  assert.match(hotfix,vre(String.raw`sw\.js\?v={WEB}&r=v{WEB}-owner-todo-report-1`));
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

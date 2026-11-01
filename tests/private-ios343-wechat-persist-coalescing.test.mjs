@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = rel => fs.readFileSync(path.join(root, rel), 'utf8');
@@ -59,20 +60,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1878'/);
-  assert.match(privateApp, /APP_VER='v1878 · 卡片与联网备用'/);
+  assert.match(privateApp, vre(String.raw`__NORTH_SHELL_BUILD__!=='{PRIV}'`));
+  assert.match(privateApp, vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1878'/);
-    assert.match(html, /app\.js\?v=1878&r=v1878-private-package-1/);
+    assert.match(html, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{PRIV}'`));
+    assert.match(html, vre(String.raw`app\.js\?v={PRIV}&r=v{PRIV}-private-package-1`));
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1878/);
-  assert.match(swift, /1\.0\.524 \(524\)/);
-  assert.match(bridge, /private static let build = "1\.0\.524 \(524\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1874'/);
+  assert.match(privateRepair, vre(String.raw`index\.html\?repair=1&v={PRIV}`));
+  assert.match(swift, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(bridge, vre(String.raw`private static let build = "1\.0\.{IOS} \({IOS}\)"`));
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g')) || []).length, 12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g')) || []).length, 12);
+  assert.match(publicApp, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(publicIndex, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{WEB}'`));
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

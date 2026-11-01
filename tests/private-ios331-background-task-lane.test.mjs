@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
+import { REL, vre } from './_helpers.mjs';
 
 const root = process.cwd();
 const bundle = path.join(
@@ -63,18 +64,18 @@ function functionSource(source, name) {
 
 test('private performance candidate keeps v1355 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1878'/);
-  assert.match(privateIndex, /app\.js\?v=1878&r=v1878-private-package-1/);
+  assert.match(privateIndex, vre(String.raw`window\.__NORTH_SHELL_BUILD__='{PRIV}'`));
+  assert.match(privateIndex, vre(String.raw`app\.js\?v={PRIV}&r=v{PRIV}-private-package-1`));
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1878/);
-  assert.match(privateApp, /APP_VER='v1878 · 卡片与联网备用'/);
+  assert.match(privateRepair, vre(String.raw`index\.html\?repair=1&v={PRIV}`));
+  assert.match(privateApp, vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.524 \(524\)/);
-  assert.match(bridge, /private static let build = "1\.0\.524 \(524\)"/);
+  assert.match(webView, vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.match(bridge, vre(String.raw`private static let build = "1\.0\.{IOS} \({IOS}\)"`));
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1874 · 卡片与联网备用'/);
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g')) || []).length, 12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g')) || []).length, 12);
+  assert.match(publicApp, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
+import { REL, vre } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const nativeRoot=path.join(root,'native','private-small-phone');
@@ -48,7 +49,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1878/);
+  assert.match(privateIndex,vre(String.raw`private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v={PRIV}`));
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -186,9 +187,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1878 · 卡片与联网备用'/);
-  assert.match(webView,/1\.0\.524 \(524\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1874 · 卡片与联网备用'/);
+  assert.match(privateApp,vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
+  assert.match(webView,vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
+  assert.match(read('app.js'),vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
 });

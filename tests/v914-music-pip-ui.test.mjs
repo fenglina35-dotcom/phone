@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
@@ -8,9 +9,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 524;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.524;/);
+  assert.match(app,vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(project,vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`));
+  assert.match(project,vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`));
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

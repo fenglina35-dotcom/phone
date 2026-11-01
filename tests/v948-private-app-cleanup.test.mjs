@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { REL, vre } from './_helpers.mjs';
 
 const read=path=>fs.readFileSync(new URL(path,import.meta.url),'utf8');
 const app=read('../app.js');
@@ -11,9 +12,9 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 const bundleInfo=read('../native/private-small-phone/Resources/PhoneWebBundleInfo.plist');
 
 test('private App version, bundled core and native status area are current',()=>{
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 524;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.524;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.524 \(524\)'/);
+  assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);
+  assert.equal((project.match(vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`, 'g'))||[]).length,12);
+  assert.match(webView,vre(String.raw`__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.{IOS} \({IOS}\)'`));
   assert.match(bundleInfo,/<string>1200<\/string>/);
   assert.match(root,/statusBarTheme\.color\)\s*\n\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
   assert.match(root,/case \.black:[\s\S]*return \.black/);

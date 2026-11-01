@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import { REL, vre } from './_helpers.mjs';
 
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
@@ -11,10 +12,10 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v1874 · 卡片与联网备用'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1874'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 524;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.524;/);
+  assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));
+  assert.match(html, vre(String.raw`__NORTH_SHELL_BUILD__='{WEB}'`));
+  assert.match(project, vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`));
+  assert.match(project, vre(String.raw`MARKETING_VERSION = 1.0.{IOS};`));
   assert.match(bridge, /contractVersion = 42/);
 });
 
