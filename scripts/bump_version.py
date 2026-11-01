@@ -80,6 +80,10 @@ def main():
     ap.add_argument('--dry-run', action='store_true', help='只看会改哪些，不写文件')
     a = ap.parse_args()
 
+    # app.js 由 src/app 拼出：先确认两边一致，改完再把改动收回 src/app
+    has_src = __import__('os').path.exists('src/app/manifest.json')
+    if has_src and subprocess.run([sys.executable, 'scripts/build_app.py', '--check'], capture_output=True).returncode != 0:
+        sys.exit('src/app 和 app.js 不一致：先运行 python3 scripts/build_app.py（或 --import）让两边一致，再升版本号')
     web, web_label = app_ver('app.js')
     priv, priv_label = app_ver(PRIV)
     ios = ios_build()
@@ -160,6 +164,11 @@ def main():
     if pending:
         with open(GUARD, 'w', encoding='utf-8') as f:
             f.write(guard_new)
+    if has_src:
+        r = subprocess.run([sys.executable, 'scripts/build_app.py', '--import'], capture_output=True, text=True)
+        if r.returncode != 0:
+            sys.exit('版本号已改，但收回 src/app 失败：' + r.stdout + r.stderr)
+        print('src/app 已同步。')
     print('已改好。还要自己改「请在Mac编译前先读.md」第一行，再跑全量测试和两遍核心聊天检查。')
 
 

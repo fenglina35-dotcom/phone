@@ -1895,3 +1895,4 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 改角色回复的解析（PHOTO_LINE_RECOVER_V1）：modelOutputUnfiltered() 恒为 true，真实回复和后台消息都走原样显示路径；只改 normalizeImageLine 那条路不会生效。验证要用假模型走完整 aiReply / roleServerPushParts，不能只测单个整理函数。
 - 新加附属 js 文件（HEALTH_CHECK_V1）：要在 app.js 的 HEALTH_SCRIPT_MARKS 里登记一个只在这个文件里定义、不是浏览器自带的名字（例如它挂到 window 上的对象），否则一键体检会说「没有登记检查方法」，tests/health-check.test.mjs 也会失败。
 - 升版本号用 scripts/bump_version.py（2026-11-01 起）：先 --dry-run 看会改哪些，再去掉 --dry-run 真改；只发网页加 --web-only。工具照着上一次发布提交改过的行改，版本说明只在 APP_VER 行里换，核对 Xcode 处数和旧版本号残留，不通过就不写文件。不要再按版本新写 prepare_vNNNN 脚本；「请在Mac编译前先读.md」第一行仍要手改。
+\n- 改 app.js（2026-11-01 起）：改 src/app 下的小文件，再运行 python3 scripts/build_app.py，两个 app.js 一起生成；不要直接改两个 app.js。两版不同的地方用 //@@ web / //@@ private / //@@ end 并排写。别的电脑直接改了 app.js 时，用 --import 收回。

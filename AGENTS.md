@@ -24,6 +24,19 @@
 - Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not
   commit it.
 
+## app.js is built from src/app (2026-11-01)
+
+- Both `app.js` (web) and `native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js` (private)
+  are generated from the small files in `src/app/` by `python3 scripts/build_app.py`. They were 97% identical and
+  every fix had to be written twice. Shared code is stored once; where the two differ, the file holds both side by
+  side between `//@@ web`, `//@@ private` and `//@@ end` lines.
+- Change code in `src/app/`, then run `python3 scripts/build_app.py`. Commit both the small files and the two app.js.
+  `tests/app-source-build.test.mjs` fails when an app.js no longer matches what src/app builds.
+- If someone edited an app.js directly (another machine, an older session), run `python3 scripts/build_app.py --import`
+  to take the change back into src/app; it refuses unless the rebuilt files are byte-identical.
+- The phone and the website still load the same two app.js files; nothing about loading, packaging or caching changed.
+  `scripts/bump_version.py` keeps src/app in sync by itself.
+
 ## Web and private bundles call only what they define (after the v1747 incident)
 
 - The web build (root `*.js`, `小手机.html`) and the private App bundle (`PhoneWeb.bundle/`) share

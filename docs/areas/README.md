@@ -787,3 +787,9 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 现在：parsePayCardLine 允许 ¥/￥ 前缀和 元/块/RMB 后缀；modelUnfilteredMessages 把行首或行尾的卡片和话拆开（卡片照常出、话原样出），单独的 [骰子] 也认。口头说「我给你转了520」不会变成转账（涉及钱，只认卡片格式）。后台服务器发消息前本来就把 [语音|…] 改成文字，所以后台路径不会出现语音标签。
 - 联网：webSearch 的 jina 请求失败（连不上、超时、报错）时，若配了聊天模型，用 webSearchModelFallback 让聊天模型查一次，结果前面注明「jina 连不上，以下由聊天模型回答，可能不是最新」；模型也失败就照旧报原来的失败。一键体检里的「联网搜索」仍直接测 jina，好让她知道 jina 本身通不通。
 - 验证：tests/card-line-recover.test.mjs（旧代码全失败）；真实页面 20 种写法经完整回复流程核对。
+\n
+## app.js 由 src/app 拼出（2026-11-01）
+
+- 量过：两个 app.js 各约 4.9MB、两万多行，97% 一模一样，以前每次修改都要两边各写一遍。现在源码放在 src/app/（42 个小文件，按顺序，每个以里面第一个函数命名，manifest.json 记顺序），scripts/build_app.py 把它们拼成两个 app.js：两版相同的行只存一份，不同的约 260 处在同一位置用 //@@ web / //@@ private / //@@ end 并排写。
+- 改代码：改 src/app 下的小文件 → python3 scripts/build_app.py → 两个 app.js 一起更新，一起提交。直接改了 app.js 时用 --import 收回（拼回必须一字节不差才写）。tests/app-source-build.test.mjs 跑 --check。bump_version.py 先 --check、改完自动 --import。
+- 实际加载的仍是两个 app.js，安装包、网页缓存、加载顺序都没变。小文件的分段和命名是按行数自动切的，以后可以再按功能重新分组。
