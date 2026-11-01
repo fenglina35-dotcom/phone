@@ -191,6 +191,7 @@ const PERMANENT_FIXES = [
   {release:"private v1875 / web v1871",scope:"both",least:1,name:"角色功能页往下滑不再弹回顶部",marker:"ROLE_FEATURES_KEEP_SCROLL_V1"},
   {release:"private v1875 / web v1871",scope:"both",least:1,name:"生活抓拍第二版：人设长相身材带入、四种构图、不再拍糊",marker:"ROLE_PHOTO_CANDID_V2"},
   {release:"private v1876 / web v1872",scope:"both",least:1,name:"角色把发照片写成一句话时仍发出照片",marker:"PHOTO_LINE_RECOVER_V1"},
+  {release:"private v1877 / web v1873",scope:"both",least:1,name:"设置里的一键体检",marker:"HEALTH_CHECK_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-theater.js",name:"长的共同生活语音分段总结成多条记忆",marker:"COHAB_VOICE_CHUNK_SUMMARY_V1"},
   {release:"private v1865 / web v1860",scope:"web",least:1,file:"fish-mcp.js",name:"Fish 会员登录的请求有等待上限",marker:"TTS_CALL_TIMEOUT_V1"},

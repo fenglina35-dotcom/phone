@@ -17,13 +17,13 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1876'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1876')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1877'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1877')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1876 · 照片不再变成文字'/);
-  assert.match(publicApp,/APP_VER='v1872 · 照片不再变成文字'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 522;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.522;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1877 · 一键体检'/);
+  assert.match(publicApp,/APP_VER='v1873 · 一键体检'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 523;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.523;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
