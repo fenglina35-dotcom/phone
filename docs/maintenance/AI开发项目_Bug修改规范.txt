@@ -1894,3 +1894,4 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 写生图说明时（ROLE_PHOTO_CANDID_V2）：真实感靠真实场景、自然光和手机质感，不要要求虚焦、手抖、噪点；不要让模型拍「影子、膝盖边缘」这类它不擅长的局部；人设里的外貌要整句带入，不要只截开头。别人写的提示词文档如注明禁止转载，不能原文放进公开代码。
 - 改角色回复的解析（PHOTO_LINE_RECOVER_V1）：modelOutputUnfiltered() 恒为 true，真实回复和后台消息都走原样显示路径；只改 normalizeImageLine 那条路不会生效。验证要用假模型走完整 aiReply / roleServerPushParts，不能只测单个整理函数。
 - 新加附属 js 文件（HEALTH_CHECK_V1）：要在 app.js 的 HEALTH_SCRIPT_MARKS 里登记一个只在这个文件里定义、不是浏览器自带的名字（例如它挂到 window 上的对象），否则一键体检会说「没有登记检查方法」，tests/health-check.test.mjs 也会失败。
+- 升版本号用 scripts/bump_version.py（2026-11-01 起）：先 --dry-run 看会改哪些，再去掉 --dry-run 真改；只发网页加 --web-only。工具照着上一次发布提交改过的行改，版本说明只在 APP_VER 行里换，核对 Xcode 处数和旧版本号残留，不通过就不写文件。不要再按版本新写 prepare_vNNNN 脚本；「请在Mac编译前先读.md」第一行仍要手改。

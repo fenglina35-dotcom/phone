@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1873'){
+if(window.__NORTH_SHELL_BUILD__!=='1874'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1873 · 一键体检';
+const APP_VER='v1874 · 卡片与联网备用';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -930,7 +930,7 @@ function modelOutputUnfiltered(){return true;}
 function modelUnfilteredThoughtTags(text,c){return String(text||'').replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]\s*(?:内心|心情)\s*[|｜:：]\s*[^\]】]+[\]】]/g,tag=>{stripHiddenThoughtTags(tag,c);return '';});}
 function modelUnfilteredText(value){return String(value==null?'':value);}
 function modelUnfilteredLines(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>line.trim());}
-function modelUnfilteredMessages(line,c){const raw=String(line==null?'':line);if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
+function modelUnfilteredMessages(line,c){const raw=String(line==null?'':line);/* CARD_LINE_RECOVER_V1：卡片和话写在同一行时拆开，卡片照常出卡片、话照常出文字，一个字不丢；单独的 [骰子] 也认 */const _cardTag=/[\[【]\s*(?:语音|转账|红包|位置|图片|文件)\s*[|｜:：][^\]】\n]*[\]】]/,_lead=raw.match(new RegExp('^\\s*('+_cardTag.source+')\\s*(\\S[\\s\\S]*)$')),_tail=!_lead&&raw.match(new RegExp('^([\\s\\S]*?\\S)\\s*('+_cardTag.source+')\\s*$'));if(_lead){const card=modelUnfilteredMessages(_lead[1],c);if(card.length&&card[0].type!=='text')return card.concat(modelUnfilteredMessages(_lead[2],c));}if(_tail&&!/[\[【]/.test(_tail[1])){const card=modelUnfilteredMessages(_tail[2],c);if(card.length&&card[0].type!=='text')return modelUnfilteredMessages(_tail[1],c).concat(card);}if(/^\s*[\[【]\s*骰子\s*[\]】]\s*$/.test(raw)){const parsed=lineToMsgs('[骰子]',c);if(parsed&&parsed.length)return parsed;}if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
 function offlineStripMoodTags(text){return String(text||'').replace(/[\[【［]\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\]】］\r\n]*(?:[\]】］]|(?=\r?\n|$))/g,'').replace(/^\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\r\n]*$/gm,'');}
 function modelUnfilteredOfflineItems(text){return modelUnfilteredLines(rolePublicText(offlineStripMoodTags(text))).map(line=>{const closed=line.match(/^\s*【([^【】]+)】\s*$/),open=!closed&&line.match(/^\s*【([^【】]+)$/),action=closed||open,part=action?{kind:'nar',text:action[1].trim()}:offResponsePart(line);return{id:uid(),who:part.kind==='nar'?'旁白':'ta',source:'ta',text:part.kind==='nar'?part.text:line};});}
 function lifeNoteReadableText(n){return n&&(n.rolePerspective||n.source==='manual')?String(n.text||''):aboutMeNoteText(n&&n.text);}
@@ -2287,7 +2287,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1873&r=v1873-owner-todo-report-1';
+  const url='sw.js?v=1874&r=v1874-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -17780,7 +17780,7 @@ function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
   if(!keepActions)t=t.replace(/【[^】]*】/g,'');
   return t.trim();}
 const CARD_RE=/^[\[【]\s*(转账|红包|位置|图片|照片|文件)\s*[\|｜]\s*([^\]】]*)[\]】]$/;
-function parsePayCardLine(line){let s=(''+(line||'')).trim(),m=s.match(/^[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+([0-9]+(?:\.[0-9]{1,2})?)\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]$/);if(!m)return null;return {kind:m[1],type:m[1]==='红包'?'redpacket':'transfer',amount:+m[2]||0,note:(m[3]||'').trim()};}
+/* CARD_LINE_RECOVER_V1：金额前面带 ¥/￥、后面带 元/块 也认（以前「[转账|¥520|爱你]」会出一张 0 元的转账） */function parsePayCardLine(line){let s=(''+(line||'')).trim(),m=s.match(/^[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+[¥￥]?\s*([0-9]+(?:\.[0-9]{1,2})?)\s*(?:元|块钱|块|RMB|rmb)?\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]$/);if(!m)return null;return {kind:m[1],type:m[1]==='红包'?'redpacket':'transfer',amount:+m[2]||0,note:(m[3]||'').trim()};}
 function cleanPhotoDescText(t){return (t||'').replace(/^[\s:：,，。；;]+|[\s\]】]+$/g,'').replace(/[|｜]/g,'，').trim().slice(0,420);}
 function sanitizeRolePhotoScene(t){return String(t||'').replace(/(?:露出|展示|看清|拍清|要看|看看)?\s*(?:完整)?\s*(?:正脸|侧脸|脸部|面部|五官)|露脸|看镜头/g,'手机完全遮住脸').replace(/对镜自拍|镜子自拍|镜中自拍|自拍/g,'手机完全遮住脸的对镜自拍').replace(/手机完全遮住脸(?:手机完全遮住脸)+/g,'手机完全遮住脸').replace(/\s+/g,' ').trim();}
 /* PHOTO_LINE_RECOVER_V1：她说角色发照片常常变成文字——模型没写 [图片|…]，而是写「我发了一张照片，书房台灯下……」「（发了一张照片：……）」
@@ -19265,6 +19265,10 @@ function northShopQueryRecord(c,query,result,key,request){const rows=msgs(c.id),
 function northShopFlatMessages(messages){const out=[];(messages||[]).forEach((m,i)=>{if(!m)return;const role=i>0&&m.role==='system'?'user':m.role,content=i>0&&m.role==='system'?'【系统提示】'+String(m.content||''):m.content,last=out[out.length-1];if(last&&last.role===role&&role!=='system'&&typeof last.content==='string'&&typeof content==='string')last.content+='\n\n'+content;else out.push({role,content});});if(out.length&&out[out.length-1].role==='assistant')out.push({role:'user',content:'【系统提示】请继续。'});return out;}
 async function northShopPostQueryReply(messages,md,state,c){let raw;try{raw=await wechatPrimaryReply(messages,md,state,c);}catch(e){if(e&&e.name==='AbortError'||/abort/i.test(String(e&&e.message)))throw e;raw=await wechatPrimaryReply(northShopFlatMessages(messages),md,state,c);}let content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw),usable=value=>!!String(value||'').replace(/[\[【]\s*(?:内心|心情|情绪|事件簿)\s*[|｜:：][^\]】]*[\]】]/g,'').replace(/\[查店铺\|[^\]]*\]/g,'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();if(!usable(content)&&!state.fallback&&wechatAuxConfigured(md.routeIndex)){state.fallback=true;raw=await chatAPI(messages,Object.assign({},md,{aux:true}));content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw);}if(!usable(content)){const error=new Error('查询后的模型没有返回可执行回复');error.code='north-shop-empty-reply';throw error;}return content;}
 function autoWebQuery(){return ''; }
+/* SEARCH_MODEL_FALLBACK_V1：jina 是国外网站，手机网络连不上时角色联网就失败（她 10-31 遇到过超时）。
+   现在 jina 连不上或报错时，自动用聊天模型查一次；结果前面注明「jina 连不上，以下由聊天模型回答，可能不是最新」，不冒充实时网页。
+   没配聊天模型、或模型也失败，就照旧报原来的失败。 */
+async function webSearchModelFallback(q){const a=S.settings&&S.settings.chat||{},base=String(a.base||'').replace(/\/+$/,''),key=a.key,model=a.model;if(!base||!key||!model)return'';try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:700,messages:[{role:'system',content:'你是联网搜索助手。请就用户的问题给出尽量最新、真实的信息；如果你具备联网/检索能力就联网查证。无法真实检索时必须明确说无法联网，不得凭记忆伪装实时结果。'},{role:'user',content:'联网搜索并简要回答：'+q}]})},45000);if(!r.ok)return'';const d=await r.json().catch(()=>null),t=String(d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();return t?('（jina 连不上，以下由聊天模型回答，可能不是最新）'+t).slice(0,1800):'';}catch(_){return'';}}
 async function webSearch(q){const ws=S.settings.search||{};
   if(ws.mode==='model'){const a=S.settings.chat;const base=(ws.base||a.base||'').replace(/\/+$/,'');const key=ws.key||a.key;const model=ws.model||a.model;
     try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:700,messages:[{role:'system',content:'你是联网搜索助手。请就用户的问题给出尽量最新、真实的信息；如果你具备联网/检索能力就联网查证。无法真实检索时必须明确说无法联网，不得凭记忆伪装实时结果。'},{role:'user',content:'联网搜索并简要回答：'+q}]})});
@@ -19273,8 +19277,8 @@ async function webSearch(q){const ws=S.settings.search||{};
   const base=(ws.base||'https://s.jina.ai').replace(/\/+$/,'');
   try{const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(ws.key)h['Authorization']='Bearer '+ws.key;
     const r=await fetchT(base+'/'+encodeURIComponent(q),{headers:h});const t=await r.text();
-    if(!r.ok)return '（联网失败 '+r.status+'：可能要去"设置→联网搜索"填上 jina 密钥，或改用「用模型」）';
-    return (t||'').slice(0,1800);}catch(e){return '（联网失败，检查网络，或在"设置→联网搜索"换方式）';}}
+    if(!r.ok){const fb=await webSearchModelFallback(q);if(fb)return fb;return '（联网失败 '+r.status+'：可能要去"设置→联网搜索"填上 jina 密钥，或改用「用模型」）';}
+    return (t||'').slice(0,1800);}catch(e){const fb=await webSearchModelFallback(q);if(fb)return fb;return '（联网失败，检查网络，或在"设置→联网搜索"换方式）';}}
 /* =================== 浏览器 =================== */
 let _brBusy=false,_brBusyMode='';
 function renderBrowser(inspection){const b=inspection?{history:spyBrowserRows(inspection)}:S.browser||{},sim='hisWxSimulatedButton()';

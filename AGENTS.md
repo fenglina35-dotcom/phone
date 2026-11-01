@@ -74,6 +74,9 @@
 - Commit completed changes and push with `git push origin HEAD:main`.
 - If the first push fails, stop retrying and leave the commit ready for the user to push manually.
 - Report the resulting version or documentation revision after every push.
+- Bump versions with `python3 scripts/bump_version.py --label "说明" [--web-only] [--dry-run]`. It copies the lines the
+  previous release bumped, only renames the label on APP_VER lines, marks pending fix-guard entries, and refuses to
+  write if the Xcode counts differ or an old version number remains. Do not write a new per-version release script.
 
 ## Core chat release gate after the v1209 incident
 

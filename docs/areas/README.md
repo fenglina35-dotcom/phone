@@ -780,3 +780,10 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 页面登记进 renderScrollTarget（healthscroll），检查过程中每项结束都会重画，位置不跳。
 - 新加附属 js 时，要在 HEALTH_SCRIPT_MARKS 里给它登记一个只在它里面定义的名字；tests/health-check.test.mjs 会扫两个入口页面，漏登记或名字不唯一就失败。
 - 验证：tests/health-check.test.mjs（两版真实页面从设置点进去、开始检查：401 原因不重复、搜索连不上的原因、红色原因被完整包住、往下滑后重画不弹回；旧代码失败）。另用假服务器跑过「坏」的情况：主模型 401、Fish 没登录、推送没登记、伴生数据 9 小时和 1 天没更新、一个附属文件没加载，原因都写对。真实线路要她在手机上点一次确认。
+
+## 聊天卡片写歪时仍能认出、联网搜索自动备用（CARD_LINE_RECOVER_V1 / SEARCH_MODEL_FALLBACK_V1，2026-11-01）
+
+- 起因：修照片变文字时，把转账、红包、位置、语音、文件、骰子的各种写歪格式经完整 aiReply 和 roleServerPushParts 跑了一遍（原话不过滤恒开）。大多数本来就认，发现三处：金额写成「¥520」「520元」时 parsePayCardLine 认不出，回退到 CARD_RE 后金额变 0，出一张 0 元转账；单独的「[骰子]」在原样显示路径不认（modelUnfilteredMessages 只认带分隔符的），显示成文字；卡片和话写在同一行（「[转账|520|爱你] 收着」或「收着 [转账|520|爱你]」）整行变文字。
+- 现在：parsePayCardLine 允许 ¥/￥ 前缀和 元/块/RMB 后缀；modelUnfilteredMessages 把行首或行尾的卡片和话拆开（卡片照常出、话原样出），单独的 [骰子] 也认。口头说「我给你转了520」不会变成转账（涉及钱，只认卡片格式）。后台服务器发消息前本来就把 [语音|…] 改成文字，所以后台路径不会出现语音标签。
+- 联网：webSearch 的 jina 请求失败（连不上、超时、报错）时，若配了聊天模型，用 webSearchModelFallback 让聊天模型查一次，结果前面注明「jina 连不上，以下由聊天模型回答，可能不是最新」；模型也失败就照旧报原来的失败。一键体检里的「联网搜索」仍直接测 jina，好让她知道 jina 本身通不通。
+- 验证：tests/card-line-recover.test.mjs（旧代码全失败）；真实页面 20 种写法经完整回复流程核对。

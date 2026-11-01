@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1877'/);
-  assert.match(index, /app\.js\?v=1877&r=v1877-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1878'/);
+  assert.match(index, /app\.js\?v=1878&r=v1878-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1877 · 一键体检'/);
+  assert.match(app, /APP_VER='v1878 · 卡片与联网备用'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.523 \(523\)/);
-  assert.match(bridge, /private static let build = "1\.0\.523 \(523\)"/);
+  assert.match(webview, /1\.0\.524 \(524\)/);
+  assert.match(bridge, /private static let build = "1\.0\.524 \(524\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 523;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.523;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1873 · 一键体检'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1873'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 524;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.524;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1874 · 卡片与联网备用'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1874'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,7 +160,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.523 \(523\)/);
+  assert.match(mac, /1\.0\.524 \(524\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

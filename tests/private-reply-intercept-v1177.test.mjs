@@ -11,7 +11,7 @@ const script=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Ph
 test('private v1178 loads diagnostic parity between app core and theater extension',()=>{
   for(const file of ['index.html','小手机.html']){
     const html=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+file);
-    assert.match(html,/app\.js\?v=1877[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1877&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1877/);
+    assert.match(html,/app\.js\?v=1878[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1878&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1878/);
   }
   assert.doesNotMatch(read('小手机.html'),/private-reply-intercept\.js/);
 });
