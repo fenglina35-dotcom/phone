@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1874 · 卡片与联网备用';
+const APP_VER='v1875 · 剧场拦截与组件不黑';
 //@@ private
-const APP_VER='v1878 · 卡片与联网备用';
+const APP_VER='v1879 · 剧场拦截与组件不黑';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

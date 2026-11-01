@@ -1897,3 +1897,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 升版本号用 scripts/bump_version.py（2026-11-01 起）：先 --dry-run 看会改哪些，再去掉 --dry-run 真改；只发网页加 --web-only。工具照着上一次发布提交改过的行改，版本说明只在 APP_VER 行里换，核对 Xcode 处数和旧版本号残留，不通过就不写文件。不要再按版本新写 prepare_vNNNN 脚本；「请在Mac编译前先读.md」第一行仍要手改。
 \n- 改 app.js（2026-11-01 起）：改 src/app 下的小文件，再运行 python3 scripts/build_app.py，两个 app.js 一起生成；不要直接改两个 app.js。两版不同的地方用 //@@ web / //@@ private / //@@ end 并排写。别的电脑直接改了 app.js 时，用 --import 收回。
 - 写测试（2026-11-01 起）：从 tests/_helpers.mjs 引入 read / fnSource / PRIV_DIR / REL / vre，不要每个文件再写一份；测试里不要写死当前版本号，用 REL 或 vre 的 {WEB} {PRIV} {IOS}。
+- 主屏液态玻璃（2026-11-02）：iOS 所有画布共用一份内存上限。丢弃画布时把宽高设 0 还内存；缓存的画布复用前要确认还有内容；烤失败要能自动再试，不能只靠切后台回来重画。
+- 新的模型请求只要可能被「纯英文拦截」挡掉，就要带 roleInterceptAudit，否则「查看上一轮拦截内容」是空的。

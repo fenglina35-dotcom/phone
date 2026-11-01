@@ -799,3 +799,8 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 量过：562 个测试文件里 188 个各自写了一份「取函数」小工具，51 个文件共 199 处写死了当前版本号，每次升版本号要改 60 多个文件。
 - 现在：tests/_helpers.mjs 提供 read（FIX_TEST_OLD=1 时读 HEAD 旧代码）、fnSource、PRIV_DIR、BUNDLES，以及从程序本身读出的当前版本 REL（web / private / ios / 两个标签）和 vre(String.raw`…{WEB}…`)。50 个测试文件的 198 处写死版本号改成 REL / vre（自动转换；iOS 构建号只在 1.0.N、(N)、VERSION = N 这类写法里替换，\u 编码和 HTTP 状态码 524 不碰）。版本号故意改错一处时，这些测试照样报错。升版本号要改的文件从 63 个降到 13 个。
 - 这次会话新写的 8 个测试改用共用工具；更早的测试不批量改，改到哪个区域顺手换。permanent-fix-guard 里的历史版本标签是档案，不改。
+
+## 剧场拦截、挂断名字、主屏组件变黑第二次（2026-11-02，网页 v1875 / 私人 v1879 / iOS 525）
+- THEATER_GUEST_INTERCEPT_V1（cohab-theater.js，两包同一份）：多人剧场来客/路人的请求（cohabTheaterActorItems）以前不带拦截记录，被纯英文拦截挡掉后正文无处可看；共同生活主角的 _offAudit 也是 null（life 时不建），主角走 cohabReplyCore 自己的 audit。现在来客请求用 roleInterceptDiagnosticTurn(主角,'cohab',…) 建记录，作为 roleInterceptAudit 带进 chatAPI，失败调 TurnFailure、成功调 TurnFinish（全部原样展示时不写记录，不会盖掉主角那条）。来客提示词原来没有任何语言要求，加了【语言】：简体中文，外语台词后括号附中文翻译。拦截规则本身（roleReplyAssertLanguage）没改。
+- HANGUP_REMARK_NAME_V1（src/app/039）：hangupCall 的 endText 用备注名（没有备注用名字），例如「先生主动挂断」。只是显示文字，没有代码按这几个字解析。
+- HOME_GLASS_MEMORY_V1（src/app/042）：HOME_GLASS_KEEP_V1 只在切后台回来时重画；她 11-02 又截到组件变黑、刷新就好。判断是 iOS 画布总内存用满：缓存 24 张大镜片加聊天气泡画布，新画布拿不到 2d 画笔，lgDraw 抛错、lgApply 失败，组件没有 lg-ready，露出私人版垫的实心黑底，而且没人再试。现在缓存 12 张、被挤掉/清掉/移除的画布宽高设 0 还内存（还挂在页面上的不动）；缓存复用前确认画布宽高不是 0、还拿得到 2d 画笔，不行就重烤（不读像素：tests 里 v1716 门禁禁止 getImageData，那是以前卡顿的做法）；烤不出来先清缓存再烤一次；lgHomeRefresh 失败后 0.6/1.2/…秒再试，最多 6 次；getContext 拿不到返回 false 不再抛错。没在真机上复现过，这是第二次修这个现象，若再出现，先让她说是在什么操作之后变黑的，再换方向。

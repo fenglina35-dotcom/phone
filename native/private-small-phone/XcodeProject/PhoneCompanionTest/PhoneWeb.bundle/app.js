@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1878'){
+if(window.__NORTH_SHELL_BUILD__!=='1879'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1878 · 卡片与联网备用';
+const APP_VER='v1879 · 剧场拦截与组件不黑';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -18790,7 +18790,7 @@ function declineCall(){if(!_call)return;ringStop();endCallTimers();audioRouteRes
 function callEndedReactionContext(c,id,sess,dir,endedBy,kindTxt,dur){const rows=(msgs(id)||[]).filter(m=>m&&m._call&&m._cs===sess&&m.type!=='sys'&&!m._callTranslationOf&&msgToText(m)).slice(-12).map(m=>(m.role==='user'?(S.me.name||'用户'):(c&&c.remark||c&&c.name||'角色'))+'：'+String(msgToText(m)||'').replace(/\s+/g,' ').trim().slice(0,260));const direction=dir==='incoming'?'这通电话是角色本人主动拨给'+S.me.name+'，由'+S.me.name+'接听。':'这通电话是'+S.me.name+'主动拨给角色本人，由角色接听。',ending=endedBy==='role'?'最后是角色本人主动挂断，不是'+S.me.name+'挂断。':'最后是'+S.me.name+'主动挂断，不是角色本人挂断。';return'[刚刚结束的真实'+kindTxt+'｜这是当前唯一新事件]\n'+direction+'\n'+ending+'\n通话时长约 '+Math.floor(dur/60)+'分'+(dur%60)+'秒。'+(rows.length?'\n本通电话最近内容：\n'+rows.join('\n'):'')+'\n上面通话里的用户话语都已经在电话中处理完毕，只用于理解话题和气氛；禁止再次逐句回答。现在只对“谁主动拨打、谁主动挂断”和整通电话的真实经过自然反应，或沿着刚才已经说完的话题继续新的内容。';}
 function hangupCall(byAI,reason){if(!_call)return;endCallTimers();audioRouteReset(false);blip(300,.3);hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _aid=_call.accountId||actId();const _kind=_call.kind;const _dir=_call.dir||(_call.state==='incoming'?'incoming':'outgoing');const _susEvent=_call._suspicionEvent||'';
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
-  const endText=byAI?(reason==='wxlogin'?'角色为了登录你的微信主动挂断':reason==='remotecontrol'?'角色为了申请远程操控主动挂断':'角色主动挂断'):'你主动挂断';
+  /* HANGUP_REMARK_NAME_V1（2026-11-02 她要求）：通话结束提示里写她给角色的备注名，例如「先生主动挂断」，不写「角色」 */const _endWho=(getC(id)&&(getC(id).remark||getC(id).name))||'角色',endText=byAI?(reason==='wxlogin'?_endWho+'为了登录你的微信主动挂断':reason==='remotecontrol'?_endWho+'为了申请远程操控主动挂断':_endWho+'主动挂断'):'你主动挂断';
   msgs(id).push({role:'user',type:'sys',content:'通话结束 · '+endText+' · '+kindTxt+'时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;_callBusy=false;_callPend=null;_callVisionPend=[];_callStatePend=null;_callStateEpoch++;callClearPersist(_sess);renderCall();if(cur().p==='chat')render();
   roleServerPushCallEnded(id);
@@ -20422,17 +20422,24 @@ function lgDraw(g,cfg,ox,oy,target,scale){const gl=lgGL(),t=gl&&_lg.texs.get(g.s
   gl.uniform2f(u('uSize'),g.w,g.h);gl.uniform2f(u('uOrigin'),ox,oy);gl.uniform4f(u('uMap'),(g.dw-mw)/2,(g.dh-mh)/2,mw,mh);const bx=o.box||[0,0,g.w,g.h],rd=o.rad||[g.radius,g.radius,g.radius,g.radius],tl=o.tail||[0,0];gl.uniform4f(u('uBox'),bx[0],bx[1],bx[2],bx[3]);gl.uniform4f(u('uRad'),rd[0],rd[1],rd[2],rd[3]);gl.uniform2f(u('uTail'),tl[0],tl[1]);const sh=o.shade||[0,0.5,0.5,0];gl.uniform4f(u('uShade'),sh[0],sh[1],sh[2],sh[3]);gl.uniform1f(u('uDeskH'),g.dh);
   gl.uniform1f(u('uBlur'),cfg.blur);gl.uniform1f(u('uIor'),cfg.ior);gl.uniform1f(u('uBend'),cfg.bend);gl.uniform1f(u('uDisp'),cfg.disp);gl.uniform1f(u('uThick'),o.thick||cfg.thick);gl.uniform1f(u('uEdgeBlur'),cfg.edgeBlur);gl.uniform1f(u('uTint'),o.tintAmt!=null?o.tintAmt:cfg.tint);gl.uniform1f(u('uSat'),cfg.sat);gl.uniform1f(u('uHi'),cfg.hi);gl.uniform1f(u('uRim'),cfg.rim);
   const tc=o.tint||(cfg.tone==='white'?[0.94,0.95,0.97]:[0.04,0.04,0.05]);gl.uniform3f(u('uTintColor'),tc[0],tc[1],tc[2]);const ang=cfg.angle*Math.PI/180;gl.uniform2f(u('uLight'),Math.cos(ang),-Math.sin(ang));
-  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);ctx.drawImage(cv,0,CH-h,w,h,0,0,W,H);return true;}
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);const ctx=target.getContext('2d');if(!ctx)return false;ctx.clearRect(0,0,W,H);ctx.drawImage(cv,0,CH-h,w,h,0,0,W,H);return true;}
 function lgBake(g,cfg){if(!lgGL()||!_lg.tex)return null;const dpr=Math.min(2,window.devicePixelRatio||1),out=document.createElement('canvas');out.className='lg-canvas';out.width=Math.max(1,Math.round(g.w*dpr));out.height=Math.max(1,Math.round(g.h*dpr));out.setAttribute('aria-hidden','true');if(!lgDraw(g,cfg,g.x,g.y,out,1))return null;out._lgShift=0;out._lgScale=1;return out;}
 function lgAttachTo(host,canvas,key){const old=host.querySelector(':scope>canvas.lg-canvas');if(old&&old!==canvas)old.remove();if(canvas.parentNode!==host)host.insertBefore(canvas,host.firstChild);canvas.dataset.lgKey=key;if(getComputedStyle(host).position==='static')host.style.position='relative';host.classList.add('lg-host','lg-ready');}
-function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').forEach(c=>c.remove());(root||document).querySelectorAll('.lg-host').forEach(h=>h.classList.remove('lg-host','lg-ready'));}
-function lgRemember(key,canvas){_lg.cache.delete(key);_lg.cache.set(key,canvas);while(_lg.cache.size>24)_lg.cache.delete(_lg.cache.keys().next().value);}
+function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').forEach(c=>{c.remove();if(![..._lg.cache.values()].includes(c))lgFree(c);});(root||document).querySelectorAll('.lg-host').forEach(h=>h.classList.remove('lg-host','lg-ready'));}
+/* HOME_GLASS_MEMORY_V1（2026-11-02 她截图：主屏组件又变黑，刷新就好；HOME_GLASS_KEEP_V1 只管切后台回来，没管这一种）：
+   iOS 给所有画布的总内存有上限。镜片缓存最多 24 张大图、聊天气泡还有很多张，用满后新画布拿不到画笔，烤镜片失败，
+   组件就露出私人版垫在下面的实心黑底，而且没有人再试一次，直到刷新。现在：①丢掉的画布把内存还回去（宽高设 0）；
+   ②缓存复用前确认画布还在（宽高不是 0、还拿得到画笔），不行就重烤（不读像素：读像素是以前卡顿的做法，门禁不许）；③烤失败过一会儿自动再试，最多 6 次。 */
+function lgFree(cv){try{if(cv&&!cv.isConnected){cv.width=0;cv.height=0;}}catch(_){}}
+function lgCanvasOk(cv){if(!cv||!cv.width||!cv.height)return false;try{return !!cv.getContext('2d');}catch(_){return false;}}
+function lgFreeCache(){_lg.cache.forEach(cv=>lgFree(cv));_lg.cache.clear();}
+function lgRemember(key,canvas){_lg.cache.delete(key);_lg.cache.set(key,canvas);while(_lg.cache.size>12){const k=_lg.cache.keys().next().value,old=_lg.cache.get(k);_lg.cache.delete(k);lgFree(old);}}
 /* deskEl 是壁纸铺满的那块；hosts 是要做成玻璃的元素。能用缓存的立即装上，不需要等下一帧 */
 async function lgApply(deskEl,hosts,src,cfg){lgStyle();const dpr=Math.min(2,window.devicePixelRatio||1),todo=[];
-  for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;g.src=src;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');host._lgGeo=g;if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit){lgAttachTo(host,hit,key);continue;}todo.push({host,g,key});}
+  for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;g.src=src;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');host._lgGeo=g;if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit&&lgCanvasOk(hit)){lgAttachTo(host,hit,key);continue;}if(hit){_lg.cache.delete(key);lgFree(hit);}todo.push({host,g,key});}
   if(!todo.length)return true;if(!await lgTexture(src))return false;
-  for(const {host,g,key} of todo){if(!host.isConnected)continue;const cv=lgBake(g,cfg);if(!cv)return false;lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
-function lgHomeRefresh(){_lg.timer=0;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgBindSwipe();lgApply(desk,Array.from(desk.querySelectorAll(LG_HOSTS)),lgWallSrc(),lgCfg()).then(()=>lgSwipeFrame(true)).catch(e=>console.warn('液态玻璃',e));}
+  for(const {host,g,key} of todo){if(!host.isConnected)continue;let cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);lgFreeCache();cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);return false;}}lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
+function lgHomeRefresh(){_lg.timer=0;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgBindSwipe();const retry=()=>{if((_lg.retry=(_lg.retry||0)+1)<=6)setTimeout(lgSoon,600*_lg.retry);};lgApply(desk,Array.from(desk.querySelectorAll(LG_HOSTS)),lgWallSrc(),lgCfg()).then(ok=>{if(ok===false)retry();else _lg.retry=0;lgSwipeFrame(true);}).catch(e=>{console.warn('液态玻璃',e);retry();});}
 function lgAfterRender(){if(typeof document==='undefined')return;lgImsgSoon();const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgHomeRefresh();}
 /* v1718：翻页滑动时，玻璃里的壁纸跟着组件此刻的位置实时变（以前停在组件原地的样子）。
    只在 #appswipe 真的在滑时，每帧重画此刻露在屏幕上的组件；位置直接用滚动距离推算，不读布局；
@@ -20504,7 +20511,7 @@ function lgImsgSettle(){clearTimeout(_lgImSettle);_lgImSettle=setTimeout(()=>lgI
 function lgImsgSoon(){if(!lgScene())return;cancelAnimationFrame(_lgImRaf);_lgImRaf=requestAnimationFrame(()=>lgImsgFrame(true));}
 function lgSoon(){if(_lg.timer)return;_lg.timer=setTimeout(lgHomeRefresh,120);}
 /* HOME_GLASS_KEEP_V1（2026-10-30 她截图：主屏组件有时变成黑色实心块）：镜片画好后会缓存复用，手机切后台时系统可能清掉这些画布，回来还拿空画布用。回到前台时清掉缓存、重新画一次（共同生活早有同样的 COHAB_GLASS_KEEP_V1）。 */
-function lgResumeRedraw(){try{if(typeof document==='undefined'||document.hidden||!lgActive())return;_lg.failed=false;if(_lg.cache&&typeof _lg.cache.clear==='function')_lg.cache.clear();document.querySelectorAll('#homeDesktop canvas.lg-canvas').forEach(c=>{c.dataset.lgKey='';});lgSoon();}catch(_){}}
+function lgResumeRedraw(){try{if(typeof document==='undefined'||document.hidden||!lgActive())return;_lg.failed=false;if(_lg.cache&&typeof _lg.cache.clear==='function'){if(typeof lgFreeCache==='function')lgFreeCache();else _lg.cache.clear();}_lg.retry=0;document.querySelectorAll('#homeDesktop canvas.lg-canvas').forEach(c=>{c.dataset.lgKey='';});lgSoon();}catch(_){}}
 if(typeof document!=='undefined'&&document.addEventListener){document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(lgResumeRedraw,250);});if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('pageshow',()=>setTimeout(lgResumeRedraw,250));}
 if(typeof render==='function'&&!render.__lg){const _lgRender=render;render=function(){const out=_lgRender.apply(this,arguments);try{lgAfterRender();}catch(e){console.warn('液态玻璃',e);}return out;};render.__lg=true;}
 if(typeof window!=='undefined'){window.addEventListener('resize',lgSoon);window.addEventListener('resize',lgImsgSettle);window.addEventListener('orientationchange',lgSoon);}
