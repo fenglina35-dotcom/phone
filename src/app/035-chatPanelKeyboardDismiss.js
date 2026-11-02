@@ -16,6 +16,8 @@ function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂�
 function wechatContinueUserText(id,t,opt){const c=getC(id);
 //@@ end
   if(typeof window.weddingHandleInviteRequest==='function'&&window.weddingHandleInviteRequest(c,t))return;
+  /* ROLE_VIDEO_V1：她说「拍一个我在你眼中的样子」这类话 → 开始做视频，同时照常回她一句（提示他已经在做了） */
+  if(typeof RoleVideo!=='undefined'&&RoleVideo.maybeStart(c,t)){scheduleReply(id,RoleVideo.replyNote());return;}
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
 //@@ web
   const remarkDiscovery=hisRemarkDiscoveryNote(c);if(remarkDiscovery)scheduleReply(id,remarkDiscovery);else if(!companionGoodMorningSchedule(c,t)&&!companionEmotionCareSchedule(c,t))scheduleReply(id);}

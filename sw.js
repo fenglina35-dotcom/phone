@@ -22,6 +22,7 @@ const CORE_FILES=[
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
   {url:'./web-hotfix.js?v='+BUILD+'&r=v1875-owner-todo-report-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
+  {url:'./role-video.js?v='+BUILD,kind:'roleVideo'},
   {url:'./task-notes.js?v='+BUILD,kind:'tasks'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -209,6 +210,7 @@ function validShellText(kind,text){
     &&text.includes('supportsPasskey');
   if(kind==='album')return text.includes('function renderPhotoAlbum(')&&text.includes('function photoAlbumTab(');
   if(kind==='tasks')return text.includes('TASK_NOTES_V2')&&text.includes('window.TaskNotes=api');
+  if(kind==='roleVideo')return text.includes('ROLE_VIDEO_V1')&&text.includes('window.RoleVideo=')&&text.trim().endsWith('})();');
   return false;
 }
 async function checkedResponse(request,kind,tries){

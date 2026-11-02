@@ -804,3 +804,14 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - THEATER_GUEST_INTERCEPT_V1（cohab-theater.js，两包同一份）：多人剧场来客/路人的请求（cohabTheaterActorItems）以前不带拦截记录，被纯英文拦截挡掉后正文无处可看；共同生活主角的 _offAudit 也是 null（life 时不建），主角走 cohabReplyCore 自己的 audit。现在来客请求用 roleInterceptDiagnosticTurn(主角,'cohab',…) 建记录，作为 roleInterceptAudit 带进 chatAPI，失败调 TurnFailure、成功调 TurnFinish（全部原样展示时不写记录，不会盖掉主角那条）。来客提示词原来没有任何语言要求，加了【语言】：简体中文，外语台词后括号附中文翻译。拦截规则本身（roleReplyAssertLanguage）没改。
 - HANGUP_REMARK_NAME_V1（src/app/039）：hangupCall 的 endText 用备注名（没有备注用名字），例如「先生主动挂断」。只是显示文字，没有代码按这几个字解析。
 - HOME_GLASS_MEMORY_V1（src/app/042）：HOME_GLASS_KEEP_V1 只在切后台回来时重画；她 11-02 又截到组件变黑、刷新就好。判断是 iOS 画布总内存用满：缓存 24 张大镜片加聊天气泡画布，新画布拿不到 2d 画笔，lgDraw 抛错、lgApply 失败，组件没有 lg-ready，露出私人版垫的实心黑底，而且没人再试。现在缓存 12 张、被挤掉/清掉/移除的画布宽高设 0 还内存（还挂在页面上的不动）；缓存复用前确认画布宽高不是 0、还拿得到 2d 画笔，不行就重烤（不读像素：tests 里 v1716 门禁禁止 getImageData，那是以前卡顿的做法）；烤不出来先清缓存再烤一次；lgHomeRefresh 失败后 0.6/1.2/…秒再试，最多 6 次；getContext 拿不到返回 false 不再抛错。没在真机上复现过，这是第二次修这个现象，若再出现，先让她说是在什么操作之后变黑的，再换方向。
+
+## 角色视频「我眼中的你」（ROLE_VIDEO_V1，2026-11-02）
+- 文件：role-video.js（两包同一份，三个入口 HTML 都挂、sw.js 预存、体检标记 RoleVideo）。app.js 只有四处接口：buildPart 画卡片、msgToText / previewOf 的文字、sendText（私人版 wechatContinueUserText）里 RoleVideo.maybeStart(c,t) 命中后 scheduleReply(id,RoleVideo.replyNote()) 照常回一句。
+- 触发：她发的话同时含「你眼里/你眼中/眼里的我/在你眼里」和「样子/视频/拍/什么样/怎样」。角色永远不主动发。同一个角色有一部正在做时不重复开。
+- 流程：先在聊天里放一条 type:'rolevideo' 的角色消息（m.video 存状态）→ 写剧本（chatAPI，buildSystem(c)+提示词，角色自己的主/副模型，失败或剧本不合格换另一个再试一次）→ 配音（ttsArr，私人版是角色音色，网页版是配好的声音；没配就只有字幕，卡片上写「只有字幕」）→ 完成。进度：写剧本 0～38% 按时间估，配音 40～98% 按句数。失败原因（主模型：…／副模型：…）写在卡片里，有重试；做到一半关掉小手机，卡片显示「被打断」，重试接着做（剧本有了就只补配音）。
+- 素材：collect(c) 用 msgs(c.id) 全部聊天（开机后长库已合并进 S.messages）。准确数字（双方条数、认识天数、聊过的日子、在一起天数、双方说「我爱你」「想你」、她的「晚安」「谢谢」「好累」、凌晨消息、通话、图片、转账）；按月份分时期，每个时期她的原话（按月平均挑，带情绪词的优先）、他的话、那个月的总结；全部记忆、小事簿、纪念日、她第一句话。提示词要求每个时期都要挑到、只用给的数字、只引用原话、1～3 分钟长短自己定、片名固定。
+- 检查：镜头名不在清单里丢掉；数字跳动的数不在准确数字里丢掉；引用卡片、满屏飘字、记忆碎片、微信消息回放里不是原话的丢掉；第一个镜头必须是开场；少于 6 个镜头算失败。镜头上的字按清单截短。
+- 画面：59 个镜头（24 氛围、6 生活片段、23 画面与文字含 3 个开场、7 情绪文字）+ 7 首配乐（去掉了「轻快」）+ 音效，全是 canvas 和 WebAudio，没有素材文件。视角：角色自称我，画面里角色的消息在右、她在左。共用文件里不能写她的名字，用 S.me.name。
+- 播放：#rvPlayer 全屏，点画面暂停，进度条能拖，旁白说话时配乐压低。配音存 imgPut('__rolevideo_<消息id>_<第几句>')（两个下划线开头，不会被当成图片）。
+- 测试：tests/role-video.test.mjs 两版真实页面走完整流程（含编的数字和非原话被丢、失败原因和重试）。样片页（她挑效果用）：https://claude.ai/artifact/TL1ewZJYAPX7wDf2fTv11A 。
+- 还没做：保存成视频文件到相册；照片缓推（用聊天里的照片）；真实模型写出来的剧本质量要她实测。

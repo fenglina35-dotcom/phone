@@ -239,6 +239,7 @@ const MODEL_FEATURES=[
  ['alter','角色小号回复','微信',0,1,'alterReply'],
  ['pursuit','被拉黑后想办法联系','微信',0,1,'pursuitDecide','pursuitForce'],
  ['pf_group','真人好友群里的角色','微信',0,1,'pf-group-role.js:reply'],
+ ['role_video','角色视频「我眼中的你」','微信',0,'跟角色资料「主模型 / 副模型」；主模型写不出会换副模型再试一次','role-video.js:runModel'],
  ['spy_refresh','查他手机·刷新','查他手机','spy','在 设置→角色、时间与消息「查他手机·刷新用副模型」切换','spyRefresh','spyContinueJson'],
  ['spy_diary','查他手机·日记','查他手机','spy','跟「查他手机·刷新用副模型」一起切换','roleDiaryGenerateDay'],
  ['spy_view','查他手机·他发现你在看','查他手机',0,1,'doSpyViewCore'],
