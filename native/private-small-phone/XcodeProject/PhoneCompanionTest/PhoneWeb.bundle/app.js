@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1886'){
+if(window.__NORTH_SHELL_BUILD__!=='1887'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1886 · 角色扮演旁白触屏修复与静音';
+const APP_VER='v1887 · 角色扮演可选自然推进';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -11593,6 +11593,7 @@ function renderRPSetup(id){const c=getC(id);if(!c)return '';const d=rpData(id);c
       <div class="two"><div class="field"><label>你的本局身份</label><input id="rp_me_role" value="${esc(d.myRole||'')}" placeholder="比如：实习生 / 病人 / 学生"></div><div class="field"><label>他的本局身份</label><input id="rp_his_role" value="${esc(d.hisRole||'')}" placeholder="比如：医生 / 老师 / 警官"></div></div>
       <div class="field"><label>你的本局设定</label><textarea id="rp_me_persona" rows="3" placeholder="写你在这局里的状态、性格、秘密、目标">${esc(d.myPersona||'')}</textarea></div>
       <div class="field"><label>他的本局设定</label><textarea id="rp_his_persona" rows="4" placeholder="写他这局的人设、语气、立场、底色；不改微信原设">${esc(d.hisPersona||'')}</textarea></div>
+      <label class="field" style="display:flex;align-items:center;gap:12px;color:#eef3f8"><input id="rp_advance_plot" type="checkbox" ${d.advancePlot===true?'checked':''} style="width:18px;height:18px;flex-shrink:0"><span>允许角色自然推进剧情<small style="display:block;color:#8d9cad;font-size:12px;line-height:1.7;margin-top:4px">从当前互动自然发展，可以临时扮演配角；不替你行动，也不会每轮硬加意外。关闭后沿用原来的方式。</small></span></label>
       <div class="field"><label>一起参演的角色</label><div style="font-size:12px;color:#8d9cad;line-height:1.7;margin-bottom:7px">主角色固定在本局里。可再邀请其他微信角色进入同一个剧情房间，每个人的身份只在本局生效。</div>
         <div class="rp-main-member" style="background:#101821;border:1px solid #253344;border-radius:12px;padding:8px 10px;margin-bottom:8px;color:#dce6f0">${av(c.avatar,'sm')} <span style="vertical-align:middle">${esc(c.remark||c.name)}</span><span style="color:#7f91a7;font-size:12px;margin-left:6px">主角色</span></div>
         ${extra.length?extra.map(x=>{const m=members.find(y=>y.id===x.id)||{};const k=rpKey(x.id);return `<div class="rp-member-card" style="background:#101821;border:1px solid #253344;border-radius:12px;padding:9px 10px;margin-bottom:8px"><label class="rp-member-select" style="color:#dce6f0;font-size:13px"><input type="checkbox" data-rp-member="${esc(x.id)}" ${m.id?'checked':''}><span class="rp-member-avatar">${av(x.avatar,'sm')}</span><span class="rp-member-name">${esc(x.remark||x.name)}</span></label><div class="two" style="margin-top:8px"><input id="rp_mrole_${k}" value="${esc(m.role||'')}" placeholder="本局身份"><input id="rp_mpersona_${k}" value="${esc(m.persona||'')}" placeholder="本局设定/秘密"></div></div>`;}).join(''):'<div class="hint">暂无其他角色可邀请</div>'}
@@ -11610,6 +11611,7 @@ function rpSaveSetup(id,mode){const d=rpData(id),active=!!d.active;if(mode!=='sa
   d.hisRole=(($('#rp_his_role')||{}).value||'').trim();
   d.myPersona=(($('#rp_me_persona')||{}).value||'').trim();
   d.hisPersona=(($('#rp_his_persona')||{}).value||'').trim();
+  d.advancePlot=!!($('#rp_advance_plot')&&$('#rp_advance_plot').checked);
   d.date=(($('#rp_date')||{}).value||todayStr()).trim();
   d.time=(($('#rp_time')||{}).value||'20:30').trim();
   d.daypart=(($('#rp_part')||{}).value||'晚上').trim();
@@ -11651,6 +11653,8 @@ function rpSystem(c){const d=rpData(c.id);const ms=rpMembers(c.id);
   s+=adultRoleRule(c.remark||c.name||'角色');
   const memories=(d.memory||[]).filter(m=>(m.accountId||'main')===actId());if(memories.length)s+='\n\n# 你们以前玩过的剧情存档（只知道个大概，别把旧身份串到本局）\n'+memories.slice(-6).map((m,i)=>(i+1)+'. '+(m.title||'本次剧情')+'：'+(m.summary||m.text||'')).join('\n');
   s+='\n\n# 本局输出规则\n- 沉浸式扮演，只说本局里的话，不要提AI、助手、模型、程序、系统、规则、政策、安全准则。\n- 如果话题太直白或不适合继续，用角色本人的口吻自然放慢、转场、设边界或留白，不解释规则，不说教，不发拒绝声明。\n- 亲密和暧昧只写氛围、情绪、动作的暗示和留白，避免露骨细节。\n- 旁白与台词遵循下面共用的现场输出格式，不再使用角色扮演的另一套格式。\n- 多人时不要群聊刷屏：一轮最多让1到2个角色说话，优先回应被点名的人；其他人只有剧情需要才插话。\n- 单人剧情按共用格式直接写台词，不加姓名前缀。多人剧情仅在台词行前加「角色名：」或「本局身份：」区分说话者；【旁白】独立成行，不加姓名前缀。\n- 每个角色只知道自己该知道的，不要全知；不要把A的设定/记忆串到B身上。\n- 不要替'+S.me.name+'决定台词或动作；等ta说完/补完动作后再继续。\n- 一次回复写1到5行，短一点、像现场互动。\n- 不要发微信卡片、红包、语音、来电、图片标签，也不要跳回微信真实设定。';
+  /* ROLEPLAY_NATURAL_PLOT_V1: opt-in instructions only; existing output/parser and turn timing stay shared. */
+  if(d.advancePlot===true)s+='\n\n# 自然推进剧情\n你和对方是在共同演故事。你主要扮演自己的本局身份，同时可以适度推动情节，不要总等对方安排下一步。\n- 先接住眼前的互动，再决定是否推进。认真谈心、亲近或安静相处时，可以停留，把当下演细腻，不必制造事件。\n- 从刚才的话、正在做的事、当前环境以及已有线索中自然接出下一步。主动提出打算、透露一件往事、兑现约定或让已有事件出现后续，都算推进，不必依赖突然闯入的人。\n- 新变化要符合背景，有来由、有后续。优先发展已有的人物、物品和未完成的事情；不要每轮发生意外，也不要反复靠误会、争吵或危险制造情绪。\n- 每轮只推进适量内容，留在对方能自然接话或行动的位置。不要替对方说话、决定动作或心理，不把事情从发生到解决全部演完，也不必每轮用问题或选项收尾。\n- 对方接住线索就顺着发展；对方换方向就跟随调整，不强拉回预设路线。\n- 必要时可临时扮演配角，但重点仍是你与对方的互动。配角有自己的语气和有限见闻，不全知，不抢戏；不要把配角身份、台词或经历当成你的。已参演角色仍按原名单区分。\n- 临时配角的行动和原话写在独立的【第三人称旁白】中，明确谁在说话，例如：【店员推开门，低声说：“您订的书到了。”】。这仍是原有旁白格式，不另创标签；不要把临时配角的话写成主要角色的普通台词气泡。主要角色及已参演角色的台词仍遵循原格式。\n- 直接演出，不说“现在推进剧情”，不解释幕后安排。本局仍是虚构游戏，临时身份不改变现实身份与关系。';
   return s+offlineFormatPin(c);}
 /* ROLEPLAY_FORMAT_SPLIT_V1 / ROLEPLAY_COHAB_FORMAT_V1: same production parser as cohab; only attach story speaker IDs. */
 function rpReplyItems(text,id){const raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(text)):offReplyItems(roleVisibleEnvelopeText(text)),members=rpMembers(id);

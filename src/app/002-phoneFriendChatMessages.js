@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1882 · 角色扮演旁白触屏修复与静音';
+const APP_VER='v1883 · 角色扮演可选自然推进';
 //@@ private
-const APP_VER='v1886 · 角色扮演旁白触屏修复与静音';
+const APP_VER='v1887 · 角色扮演可选自然推进';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

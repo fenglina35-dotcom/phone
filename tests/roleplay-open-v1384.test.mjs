@@ -56,6 +56,18 @@ test('roleplay date surface, separated output and durable archives survive endin
   assert(await page.locator('.offstage.rp-date-stage').count(),'roleplay must use the date surface');assert.equal(await page.locator('#off_in').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','the real date textarea must stay transparent across its entire width');assert.equal(await page.locator('.rp-reply-bottom').evaluate(e=>{const input=document.querySelector('.offinput');return !input.contains(e)&&e.getBoundingClientRect().bottom<=input.getBoundingClientRect().top;}),true,'reply stays above the composer, aligned with the note button');
   await page.getByRole('button',{name:'外观',exact:true}).click();await page.waitForSelector('#modal.show');assert((await page.locator('#modal').innerText()).includes('角色扮演外观'));await page.evaluate(()=>closeModal());
   await page.getByRole('button',{name:'设定',exact:true}).click();assert((await page.locator('#modal').innerText()).includes('角色扮演设定'));await page.evaluate(()=>closeModal());
+  await page.evaluate(()=>{rpData(storyId).hisRole='老板';window.storyOriginalSystem=rpSystem(getC(storyId));go('rpset',{id:storyId});});
+  assert.equal(await page.locator('#rp_advance_plot').count(),1,'story settings must expose natural plot advancement');
+  assert.equal(await page.locator('#rp_advance_plot').isChecked(),false,'old rooms remain opt-in');
+  await page.locator('#rp_advance_plot').check();await page.getByRole('button',{name:'保存并返回',exact:true}).click();
+  assert.equal(await page.evaluate(()=>rpData(storyId).advancePlot),true);
+  assert(await page.evaluate(()=>rpSystem(getC(storyId)).includes('# 自然推进剧情')));
+  const npc=await page.evaluate(()=>rpReplyItems('【店员推开门，低声说：“您订的书到了。”】',storyId).map(({who,text,cid})=>({who,text,cid})));
+  assert.equal(npc[0].who,'旁白');assert.equal(npc[0].cid,undefined,'supporting actor dialogue must not become the main character');
+  await page.evaluate(()=>go('rpset',{id:storyId}));await page.locator('#rp_advance_plot').uncheck();await page.getByRole('button',{name:'保存并返回',exact:true}).click();
+  assert.equal(await page.evaluate(()=>rpSystem(getC(storyId)).includes('# 自然推进剧情')),false,'turning off restores the original prompt');
+  assert.equal(await page.evaluate(()=>rpSystem(getC(storyId))===storyOriginalSystem),true,'disabled rules must leave the whole original prompt unchanged');
+  await page.evaluate(()=>go('rpset',{id:storyId}));await page.locator('#rp_advance_plot').check();await page.getByRole('button',{name:'保存并返回',exact:true}).click();
   await page.evaluate(()=>{window.storyDings=0;playDing=()=>window.storyDings++;});
   await page.locator('#off_in').focus();
   await page.locator('#rp_narrate').dispatchEvent('pointerdown',{pointerType:'touch',bubbles:true,cancelable:true});
@@ -67,6 +79,7 @@ test('roleplay date surface, separated output and durable archives survive endin
   assert.equal(await page.locator('#off_in').evaluate(e=>document.activeElement===e),true,'preserve input focus');
   await page.locator('#off_in').fill('她把书放在桌上。');await page.getByRole('button',{name:'记下',exact:true}).click();assert.equal(await page.evaluate(()=>rpData(storyId).msgs.at(-1).who),'旁白');
   await page.evaluate(()=>rpReply());await page.waitForFunction(()=>_rp&&!_rp.busy);
+  assert(requests.some(r=>r.messages.some(m=>m.role==='system'&&m.content.includes('# 自然推进剧情'))),'actual roleplay request must receive the enabled rules');
   const split=await page.evaluate(()=>rpData(storyId).msgs.slice(-4).map(m=>({who:m.who,text:m.text,cid:m.cid})));assert.deepEqual(split.map(m=>[m.who,m.text]),[['旁白','他合上书。'],['ta','我在等你。'],['旁白','她指了指门外。'],['ta','雨停了。']]);assert.equal(split[1].cid,await page.evaluate(()=>storyId));assert.equal(split[3].cid,await page.evaluate(()=>storyOther));
   assert.equal(await page.evaluate(()=>window.storyDings),0,'roleplay sending and incoming lines must stay silent');
   // Editing and deleting remain attached to stored messages, not visual fragments.
@@ -77,7 +90,7 @@ test('roleplay date surface, separated output and durable archives survive endin
   await page.waitForFunction(()=>msgs(storyId).filter(m=>m.role==='assistant').length>storyBeforeEnd,{},{timeout:15000});assert(requests.some(b=>JSON.stringify(b.messages).includes('刚结束手机角色扮演')),'the actual WeChat model request must receive the roleplay closing event');
   const snapshot=await page.evaluate(async()=>{await saveNowAsync();const d=rpData(storyId);return {id:storyId,other:storyOther,record:d.memory.at(-1),active:d.active,summaries:getC(storyId).summaries,legacy:d.memory[0],offline:S.offline};});assert.equal(snapshot.active,false);assert(snapshot.record.msgs.some(m=>m.text==='我一直在等你。'));assert(snapshot.summaries.some(m=>m.roleplayId===snapshot.record.id&&m.text.includes('虚构剧情')));assert.equal(snapshot.legacy.summary,'旧记忆保留');assert(requests.some(b=>b.model==='story-model'));
   // Reload the real persisted state, not preview seed data.
-  await page.goto(url);await page.waitForFunction(()=>window.__northBootReady);const restored=await page.evaluate(({id,other})=>({record:rpData(id).memory.at(-1),other:rpData(other).memory.at(-1),legacy:rpData(id).memory[0]}),snapshot);assert.deepEqual(restored.record,snapshot.record);assert.equal(restored.other.id,snapshot.record.id);assert.equal(restored.legacy.summary,'旧记忆保留');
+  await page.goto(url);await page.waitForFunction(()=>window.__northBootReady);const restored=await page.evaluate(({id,other})=>({advancePlot:rpData(id).advancePlot,record:rpData(id).memory.at(-1),other:rpData(other).memory.at(-1),legacy:rpData(id).memory[0]}),snapshot);assert.equal(restored.advancePlot,true,'plot switch survives persistence reload');assert.deepEqual(restored.record,snapshot.record);assert.equal(restored.other.id,snapshot.record.id);assert.equal(restored.legacy.summary,'旧记忆保留');
   failSummary=false;await page.evaluate(async({id,record})=>{await rpSummarizeArchive(id,record.id);await saveNowAsync();},snapshot);assert.equal(await page.evaluate(({id})=>rpData(id).memory.at(-1).summaryStatus,snapshot),'done');
   await page.evaluate(({id})=>{S.me.locked=false;localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));document.getElementById('gate')?.remove();stack=[{p:'home'},{p:'rp',id}];render();rpMemory(id);},snapshot);assert((await page.locator('#modal').innerText()).includes('旧剧情'));await page.getByRole('button',{name:'完整记录',exact:true}).last().click();assert((await page.locator('#modal').innerText()).includes('我一直在等你。'));assert.deepEqual(errors,[]);await page.close();
  }}finally{await browser.close();}
