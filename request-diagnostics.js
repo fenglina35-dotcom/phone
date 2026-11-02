@@ -85,5 +85,7 @@
  async function copy(id){const text=report(id);try{await navigator.clipboard.writeText(text);toast('已复制故障诊断（不含正文和密钥）');}catch(_){openModal('<h3>请长按复制故障诊断</h3><textarea readonly style="width:100%;height:45vh">'+escape(text)+'</textarea><button class="btn g" onclick="closeModal()">关闭</button>');}}
  function button(id){return '<button class="btn g" style="margin:10px 0" onclick="NorthRequestDiagnostics.open('+escape(JSON.stringify(String(id)))+')">请求故障诊断 · 复制记录</button>';}
  function route(c){const row=list(c&&c.id).find(r=>r.kind==='request');if(!row)return null;const pending=['started','sent','reading'].includes(row.state),name=typeof CHAT_ROUTE_NAMES!=='undefined'&&CHAT_ROUTE_NAMES[row.routeIndex]||'实际请求路线';return{at:row.at,outcome:pending?'pending':row.state==='returned'?'success':'failed',routeName:name,actualRoute:name,slot:row.slot,actualSlot:row.slot,model:row.model,actualModel:row.model,status:row.status,reason:row.reason,messageCount:row.messageCount,requestChars:row.requestChars};}
- root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,turnError,finishTurn,list,listAll,preview,report,open,copy,button,route};
+ /* 给最近一次某功能的请求加一句说明（比如「写出来了但没发出」），全部调用记录里能看到 */
+  function noteLatest(featureKey,text){const now=Date.now(),row=all().slice().reverse().find(r=>r&&r.kind==='request'&&r.featureKey===String(featureKey||'')&&now-(+r.at||0)<10*60000);if(row)patch(row,{note:String(text||'').slice(0,160)});return !!row;}
+  root.NorthRequestDiagnostics={begin,configured,data,read,result,error,turn,turnError,finishTurn,list,listAll,preview,report,open,copy,button,route,noteLatest};
 })(globalThis);

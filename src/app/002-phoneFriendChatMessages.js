@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1878 · 视频开头结尾、英文旁白、话筒和重播';
+const APP_VER='v1879 · 写信不再误扔';
 //@@ private
-const APP_VER='v1882 · 视频开头结尾、英文旁白、话筒和重播';
+const APP_VER='v1883 · 写信不再误扔';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

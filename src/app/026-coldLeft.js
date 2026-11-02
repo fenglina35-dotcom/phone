@@ -348,7 +348,15 @@ function letterNorm(t){return String(t||'').replace(/[\s　，。！？、；：
 function letterGrams(t){const v=letterNorm(t),g=new Set();for(let i=0;i<v.length-1;i++)g.add(v.slice(i,i+2));return g;}
 function letterSimilar(a,b){const A=letterGrams(a),B=letterGrams(b);if(A.size<6||B.size<6)return 0;let n=0;A.forEach(x=>{if(B.has(x))n++;});return n/Math.min(A.size,B.size);}
 function letterPastByRole(id){const out=[];(S.mail||[]).forEach(l=>{if(l&&l.cid===id&&l.type!=='gift'&&(l.body||l.subject))out.push({subject:String(l.subject||''),body:String(l.body||''),time:+l.time||0});});(Array.isArray(S.mailOutbox)?S.mailOutbox:[]).forEach(l=>{const o=l&&l.originalLetter;if(o&&o.cid===id&&(o.body||o.subject))out.push({subject:String(o.subject||''),body:String(o.body||''),time:+o.time||0});});const seen=new Set();return out.filter(x=>{const k=letterNorm(x.subject)+'|'+letterNorm(x.body).slice(0,80);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>b.time-a.time).slice(0,20);}
-function letterRepeatOf(id,subject,body){const ns=letterNorm(subject);for(const p of letterPastByRole(id)){if(ns.length>=4&&ns===letterNorm(p.subject))return p;if(letterSimilar(body,p.body)>=0.6)return p;}return null;}
+/* LETTER_REPEAT_FAIR_V1（2026-11-02 群里用户：调用记录里写信成功，信箱却没收到）：以前按「两字片段重合数 ÷ 两封里短的那封」算，
+   他以前只要写过一封很短的信，新信里几乎一定含有它的大部分两字片段（我们、今天、晚安…），就被当成重复，重写一次还「像」就整封扔掉、不提示。
+   现在只看新信：新信的两字片段有多少出现在某封旧信里（旧信太短不比），或者有一大段一字不差。
+   像（片段 ≥60%、或有 24 字一样、或标题一样）→ 重写一次；重写后只有几乎照抄（片段 ≥85%、或有 40 字一样）才不发，否则照常发出。 */
+function letterRepeatOf(id,subject,body){const ns=letterNorm(subject),nb=letterNorm(body),grams=t=>{const g=new Set();for(let i=0;i<t.length-1;i++)g.add(t.slice(i,i+2));return g;},A=grams(nb),run=(ob,len)=>{for(let i=0;i+len<=nb.length;i+=2)if(ob.includes(nb.slice(i,i+len)))return true;return false;};let found=null;
+  for(const p of letterPastByRole(id)){const ob=letterNorm(p.body);let share=0;if(A.size>=20&&ob.length>=60){const B=grams(ob);let n=0;A.forEach(x=>{if(B.has(x))n++;});share=n/A.size;}
+    const copy=share>=0.85||run(ob,40),similar=copy||share>=0.6||run(ob,24)||(ns.length>=4&&ns===letterNorm(p.subject));
+    if(copy)return Object.assign({},p,{copy:true});if(similar&&!found)found=Object.assign({},p,{copy:false});}
+  return found;}
 function letterTodayText(){const d=new Date();return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}
 function letterPastPrompt(id){const rows=letterPastByRole(id).slice(0,3);return '\n\n# 写信的日子\n今天是'+letterTodayText()+'。如果信末写日期，只能写今天。'+(rows.length?'\n\n# 你最近已经写过的信（只给你认得出来，不能照抄、不能重写同一封）\n'+rows.map((p,i)=>(i+1)+'. 《'+p.subject.slice(0,30)+'》开头：'+p.body.replace(/\s+/g,' ').slice(0,40)+'…').join('\n')+'\n这封要写新的内容和角度，标题、开头都不能和上面重复。':'');}
 async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailState=S;if(!c)return false;
@@ -360,7 +368,7 @@ async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailSt
       const ms=r.match(/主题[:：]{1,3}\s*([^\n]+)/);if(ms)sub=ms[1].trim();
       const mb=r.split(/正文[:：]{1,3}/);if(mb[1])body=mb[1].trim();
       body=body.replace(/^主题[:：]{1,3}[^\n]*\n+/,'').trim();
-      const same=letterRepeatOf(id,sub,body);if(!same)break;if(_try)return false;/* 两次都和旧信太像：这封不发 */
+      const same=letterRepeatOf(id,sub,body);if(!same)break;if(_try){if(same.copy){if(typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.noteLatest==='function')NorthRequestDiagnostics.noteLatest('letter','信写出来了，但重写后还和以前的《'+String(same.subject||'').slice(0,20)+'》几乎一字不差，这封没有发出');return false;}break;}/* 重写后只是有点像：照常发出；几乎照抄才不发 */
       ask+='\n\n[刚才这一版和你以前写过的《'+same.subject.slice(0,30)+'》太像了。请写一封全新的信：换内容、换角度、换标题和开头，日期只能写今天。]';}
     if(!body)return false;
     if(S!==mailState)return false;const letter={id:uid(),cid:id,acct:mailAccount,subject:sub.slice(0,40),body,time:Date.now(),read:false};
@@ -490,11 +498,3 @@ function phRegion(n){const p=phState(),key=phNorm(n),x=phFind(n);if(p.regions[ke
 function phSound(type,key){if(!S.settings.sound)return;const map={sms:[[1046,.07],[1396,.08]],call:[[880,.22]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]},seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}playMediaTone(seq,{key:'phone-soft-v3-'+type+'-'+(key||''),level:type==='key'?.09:(type==='call'?.12:.11),gap:.035,wave:'sine',decay:type==='call'});}
 function phMyAliasNumber(){const p=phState();if(!p.aliasNum){p.aliasNum=phRandomNumber();save(300);}return p.aliasNum;}
 function phLineLabel(line){return line==='alias'?'匿名号':'主号';}
-function phSetLine(line){const p=phState();p.line=line==='alias'?'alias':'main';if(p.line==='alias')phMyAliasNumber();save();const page=cur();if(page&&page.p==='phonesms'){const n=phDigits(page.num),x=phFind(n);if(x&&x.kind==='role'){openPhoneSMS(n,p.line==='alias'?phSmsKey(n,'alias',phMyAliasNumber()):n);return;}}render();}
-function phLineSwitchHTML(){const p=phState(),line=p.line==='alias'?'alias':'main';return `<div class="phlineswitch"><button class="${line==='main'?'on':''}" onclick="phSetLine('main')">主号</button><button class="${line==='alias'?'on':''}" onclick="phSetLine('alias')">匿名号</button></div>${line==='alias'?`<div class="phaliasnote">当前匿名号 ${esc(phFmt(phMyAliasNumber()))}</div>`:''}`;}
-function phEnsureAliasThread(c,num,kind){const p=phState(),targetNum=phDigits(num||phRoleNumber(c)),aliasNum=phMyAliasNumber(),old=p.aliasThreads[targetNum]||{};p.aliasThreads[targetNum]=Object.assign({},old,{cid:c.id,name:c.remark||c.name,ts:Date.now(),kind:kind||old.kind||'sms',asStranger:true,aliasNum,targetNum,blocked:old.blocked&&phNorm(old.aliasNum)===phNorm(aliasNum),blockedAt:old.blockedAt});if(!p.regions[phNorm(targetNum)])p.regions[phNorm(targetNum)]=phRegion(targetNum);return p.aliasThreads[targetNum];}
-function phAliasBlocked(thread,aliasNum){return !!(thread&&thread.blocked&&phNorm(thread.aliasNum)===phNorm(aliasNum));}
-function phTab(t){phState().tab=t;save();render();}
-//@@ web
-
-//@@ end

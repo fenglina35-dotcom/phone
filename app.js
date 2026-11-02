@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1878'){
+if(window.__NORTH_SHELL_BUILD__!=='1879'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1878 · 视频开头结尾、英文旁白、话筒和重播';
+const APP_VER='v1879 · 写信不再误扔';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1647,7 +1647,7 @@ function modelLedgerRows(){return typeof NorthRequestDiagnostics!=='undefined'&&
 function modelLedgerRouteName(i){i=parseInt(i,10);return Number.isInteger(i)&&typeof CHAT_ROUTE_NAMES!=='undefined'&&CHAT_ROUTE_NAMES[i]?CHAT_ROUTE_NAMES[i]:'线路未记录';}
 function modelLedgerRoleName(id){const c=id&&typeof getC==='function'?getC(id):null;return c?(c.remark||c.name||''):'';}
 function modelLedgerSeconds(ms){ms=+ms||0;return ms<1000?'不到 1 秒':(Math.round(ms/100)/10)+' 秒';}
-function modelLedgerState(r){return r.state==='returned'?['成功','#30d158']:r.state==='failed'?['失败','#ff453a']:r.state==='empty'?['没有正文','#ff9f0a']:['还在等','#8e8e93'];}
+function modelLedgerState(r){if(r.state==='returned'&&r.note)return['成功 · 没发出','#ff9f0a'];return r.state==='returned'?['成功','#30d158']:r.state==='failed'?['失败','#ff453a']:r.state==='empty'?['没有正文','#ff9f0a']:['还在等','#8e8e93'];}
 function modelLedgerRoutesHTML(){const rs=chatRoutesInit(),act=Math.max(0,parseInt(S.settings.chatRouteActive,10)||0);return rs.map((r,i)=>{if(!r||!(r.base||r.model))return '';const users=(S.contacts||[]).filter(c=>c&&!c.deleted&&!c.isPhoneFriend&&roleChatRouteIndex(c)===i).map(c=>c.remark||c.name).filter(Boolean);return '<div style="background:rgba(127,127,127,.12);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:13px;line-height:1.6"><b>'+esc(modelLedgerRouteName(i))+(i===act?' · 默认线路':'')+'</b><div>主模型：'+esc(r.model||'没填')+'</div><div>副模型：'+esc(r.aux&&r.aux.model?r.aux.model:'没填（用主模型）')+'</div><div style="color:#8e8e93">'+(users.length?'用这条线路的角色：'+esc(users.join('、')):'没有角色在用这条线路')+'</div></div>';}).join('')||'<p class="hint">还没有填好的线路。</p>';}
 function modelLedgerFilterSet(k,v){_modelLedgerFilter[k]=k==='failed'?!!v:String(v||'');modelLedgerOpen();}
 function modelLedgerOpen(){const all=modelLedgerRows(),f=_modelLedgerFilter,feats=[...new Set(all.map(r=>(r.feature||'其他').replace(/（接着写）$/,'')))],routes=[...new Set(all.map(r=>r.routeIndex).filter(x=>x!=null))];
@@ -1657,7 +1657,7 @@ function modelLedgerOpen(){const all=modelLedgerRows(),f=_modelLedgerFilter,feat
  const rows=list.slice(0,150).map(r=>{const st=modelLedgerState(r),role=modelLedgerRoleName(r.roleId);return '<div onclick="modelLedgerDetail(\''+esc(r.id)+'\')" style="cursor:pointer;border-bottom:1px solid rgba(127,127,127,.2);padding:9px 2px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px">'+esc(r.feature||'其他')+'</b><span style="color:'+st[1]+';font-size:13px;white-space:nowrap">'+st[0]+'</span></div><div style="font-size:12px;color:#8e8e93;line-height:1.5;overflow-wrap:anywhere">'+esc(fmtDT(r.at))+(role?' · '+esc(role):'')+' · '+esc(modelLedgerRouteName(r.routeIndex))+' · '+esc(r.slot||'')+' · '+esc(r.model||'模型未记录')+(r.duration!=null&&r.state!=='started'?' · '+modelLedgerSeconds(r.duration):'')+'</div>'+(r.state==='failed'?'<div style="font-size:12px;color:#ff453a;overflow-wrap:anywhere">'+esc(r.rawError||r.error||r.reason||'')+'</div>':'')+'</div>';}).join('');
  openModal('<h3>全部调用记录</h3><div class="hint">只在这台手机上记最近 200 次模型调用，不上传，密钥自动隐藏。点一条看明细。</div>'+filters+'<div style="max-height:56vh;overflow:auto"><details style="margin:4px 0 8px"><summary style="font-weight:600">当前线路配置</summary>'+modelLedgerRoutesHTML()+'</details>'+(rows||'<p class="hint">'+(all.length?'没有符合筛选的记录。':'还没有记录。更新后下一次调用模型就会出现在这里。')+'</p>')+'</div><div class="btns"><button class="btn g" onclick="modelFeatureListOpen()">副模型使用清单</button><button class="btn p" onclick="closeModal()">关闭</button></div>');}
 function modelLedgerDetail(id){const r=modelLedgerRows().find(x=>x.id===id);if(!r)return;const st=modelLedgerState(r),role=modelLedgerRoleName(r.roleId),line=(k,v)=>v===''||v==null?'':'<div style="display:flex;gap:10px;padding:6px 0;border-bottom:1px solid rgba(127,127,127,.15);font-size:13px"><span style="color:#8e8e93;min-width:5.5em">'+esc(k)+'</span><span style="overflow-wrap:anywhere">'+esc(String(v))+'</span></div>',prev=typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.preview==='function'?NorthRequestDiagnostics.preview(r.id):'';
- openModal('<h3>'+esc(r.feature||'其他')+'</h3>'+line('时间',fmtDT(r.at))+line('结果',st[0]+(r.state==='failed'&&r.reason?'：'+r.reason:''))+line('角色',role)+line('线路',modelLedgerRouteName(r.routeIndex))+line('主/副',r.slot)+line('请求的模型',r.model)+line('实际回复的模型',r.responseModel)+line('接口域名',r.endpointOrigin)+line('HTTP',r.status||'')+line('耗时',r.duration!=null?modelLedgerSeconds(r.duration):'')+line('输入/输出',(r.inputTokens!=null||r.outputTokens!=null)?(r.inputTokens!=null?r.inputTokens:'?')+' / '+(r.outputTokens!=null?r.outputTokens:'?')+' token':'')+line('请求长度',r.requestChars?r.requestChars+' 字符':'')+line('返回正文',r.bodyChars!=null?r.bodyChars+' 字符':'')+line('结束原因',r.finishReason)+line('原始错误',r.rawError||r.error)+line('第几次',r.attempt)+line('小手机版本',r.version)+(prev?'<details style="margin-top:8px"><summary>本机响应片段</summary><pre style="white-space:pre-wrap;font-size:12px">'+esc(prev)+'</pre></details>':'')+'<div class="btns"><button class="btn g" onclick="modelLedgerOpen()">返回列表</button><button class="btn p" onclick="closeModal()">关闭</button></div>');}
+ openModal('<h3>'+esc(r.feature||'其他')+'</h3>'+line('时间',fmtDT(r.at))+line('结果',st[0]+(r.state==='failed'&&r.reason?'：'+r.reason:''))+line('说明',r.note||'')+line('角色',role)+line('线路',modelLedgerRouteName(r.routeIndex))+line('主/副',r.slot)+line('请求的模型',r.model)+line('实际回复的模型',r.responseModel)+line('接口域名',r.endpointOrigin)+line('HTTP',r.status||'')+line('耗时',r.duration!=null?modelLedgerSeconds(r.duration):'')+line('输入/输出',(r.inputTokens!=null||r.outputTokens!=null)?(r.inputTokens!=null?r.inputTokens:'?')+' / '+(r.outputTokens!=null?r.outputTokens:'?')+' token':'')+line('请求长度',r.requestChars?r.requestChars+' 字符':'')+line('返回正文',r.bodyChars!=null?r.bodyChars+' 字符':'')+line('结束原因',r.finishReason)+line('原始错误',r.rawError||r.error)+line('第几次',r.attempt)+line('小手机版本',r.version)+(prev?'<details style="margin-top:8px"><summary>本机响应片段</summary><pre style="white-space:pre-wrap;font-size:12px">'+esc(prev)+'</pre></details>':'')+'<div class="btns"><button class="btn g" onclick="modelLedgerOpen()">返回列表</button><button class="btn p" onclick="closeModal()">关闭</button></div>');}
 async function chatAPI(messages,opt){opt=opt||{};const _modelFeature=typeof modelFeatureOf==='function'?modelFeatureOf(opt):null;if(_modelFeature){opt.diagnosticFeatureKey=_modelFeature.key;opt.diagnosticFeature=_modelFeature.label;}messages=roleMoodScopeMessages(messages,opt);const _requestDiag=chatRequestDiagnostic('begin',messages,opt);try{const startedAt=Date.now();if(!opt.independentRoleModel&&gameModelSessionPage())opt.aux=gameModelUseAux();else if(!opt.independentRoleModel&&chatRouteSessionPage()&&!opt.allowSessionModel)opt.aux=false;if(_modelFeature&&typeof modelFeatureApply==='function')modelFeatureApply(_modelFeature,opt);const fixedRoute=chatRequestRoute(opt.routeIndex);opt._diagRoute=fixedRoute?parseInt(opt.routeIndex,10):Math.max(0,parseInt(S.settings&&S.settings.chatRouteActive,10)||0);let a=fixedRoute?chatMainCopy(fixedRoute):S.settings.chat;
   const pendingAux=opt.aux?(fixedRoute?fixedRoute.aux:S.settings.aux):null,guardModel=opt.model||((pendingAux&&pendingAux.model)||a.model);chatModelAssertText(guardModel,opt.aux?'辅助模型':'聊天模型');
 
@@ -2288,7 +2288,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1878&r=v1878-owner-todo-report-1';
+  const url='sw.js?v=1879&r=v1879-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -12558,7 +12558,15 @@ function letterNorm(t){return String(t||'').replace(/[\s　，。！？、；：
 function letterGrams(t){const v=letterNorm(t),g=new Set();for(let i=0;i<v.length-1;i++)g.add(v.slice(i,i+2));return g;}
 function letterSimilar(a,b){const A=letterGrams(a),B=letterGrams(b);if(A.size<6||B.size<6)return 0;let n=0;A.forEach(x=>{if(B.has(x))n++;});return n/Math.min(A.size,B.size);}
 function letterPastByRole(id){const out=[];(S.mail||[]).forEach(l=>{if(l&&l.cid===id&&l.type!=='gift'&&(l.body||l.subject))out.push({subject:String(l.subject||''),body:String(l.body||''),time:+l.time||0});});(Array.isArray(S.mailOutbox)?S.mailOutbox:[]).forEach(l=>{const o=l&&l.originalLetter;if(o&&o.cid===id&&(o.body||o.subject))out.push({subject:String(o.subject||''),body:String(o.body||''),time:+o.time||0});});const seen=new Set();return out.filter(x=>{const k=letterNorm(x.subject)+'|'+letterNorm(x.body).slice(0,80);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>b.time-a.time).slice(0,20);}
-function letterRepeatOf(id,subject,body){const ns=letterNorm(subject);for(const p of letterPastByRole(id)){if(ns.length>=4&&ns===letterNorm(p.subject))return p;if(letterSimilar(body,p.body)>=0.6)return p;}return null;}
+/* LETTER_REPEAT_FAIR_V1（2026-11-02 群里用户：调用记录里写信成功，信箱却没收到）：以前按「两字片段重合数 ÷ 两封里短的那封」算，
+   他以前只要写过一封很短的信，新信里几乎一定含有它的大部分两字片段（我们、今天、晚安…），就被当成重复，重写一次还「像」就整封扔掉、不提示。
+   现在只看新信：新信的两字片段有多少出现在某封旧信里（旧信太短不比），或者有一大段一字不差。
+   像（片段 ≥60%、或有 24 字一样、或标题一样）→ 重写一次；重写后只有几乎照抄（片段 ≥85%、或有 40 字一样）才不发，否则照常发出。 */
+function letterRepeatOf(id,subject,body){const ns=letterNorm(subject),nb=letterNorm(body),grams=t=>{const g=new Set();for(let i=0;i<t.length-1;i++)g.add(t.slice(i,i+2));return g;},A=grams(nb),run=(ob,len)=>{for(let i=0;i+len<=nb.length;i+=2)if(ob.includes(nb.slice(i,i+len)))return true;return false;};let found=null;
+  for(const p of letterPastByRole(id)){const ob=letterNorm(p.body);let share=0;if(A.size>=20&&ob.length>=60){const B=grams(ob);let n=0;A.forEach(x=>{if(B.has(x))n++;});share=n/A.size;}
+    const copy=share>=0.85||run(ob,40),similar=copy||share>=0.6||run(ob,24)||(ns.length>=4&&ns===letterNorm(p.subject));
+    if(copy)return Object.assign({},p,{copy:true});if(similar&&!found)found=Object.assign({},p,{copy:false});}
+  return found;}
 function letterTodayText(){const d=new Date();return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';}
 function letterPastPrompt(id){const rows=letterPastByRole(id).slice(0,3);return '\n\n# 写信的日子\n今天是'+letterTodayText()+'。如果信末写日期，只能写今天。'+(rows.length?'\n\n# 你最近已经写过的信（只给你认得出来，不能照抄、不能重写同一封）\n'+rows.map((p,i)=>(i+1)+'. 《'+p.subject.slice(0,30)+'》开头：'+p.body.replace(/\s+/g,' ').slice(0,40)+'…').join('\n')+'\n这封要写新的内容和角度，标题、开头都不能和上面重复。':'');}
 async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailState=S;if(!c)return false;
@@ -12570,7 +12578,7 @@ async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailSt
       const ms=r.match(/主题[:：]{1,3}\s*([^\n]+)/);if(ms)sub=ms[1].trim();
       const mb=r.split(/正文[:：]{1,3}/);if(mb[1])body=mb[1].trim();
       body=body.replace(/^主题[:：]{1,3}[^\n]*\n+/,'').trim();
-      const same=letterRepeatOf(id,sub,body);if(!same)break;if(_try)return false;/* 两次都和旧信太像：这封不发 */
+      const same=letterRepeatOf(id,sub,body);if(!same)break;if(_try){if(same.copy){if(typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.noteLatest==='function')NorthRequestDiagnostics.noteLatest('letter','信写出来了，但重写后还和以前的《'+String(same.subject||'').slice(0,20)+'》几乎一字不差，这封没有发出');return false;}break;}/* 重写后只是有点像：照常发出；几乎照抄才不发 */
       ask+='\n\n[刚才这一版和你以前写过的《'+same.subject.slice(0,30)+'》太像了。请写一封全新的信：换内容、换角度、换标题和开头，日期只能写今天。]';}
     if(!body)return false;
     if(S!==mailState)return false;const letter={id:uid(),cid:id,acct:mailAccount,subject:sub.slice(0,40),body,time:Date.now(),read:false};

@@ -1,3 +1,9 @@
+function phFxSwellAll(){const box=$('#smsbody');if(!box)return;
+  box.querySelectorAll('.imsg-b').forEach(phFxSwell);}
+/* ===== 爆发：把字贴到屏幕层上飞 =====
+   气泡带 clip-path（小尾巴是剪出来的），字一飞出气泡边缘就被整块裁掉——
+   所以「蹦出去」这件事在气泡里根本做不到。这里把那几个字原样复制一份
+   钉到屏幕层上飞，原来那几个先藏起来；摔两下、消失、满五秒之后再弹回来。 */
 const PH_BURST_FLY=2300,PH_BURST_GONE=5000;
 function phBurstPlay(node){if(!node)return;
   const stage=document.querySelector('.screen');if(!stage)return;

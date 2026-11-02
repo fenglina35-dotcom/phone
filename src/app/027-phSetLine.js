@@ -1,3 +1,11 @@
+function phSetLine(line){const p=phState();p.line=line==='alias'?'alias':'main';if(p.line==='alias')phMyAliasNumber();save();const page=cur();if(page&&page.p==='phonesms'){const n=phDigits(page.num),x=phFind(n);if(x&&x.kind==='role'){openPhoneSMS(n,p.line==='alias'?phSmsKey(n,'alias',phMyAliasNumber()):n);return;}}render();}
+function phLineSwitchHTML(){const p=phState(),line=p.line==='alias'?'alias':'main';return `<div class="phlineswitch"><button class="${line==='main'?'on':''}" onclick="phSetLine('main')">主号</button><button class="${line==='alias'?'on':''}" onclick="phSetLine('alias')">匿名号</button></div>${line==='alias'?`<div class="phaliasnote">当前匿名号 ${esc(phFmt(phMyAliasNumber()))}</div>`:''}`;}
+function phEnsureAliasThread(c,num,kind){const p=phState(),targetNum=phDigits(num||phRoleNumber(c)),aliasNum=phMyAliasNumber(),old=p.aliasThreads[targetNum]||{};p.aliasThreads[targetNum]=Object.assign({},old,{cid:c.id,name:c.remark||c.name,ts:Date.now(),kind:kind||old.kind||'sms',asStranger:true,aliasNum,targetNum,blocked:old.blocked&&phNorm(old.aliasNum)===phNorm(aliasNum),blockedAt:old.blockedAt});if(!p.regions[phNorm(targetNum)])p.regions[phNorm(targetNum)]=phRegion(targetNum);return p.aliasThreads[targetNum];}
+function phAliasBlocked(thread,aliasNum){return !!(thread&&thread.blocked&&phNorm(thread.aliasNum)===phNorm(aliasNum));}
+function phTab(t){phState().tab=t;save();render();}
+//@@ web
+
+//@@ end
 /* Role inspection uses the same phone shell and SMS templates without borrowing player state. */
 const _spyPhoneViews=new Map();
 function spyPhoneView(id){const key=String(actId()||'main')+'@'+id;let v=_spyPhoneViews.get(key);if(!v){v={tab:'recents',filter:'all',thread:null};_spyPhoneViews.set(key,v);}return v;}
@@ -495,9 +503,3 @@ function phFxSwell(node){if(!node||!node.classList)return;
   const sw=Math.max(.9,Math.min(1.16,(bw+grow)/bw));
   if(Math.abs(sw-1)<.012)return;
   node.style.setProperty('--sw',sw.toFixed(3));node.classList.add('imb-swell');}
-function phFxSwellAll(){const box=$('#smsbody');if(!box)return;
-  box.querySelectorAll('.imsg-b').forEach(phFxSwell);}
-/* ===== 爆发：把字贴到屏幕层上飞 =====
-   气泡带 clip-path（小尾巴是剪出来的），字一飞出气泡边缘就被整块裁掉——
-   所以「蹦出去」这件事在气泡里根本做不到。这里把那几个字原样复制一份
-   钉到屏幕层上飞，原来那几个先藏起来；摔两下、消失、满五秒之后再弹回来。 */
