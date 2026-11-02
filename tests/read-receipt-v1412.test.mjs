@@ -72,9 +72,12 @@ test('real browser: friend ACK and role/group redraw keep entrance progress on b
   for(const kind of ['chat','group','pfchat','pfgroup']){
    await page.evaluate(kind=>{window.kind=kind;window.box=document.getElementById(kind==='pfchat'?'pfchatbg':kind==='pfgroup'?'pfgroupbg':'chatbg');box.innerHTML='';wechatMotionDispose();wechatMotionMount({p:kind,id:'fixture'});window.rowHTML=id=>'<div class="msg me" data-message-id="'+id+'" data-wx-motion-id="client:fixture"><div class="avatar">头像</div><div class="col">消息</div></div>';box.innerHTML=rowHTML('local_1');},kind);
    await page.waitForTimeout(180);
-   const before=await page.evaluate(()=>({opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),time:box.querySelector('.avatar').getAnimations()[0].currentTime}));
-   await page.evaluate(()=>{box.innerHTML=rowHTML('server_1');wechatMotionMount({p:kind,id:'fixture'});});
-   const after=await page.evaluate(()=>({opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),size:_wechatMotion.rows.size,time:box.querySelector('.avatar').getAnimations()[0]?.currentTime}));
+   // Sample around the actual redraw in one browser task: separate RPCs can advance a healthy animation by hundreds of ms under load.
+   const {before,after}=await page.evaluate(()=>{
+    const before={opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),time:box.querySelector('.avatar').getAnimations()[0].currentTime};
+    box.innerHTML=rowHTML('server_1');wechatMotionMount({p:kind,id:'fixture'});
+    const after={opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),size:_wechatMotion.rows.size,time:box.querySelector('.avatar').getAnimations()[0]?.currentTime};return {before,after};
+   });
    assert.equal(after.size,1,file+' '+kind+' acknowledgement keeps one record');assert(after.time>=before.time&&after.time>0,file+' '+kind+' resumed timeline');assert(Math.abs(after.opacity-before.opacity)<.16,file+' '+kind+' no reset: '+JSON.stringify({before,after}));
    await page.waitForTimeout(650);
    await page.evaluate(()=>{box.innerHTML=rowHTML('server_1');wechatMotionMount({p:kind,id:'fixture'});});
