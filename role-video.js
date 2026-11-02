@@ -404,6 +404,8 @@ const META={
 };
 const ATMOS=A.map(x=>x.n);
 const OPENERS=['开场 · 一道光','开场 · 锁屏亮起','开场 · 从你那句话开始'];
+/* 结尾只能从这些里选（她说：要告诉角色开头结尾用什么，不然他不会选） */
+const ENDINGS=['两颗星','光点聚成字','信纸','心动','呼吸','低语','烟花','星空','上浮光点'];
 const MUSICS=MOODS.map(m=>m.n);
 function shotMeta(n){const m=META[n];if(m)return{cyc:m[0],hold:m[1],desc:m[2],slots:m[3]};const s=SHOTS[n];return s&&s.g==='A'?{cyc:0,hold:null,desc:s.fx.d,slots:n==='老电视'?'text：画面里那行字（≤6字）':''}:null}
 function allowedShots(){return OPENERS.concat(ATMOS,Object.keys(META).filter(n=>!OPENERS.includes(n)))}
@@ -464,8 +466,10 @@ function materialText(c,M){
   return L.join('\n');
 }
 function shotList(){return allowedShots().map(n=>{const m=shotMeta(n);return '- 「'+n+'」'+m.desc+(m.slots?'  要填：'+m.slots:'')}).join('\n')}
+function voiceLang(c){try{if(typeof ttsContentLang==='function'){const l=ttsContentLang(c);return l&&l!=='zh'?l:''}}catch(_){}return ''}
+function voiceLangLabel(l){return typeof voiceLangName==='function'&&voiceLangName(l)||({'英':'英语','日':'日语','韩':'韩语','粤':'粤语','法':'法语','德':'德语','俄':'俄语'})[l]||'外语'}
 function promptText(c,M,ask){
-  const her=(S.me&&S.me.name)||'她',me=c.name||'我';
+  const her=(S.me&&S.me.name)||'她',me=c.name||'我',lang=voiceLang(c),ln=lang?voiceLangLabel(lang):'';
   return ['# 这次要做的事',
 '「'+her+'」刚刚对你说：「'+ask+'」。她想知道：在你眼里，她是什么样的人。',
 '你要像导演一样，用下面「镜头清单」里的镜头，拍一部竖屏小视频送给她。长度由你自己决定：最短一分钟左右，两分钟、三分钟都可以，看你想说多少。片名固定是「'+TITLE+'」，程序会放在开场镜头里，你不用写片名。除此以外，讲什么、怎么排、每个镜头上写什么、旁白怎么说、配什么音乐，全部由你决定。',
@@ -479,9 +483,23 @@ function promptText(c,M,ask){
 '3. 引用她说过的话时，只能用素材里出现过的原话，可以截短，不能改意思，不能编她没说过的话。',
 '4. 要有情绪起伏：心疼、开心、难过、生气、在意都可以，按你们真实发生过的事来，不要一直一个调子。最后落在你最想对她说的那句话上。',
 '5. 写具体的小事和细节，不写空泛的大道理，不写「你是我的全世界」这种套话。',
-'6. 每个镜头的旁白（say）是一两句话，不超过 40 个字，像在她耳边说的。也可以不写旁白，让画面自己说话。',
-'7. 一个镜头大约 5～10 秒。一分钟左右大概 8～12 个镜头，三分钟左右大概 20～30 个。第一个必须是三个开场镜头之一。最后一个镜头要是收尾，留给你最想说的话。',
+(lang?'6. 你的配音说的是'+ln+'。所以每个镜头的旁白（say）用'+ln+'写，一两句话，像在她耳边说的；同时写一个 zh：这句旁白的中文翻译（直接写译文，不要加括号）。镜头画面上的字（sign、text、quote 这些）照样写中文。也可以不写旁白，让画面自己说话。':'6. 每个镜头的旁白（say）是一两句话，不超过 40 个字，像在她耳边说的。也可以不写旁白，让画面自己说话。'),
+'7. 一个镜头大约 5～10 秒。一分钟左右大概 8～12 个镜头，三分钟左右大概 20～30 个。',
 '8. 镜头上的字很短，每个镜头的字数限制写在清单里，不要超。',
+'',
+'# 开头和结尾（一定要照这个来）',
+'开头：第一个镜头只能从下面三个开场里选一个，片名「'+TITLE+'」会自动出现在开场里：',
+'- 「开场 · 一道光」黑屏里一道细光拉开，片名在光里慢慢变清楚，下面一行是你的落款。适合安静、郑重地开始。要填 sign。',
+'- 「开场 · 锁屏亮起」她的手机锁屏亮起，弹进你发来的一条通知，点开就是片名。适合像给她一个惊喜。要填 note。',
+'- 「开场 · 从你那句话开始」先回放她刚才让你拍视频的那句原话，你回她一句，镜头推进你的消息变成片名。适合接着她的话开始。要填 reply、line。',
+'结尾：最后一个镜头只能从下面这些里选一个，旁白（say）写你最想对她说的那一句，可以落款：',
+'- 「两颗星」两颗光点从两边靠近、绕着彼此转、连上一条线。',
+'- 「光点聚成字」满屏光点汇成你写的一句短话（text），再被吹散。',
+'- 「信纸」信纸上一行行写出你的话，最后落款（lines、sign）。',
+'- 「心动」一个字像心跳一样怦怦跳（text、sub）。',
+'- 「呼吸」两三个字像在呼吸一样亮起又暗下（text、sub）。',
+'- 「低语」很小很淡的三句话，像在她耳边说（lines）。',
+'- 「烟花」「星空」「上浮光点」安静的画面，只靠旁白收尾。',
 '',
 '# 镜头清单（只能用这里的名字，一字不差）',
 '带「要填」的镜头，要把那些空填好；氛围镜头（下雪、下雨、星空这类）没有字，只靠旁白。',
@@ -498,7 +516,7 @@ materialText(c,M),
 '{"music":"温柔钢琴","scenes":[',
 '  {"shot":"开场 · 一道光","sign":"—— '+me+'，拍给你"},',
 '  {"shot":"数字跳动","num":1234,"label":"你对我说过的话","say":"你跟我说过的每一句，我都留着。"},',
-'  {"shot":"细雨","say":"那天下雨，你一直等我回消息。"},',
+(lang?'  {"shot":"细雨","say":"（这里用'+ln+'写）","zh":"那天下雨，你一直等我回消息。"},':'  {"shot":"细雨","say":"那天下雨，你一直等我回消息。"},'),
 '  {"shot":"引用卡片","quote":"她的一句原话","date":"10月30日","say":"……"}',
 ']}',
 '上面只是格式示范，内容要换成你们自己的。'].join('\n');
@@ -511,10 +529,10 @@ function findShot(n){const k=norm(n);return allowedShots().find(x=>norm(x)===k)|
 const cut=(s,n)=>[...String(s==null?'':s)].slice(0,n).join('');
 const qkey=s=>String(s||'').replace(/[\s。！？!?~～，,、…\.\-—]+/g,'');
 function isOrig(text,pool){const k=qkey(text);if([...k].length<2)return false;return pool.replace(/[\s。！？!?~～，,、…\.\-—]+/g,'').includes(k)}
-function checkScript(obj,c,M,ask){
+function checkScript(obj,c,M,ask){const foreign=!!voiceLang(c);
   if(!obj||!Array.isArray(obj.scenes))return{error:'模型没有按格式给出剧本（没有 scenes）'};
   const out=[],herPool=M.herText,himPool=M.himText,her=(S.me&&S.me.name)||'',him=c.name||'';
-  obj.scenes.slice(0,32).forEach(sc=>{if(!sc||typeof sc!=='object')return;const n=findShot(sc.shot);if(!n)return;const o={shot:n,say:cut(clean(sc.say),60)};const m=shotMeta(n);
+  obj.scenes.slice(0,32).forEach(sc=>{if(!sc||typeof sc!=='object')return;const n=findShot(sc.shot);if(!n)return;const o={shot:n,say:cut(clean(sc.say),foreign?220:60)};if(foreign&&o.say)o.zh=cut(clean(sc.zh),80);const m=shotMeta(n);
     const S1=k=>cut(clean(sc[k]),40),arr=(k,max,len)=>(Array.isArray(sc[k])?sc[k]:[]).map(x=>cut(clean(x),len)).filter(Boolean).slice(0,max);
     switch(n){
       case '开场 · 一道光':o.sign=S1('sign');break;
@@ -556,6 +574,8 @@ function checkScript(obj,c,M,ask){
     out.push(o)});
   if(!out.length||!OPENERS.includes(out[0].shot)){const k=out.findIndex(x=>OPENERS.includes(x.shot));if(k>0)out.unshift(out.splice(k,1)[0]);else out.unshift({shot:'开场 · 一道光',say:'',sign:'—— '+him})}
   const rest=out.slice(1).filter(x=>!OPENERS.includes(x.shot));const scenes=[out[0]].concat(rest);
+  /* 最后一个镜头要是收尾镜头：不是的话，把最后出现的收尾镜头挪到最后；一个都没有就补一个「两颗星」 */
+  if(!ENDINGS.includes(scenes[scenes.length-1].shot)){let k=-1;for(let i=scenes.length-1;i>0;i--)if(ENDINGS.includes(scenes[i].shot)){k=i;break}if(k>0)scenes.push(scenes.splice(k,1)[0]);else scenes.push({shot:'两颗星',say:''})}
   if(scenes.length<6)return{error:'剧本里能用的镜头太少（只有 '+scenes.length+' 个），模型可能没按要求写'};
   const now=new Date(),wk=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][now.getDay()],hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   scenes.forEach(o=>{o.her=her;o.him=him;o.time=hh;o.day=(now.getMonth()+1)+'月'+now.getDate()+'日 '+wk;if(o.shot==='开场 · 一道光'){o.date=now.getFullYear()+' · '+String(now.getMonth()+1).padStart(2,'0')+' · '+String(now.getDate()).padStart(2,'0');if(!o.sign)o.sign='—— '+him}if(o.shot==='开场 · 从你那句话开始')o.ask=cut(ask,16)});
@@ -566,6 +586,8 @@ function checkScript(obj,c,M,ask){
 /* ---------- 时间轴 ---------- */
 function sceneDur(o,voice){const m=shotMeta(o.shot),base=m.hold!=null?m.hold+1:5.5;return Math.min(18,Math.max(base,voice?voice+1.6:0))}
 function timeline(v){let t=0;const rows=v.script.scenes.map((o,i)=>{const d=sceneDur(o,v.voice&&v.voice[i]&&v.voice[i].dur);const r={o,start:t,dur:d};t+=d;return r});return{rows,total:t+1}}
+/* 按宽度换行：中文按字，英文按词 */
+function wrapText(c,s,maxW,size){c.save();c.font=size+'px '+SANS;const words=String(s||'').match(/[A-Za-z0-9'’\-]+[,.!?;:]*\s*|\s+|./gu)||[],lines=[];let cur='';words.forEach(w=>{const t=cur+w;if(c.measureText(t.trim()).width>maxW&&cur.trim()){lines.push(cur.trim());cur=w.trimStart()}else cur=t});if(cur.trim())lines.push(cur.trim());c.restore();return lines.slice(0,3)}
 const fmtT=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
 
 /* ---------- 制作 ---------- */
@@ -612,7 +634,10 @@ function styleOnce(){if(document.getElementById('rvStyle'))return;const st=docum
 .rv-card .rv-note{position:absolute;left:6px;right:6px;bottom:22px;text-align:center;font-size:10px;color:rgba(255,255,255,.55)}
 #rvPlayer{position:fixed;inset:0;z-index:2147483000;background:#000;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
 #rvPlayer canvas{max-width:100vw;max-height:100vh;aspect-ratio:9/16;height:100vh;width:auto;display:block}
-#rvPlayer .rv-x{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:14px;width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;font-size:20px;line-height:36px}
+#rvPlayer .rv-mic,#rvPlayer .rv-x{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);width:28px;height:28px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 1px 3px rgba(0,0,0,.7));transition:opacity .3s}
+#rvPlayer .rv-mic{left:12px}#rvPlayer .rv-x{right:12px}
+#rvPlayer .rv-replay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:inherit;font-size:15px;color:#fff;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:10px 22px}
+/* 右上角关闭：只有线条 */
 #rvPlayer .rv-bar{position:absolute;left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);display:flex;align-items:center;gap:10px;color:#fff;font-size:12px;font-variant-numeric:tabular-nums;transition:opacity .3s}
 #rvPlayer .rv-bar.hide{opacity:0}
 #rvPlayer .rv-pp{width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:13px}
@@ -630,32 +655,41 @@ function tap(cid,mid){const m=msgOf(cid,mid);if(!m||!m.video)return;if(m.video.s
 /* ---------- 全屏播放 ---------- */
 let P=null;
 async function open(cid,mid){const m=msgOf(cid,mid);if(!m||!m.video||m.video.status!=='done')return;close();styleOnce();const ac=sndInit();if(!ac&&typeof toast==='function')toast('这台设备放不了声音');
-  const v=m.video,tl=timeline(v),wrap=document.createElement('div');wrap.id='rvPlayer';wrap.innerHTML='<canvas></canvas><button class="rv-x" aria-label="关闭">×</button><div class="rv-bar"><button class="rv-pp" aria-label="暂停">❚❚</button><span class="rv-cur">0:00</span><input type="range" min="0" max="'+tl.total.toFixed(2)+'" step="0.05" value="0" aria-label="进度"><span>'+fmtT(tl.total)+'</span></div>';document.body.appendChild(wrap);
+  const v=m.video,tl=timeline(v),wrap=document.createElement('div');wrap.id='rvPlayer';wrap.innerHTML='<canvas></canvas><button class="rv-mic" aria-label="背景音乐" aria-pressed="true"></button><button class="rv-x" aria-label="关闭"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></button><button class="rv-replay" hidden>重新播放</button><div class="rv-bar"><button class="rv-pp" aria-label="暂停">❚❚</button><span class="rv-cur">0:00</span><input type="range" min="0" max="'+tl.total.toFixed(2)+'" step="0.05" value="0" aria-label="进度"><span>'+fmtT(tl.total)+'</span></div>';document.body.appendChild(wrap);
   const cv=wrap.querySelector('canvas'),bar=wrap.querySelector('.rv-bar'),pp=wrap.querySelector('.rv-pp'),rg=wrap.querySelector('input'),curT=wrap.querySelector('.rv-cur');
   const H=Math.round(Math.min(1920,window.innerHeight*(window.devicePixelRatio||1))),W=Math.round(H*9/16);cv.width=W;cv.height=H;
-  const bufs=[];P={wrap,ac,t0:ac?ac.currentTime:performance.now()/1000,cur:-1,prev:0,src:null,raf:0,paused:false,hideAt:Date.now()+3000,tl,v,bufs,music:v.script.music};
-  if(ac){await ac.resume();for(let i=0;i<v.voice.length;i++){const x=v.voice[i];if(!x){bufs[i]=null;continue}try{const du=await imgGet(x.key),ab=await fetch(du).then(r=>r.arrayBuffer());bufs[i]=await ac.decodeAudioData(ab)}catch(_){bufs[i]=null}}if(!P||P.wrap!==wrap)return;P.t0=ac.currentTime;musStart(P.music)}
+  const bufs=[];let musicOn=true;try{musicOn=localStorage.getItem('rvMusicOff')!=='1'}catch(_){}
+  P={wrap,ac,musicOn,ended:false,t0:ac?ac.currentTime:performance.now()/1000,cur:-1,prev:0,src:null,raf:0,paused:false,hideAt:Date.now()+3000,tl,v,bufs,music:v.script.music};
+  if(ac){await ac.resume();for(let i=0;i<v.voice.length;i++){const x=v.voice[i];if(!x){bufs[i]=null;continue}try{const du=await imgGet(x.key),ab=await fetch(du).then(r=>r.arrayBuffer());bufs[i]=await ac.decodeAudioData(ab)}catch(_){bufs[i]=null}}if(!P||P.wrap!==wrap)return;P.t0=ac.currentTime;if(P.musicOn)musStart(P.music)}
   const now=()=>P.ac?P.ac.currentTime-P.t0:performance.now()/1000-P.t0;
   const seek=T=>{if(P.ac)P.t0=P.ac.currentTime-T;else P.t0=performance.now()/1000-T;stopVoice();P.cur=-1};
   const stopVoice=()=>{if(P.src){try{P.src.stop()}catch(_){}P.src=null}};
   wrap.querySelector('.rv-x').onclick=e=>{e.stopPropagation();close()};
-  pp.onclick=e=>{e.stopPropagation();toggle()};const toggle=()=>{if(!P.ac)return;P.paused=!P.paused;pp.textContent=P.paused?'▶':'❚❚';P.paused?P.ac.suspend():P.ac.resume();P.hideAt=Date.now()+3000};
-  cv.onclick=()=>{toggle();bar.classList.remove('hide')};rg.oninput=e=>{e.stopPropagation();seek(+rg.value);P.hideAt=Date.now()+3000};
+  const mic=wrap.querySelector('.rv-mic'),rp=wrap.querySelector('.rv-replay');
+  /* 左上角话筒：关上就不放背景音乐，特效的声音和旁白照常 */
+  const micPaint=()=>{mic.classList.toggle('off',!P.musicOn);mic.setAttribute('aria-pressed',String(P.musicOn));mic.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'+(P.musicOn?'':'<path d="M4 4l16 16" stroke="#ff8a8a"/>')+'</svg>'};micPaint();
+  mic.onclick=e=>{e.stopPropagation();P.musicOn=!P.musicOn;try{localStorage.setItem('rvMusicOff',P.musicOn?'0':'1')}catch(_){}if(P.musicOn){if(!P.ended&&!P.paused)musStart(P.music)}else musStop();micPaint();P.hideAt=Date.now()+3000};
+  /* 放完了：停在最后，点画面、点▶、点「重新播放」都从头再放（以前放完再点只会马上又停住） */
+  const replay=()=>{P.ended=false;P.paused=false;rp.hidden=true;seek(0);pp.textContent='❚❚';if(P.ac)P.ac.resume();if(P.musicOn)musStart(P.music);P.hideAt=Date.now()+3000};
+  const toggle=()=>{if(!P.ac)return;if(P.ended){replay();return}P.paused=!P.paused;pp.textContent=P.paused?'▶':'❚❚';P.paused?P.ac.suspend():P.ac.resume();P.hideAt=Date.now()+3000};
+  pp.onclick=e=>{e.stopPropagation();toggle()};rp.onclick=e=>{e.stopPropagation();replay()};
+  cv.onclick=()=>{toggle();bar.classList.remove('hide')};rg.oninput=e=>{e.stopPropagation();const v=+rg.value;seek(v);if(P.ended&&v<tl.total-.3){P.ended=false;rp.hidden=true;pp.textContent='❚❚';if(P.ac)P.ac.resume();if(P.musicOn)musStart(P.music)}P.hideAt=Date.now()+3000};
   const c=cv.getContext('2d');
-  function frame(){if(!P||P.wrap!==wrap)return;let T=now();if(T>=tl.total){if(P.ac&&!P.paused){P.paused=true;P.ac.suspend();pp.textContent='↺';pp.onclick=e=>{e.stopPropagation();pp.onclick=ev=>{ev.stopPropagation();toggle()};seek(0);P.paused=false;pp.textContent='❚❚';P.ac.resume();musStart(P.music)};}T=tl.total}
+  function frame(){if(!P||P.wrap!==wrap)return;let T=now();if(T>=tl.total){if(!P.ended){P.ended=true;stopVoice();sndStop();musStop();if(P.ac)P.ac.suspend();pp.textContent='↺';rp.hidden=false;bar.classList.remove('hide')}T=tl.total}
     let i=tl.rows.findIndex(r=>T>=r.start&&T<r.start+r.dur);if(i<0)i=tl.rows.length-1;const r=tl.rows[i],m2=shotMeta(r.o.shot),lt=T-r.start,ft=m2.hold!=null?Math.min(lt,m2.hold):lt,sh=SHOTS[r.o.shot];
     if(i!==P.cur){P.cur=i;sndStop();stopVoice();const a=AU[r.o.shot];(a&&a.bed||[]).forEach(f=>{try{f()}catch(_){}});P.prev=ft;
       const b=bufs[i];if(b&&P.ac&&lt<.4+b.duration){const s=P.ac.createBufferSource();s.buffer=b;const g=P.ac.createGain();g.gain.value=1;s.connect(g);g.connect(SND.master);const off=Math.max(0,lt-.4);s.start(P.ac.currentTime+Math.max(0,.4-lt),off);P.src=s;P.voiceEnd=T+Math.max(0,.4-lt)+b.duration-off}else P.voiceEnd=0}
     else{const a=AU[r.o.shot];if(a&&a.ev&&ft>P.prev){try{a.ev(P.prev,ft)}catch(_){}}P.prev=ft}
-    if(MUS.out&&P.ac){const talking=P.voiceEnd&&T<P.voiceEnd+.2,end=Math.max(0,Math.min(1,(tl.total-T)/2.5));MUS.out.gain.setTargetAtTime((talking?.22:.5)*end,P.ac.currentTime,.25)}
+    if(MUS.out&&P.ac&&P.musicOn){const talking=P.voiceEnd&&T<P.voiceEnd+.2,end=Math.max(0,Math.min(1,(tl.total-T)/2.5));MUS.out.gain.setTargetAtTime((talking?.22:.5)*end,P.ac.currentTime,.25)}
     c.save();try{sh.fx.draw(c,W,H,ft,r.o)}catch(e){c.fillStyle='#000';c.fillRect(0,0,W,H)}c.restore();
-    if(r.o.say){const u=H/1000,a=cl((lt-.3)/.5)*cl((r.dur-.4-lt)/.4),parts=rvSplit(r.o.say);const g=c.createLinearGradient(0,H*.82,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,'+.6*a+')');c.fillStyle=g;c.fillRect(0,H*.82,W,H*.18);
-      txt(c,parts[0],W/2,H*(parts[1]?.9:.92),21*u,{a,color:'#fff',shadow:1});if(parts[1])txt(c,parts[1],W/2,H*.935,21*u,{a,color:'#fff',shadow:1})}
+    if(r.o.say){const u=H/1000,a=cl((lt-.3)/.5)*cl((r.dur-.4-lt)/.4);const g=c.createLinearGradient(0,H*.7,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,'+.6*a+')');c.fillStyle=g;c.fillRect(0,H*.7,W,H*.3);
+      const main=wrapText(c,r.o.say,W*.86,21*u),zh=r.o.zh?wrapText(c,r.o.zh,W*.86,15*u):[],lh=21*u*1.45,zl=15*u*1.5,base=H*.865-zh.length*zl-(main.length-1)*lh;/* 留出下面进度条的位置 */
+      main.forEach((t,k)=>txt(c,t,W/2,base+k*lh,21*u,{a,color:'#fff',shadow:1}));zh.forEach((t,k)=>txt(c,t,W/2,base+(main.length-1)*lh+zl*(k+1),15*u,{a,color:'#9cc2ff',shadow:1}))}
     const edge=Math.min(lt,r.dur-lt);if(edge<.4){c.fillStyle='rgba(0,0,0,'+(1-edge/.4)+')';c.fillRect(0,0,W,H)}if(T>=tl.total-1){c.fillStyle='rgba(0,0,0,'+cl(T-(tl.total-1))+')';c.fillRect(0,0,W,H)}
-    if(document.activeElement!==rg)rg.value=T.toFixed(2);curT.textContent=fmtT(T);bar.classList.toggle('hide',!P.paused&&Date.now()>P.hideAt);
+    if(document.activeElement!==rg)rg.value=T.toFixed(2);curT.textContent=fmtT(T);bar.classList.toggle('hide',!P.paused&&!P.ended&&Date.now()>P.hideAt);const _dim=bar.classList.contains('hide')?'.35':'1';mic.style.opacity=_dim;wrap.querySelector('.rv-x').style.opacity=_dim;
     P.raf=requestAnimationFrame(frame)}
   P.raf=requestAnimationFrame(frame)}
 function close(){if(!P)return;cancelAnimationFrame(P.raf);try{P.src&&P.src.stop()}catch(_){}sndStop();musStop();if(P.ac&&P.ac.state==='suspended')P.ac.resume();P.wrap.remove();P=null}
-window.RoleVideo={matches,maybeStart,replyNote,cardHTML,text,tap,retry,open,close,_collect:collect,_prompt:promptText,_check:checkScript,_parse:parseJSON,_shots:allowedShots,_meta:shotMeta,_timeline:timeline,_draw:(n,c,w,h,t,o)=>SHOTS[n].fx.draw(c,w,h,t,o)};
+window.RoleVideo={matches,maybeStart,replyNote,cardHTML,text,tap,retry,open,close,_collect:collect,_prompt:promptText,_check:checkScript,_parse:parseJSON,_shots:allowedShots,_meta:shotMeta,_timeline:timeline,_draw:(n,c,w,h,t,o)=>SHOTS[n].fx.draw(c,w,h,t,o),_player:()=>P?{ended:P.ended,paused:P.paused,music:P.musicOn,playing:!!(MUS.mood),t:P.ac?P.ac.currentTime-P.t0:0,total:P.tl.total}:null};
 
 })();

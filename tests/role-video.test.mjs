@@ -6,9 +6,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import cp from 'node:child_process';
 import { read, ROOT, PRIV_DIR } from './_helpers.mjs';
 
 test('both bundles ship the same role-video.js, attached in every entry, without her name in it', () => {
+  /* 2026-11-02 踩坑：私人包目录默认不进版本库，role-video.js 没放行，前两次提交里根本没有它，装到手机上的是工作目录里的 */
+  const tracked = cp.execFileSync('git', ['ls-files', PRIV_DIR + 'role-video.js'], { cwd: ROOT, encoding: 'utf8' }).trim();
+  assert.equal(tracked, PRIV_DIR + 'role-video.js', '私人包的 role-video.js 必须进版本库');
   const web = read('role-video.js'), priv = read(PRIV_DIR + 'role-video.js');
   assert.equal(web, priv, '两版必须是同一份');
   assert.doesNotMatch(web, /North/, '共用文件里不能写她的名字');
@@ -54,6 +58,14 @@ async function runPage(label, entry) {
         let content = '好，等我一下。';
         if (body.includes('镜头清单')) {
           if (mode === 'bad') content = '我不太会拍视频，抱歉。';
+          else if (mode === 'en') content = JSON.stringify({ music: '温柔钢琴', scenes: [
+            { shot: '开场 · 一道光', sign: '—— 林深' },
+            { shot: '细雨', say: 'It was raining that night, and you waited for me.', zh: '那天晚上下雨，你一直在等我。' },
+            { shot: '引用卡片', quote: '你累了吗？', date: '8月', say: 'You asked if I was tired.', zh: '你问我累不累。' },
+            { shot: '星空', say: 'You stayed up until four.', zh: '你熬到了四点。' },
+            { shot: '心动', text: '你', sub: '最在意的', say: 'You matter most to me.', zh: '你是我最在意的。' },
+            { shot: '细雪', say: 'Good night.', zh: '晚安。' },
+          ] });
           else {
             const love = +(body.match(/她说「我爱你」（次）：(\d+)/) || [])[1];
             content = JSON.stringify({ music: '深夜', scenes: [
@@ -106,7 +118,7 @@ async function runPage(label, entry) {
     assert.match(got.text, /\[视频\]「我眼中的你」（你拍给她的/);
     const prompt = bodies.find((b) => b.includes('镜头清单'));
     assert.ok(prompt, '有制作剧本的请求');
-    for (const want of ['最短一分钟', '每个时期都要挑到', '准确数字', '她说「我爱你」（次）', '在一起', '她对你说的第一句话', '你累了吗？']) if (want !== '在一起') assert.ok(prompt.includes(want), '提示词里缺少：' + want);
+    for (const want of ['# 开头和结尾（一定要照这个来）', '最后一个镜头只能从下面这些里选一个', '最短一分钟', '每个时期都要挑到', '准确数字', '她说「我爱你」（次）', '在一起', '她对你说的第一句话', '你累了吗？']) if (want !== '在一起') assert.ok(prompt.includes(want), '提示词里缺少：' + want);
     assert.ok((prompt.match(/### \d{4}年\d{1,2}月：她说了/g) || []).length >= 3, '素材按月份分了时期，覆盖从第一天到今天');
     for (let i = 0; i < 80 && !bodies.some((b) => b.includes('你已经开始做了')); i++) await page.waitForTimeout(500);
     assert.ok(bodies.some((b) => b.includes('你已经开始做了')), '角色照常回一句，并知道视频在做');
@@ -115,8 +127,27 @@ async function runPage(label, entry) {
     const play = await page.evaluate(() => { const w = document.getElementById('rvPlayer'), cv = w && w.querySelector('canvas'); let lit = 0; if (cv) { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; for (let i = 0; i < d.length; i += 4000) lit += d[i] + d[i + 1] + d[i + 2] > 60 ? 1 : 0; } return { open: !!w, lit, range: !!(w && w.querySelector('input[type=range]')) }; });
     assert.ok(play.open && play.range, '全屏播放器打开了，有进度条');
     assert.ok(play.lit > 0, '画面在动（不是全黑）');
+    const mic = await page.evaluate(async () => { const b = document.querySelector('#rvPlayer .rv-mic'); b.click(); await new Promise((r) => setTimeout(r, 900)); const off = RoleVideo._player(); b.click(); await new Promise((r) => setTimeout(r, 400)); const on = RoleVideo._player(); return { off: off.music, offPlaying: off.playing, on: on.music, onPlaying: on.playing }; });
+    assert.deepEqual(mic, { off: false, offPlaying: false, on: true, onPlaying: true }, '左上角话筒关掉背景音乐、再打开');
+    await page.evaluate(() => { const r = document.querySelector('#rvPlayer input[type=range]'); r.value = String(RoleVideo._player().total - .3); r.dispatchEvent(new Event('input')); });
+    await page.waitForFunction(() => RoleVideo._player() && RoleVideo._player().ended, null, { timeout: 8000 });
+    assert.equal(await page.evaluate(() => !document.querySelector('#rvPlayer .rv-replay').hidden), true, '放完出现「重新播放」');
+    await page.evaluate(() => document.querySelector('#rvPlayer canvas').click());
+    await page.waitForTimeout(1200);
+    const again = await page.evaluate(() => RoleVideo._player());
+    assert.equal(again.ended, false, '点画面就从头再放');
+    assert.ok(again.t > .3 && again.t < 3, '重新播放从头开始，时间在走：' + again.t);
     await page.evaluate(() => RoleVideo.close());
     assert.equal(await page.evaluate(() => !!document.getElementById('rvPlayer')), false);
+    /* 配音是英文：旁白写英文，下面配中文翻译；最后一个不是收尾镜头时补一个 */
+    mode = 'en';
+    await page.evaluate((id) => { getC(id).voice = Object.assign({}, getC(id).voice, { lang: 'en' }); document.getElementById('cinput').value = '你眼中的我是什么样子'; sendText(id); }, id);
+    await page.waitForFunction((id) => msgs(id).filter((m) => m.type === 'rolevideo').length >= 2 && msgs(id).filter((m) => m.type === 'rolevideo').pop().video.status === 'done', id, { timeout: 60000 });
+    const en = await page.evaluate((id) => { const m = msgs(id).filter((x) => x.type === 'rolevideo').pop(); return m.video.script.scenes.map((s) => [s.shot, s.say || '', s.zh || '']); }, id);
+    assert.ok(bodies.some((b) => b.includes('你的配音说的是英语')), '提示词告诉他用英语写旁白');
+    assert.deepEqual(en[1], ['细雨', 'It was raining that night, and you waited for me.', '那天晚上下雨，你一直在等我。']);
+    assert.equal(en.at(-1)[0], '心动', '最后一个（细雪）不是收尾镜头，把剧本里的收尾镜头「心动」挪到最后');
+    await page.evaluate((id) => { getC(id).voice = Object.assign({}, getC(id).voice, { lang: 'zh' }); }, id);
     /* 模型写不出剧本：卡片上写原因，有重试 */
     mode = 'bad';
     await page.waitForTimeout(1500);
