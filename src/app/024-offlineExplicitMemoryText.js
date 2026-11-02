@@ -19,7 +19,7 @@ function cohabTimeTopicInput(text){return /(?:几点|现在.{0,4}(?:时间|几�
 function cohabNarrationReportsClock(text){text=String(text||'').replace(/\s+/g,'').trim();if(!text)return false;const clock=/(?:[01]?\d|2[0-3])[:：][0-5]\d|(?:凌晨|早上|上午|中午|下午|傍晚|晚上|夜里|深夜)?[零〇一二两三四五六七八九十百\d]{1,4}点(?:半|一刻|三刻|[零〇一二两三四五六七八九十百\d]{1,4}分)?/;if(!clock.test(text))return false;return /^(?:现在|当前|此刻|这会儿|这时|当下|时间|时钟|钟表|手机屏幕|墙上的钟|窗外|天色|凌晨|早上|上午|中午|下午|傍晚|晚上|夜里|深夜)/.test(text)||/(?:现在|当前|此刻|这会儿|时间|时钟|钟表).{0,12}(?:显示|指向|来到|已经|已是|正是|是)/.test(text);}
 function cohabTimeEchoAudit(text,o,currentInput){if(cohabTimeTopicInput(currentInput))return{fails:[],score:0};const current=offResponseParts(text).filter(x=>x.kind==='nar'&&cohabNarrationReportsClock(x.text)),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='旁白'&&m.source!=='me').slice(-4).filter(m=>cohabNarrationReportsClock(m.text)),fails=[];let score=0;if(current.length>1){score+=current.length*3;fails.push('同一轮多个旁白都在重复报时');}else if(current.length&&recent.length>=2){score+=4;fails.push('连续多轮旁白都把当前钟点当成开场白');}return{fails,score};}
 function cohabRepeatRepairNote(c,fails){return '[系统：上一版共同生活回复需要重写：'+fails.join('；')+'。准确时间只供内部校准先后，不要用“现在几点、时钟显示、此刻已是几点”反复给每段旁白报时；只有本轮确实在谈时间、约定、行程或作息时才自然提一次。请只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景，不复述旧旁白或旧台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
-function offlineSystem(c,query){let s=(c.persona||'')+traitDesc(c)+rolePriorityPrompt();
+function offlineSystem(c,query){if(typeof offRealTimeSync==='function'&&S.offline&&S.offline[c.id])offRealTimeSync(S.offline[c.id]);let s=(c.persona||'')+traitDesc(c)+rolePriorityPrompt();
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+=offlineRoleGuard(c);if(typeof roleThoughtFormatPrompt==='function')s+=roleThoughtFormatPrompt();
   s+='\n\n# 当前关系阶段\n'+affTone(c);if(typeof relPromptFor==='function')s+=relPromptFor(c,[query,((offData(c.id)||{}).msgs||[]).slice(-6).map(m=>m&&m.text||'').join(' ')].join(' '));/* 线下约会也认得他的家人朋友 */
@@ -378,8 +378,7 @@ function offModelDiagnosticShow(id){if(typeof window!=='undefined'&&typeof windo
 function offSetting(id){const o=offData(id);
   openModal(`<h3>约会设定</h3>
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
-   <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
-   <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
+   <div class="hint">时间按现实里此刻，不用选。</div>
    ${(()=>{const x=offReplySettings(o),opt=(v,cur,l)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`,sel='style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee"';return `<div class="field"><label>对话模型<small style="color:#888;display:block">单次约会正常回复用哪个模型；纠错仍用这条路线的副模型</small></label><select ${sel} onchange="offSettingSet('${id}','replyModel',this.value)">${opt('main',x.replyModel,'主模型（原来的规则）')}${opt('role',x.replyModel,'跟随微信角色')}${opt('aux',x.replyModel,'副模型')}</select></div><div class="field"><label>对话 API 路线<small style="color:#888;display:block">接口地址、Key 与模型组；只影响单次约会，不会切换微信</small></label><select ${sel} onchange="offSettingSet('${id}','replyApiRoute',this.value)">${opt('follow',x.replyApiRoute,'跟随微信角色路线')}${CHAT_ROUTE_NAMES.map((n,i)=>opt(String(i),x.replyApiRoute,n)).join('')}</select></div><button class="btn g" style="margin-bottom:10px" onclick="closeModal();offModelDiagnosticShow('${id}')">模型与路线诊断</button>`;})()}
    <div class="field"><label class="avline">单次约会同步到线上<span class="sw ${offlineWechatLiveOn()?'on':''}" onclick="offlineWechatLiveToggle(this)"></span></label><div class="hint" style="padding:8px 0 0">这个开关只管“一次性线下约会”。共同生活永远与微信、电话共用同一条连续上下文；两边可见记录和输出格式仍然分开，不会复制气泡。</div></div>
    <div class="field"><label class="avline">角色扮演软件使用副模型（不影响线下约会）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'角色扮演改用副模型':'角色扮演改用主模型')"></span></label></div>
@@ -387,7 +386,7 @@ function offSetting(id){const o=offData(id);
 //@@ web
    <button class="btn g" style="margin-bottom:10px" onclick="closeModal();roleInterceptDiagnosticOpen('${id}','offline')">查看上一轮拦截内容</button>
 //@@ end
-   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();save();closeModal();render();})()">保存</button></div>`);}
 function offlineWechatLiveToggle(el){S.settings=S.settings||{};S.settings.offlineWechatLive=!offlineWechatLiveOn();save();if(el&&el.classList)el.classList.toggle('on',S.settings.offlineWechatLive);toast(S.settings.offlineWechatLive?'单次约会已同步到线上':'单次约会已与线上分开；共同生活仍保持互通');}
 function offQuit(){_off=null;_offSel=null;home();return true;}
 

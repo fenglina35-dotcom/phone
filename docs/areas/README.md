@@ -815,3 +815,7 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 播放：#rvPlayer 全屏，点画面暂停，进度条能拖，旁白说话时配乐压低。配音存 imgPut('__rolevideo_<消息id>_<第几句>')（两个下划线开头，不会被当成图片）。
 - 测试：tests/role-video.test.mjs 两版真实页面走完整流程（含编的数字和非原话被丢、失败原因和重试）。样片页（她挑效果用）：https://claude.ai/artifact/TL1ewZJYAPX7wDf2fTv11A 。
 - 还没做：保存成视频文件到相册；照片缓推（用聊天里的照片）；真实模型写出来的剧本质量要她实测。
+
+## 单次约会按现实时间、AI 群聊能编辑（OFF_REAL_TIME_V1 / GROUP_MSG_EDIT_V1，2026-11-02）
+- 单次约会：邀请框去掉日期、时间、时段；约会设定去掉时间、时段两栏。offRealClock() 用 roleTimeParts 取此刻（会跟时区设置走），offRealTimeSync(o) 在 offlineSystem 和 offlineWechatLivePrompt 里每次刷新 o.when / o.daypart，所以聊得越久时间越往后走。o.when 的格式还是「YYYY-MM-DD HH:MM」，offMemLabel、查他手机的约会页照旧能读。时段的分法用原来的 dayPartNow（23 点以后算深夜）。
+- AI 群聊：gMsgMenu 加「编辑」（文字和语音文字，角色说的也能改，按钮写「编辑（某某说的）」），gEditMsg/gEditSave 只改 content 并标 edited。菜单的「↗️ 转发」「↩️ 撤回」去掉 emoji。v917（2026-08-14）定过「AI 群的 AI 发言不能编辑」，这次她明确要能改，旧测试 v917-group-permissions 改成检查能编辑、没有 emoji。

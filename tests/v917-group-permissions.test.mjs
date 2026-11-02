@@ -8,12 +8,14 @@ const migration = fs.readFileSync(
   'utf8',
 );
 
-test('AI group messages have no edit operation', () => {
+// 2026-11-02 她改了主意：AI 群聊里的消息（包括角色说的）可以编辑，菜单里不放 emoji（GROUP_MSG_EDIT_V1）。
+test('AI group message menu can edit and shows no emoji', () => {
   const start = app.indexOf('function gMsgMenu(gid,mid)');
-  const end = app.indexOf('function gForwardOne(', start);
+  const end = app.indexOf('function gDelOne(', start);
   assert.ok(start >= 0 && end > start);
-  const menu = app.slice(start, end);
-  assert.doesNotMatch(menu, /编辑|edit/i);
+  const menu = app.slice(start, app.indexOf('/* GROUP_MSG_EDIT_V1', start));
+  assert.match(menu, /gEditMsg\('\$\{gid\}','\$\{mid\}'\)">编辑/);
+  assert.doesNotMatch(menu, /\p{Extended_Pictographic}/u);
   assert.match(menu, /gForwardOne/);
   assert.match(menu, /gRecallMsg/);
   assert.match(menu, /gDelOne/);

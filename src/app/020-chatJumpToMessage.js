@@ -324,11 +324,16 @@ function gQuoteRefresh(gid){if(cur().p!=='group'||cur().id!==gid)return;const ol
 function gQuoteClear(ev){if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation();}const gid=_gquoting&&_gquoting.gid;_gquoting=null;if(gid)gQuoteRefresh(gid);}
 function gMsgMenu(gid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.type==='sys')return;const me=m.senderId==='me';
   openModal(`<h3>消息操作</h3>
-   <button class="btn g" style="margin-bottom:8px" onclick="gForwardOne('${gid}','${mid}')">↗️ 转发</button>
-   <button class="btn d" style="margin-bottom:8px" onclick="gRecallMsg('${gid}','${mid}')">↩️ 撤回${me?'':'（对方这条）'}</button>
+   ${m.type==='text'||m.type==='voice'?`<button class="btn g" style="margin-bottom:8px" onclick="gEditMsg('${gid}','${mid}')">编辑${me?'':'（'+esc(gSenderName(g,m))+'说的）'}</button>`:''}
+    <button class="btn g" style="margin-bottom:8px" onclick="gForwardOne('${gid}','${mid}')">转发</button>
+    <button class="btn d" style="margin-bottom:8px" onclick="gRecallMsg('${gid}','${mid}')">撤回${me?'':'（对方这条）'}</button>
    <button class="btn d" style="margin-bottom:8px" onclick="gDelOne('${gid}','${mid}')">删除这条</button>
    <button class="btn p" style="margin-bottom:8px" onclick="closeModal();enterGSelect('${gid}')">多选</button>
    <button class="btn g" onclick="closeModal()">取消</button>`);}
+/* GROUP_MSG_EDIT_V1（2026-11-02 她要求）：角色群聊里点一条消息可以改它的文字（角色说的也能改），菜单里不放 emoji */
+function gSenderName(g,m){const c=m&&m.senderId&&m.senderId!=='me'?getC(m.senderId):null;return c?(c.remark||c.name||'TA'):'TA';}
+function gEditMsg(gid,mid){const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid);if(!m)return;openModal(`<h3>编辑消息</h3><div class="field"><textarea id="gem_t" rows="4">${esc(m.content||'')}</textarea></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="gEditSave('${gid}','${mid}')">保存</button></div>`);}
+function gEditSave(gid,mid){const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid),el=document.getElementById('gem_t');if(!m||!el)return;const v=el.value.trim();if(!v){toast('内容不能为空');return;}m.content=v;m.edited=true;save();closeModal();render();toast('已修改');}
 function gDelOne(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;g.msgs=g.msgs.filter(m=>m.id!==mid);save();closeModal();render();toast('已删除');}
 function gRecallMsg(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const i=g.msgs.findIndex(m=>m.id===mid);if(i<0)return;const me=g.msgs[i].senderId==='me';g.msgs[i]={senderId:'me',role:'user',type:'sys',content:(me?'你':'对方')+'撤回了一条消息',time:g.msgs[i].time,id:mid};save();closeModal();render();}
 function enterGSelect(id,mode){_gmsel={id,ids:[],mode:mode==='delete'?'delete':'forward'};const p=document.getElementById('gpanel');if(p)p.classList.remove('show');try{closeModal();}catch(e){}render();}
