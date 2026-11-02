@@ -1,3 +1,10 @@
+function phFxPick(tab,k){if(tab==='screen')_phFx.sfx=k;else _phFx.bfx=k;phFxSendModal(_phFxNum,_phFxSk);}
+function phFxDrop(){_phFx.bfx='';_phFx.sfx='';_phFx.ch=[];render();}
+/* 输入框上面那条：发之前就能看见 */
+function phFxBarHTML(){if(!phFxHas())return '';
+  const text=String(_phFx.prev||''),runs=phFxRuns(text,_phFx.ch||[]),
+    tags=[_phFx.bfx?phFxName(PH_FX_BUBBLE,_phFx.bfx):'',_phFx.sfx?phFxName(PH_FX_SCREEN,_phFx.sfx):''].filter(Boolean).join(' · ');
+  return `<div class="imsg-fxbar"><b>${runs.map(phFxRunHTML).join('')||'（还没打字）'}</b>${tags?`<small>${esc(tags)}</small>`:''}<button onclick="phFxDrop()" aria-label="清掉效果">×</button></div>`;}
 /* ===== 放效果 ===== */
 /* ===== 字撑大了，气泡跟着鼓一下 =====
    她说「字体放大一般气泡就会不够用了，所以气泡也可以跟着像被里面的字撑了一样，
@@ -496,5 +503,3 @@ function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num
 //@@ private
 function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
 //@@ end
-/* 语音条在上下文和列表预览里怎么写：把原文和译文都带上，
-   不然下一轮角色就不知道自己刚才用语音说了什么 */

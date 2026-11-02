@@ -1,3 +1,17 @@
+async function pursuitStep(c){const st=pursuitState(c);if(!st||st.status!=='active')return;
+  while(pursuitMark(c,'ignored',r=>r.act==='apply'||r.act==='sms'));/* 之前的申请/短信到现在还没回应，算她没理 */
+  const plan=_pursuitPlans.get(c.id);_pursuitPlans.delete(c.id);let d=plan&&plan.result;const opts=pursuitOptions(c);if(!d||!opts.includes(d.act))d=pursuitQuickPick(c);if(!d.text)d.text=pursuitFallbackText(c,d.act);if(!pursuitActive(c)||!friendMainBlocked(c))return;
+  if(d.act==='stop'){if(d.text)await pursuitSendSms(c,d.text,true);pursuitEnd(c,'gaveup');return;}
+  if(d.act==='force'){st.steps++;st.nextAt=0;save();const ok=await pursuitForce(c,d.text);if(!ok&&pursuitActive(c)){st.nextAt=Date.now()+5000;save();}return;}
+  if(d.act==='apply'){setTimeout(()=>pursuitPlanAhead(c),0);st.steps++;const attempt=S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd').length+1,req=queueFriendRequest(c,{kind:'readd',delay:0,msg:friendReqUnique(c,d.text,attempt),source:'重新添加',intent:'想让你把我从黑名单里放出来',attempt});pursuitLogAdd(c,{act:'apply',rid:req.id,text:req.msg});friendRequestNotifyDue();st.nextAt=Date.now()+pursuitGap();save();return;}
+  if(d.act==='sms'){setTimeout(()=>pursuitPlanAhead(c),0);st.steps++;await pursuitSendSms(c,d.text,false);st.nextAt=Date.now()+pursuitGap();save();return;}
+  if(d.act==='call_own'||d.act==='call_stranger'){if(pursuitPlaceCall(c,d.act==='call_stranger')){st.steps++;st.nextAt=0;}else st.nextAt=Date.now()+5000;save();}}
+function phClearStaleSimCall(){const p=phState(),c=p.simCall;if(!c)return;const age=Date.now()-(+c.started||0),onCall=cur()&&cur().p==='phonecall';if(c.state==='incoming'&&age>45000){try{phSimIncomingMiss(c.id);}catch(_){}if(p.simCall===c){p.simCall=null;save();}return;}if(c.state==='ended'||(!onCall&&age>10*60000)){p.simCall=null;save();}}/* 来电 32 秒没接会自动算未接，但页面中途关掉那个计时就丢了，这通电话会一直卡着「通话中」 */
+function pursuitSweep(){try{phClearStaleSimCall();}catch(_){}if(_pursuitBusy||(typeof document!=='undefined'&&document.hidden))return;if(actId()!=='main')return;const now=Date.now();let due=null;
+  (S.contacts||[]).forEach(c=>{const st=pursuitState(c);if(!st||st.status!=='active')return;if(!friendMainBlocked(c)||c.deleted){pursuitEnd(c,'unblocked');return;}if(st.nextAt&&now>=st.nextAt&&(!due||st.nextAt<pursuitState(due).nextAt))due=c;});
+  if(!due)return;if(phStrangerQuietNow('call')||remoteControlActive()||wxLoginActive())return;/* 正在通话、游戏、睡眠等时先等一等，一次只让一个人追 */
+  _pursuitBusy=true;pursuitStep(due).catch(()=>{}).finally(()=>{_pursuitBusy=false;});}
+setInterval(pursuitSweep,1000);
 /* 电话结果 */
 function pursuitCallMissed(call,why){const meta=call&&call.meta,c=meta&&getC(meta.roleId),st=pursuitState(c);if(!st)return true;pursuitMark(c,why==='decline'?'declined':'missed',r=>r.act==='call_own'||r.act==='call_stranger');if(st.status==='active'){st.nextAt=Date.now()+pursuitGap();pursuitPlanAhead(c);}save();return true;}
 function pursuitCallAnswered(call){const meta=call&&call.meta,c=meta&&getC(meta.roleId);if(!pursuitState(c))return;pursuitMark(c,'answered',r=>r.act==='call_own'||r.act==='call_stranger');pursuitEnd(c,'answered');}
@@ -492,10 +506,3 @@ function phFxSendModal(num,sk){_phFxNum=num;_phFxSk=sk;
   <button class="btn g" style="margin-top:10px" onclick="phFxPick('${_phFxTab}','')">不要这个效果</button>
   <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phSendSms('${esc(num)}','${esc(sk)}')">发送</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal();render()">先不发</button>`);}
-function phFxPick(tab,k){if(tab==='screen')_phFx.sfx=k;else _phFx.bfx=k;phFxSendModal(_phFxNum,_phFxSk);}
-function phFxDrop(){_phFx.bfx='';_phFx.sfx='';_phFx.ch=[];render();}
-/* 输入框上面那条：发之前就能看见 */
-function phFxBarHTML(){if(!phFxHas())return '';
-  const text=String(_phFx.prev||''),runs=phFxRuns(text,_phFx.ch||[]),
-    tags=[_phFx.bfx?phFxName(PH_FX_BUBBLE,_phFx.bfx):'',_phFx.sfx?phFxName(PH_FX_SCREEN,_phFx.sfx):''].filter(Boolean).join(' · ');
-  return `<div class="imsg-fxbar"><b>${runs.map(phFxRunHTML).join('')||'（还没打字）'}</b>${tags?`<small>${esc(tags)}</small>`:''}<button onclick="phFxDrop()" aria-label="清掉效果">×</button></div>`;}

@@ -1,3 +1,6 @@
+/* ROLEPLAY_FORMAT_SPLIT_V1 / ROLEPLAY_COHAB_FORMAT_V1: same production parser as cohab; only attach story speaker IDs. */
+function rpReplyItems(text,id){const raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(text)):offReplyItems(roleVisibleEnvelopeText(text)),members=rpMembers(id);
+  for(const item of items){if(item.who==='ta'){let cid=members[0]&&members[0].id;const label=item.text.match(/^\s*([^\uff1a:]{1,40})[\uff1a:]\s*([\s\S]+)$/);if(label){const name=label[1].trim(),hit=members.find(m=>{const c=getC(m.id);return[c&&c.name,c&&c.remark,m.role].filter(Boolean).includes(name);});if(hit){cid=hit.id;item.text=label[2];}}item.cid=cid;}item.time=Date.now();}return items;}
 /* ROLEPLAY_REPLY_RECOVERY_V1734: waiting UI, role route, visible failure and request ownership. */
 async function rpAI(note){if(!_rp||_rp.busy)return;const session=_rp,id=session.id,c=getC(id),d=rpData(id),ownerState=S,ownerAccount=actId(),token=uid();if(!c||c.deleted||!d.active)return;session.replyToken=token;const current=()=>_rp===session&&S===ownerState&&actId()===ownerAccount&&session.replyToken===token&&rpData(id)===d&&d.active;session.busy=true;session.busyAt=Date.now();session.error='';
   try{rpRender();const rawOutput=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),requestOpt=Object.assign(rpRequestOptions(id),{unfilteredOutput:rawOutput,complete:!rawOutput}),ms=rpMembers(id);const hist=d.msgs.slice(-rpReplySettings(d).hist).map(m=>({role:(m.who==='me'||(m.who==='旁白'&&m.source==='me'))?'user':'assistant',content:m.who==='旁白'?('【'+m.text+'】'):(m.cid?(rpMemberTitle({id:m.cid,role:''})+'：'+m.text):m.text)}));if(note)hist.push({role:'user',content:note});
@@ -6,12 +9,13 @@ async function rpAI(note){if(!_rp||_rp.busy)return;const session=_rp,id=session.
     for(let _ra=0;!rawOutput&&_ra<1&&isRefusal(r);_ra++){const fix=await chatAPI([{role:'system',content:rpSystem(c)},...hist,{role:'assistant',content:r},{role:'user',content:'[系统：刚才的回复跳出了本局角色。重来：只在当前剧情里沉浸扮演；若当前话题不适合直白展开，就用角色口吻自然放慢、转场、留白或设边界。不要解释规则，不要提AI/助手/模型/程序/政策/安全。动作旁白和角色台词分开。]'},{role:'system',content:personaPin(c)+offlineFormatPin(c)+'\n但本轮只演角色扮演的虚构剧情：临时身份以本局设定为准，台词与【第三人称旁白】分行；不是单次约会或共同生活，不把游戏里的身份和事件当成现实。'}],Object.assign({},requestOpt,{aux:true,max:700,temp:.75}));if(!current())return;if(fix){r=fix;if(typeof rpRememberOutput==='function')rpRememberOutput(id,fix,'格式重试');}if(fix&&!isRefusal(fix))break;}
     const items=rpReplyItems(r,id);
     if(!items.length)throw new Error('模型没有返回可显示的剧情内容，请重试。');
-    for(let i=0;i<items.length;i++){if(!current())return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});d.msgs.push(item);save();playDing();rpRender();await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}
+    for(let i=0;i<items.length;i++){if(!current())return;const item=items[i],timing=offRevealTiming(item);Object.defineProperties(item,{_reveal:{value:true,writable:true,configurable:true},_revealStep:{value:timing.step,writable:true,configurable:true}});d.msgs.push(item);save();rpRender();await new Promise(res=>setTimeout(res,timing.total));item._reveal=false;}
   }catch(e){if(current()){session.error='角色扮演回复失败：'+offlineReplyFailureReason(e);toast(session.error,6500);}}finally{if(session.replyToken===token){session.busy=false;session.busyAt=0;}if(current())rpRender();}}
 /* ROLEPLAY_DATE_PAGE_V1: reuse the date surface, keep independent story state. */
 function rpRender(){if(cur().p==='rp')render();}
-function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:_rp.narrateMode?'旁白':'me',source:'me',text:v,time:Date.now()});save();playDing();rpRender();if(!manualReplySceneOn('roleplay'))rpAI();}
-function rpNarrate(){if(!_rp||_rp.busy)return;_rp.narrateMode=!_rp.narrateMode;const ta=$('#off_in'),btn=$('#rp_narrate');if(ta)ta.placeholder=_rp.narrateMode?'输入第三人称动作 / 场景旁白…':'写下本局台词…';if(btn){btn.classList.toggle('on',_rp.narrateMode);btn.setAttribute('aria-pressed',String(_rp.narrateMode));}}
+function rpSay(){if(!_rp||_rp.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';rpData(_rp.id).msgs.push({id:uid(),who:_rp.narrateMode?'旁白':'me',source:'me',text:v,time:Date.now()});save();rpRender();if(!manualReplySceneOn('roleplay'))rpAI();}
+/* ROLEPLAY_TOUCH_SILENT_V1: route touch to this story and consume its compatibility click. */
+function rpNarrate(fromPointer){if(!fromPointer&&_offNarrationClickEat&&Date.now()-_offNarrationClickEat<4000){_offNarrationClickEat=0;_offNarrationPointerAt=0;return;}if(!_rp||_rp.busy)return;_rp.narrateMode=!_rp.narrateMode;const ta=$('#off_in'),btn=$('#rp_narrate'),on=_rp.narrateMode;if(ta){ta.placeholder=on?'输入第三人称动作 / 场景旁白…':'写下本局台词…';const bar=ta.closest('.offinput');if(bar)bar.classList.toggle('narration-mode',on);}if(btn){btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',String(on));btn.title=on?'旁白输入已开启，再点恢复普通对话':'切换为旁白输入';}}
 function rpSaveNarrate(goOn){if(!_rp||_rp.busy)return;const ta=$('#rp_act'),v=(ta&&ta.value||'').trim();if(!v)return;rpData(_rp.id).msgs.push({id:uid(),who:'旁白',source:'me',text:v,time:Date.now()});save();closeModal();rpRender();if(goOn||!manualReplySceneOn('roleplay'))rpAI();}
 function rpReply(){const p=cur();if(p&&p.p==='rp'&&p.id&&(!_rp||_rp.id!==p.id))_rp={id:p.id,busy:false};
   /* 上一次请求卡死（切后台断网等）超过 3 分钟还在「剧情展开中」，允许重新点 */
@@ -494,14 +498,3 @@ function tvCharGift(c,cityName,dateStr){if(typeof NorthTravelFlight==='undefined
   toast((c.remark||c.name)+' 送了你一趟去'+city+'的旅行');}
 //@@ end
 // 到了出发日：提醒一下，并让角色主动提起这场待约会
-/* v1726：订了机票/火车票，当天聊天里没有「约好的日子到了」提醒——新版机票、火车票走 flightV2/railV2，
-   上面那段老提醒一看到新票就直接 return 了，只剩角色那边的出行提示（她不在线时还可能被跳过）。
-   到了出行当天，在每个同行/知情角色的聊天里放一条可见的系统提醒，每张票只放一次。 */
-function tvV2DayNotice(tr){if(!tr||tr.status!=='upcoming'||tr._dayNoticed)return false;const dd=tvDays(tr.date);if(dd===null||dd>0)return false;if(+tr.departAt&&Date.now()>+tr.departAt+43200000){tr._dayNoticed=true;return true;}
-  tr._dayNoticed=true;const kind=tr.flightV2?'航班':'火车',ids=[...new Set([...(tr.knownRoleIds||[]),...(tr.cid?[tr.cid]:[])])];
-  ids.forEach(id=>{const c=getC(id);if(!c||c.deleted)return;const name=c.remark||c.name,line=(tr.from&&tr.to?tr.from+' → '+tr.to:'')+(tr.no?' · '+kind+' '+tr.no:'')+(tr.dep?' · '+tr.dep+' 出发':'');
-    /* TRIP_DAY_WHO_V1（2026-10-21 她发现：他给她订的单人票，提示却写「和先生约好的出行日」）：按票上真正坐车的人说 */
-    const people=Array.isArray(tr.people)?tr.people.map(p=>p&&p.id):null,me=!!people&&people.includes('me'),ta=!!people&&people.includes('role:'+id),gift=tr.payer==='ta'&&tr.cid===id;
-    const head=!people?'今天是和'+name+'约好的出行日':me&&ta?'今天是和'+name+'一起出行的日子':me?'今天是你的出行日'+(gift?'（'+name+'给你订的票）':''):ta?'今天是'+name+'出行的日子':'今天有一趟'+name+'知道的出行';
-    msgs(id).push({role:'user',type:'sys',content:head+'：'+line+'，去「小鱼旅行 → 行程」看看这张票',time:Date.now(),id:uid()});});
-  return true;}

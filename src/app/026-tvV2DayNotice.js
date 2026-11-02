@@ -1,3 +1,14 @@
+/* v1726：订了机票/火车票，当天聊天里没有「约好的日子到了」提醒——新版机票、火车票走 flightV2/railV2，
+   上面那段老提醒一看到新票就直接 return 了，只剩角色那边的出行提示（她不在线时还可能被跳过）。
+   到了出行当天，在每个同行/知情角色的聊天里放一条可见的系统提醒，每张票只放一次。 */
+function tvV2DayNotice(tr){if(!tr||tr.status!=='upcoming'||tr._dayNoticed)return false;const dd=tvDays(tr.date);if(dd===null||dd>0)return false;if(+tr.departAt&&Date.now()>+tr.departAt+43200000){tr._dayNoticed=true;return true;}
+  tr._dayNoticed=true;const kind=tr.flightV2?'航班':'火车',ids=[...new Set([...(tr.knownRoleIds||[]),...(tr.cid?[tr.cid]:[])])];
+  ids.forEach(id=>{const c=getC(id);if(!c||c.deleted)return;const name=c.remark||c.name,line=(tr.from&&tr.to?tr.from+' → '+tr.to:'')+(tr.no?' · '+kind+' '+tr.no:'')+(tr.dep?' · '+tr.dep+' 出发':'');
+    /* TRIP_DAY_WHO_V1（2026-10-21 她发现：他给她订的单人票，提示却写「和先生约好的出行日」）：按票上真正坐车的人说 */
+    const people=Array.isArray(tr.people)?tr.people.map(p=>p&&p.id):null,me=!!people&&people.includes('me'),ta=!!people&&people.includes('role:'+id),gift=tr.payer==='ta'&&tr.cid===id;
+    const head=!people?'今天是和'+name+'约好的出行日':me&&ta?'今天是和'+name+'一起出行的日子':me?'今天是你的出行日'+(gift?'（'+name+'给你订的票）':''):ta?'今天是'+name+'出行的日子':'今天有一趟'+name+'知道的出行';
+    msgs(id).push({role:'user',type:'sys',content:head+'：'+line+'，去「小鱼旅行 → 行程」看看这张票',time:Date.now(),id:uid()});});
+  return true;}
 function tvCheckDue(){if(typeof NorthConcertBooking!=='undefined'&&isMain())NorthConcertBooking.checkDue();if(typeof NorthTrainBooking!=='undefined'&&isMain())NorthTrainBooking.checkDue();if(typeof NorthFlightBooking!=='undefined'&&isMain())NorthFlightBooking.checkDue();if(!isMain()||!(S.travel&&S.travel.trips))return;let ch=false;
   S.travel.trips.forEach(tr=>{if(tr&&(tr.flightV2||tr.railV2)){if(tvV2DayNotice(tr))ch=true;return;}if(tr&&tr.cohab){const d=tr.cid&&S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[tr.cid];if(d&&cohabTravelAdvance(tr.cid,d,Date.now()))ch=true;return;}if(tr.status!=='upcoming'||tr._reminded)return;const dd=tvDays(tr.date);if(dd!==null&&dd<=0){tr._reminded=true;ch=true;const c=tr.cid?getC(tr.cid):null;
     if(tr.meet===false){
@@ -487,17 +498,3 @@ async function pursuitForce(c,thought){const st=pursuitState(c);if(!st||remoteCo
   pursuitMark(c,'done',r=>r.act==='force');st.forcing=false;pursuitEnd(c,'forced');
   setTimeout(()=>scheduleReply(c.id,'[系统：你刚刚强制远程操控了'+S.me.name+'的小手机，打开微信「新的朋友」，自己点了同意，把自己从她的黑名单里拉了出来——她没有同意，是你自己做的。你清楚自己为什么这么做（她拉黑你之后，你申请、打电话、发短信都被无视了）。现在你已经回到她的微信里，按你的性格马上给她发微信：可以理直气壮、霸道、委屈、道歉或撒娇，但要承认是你自己做的，也要面对她可能的生气。不要提系统或按钮。]'),700);
   return true;}
-async function pursuitStep(c){const st=pursuitState(c);if(!st||st.status!=='active')return;
-  while(pursuitMark(c,'ignored',r=>r.act==='apply'||r.act==='sms'));/* 之前的申请/短信到现在还没回应，算她没理 */
-  const plan=_pursuitPlans.get(c.id);_pursuitPlans.delete(c.id);let d=plan&&plan.result;const opts=pursuitOptions(c);if(!d||!opts.includes(d.act))d=pursuitQuickPick(c);if(!d.text)d.text=pursuitFallbackText(c,d.act);if(!pursuitActive(c)||!friendMainBlocked(c))return;
-  if(d.act==='stop'){if(d.text)await pursuitSendSms(c,d.text,true);pursuitEnd(c,'gaveup');return;}
-  if(d.act==='force'){st.steps++;st.nextAt=0;save();const ok=await pursuitForce(c,d.text);if(!ok&&pursuitActive(c)){st.nextAt=Date.now()+5000;save();}return;}
-  if(d.act==='apply'){setTimeout(()=>pursuitPlanAhead(c),0);st.steps++;const attempt=S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd').length+1,req=queueFriendRequest(c,{kind:'readd',delay:0,msg:friendReqUnique(c,d.text,attempt),source:'重新添加',intent:'想让你把我从黑名单里放出来',attempt});pursuitLogAdd(c,{act:'apply',rid:req.id,text:req.msg});friendRequestNotifyDue();st.nextAt=Date.now()+pursuitGap();save();return;}
-  if(d.act==='sms'){setTimeout(()=>pursuitPlanAhead(c),0);st.steps++;await pursuitSendSms(c,d.text,false);st.nextAt=Date.now()+pursuitGap();save();return;}
-  if(d.act==='call_own'||d.act==='call_stranger'){if(pursuitPlaceCall(c,d.act==='call_stranger')){st.steps++;st.nextAt=0;}else st.nextAt=Date.now()+5000;save();}}
-function phClearStaleSimCall(){const p=phState(),c=p.simCall;if(!c)return;const age=Date.now()-(+c.started||0),onCall=cur()&&cur().p==='phonecall';if(c.state==='incoming'&&age>45000){try{phSimIncomingMiss(c.id);}catch(_){}if(p.simCall===c){p.simCall=null;save();}return;}if(c.state==='ended'||(!onCall&&age>10*60000)){p.simCall=null;save();}}/* 来电 32 秒没接会自动算未接，但页面中途关掉那个计时就丢了，这通电话会一直卡着「通话中」 */
-function pursuitSweep(){try{phClearStaleSimCall();}catch(_){}if(_pursuitBusy||(typeof document!=='undefined'&&document.hidden))return;if(actId()!=='main')return;const now=Date.now();let due=null;
-  (S.contacts||[]).forEach(c=>{const st=pursuitState(c);if(!st||st.status!=='active')return;if(!friendMainBlocked(c)||c.deleted){pursuitEnd(c,'unblocked');return;}if(st.nextAt&&now>=st.nextAt&&(!due||st.nextAt<pursuitState(due).nextAt))due=c;});
-  if(!due)return;if(phStrangerQuietNow('call')||remoteControlActive()||wxLoginActive())return;/* 正在通话、游戏、睡眠等时先等一等，一次只让一个人追 */
-  _pursuitBusy=true;pursuitStep(due).catch(()=>{}).finally(()=>{_pursuitBusy=false;});}
-setInterval(pursuitSweep,1000);

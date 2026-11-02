@@ -1,3 +1,5 @@
+/* 语音条在上下文和列表预览里怎么写：把原文和译文都带上，
+   不然下一轮角色就不知道自己刚才用语音说了什么 */
 function phSmsVoiceLine(m){const t=String((m&&m.text)||'');
   return '[语音]'+t+(m&&m.trans?'（中文：'+m.trans+'）':'');}
 function phSmsLineText(m){return m&&m.voice?phSmsVoiceLine(m):(m&&m.img?phSmsImgLine(m):(m&&m.text)||'');}
@@ -496,5 +498,3 @@ function coupleAlbumItems(c){if(!c||!S.couple||S.couple.cid!==c.id)return[];cons
   return out.sort((a,b)=>(+b.time||0)-(+a.time||0));}
 function coupleAlbumPromptRows(c){return typeof photoAlbumRoleRows==='function'?photoAlbumRoleRows(c).filter(r=>r.desc&&r.visionState==='success').slice(0,20).map(r=>String(r.desc).slice(0,300)):[];}
 function coupleAlbumPrompt(c){return typeof photoAlbumRolePrompt==='function'?photoAlbumRolePrompt(c):'';}
-async function coupleAlbumDescribe(c,item,sourceFactory){const prompt='这是你们共同相册里的一张真实照片。请仔细、客观地用中文描述主体、人物、动作、场景、关键文字和最明显的细节，用2到3句自然白话说清楚，让聊天角色以后能准确记得画面；不要编造看不见的内容。';const ok=await runVisionForMessage(c.id,item,sourceFactory,prompt);await saveNowAsync();if(cur().p==='couple')render();return ok;}
-function coupleAlbumUpload(){if(appLocked('album'))return;go('album');photoAlbumUploadOpen('共享相簿');}

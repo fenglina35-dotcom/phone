@@ -56,9 +56,19 @@ test('roleplay date surface, separated output and durable archives survive endin
   assert(await page.locator('.offstage.rp-date-stage').count(),'roleplay must use the date surface');assert.equal(await page.locator('#off_in').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','the real date textarea must stay transparent across its entire width');assert.equal(await page.locator('.rp-reply-bottom').evaluate(e=>{const input=document.querySelector('.offinput');return !input.contains(e)&&e.getBoundingClientRect().bottom<=input.getBoundingClientRect().top;}),true,'reply stays above the composer, aligned with the note button');
   await page.getByRole('button',{name:'外观',exact:true}).click();await page.waitForSelector('#modal.show');assert((await page.locator('#modal').innerText()).includes('角色扮演外观'));await page.evaluate(()=>closeModal());
   await page.getByRole('button',{name:'设定',exact:true}).click();assert((await page.locator('#modal').innerText()).includes('角色扮演设定'));await page.evaluate(()=>closeModal());
-  await page.locator('#rp_narrate').click();await page.locator('#off_in').fill('她把书放在桌上。');await page.getByRole('button',{name:'记下',exact:true}).click();assert.equal(await page.evaluate(()=>rpData(storyId).msgs.at(-1).who),'旁白');
+  await page.evaluate(()=>{window.storyDings=0;playDing=()=>window.storyDings++;});
+  await page.locator('#off_in').focus();
+  await page.locator('#rp_narrate').dispatchEvent('pointerdown',{pointerType:'touch',bubbles:true,cancelable:true});
+  assert.equal(await page.locator('#rp_narrate').getAttribute('aria-pressed'),'true','touch must toggle roleplay narration, not the offline session');
+  await page.locator('#rp_narrate').dispatchEvent('touchstart',{bubbles:true,cancelable:true});
+  await page.locator('#rp_narrate').dispatchEvent('click',{bubbles:true,cancelable:true});
+  assert.equal(await page.locator('#rp_narrate').getAttribute('aria-pressed'),'true','follow-up touch and click must not toggle twice');
+  assert.equal(await page.locator('.offinput').evaluate(e=>e.classList.contains('narration-mode')),true);
+  assert.equal(await page.locator('#off_in').evaluate(e=>document.activeElement===e),true,'preserve input focus');
+  await page.locator('#off_in').fill('她把书放在桌上。');await page.getByRole('button',{name:'记下',exact:true}).click();assert.equal(await page.evaluate(()=>rpData(storyId).msgs.at(-1).who),'旁白');
   await page.evaluate(()=>rpReply());await page.waitForFunction(()=>_rp&&!_rp.busy);
   const split=await page.evaluate(()=>rpData(storyId).msgs.slice(-4).map(m=>({who:m.who,text:m.text,cid:m.cid})));assert.deepEqual(split.map(m=>[m.who,m.text]),[['旁白','他合上书。'],['ta','我在等你。'],['旁白','她指了指门外。'],['ta','雨停了。']]);assert.equal(split[1].cid,await page.evaluate(()=>storyId));assert.equal(split[3].cid,await page.evaluate(()=>storyOther));
+  assert.equal(await page.evaluate(()=>window.storyDings),0,'roleplay sending and incoming lines must stay silent');
   // Editing and deleting remain attached to stored messages, not visual fragments.
   await page.evaluate(()=>{const d=rpData(storyId);window.editMid=d.msgs.find(m=>m.who==='ta').id;rpMsgMenu(storyId,editMid);});await page.locator('#rp_e').fill('我一直在等你。');await page.getByRole('button',{name:'保存',exact:true}).click();assert.equal(await page.evaluate(()=>rpData(storyId).msgs.find(m=>m.id===editMid).text),'我一直在等你。');
   // Render while the reader is looking at older lines must not pull them to the bottom.
