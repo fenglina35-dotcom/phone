@@ -18,6 +18,8 @@ function wechatContinueUserText(id,t,opt){const c=getC(id);
   if(typeof window.weddingHandleInviteRequest==='function'&&window.weddingHandleInviteRequest(c,t))return;
   /* ROLE_VIDEO_V1：她说「拍一个我在你眼中的样子」这类话 → 开始做视频，同时照常回她一句（提示他已经在做了） */
   if(typeof RoleVideo!=='undefined'&&RoleVideo.maybeStart(c,t)){scheduleReply(id,RoleVideo.replyNote());return;}
+  /* MARKET_PIN_ROLE_V1：她问情侣角色支付密码时，这一轮把她让他记着的密码带给他 */
+  {const _pinNote=typeof window.northMarketPinRoleNote==='function'?window.northMarketPinRoleNote(c,t):'';if(_pinNote){scheduleReply(id,_pinNote);return;}}
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
 //@@ web
   const remarkDiscovery=hisRemarkDiscoveryNote(c);if(remarkDiscovery)scheduleReply(id,remarkDiscovery);else if(!companionGoodMorningSchedule(c,t)&&!companionEmotionCareSchedule(c,t))scheduleReply(id);}
@@ -496,5 +498,3 @@ function repairTweetTexts(){let changed=false;(S.x&&S.x.tweets||[]).forEach(t=>{
 function parseMomentCommandLine(line){const t=normTag(line);let m=t.match(/^\[发朋友圈\|([\s\S]*?)\]$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\|([^\]]+)\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]||m[2]);return null;}
 function roleMomentRequestedUserImage(c,opt){const ask=String(opt&&opt.userText||'').trim();if(!c||!/(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片).{0,24}(?:朋友圈|官宣|动态)|(?:朋友圈|官宣|动态).{0,24}(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片)/.test(ask))return'';const recent=msgs(c.id).slice(-16);for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(m&&m.role==='user'&&m.type==='image'&&m.src&&Date.now()-(m.time||Date.now())<48*3600000)return m.src;}return'';}
 function roleMomentReferencedChatImage(c,opt){const ask=String(opt&&opt.userText||'').trim();if(!c||!/(?:上次|之前|前面|刚才|刚刚|那张).{0,16}(?:官宣照|图|图片|照片)|(?:官宣照|那张照片).{0,16}(?:发朋友圈|发动态|官宣)/.test(ask))return'';const recent=msgs(c.id).slice(-40);for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(m&&m.type==='image'&&m.src&&Date.now()-(m.time||Date.now())<30*86400000)return m.src;}const old=(S.moments||[]).filter(p=>p&&p.authorId===c.id&&(p.images||[]).some(Boolean)&&/官宣|公开|在一起|恋爱|对象|爱人/.test(String(p.text||''))).sort((a,b)=>(+b.time||0)-(+a.time||0))[0];return old&&(old.images||[]).find(Boolean)||'';}
-function roleMomentPhotoCaptionIntent(text){const ask=String(text||'').replace(/\s+/g,'').trim();return /(?:我需要你|请你|你)?发(?:一张)?(?:图|图片|照片)并配文(?:发朋友圈)?/.test(ask);}
-function roleMomentExplicitPhotoIntent(opt){const ask=String(opt&&opt.userText||'').trim();return roleMomentPhotoCaptionIntent(ask)||/(?:朋友圈|动态|官宣).{0,30}(?:配图|带图|照片|图片|官宣照|生图|生成)|(?:配图|带图|照片|图片|官宣照|生图|生成).{0,30}(?:朋友圈|动态|官宣)/.test(ask);}

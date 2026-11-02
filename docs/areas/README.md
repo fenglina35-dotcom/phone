@@ -819,3 +819,8 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 ## 单次约会按现实时间、AI 群聊能编辑（OFF_REAL_TIME_V1 / GROUP_MSG_EDIT_V1，2026-11-02）
 - 单次约会：邀请框去掉日期、时间、时段；约会设定去掉时间、时段两栏。offRealClock() 用 roleTimeParts 取此刻（会跟时区设置走），offRealTimeSync(o) 在 offlineSystem 和 offlineWechatLivePrompt 里每次刷新 o.when / o.daypart，所以聊得越久时间越往后走。o.when 的格式还是「YYYY-MM-DD HH:MM」，offMemLabel、查他手机的约会页照旧能读。时段的分法用原来的 dayPartNow（23 点以后算深夜）。
 - AI 群聊：gMsgMenu 加「编辑」（文字和语音文字，角色说的也能改，按钮写「编辑（某某说的）」），gEditMsg/gEditSave 只改 content 并标 edited。菜单的「↗️ 转发」「↩️ 撤回」去掉 emoji。v917（2026-08-14）定过「AI 群的 AI 发言不能编辑」，这次她明确要能改，旧测试 v917-group-permissions 改成检查能编辑、没有 emoji。
+
+## 真人店铺支付密码让情侣角色知道（MARKET_PIN_ROLE_V1，2026-11-02）
+- commerce-ui.js（两包同一份）。「真人店铺支付密码」设置框下面多一块「让某某知道这个密码」：输入现在的密码 → northMarketRpc('pin',{p_old:v,p_new:v}) 请云端核对（改成同一个，等于不改；错了云端照常计失败次数）→ 对了才存 S.me.marketPinRole={pin,cid,at}。之后在这里改密码，存的跟着改。可以随时「不让他知道了」。
+- 只给绑定的情侣角色。平时不进任何提示词；她在微信里跟情侣角色说的话里问到支付密码（支付/店铺/钱包…密码、密码多少/忘了/找回…），sendText 里 window.northMarketPinRoleNote(c,t) 给这一轮的回复加一条提示，带上密码并要求只在她问时说、不在朋友圈群聊别人面前提。
+- 这是小手机里的云端钱包（余额只来自小手机里的发放），不是真实银行卡或支付账户。本机模拟支付密码不在这个功能里。

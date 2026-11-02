@@ -57,6 +57,7 @@ const PERMANENT_FIXES = [
   {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
+  {release:"private v1881 / web v1877",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码可以让情侣角色知道（云端核对后存本机，只在她问到那一轮告诉他）",marker:"MARKET_PIN_ROLE_V1"},
   {release:"private v1880 / web v1876",scope:"both",least:1,file:"app.js",name:"单次约会不用选时间，按现实里此刻（和共同生活一样）",marker:"OFF_REAL_TIME_V1"},
   {release:"private v1880 / web v1876",scope:"both",least:1,file:"app.js",name:"AI 群聊消息可以编辑（角色说的也能改），菜单不放 emoji",marker:"GROUP_MSG_EDIT_V1"},
   {release:"private v1880 / web v1876",scope:"both",least:1,file:"role-video.js",name:"角色拍「我眼中的你」视频（说指定的话触发、进度、失败原因与重试、全屏播放）",marker:"ROLE_VIDEO_V1"},

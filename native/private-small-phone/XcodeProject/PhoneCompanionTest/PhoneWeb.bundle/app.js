@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1880'){
+if(window.__NORTH_SHELL_BUILD__!=='1881'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1880 · 角色视频与约会现实时间';
+const APP_VER='v1881 · 角色记得店铺支付密码';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -16572,6 +16572,8 @@ function wechatContinueUserText(id,t,opt){const c=getC(id);
   if(typeof window.weddingHandleInviteRequest==='function'&&window.weddingHandleInviteRequest(c,t))return;
   /* ROLE_VIDEO_V1：她说「拍一个我在你眼中的样子」这类话 → 开始做视频，同时照常回她一句（提示他已经在做了） */
   if(typeof RoleVideo!=='undefined'&&RoleVideo.maybeStart(c,t)){scheduleReply(id,RoleVideo.replyNote());return;}
+  /* MARKET_PIN_ROLE_V1：她问情侣角色支付密码时，这一轮把她让他记着的密码带给他 */
+  {const _pinNote=typeof window.northMarketPinRoleNote==='function'?window.northMarketPinRoleNote(c,t):'';if(_pinNote){scheduleReply(id,_pinNote);return;}}
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
   const remarkDiscovery=hisRemarkDiscoveryNote(c);if(remarkDiscovery)scheduleReply(id,remarkDiscovery);else if(!companionGoodMorningSchedule(c,t)&&!companionEmotionCareSchedule(c,t)){if(opt&&opt.robotVoice&&manualReplySceneOn('wechat'))manualReply(id);else scheduleReply(id);}}
 /* ===== 聊天引用 ===== */

@@ -36,7 +36,7 @@
   "033-wipeContact.js",
   "034-roleServerPushWakePull.js",
   "035-chatPanelKeyboardDismiss.js",
-  "036-roleMomentGenerateRequestedImage.js",
+  "036-roleMomentPhotoCaptionIntent.js",
   "037-wxLoginSnapshotNorm.js",
   "038-sleep.js",
   "039-callScreenRealtimeTick.js",
