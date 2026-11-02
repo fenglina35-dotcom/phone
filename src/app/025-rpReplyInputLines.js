@@ -1,5 +1,11 @@
 /* ROLEPLAY_FORMAT_SPLIT_V1 / ROLEPLAY_COHAB_FORMAT_V1: same production parser as cohab; only attach story speaker IDs. */
-function rpReplyItems(text,id){const raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(text)):offReplyItems(roleVisibleEnvelopeText(text)),members=rpMembers(id);
+/* ROLEPLAY_INLINE_BOUNDARY_V1: restore omitted line breaks at explicit story boundaries before the shared parser. */
+function rpReplyInputLines(text,members){
+  const names=[...new Set(members.flatMap(m=>{const c=getC(m.id);return[c&&c.name,c&&c.remark,m.role];}).filter(n=>typeof n==='string'&&n.trim()).map(n=>n.trim()))].sort((a,b)=>b.length-a.length),labels=names.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const speaker=labels.length?new RegExp('(^|[\\s。！？!?…])((?:'+labels.join('|')+')\\s*[：:])','g'):null;
+  return String(text==null?'':text).split(/\r?\n/).map(line=>{const normalized=line.split(/(【[^【】]+】)/).filter(part=>part.trim()).map(part=>/^\s*【/.test(part)||!speaker?part:part.replace(speaker,'$1\n$2')).join('\n');return normalized===line?line:normalized.split('\n').map(part=>part.trim()).filter(Boolean).join('\n');}).join('\n');
+}
+function rpReplyItems(text,id){const members=rpMembers(id),input=rpReplyInputLines(text,members),raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(input)):offReplyItems(roleVisibleEnvelopeText(input));
   for(const item of items){if(item.who==='ta'){let cid=members[0]&&members[0].id;const label=item.text.match(/^\s*([^\uff1a:]{1,40})[\uff1a:]\s*([\s\S]+)$/);if(label){const name=label[1].trim(),hit=members.find(m=>{const c=getC(m.id);return[c&&c.name,c&&c.remark,m.role].filter(Boolean).includes(name);});if(hit){cid=hit.id;item.text=label[2];}}item.cid=cid;}item.time=Date.now();}return items;}
 /* ROLEPLAY_REPLY_RECOVERY_V1734: waiting UI, role route, visible failure and request ownership. */
 async function rpAI(note){if(!_rp||_rp.busy)return;const session=_rp,id=session.id,c=getC(id),d=rpData(id),ownerState=S,ownerAccount=actId(),token=uid();if(!c||c.deleted||!d.active)return;session.replyToken=token;const current=()=>_rp===session&&S===ownerState&&actId()===ownerAccount&&session.replyToken===token&&rpData(id)===d&&d.active;session.busy=true;session.busyAt=Date.now();session.error='';

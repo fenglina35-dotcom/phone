@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1887'){
+if(window.__NORTH_SHELL_BUILD__!=='1888'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1887 · 角色扮演可选自然推进';
+const APP_VER='v1888 · 角色扮演副模型旁白台词分离';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -11657,7 +11657,13 @@ function rpSystem(c){const d=rpData(c.id);const ms=rpMembers(c.id);
   if(d.advancePlot===true)s+='\n\n# 自然推进剧情\n你和对方是在共同演故事。你主要扮演自己的本局身份，同时可以适度推动情节，不要总等对方安排下一步。\n- 先接住眼前的互动，再决定是否推进。认真谈心、亲近或安静相处时，可以停留，把当下演细腻，不必制造事件。\n- 从刚才的话、正在做的事、当前环境以及已有线索中自然接出下一步。主动提出打算、透露一件往事、兑现约定或让已有事件出现后续，都算推进，不必依赖突然闯入的人。\n- 新变化要符合背景，有来由、有后续。优先发展已有的人物、物品和未完成的事情；不要每轮发生意外，也不要反复靠误会、争吵或危险制造情绪。\n- 每轮只推进适量内容，留在对方能自然接话或行动的位置。不要替对方说话、决定动作或心理，不把事情从发生到解决全部演完，也不必每轮用问题或选项收尾。\n- 对方接住线索就顺着发展；对方换方向就跟随调整，不强拉回预设路线。\n- 必要时可临时扮演配角，但重点仍是你与对方的互动。配角有自己的语气和有限见闻，不全知，不抢戏；不要把配角身份、台词或经历当成你的。已参演角色仍按原名单区分。\n- 临时配角的行动和原话写在独立的【第三人称旁白】中，明确谁在说话，例如：【店员推开门，低声说：“您订的书到了。”】。这仍是原有旁白格式，不另创标签；不要把临时配角的话写成主要角色的普通台词气泡。主要角色及已参演角色的台词仍遵循原格式。\n- 直接演出，不说“现在推进剧情”，不解释幕后安排。本局仍是虚构游戏，临时身份不改变现实身份与关系。';
   return s+offlineFormatPin(c);}
 /* ROLEPLAY_FORMAT_SPLIT_V1 / ROLEPLAY_COHAB_FORMAT_V1: same production parser as cohab; only attach story speaker IDs. */
-function rpReplyItems(text,id){const raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(text)):offReplyItems(roleVisibleEnvelopeText(text)),members=rpMembers(id);
+/* ROLEPLAY_INLINE_BOUNDARY_V1: restore omitted line breaks at explicit story boundaries before the shared parser. */
+function rpReplyInputLines(text,members){
+  const names=[...new Set(members.flatMap(m=>{const c=getC(m.id);return[c&&c.name,c&&c.remark,m.role];}).filter(n=>typeof n==='string'&&n.trim()).map(n=>n.trim()))].sort((a,b)=>b.length-a.length),labels=names.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const speaker=labels.length?new RegExp('(^|[\\s。！？!?…])((?:'+labels.join('|')+')\\s*[：:])','g'):null;
+  return String(text==null?'':text).split(/\r?\n/).map(line=>{const normalized=line.split(/(【[^【】]+】)/).filter(part=>part.trim()).map(part=>/^\s*【/.test(part)||!speaker?part:part.replace(speaker,'$1\n$2')).join('\n');return normalized===line?line:normalized.split('\n').map(part=>part.trim()).filter(Boolean).join('\n');}).join('\n');
+}
+function rpReplyItems(text,id){const members=rpMembers(id),input=rpReplyInputLines(text,members),raw=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered(),items=raw?modelUnfilteredOfflineItems(modelUnfilteredText(input)):offReplyItems(roleVisibleEnvelopeText(input));
   for(const item of items){if(item.who==='ta'){let cid=members[0]&&members[0].id;const label=item.text.match(/^\s*([^\uff1a:]{1,40})[\uff1a:]\s*([\s\S]+)$/);if(label){const name=label[1].trim(),hit=members.find(m=>{const c=getC(m.id);return[c&&c.name,c&&c.remark,m.role].filter(Boolean).includes(name);});if(hit){cid=hit.id;item.text=label[2];}}item.cid=cid;}item.time=Date.now();}return items;}
 /* ROLEPLAY_REPLY_RECOVERY_V1734: waiting UI, role route, visible failure and request ownership. */
 async function rpAI(note){if(!_rp||_rp.busy)return;const session=_rp,id=session.id,c=getC(id),d=rpData(id),ownerState=S,ownerAccount=actId(),token=uid();if(!c||c.deleted||!d.active)return;session.replyToken=token;const current=()=>_rp===session&&S===ownerState&&actId()===ownerAccount&&session.replyToken===token&&rpData(id)===d&&d.active;session.busy=true;session.busyAt=Date.now();session.error='';
