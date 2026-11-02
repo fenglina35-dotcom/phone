@@ -57,8 +57,8 @@ const PERMANENT_FIXES = [
   {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
-  {release:"pending",scope:"both",least:1,file:"app.js",name:"主屏组件玻璃画出纯黑就不贴、重读壁纸，并在一键体检记下原因",marker:"HOME_GLASS_BLACK_GUARD_V1"},
-  {release:"pending",scope:"both",least:1,file:"role-video.js",name:"做好的角色视频重开小手机还在（状态变了就让聊天记录整包重存）",marker:"MESSAGES_CHANGED_V1"},
+  {release:"private v1885 / web v1881",scope:"both",least:1,file:"app.js",name:"主屏组件玻璃画出纯黑就不贴、重读壁纸，并在一键体检记下原因",marker:"HOME_GLASS_BLACK_GUARD_V1"},
+  {release:"private v1885 / web v1881",scope:"both",least:1,file:"role-video.js",name:"做好的角色视频重开小手机还在（状态变了就让聊天记录整包重存）",marker:"MESSAGES_CHANGED_V1"},
   {release:"private v1884 / web v1880",scope:"both",least:1,file:"role-video.js",name:"角色视频结尾尽量由角色自己选（清单打乱、最后再提醒、没选再问一次，补的结尾带旁白）",marker:"ENDING_CHOICE_V2"},
   {release:"private v1883 / web v1879",scope:"both",least:1,file:"app.js",name:"角色写信不再因为和很短的旧信「像」就被扔掉；只有几乎照抄才不发，并在调用记录里写原因",marker:"LETTER_REPEAT_FAIR_V1"},
   {release:"private v1881 / web v1877",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码可以让情侣角色知道（云端核对后存本机，只在她问到那一轮告诉他）",marker:"MARKET_PIN_ROLE_V1"},
@@ -2021,3 +2021,6 @@ for(const file of [WEB,PRIVATE])test(file+': search, batched translation, group 
 for(const file of [WEB,PRIVATE])test(file+': grudge jail requires role announcement before entry',()=>{const s=read(file);for(const marker of ['GRUDGE_JAIL_ANNOUNCE_V1','s+=roleGrudgeJailPrompt(c)','announcementSaved===true&&roleJailAnnounced(decisionText,c)','content=roleJailTakeTags(content,_appControlTags)','content=roleJailTakeTags(content,_callJailTags)','content=roleJailTakeTags(content,_spyJailTags)'])assert(s.includes(marker),marker);assert(!s.includes('if(!_natural&&_gn>=8'));});
 
 test('APNs environment recovery only follows an explicit BadDeviceToken rejection',()=>{const s=read('supabase/functions/phone-role-push/index.ts');assert(s.includes('APNS_ENV_FALLBACK_V1'));assert(s.includes('detail?.reason === "BadDeviceToken"'));assert(s.includes('if (alternate.ok) return'));});
+
+// 角色扮演复用约会页面，但剧情、存档与身份保持独立。
+test('roleplay keeps date surface, strict narration and archive-before-summary in both bundles',()=>{for(const file of [WEB,PRIVATE]){const app=read(file);for(const marker of ['ROLEPLAY_DATE_PAGE_V1','ROLEPLAY_SHARED_DATE_SURFACE_V2','ROLEPLAY_ARCHIVE_FIRST_V1','ROLEPLAY_FORMAT_SPLIT_V1','ROLEPLAY_COHAB_FORMAT_V1','ROLEPLAY_END_MESSAGE_V1','rpSummarizeArchive','rp-date-stage'])assert(app.includes(marker),file+': '+marker);}});

@@ -1,3 +1,33 @@
+function phSmsVoiceLine(m){const t=String((m&&m.text)||'');
+  return '[语音]'+t+(m&&m.trans?'（中文：'+m.trans+'）':'');}
+function phSmsLineText(m){return m&&m.voice?phSmsVoiceLine(m):(m&&m.img?phSmsImgLine(m):(m&&m.text)||'');}
+function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;num=phDigits(num);sk=sk||num;
+  /* 只有真角色那条线认语音标签：陌生号那边压根没拿到这个用法 */
+  const vt=c&&typeof parseVoiceTagLine==='function'?parseVoiceTagLine(phCleanSmsText(text)):null;
+  const tag=vt?null:phFxParseTags(phCleanSmsText(text));
+  if(!vt){text=tag.text.slice(0,240);if(!text)return;}
+  const viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,arr=phSmsArr(num,sk);
+  const m={id:uid(),from:'them',text,time:Date.now(),read:viewing};
+  if(vt){
+    const say=[...String(vt.text||'')].slice(0,VOICE_MAX_CHARS).join('').trim();
+    if(!say)return;
+    /* 复用微信那一套：type/role/content 都按微信语音消息的形状存，
+       warmVoiceMsg、speakMsg、refreshVoiceBubble 就能原样拿来用 */
+    m.voice=1;m.type='voice';m.role='assistant';m.content=say;m.text=say;
+    const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(say):null,_say=_vx?_vx.text:say;if(_vx){m.content=_say;m.text=_say;m.voicePerf=_vx.perf;m.voiceSpatial=_vx.spatial;}
+    m.trans=String(vt.trans||'').trim();
+    if(vt.cue)m.voiceCue=vt.cue;
+    m.dur=voiceEstimatedSeconds(say);if(_vx)m.dur=voiceEstimatedSeconds(_say);
+    m.showText=false;
+  }
+  else{if(tag.fx)m.fx=tag.fx;if(tag.bfx)m.bfx=tag.bfx;if(tag.sfx)m.sfx=tag.sfx;}
+  arr.push(m);if(arr.length>300)arr.splice(0,arr.length-300);
+  /* 镜像进微信的还是干净正文，标签和效果都不带过去 */
+  phMirrorSMS(num,'them',m.voice?(m.text+(m.trans?'（'+m.trans+'）':'')):text);save();phSound('sms');
+  if(m.voice&&c&&ttsApiOn(c)){m._ttsLoading=true;scheduleVoiceWarm(m,c,voiceProgressiveOn());}
+  if(!viewing)phSmsNotify(num,m.voice?'给你发来一条语音':text,c);
+  if(viewing){render();if(phMsgHasFx(m))setTimeout(()=>phFxPlay(m,$('#smsbody')),140);}
+  return m;}
 /* 点一下语音条就放；放过一次就把文字（和外语的中文翻译）留在下面 */
 function phVoiceTap(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id===mid);if(!m||!m.voice)return;
   const x=phFind(num),c=x&&x.kind==='role'?getC(x.id):null;
@@ -468,89 +498,3 @@ function coupleAlbumPromptRows(c){return typeof photoAlbumRoleRows==='function'?
 function coupleAlbumPrompt(c){return typeof photoAlbumRolePrompt==='function'?photoAlbumRolePrompt(c):'';}
 async function coupleAlbumDescribe(c,item,sourceFactory){const prompt='这是你们共同相册里的一张真实照片。请仔细、客观地用中文描述主体、人物、动作、场景、关键文字和最明显的细节，用2到3句自然白话说清楚，让聊天角色以后能准确记得画面；不要编造看不见的内容。';const ok=await runVisionForMessage(c.id,item,sourceFactory,prompt);await saveNowAsync();if(cur().p==='couple')render();return ok;}
 function coupleAlbumUpload(){if(appLocked('album'))return;go('album');photoAlbumUploadOpen('共享相簿');}
-async function coupleAlbumRetry(id){const c=S.couple&&getC(S.couple.cid),item=coupleAlbumStore().find(x=>String(x.id)===String(id));if(!c||!item||!item.src||item.visionState==='pending')return;closeModal();toast('正在重新理解这张照片');const ok=await coupleAlbumDescribe(c,item,()=>visionDataURLSource(item.src,1200,.74));toast(ok?'角色已经能看到这张共同相册照片':'识图仍失败：'+String(item.visionError||'请检查图片理解线路').slice(0,90));coupleAlbumOpen();}
-async function coupleAlbumDelete(source,id){if(id==null){id=source;source='album';}source=String(source||'album');id=String(id||'');const item=(S.couple&&getC(S.couple.cid))&&coupleAlbumItems(getC(S.couple.cid)).find(x=>String(x.source)===source&&String(x.id)===id);if(!item||!await uiConfirm('从共同相册删除这一张照片？\n\n只会从共同相册隐藏这一张，不会删除微信聊天里的原图或其他照片。',{danger:true,yes:'删除这一张'}))return;if(source==='album'){const arr=coupleAlbumStore(),i=arr.findIndex(x=>String(x.id)===id);if(i>=0)arr.splice(i,1);}else{const key=source+':'+id,hidden=coupleAlbumHidden();if(!hidden.includes(key))hidden.push(key);if(hidden.length>500)hidden.splice(0,hidden.length-500);}await saveNowAsync();if($('#modal')&&$('#modal').classList.contains('show'))coupleAlbumOpen();else render();toast('已从共同相册删除这一张');}
-function coupleAlbumOpen(){openApp('album');}
-/* COUPLE_REDESIGN_V1（2026-10-21 她画的设计图）：情侣空间三页改成卡片首页——甜蜜日常 / 管控授权 / 伴生设备。
-   原来的每个区块（共同目标、纪念日、睡眠、报备、小账本、授权、禁言、钱包、限时、盯防、小黑屋、出门审批、登录微信、远程操控、伴生设备整页）
-   原样保留，点卡片进二级页 go('couple',{list:1,sub}) 显示，返回键回到卡片首页；coupleJump 和伴生入口按区块 id 找到对应二级页。
-   照片在 assets/couple-space/（Codex 生成），没有图片时用深色渐变，不影响功能。 */
-const COUPLE_SUBS={
-  goals:{t:'共同目标',tab:1,ids:['cou_goals']},anniv:{t:'纪念日',tab:1,ids:['cou_anniv','cou_startdate']},wedding:{t:'婚书收藏夹',tab:1,ids:['cou_wedding']},
-  sleep:{t:'睡眠',tab:1,ids:['cou_sleep']},report:{t:'报备',tab:1,ids:['cou_report']},behavior:{t:'行为小账本',tab:1,ids:['cou_behavior']},
-  tasks:{t:'任务设置',tab:1,ids:['cou_tasks']},screen:{t:'屏幕时长导入',tab:1,ids:[]},
-  all1:{t:'一起过日子',tab:1,ids:['cou_sleep','cou_report','cou_goals','cou_anniv','cou_startdate','cou_behavior','cou_wedding','cou_tasks']},
-  apps:{t:'应用与聊天',tab:2,ids:['cou_grant','cou_album','cou_watch']},wallet:{t:'钱包与限额',tab:2,ids:['cou_wallet','cou_limit']},
-  remote:{t:'远程与登录',tab:2,ids:['cou_wxlogin','cou_remote']},star:{t:'重点关注',tab:2,ids:['cou_star']},jail:{t:'小黑屋',tab:2,ids:['cou_jail']},
-  outpass:{t:'出门审批',tab:2,ids:['cou_outpass']},device:{t:'伴生设备',tab:3,ids:[]}};
-const COUPLE_ID_SUB={cou_goals:'goals',cou_anniv:'anniv',cou_wedding_collection:'wedding',cou_sleep:'sleep',cou_report:'report',cou_behavior:'behavior',cou_tasks:'tasks',
-  cou_shortcut_screen_time:'screen',cou_screen_cloud:'screen',cou_album:'apps',cou_grant:'apps',cou_gag_auth:'apps',cou_locks:'apps',cou_wallet:'wallet',cou_limit:'wallet',cou_star:'star',
-  cou_jail:'jail',cou_outpass:'outpass',cou_wxlogin:'remote',cou_remote:'remote'};
-function coupleOpen(sub,id){const d=COUPLE_SUBS[sub];if(!d)return;_couTab=d.tab;if(d.tab===3&&typeof companionPollSnapshot==='function'){try{_companionPanelHealthPending=true;}catch(_){}companionPollSnapshot(true);}go('couple',{list:1,sub});if(id)setTimeout(()=>jumpToSection(id),80);}
-function coupleNextAnniv(cp){const list=(cp&&cp.anniversaries||[]).filter(a=>a&&/^\d{4}-\d{2}-\d{2}$/.test(a.date||'')),t=new Date();t.setHours(0,0,0,0);let best=null;
-  list.forEach(a=>{const p=a.date.split('-').map(Number);let d=new Date(t.getFullYear(),p[1]-1,p[2]);if(d<t)d=new Date(t.getFullYear()+1,p[1]-1,p[2]);const left=Math.round((d-t)/86400e3);if(!best||left<best.left)best={title:a.title||'纪念日',left};});return best;}
-function coupleIcon(name,size,color){const z=size||22,s='stroke="'+(color||'currentColor')+'" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"',P={
-  grid:'<rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/>',
-  door:'<path d="M5 21V4.5L14 3v18"/><path d="M14 4.5h4.5V21"/><path d="M3 21h18"/><path d="M11 12h.01"/>',
-  bars:'<path d="M5 20V10"/><path d="M12 20V5"/><path d="M19 20v-7"/><path d="M3 20.5h18"/>',
-  sliders:'<path d="M6 4v16"/><path d="M12 4v16"/><path d="M18 4v16"/><circle cx="6" cy="9" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="18" cy="8" r="2"/>',
-  list:'<rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h4"/>'};
-  return P[name]?'<svg viewBox="0 0 24 24" width="'+z+'" height="'+z+'" '+s+' style="vertical-align:middle;flex:none">'+P[name]+'</svg>':svgIc(name,z,color);}
-const COUPLE_CSS=`<style>
-.cs{color:#eee;padding-bottom:10px}.cs .serif{font-family:"Songti SC","STSong","Noto Serif SC","Source Han Serif SC",serif}
-.cs-head{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 14px 0;gap:6px}
-.cs-p{width:34%;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}.cs-p b{font-weight:500;font-size:17px;color:#f2ece8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cs-av{width:min(100px,26vw);height:min(100px,26vw);border-radius:50%;overflow:hidden;border:1px solid rgba(255,255,255,.28);box-shadow:0 8px 24px rgba(0,0,0,.5);flex:none}
-.cs-av .avatar,.cs-av img{width:100%!important;height:100%!important;border-radius:50%!important;margin:0!important;object-fit:cover;font-size:34px!important}
-.cs-mid{flex:1;min-width:0;text-align:center;padding-top:14px}.cs-mid .ln{display:flex;align-items:center;gap:6px;color:#e89db5}.cs-mid .ln i{flex:1;border-top:1px dashed rgba(255,255,255,.3)}
-.cs-mid small{display:block;color:#c9c0c4;font-size:12px;margin-top:4px}.cs-mid .n{font-size:52px;line-height:1.05;color:#f0a9c1;margin-top:6px}.cs-mid .n span{font-size:17px;color:#f2ece8;margin-left:4px}
-.cs-mid .since{font-size:12.5px;color:#c9c0c4;letter-spacing:.5px}.cs-cats{display:block;width:62%;max-width:260px;margin:4px auto 0;height:auto}
-.cs-tabs{display:flex;justify-content:space-around;margin:14px 8px 4px}.cs-tabs .minibtn{background:none!important;border:0!important;box-shadow:none!important;color:#a9a1a6!important;font-size:16px!important;padding:8px 6px 10px!important;position:relative;flex:none!important}
-.cs-tabs .minibtn[data-on="1"]{color:#f0a9c1!important}.cs-tabs .minibtn[data-on="1"]:after{content:"";position:absolute;left:4px;right:4px;bottom:0;height:3px;border-radius:3px;background:#f0a9c1}
-.cs-card{margin:12px 14px;border-radius:18px;overflow:hidden;background:#141315;border:1px solid rgba(255,255,255,.07);position:relative}
-.cs-hero{position:relative;padding:22px 20px 20px;min-height:178px;background-size:cover;background-position:right center;background-repeat:no-repeat}
-.cs-hero h2{margin:0;font-size:31px;font-weight:600;color:#f6efe9;letter-spacing:1px}.cs-hero p{margin:8px 0 0;color:#cdc4c8;font-size:13.5px}
-.cs-big{display:flex;align-items:baseline;gap:8px;margin-top:10px;color:#f2ece8;font-size:17px}.cs-big b{font-size:54px;color:#f0a9c1;font-weight:500;line-height:1}
-.cs-link{display:inline-block;margin-top:12px;color:#f2ece8;font-size:14px;cursor:pointer}.cs-link.pink{color:#f0a9c1}
-.cs-strip{display:flex;align-items:center;gap:14px;padding:16px 18px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}.cs-strip .tx{flex:1;min-width:0}.cs-strip .tx b{display:block;font-size:17px;font-weight:500;color:#f2ece8}.cs-strip .tx small{color:#a39aa0;font-size:12.5px}
-.cs-split{display:flex;border-top:1px solid rgba(255,255,255,.07)}.cs-split>div{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;padding:16px 8px;cursor:pointer;font-size:14px;color:#e9e2e5;min-width:0}.cs-split>div+div{border-left:1px solid rgba(255,255,255,.1)}
-.cs-split b{font-size:28px;color:#f0a9c1;font-weight:500}.cs-h{display:flex;justify-content:space-between;align-items:baseline;margin:24px 16px 10px}.cs-h h3{margin:0;font-size:24px;font-weight:600;color:#f6efe9}.cs-h span{color:#cfc7cb;font-size:13px;cursor:pointer}
-.cs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 14px}.cs-half{position:relative;border-radius:16px;min-height:142px;padding:16px;overflow:hidden;background-color:#17151a;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.06);cursor:pointer;display:flex;flex-direction:column}
-.cs-half .t{display:flex;align-items:center;gap:10px;font-size:18px;color:#f6efe9}.cs-half small{display:block;margin-top:10px;color:#cdc4c8;font-size:12.5px;line-height:1.5}
-.cs-pill{align-self:flex-start;margin-top:auto;border:1.5px solid #f0a9c1;color:#f0a9c1;background:rgba(0,0,0,.25);border-radius:999px;padding:7px 16px;font-size:14px;cursor:pointer}
-.cs-chips{display:flex;flex-wrap:nowrap;white-space:nowrap;gap:5px;margin-top:14px;color:#ece6e8;font-size:13px}.cs-chips span{cursor:pointer}.cs-chips i{font-style:normal;color:#8f878c}
-.cs-row{display:flex;align-items:center;gap:16px;padding:16px 4px;margin:0 14px;border-top:1px solid rgba(255,255,255,.08);cursor:pointer}.cs-row .ic{width:44px;display:flex;justify-content:center}.cs-row .tx{flex:1;min-width:0}
-.cs-row .tx b{display:block;font-size:18px;font-weight:500;color:#f2ece8}.cs-row .tx small{color:#a39aa0;font-size:12.5px}.cs-row .r{color:#f0a9c1;font-size:15px}.cs-row .ar{color:#cfc7cb;font-size:20px}
-.cs-foot{display:flex;margin:6px 14px 0;border-top:1px solid rgba(255,255,255,.08)}.cs-foot>div{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 4px;color:#cfc7cb;font-size:13.5px;cursor:pointer;min-width:0;white-space:nowrap}.cs-foot>div+div{border-left:1px solid rgba(255,255,255,.12)}
-.cs-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f0a9c1;margin-right:8px;vertical-align:middle}.cs-stats{display:flex;border-top:1px solid rgba(255,255,255,.07)}.cs-stats>div{flex:1;text-align:center;padding:14px 4px 12px}.cs-stats>div+div{border-left:1px solid rgba(255,255,255,.1)}
-.cs-stats b{font-size:36px;color:#f0a9c1;font-weight:500}.cs-stats em{font-style:normal;font-size:18px;color:#f0a9c1}.cs-stats small{display:block;color:#cdc4c8;font-size:12.5px;margin-top:2px}
-#couplescroll{background:#000!important}.page:has(#couplescroll) .nav{background:#000!important;border-bottom:1px solid rgba(255,255,255,.05)!important;box-shadow:none!important}
-.cs-card,.cs-half{background-color:#141315}
-.cs-sub{padding-top:4px;color:#ece6e8}.cs-sub .section{background:#141315!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:18px!important;margin:12px 14px!important;box-shadow:none!important;color:#ece6e8!important;overflow:hidden}
-.cs-sub .section>div:first-child[style*="border-bottom"]{color:#f2ece8!important;font-family:"Songti SC","STSong","Noto Serif SC",serif;font-size:17px!important;font-weight:500!important;letter-spacing:.5px!important;padding:15px 16px!important;border-bottom-color:rgba(255,255,255,.07)!important}
-.cs-sub .section>div:first-child[style*="border-bottom"]>svg{stroke:#f0a9c1}
-.cs-sub .it{border-color:rgba(255,255,255,.07)!important;color:#ece6e8!important;background:transparent!important}.cs-sub .it .v{color:#a39aa0!important}.cs-sub small{color:#9b9297!important}
-.cs-sub .sw{background:#4a474d!important;border-color:transparent!important}.cs-sub .sw.on{background:#f0a9c1!important;border-color:#f0a9c1!important}
-.cs-sub .minibtn{background:transparent!important;border:1px solid rgba(240,169,193,.85)!important;color:#f0a9c1!important;border-radius:999px!important;box-shadow:none!important}
-.cs-sub .btn.p,.cs-sub .btn.g{background:transparent!important;border:1.5px solid #f0a9c1!important;color:#f0a9c1!important;border-radius:999px!important;box-shadow:none!important}.cs-sub .btn.p svg{stroke:#f0a9c1}
-.cs-sub .btn.d{background:transparent!important;border:1.5px solid #ff5a6e!important;color:#ff5a6e!important;border-radius:999px!important;box-shadow:none!important}
-.cs-sub .bill{background:rgba(255,255,255,.04)!important;border:1px solid rgba(255,255,255,.05)!important;color:#ece6e8!important}.cs-sub .empty{color:#8f878c!important}
-.cs-sub input[type=number],.cs-sub input[type=text],.cs-sub input[type=date],.cs-sub select{background:#2c2a2e!important;border:1px solid #3d3a3f!important;color:#ece6e8!important}
-#couplescroll .cs #coupage3{background:none!important;margin:0!important;padding:0!important}
-#couplescroll #coupage3.cs-sub{background:none!important;margin:0!important;padding:4px 0 30px!important}
-#couplescroll #coupage3.cs-sub>.section{background:#141315!important;width:auto!important;margin:12px 14px!important;border-radius:18px!important;box-shadow:none!important;border:1px solid rgba(255,255,255,.07)!important}
-#couplescroll #coupage3.cs-sub>.section:before{display:none}
-#couplescroll #coupage3.cs-sub>.section>div:first-child>span{font-size:16px!important;font-weight:500!important;font-family:"Songti SC","STSong","Noto Serif SC",serif}
-#couplescroll #coupage3.cs-sub .minibtn{background:transparent!important;border:1px solid rgba(240,169,193,.85)!important;color:#f0a9c1!important;border-radius:999px!important}
-#modal.cs-modal,#cfm.cs-modal{background:rgba(0,0,0,.62)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-#modal.cs-modal .sheet,#cfm.cs-modal .cfmbox{background:#000!important;background-image:none!important;border:1.5px solid #f0a9c1!important;box-shadow:0 18px 50px rgba(0,0,0,.65)!important;color:#ece6e8!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-#modal.cs-modal .sheet:before,#modal.cs-modal .sheet:after,#cfm.cs-modal .cfmbox:before,#cfm.cs-modal .cfmbox:after{display:none!important}
-#modal.cs-modal .sheet h3,#cfm.cs-modal .cfmmsg{color:#f6efe9!important;-webkit-text-fill-color:#f6efe9}#modal.cs-modal .sheet :is(.hint,small,label,.empty){color:#a39aa0!important;-webkit-text-fill-color:#a39aa0}
-#modal.cs-modal .sheet :where(.section,.it,.bill,.avline,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea){background:#141315!important;background-image:none!important;border:1px solid rgba(240,169,193,.38)!important;color:#ece6e8!important;-webkit-text-fill-color:#ece6e8;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-#modal.cs-modal .sheet .section{border-radius:14px!important;overflow:hidden}#modal.cs-modal .sheet .section .it{background:transparent!important;border-width:0 0 1px!important;border-radius:0!important}
-#modal.cs-modal .sheet :is(.btn,.minibtn,.section,input,select,textarea):before,#cfm.cs-modal .cfmb:before{display:none!important}
-#modal.cs-modal .sheet .btn,#cfm.cs-modal .cfmb{background:#141315!important;background-image:none!important;border:1.5px solid rgba(240,169,193,.55)!important;color:#ece6e8!important;-webkit-text-fill-color:#ece6e8;border-radius:999px!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
-#modal.cs-modal .sheet .btn.p,#cfm.cs-modal .cfmb.p{background:#f0a9c1!important;border-color:#f0a9c1!important;color:#1a0f14!important;-webkit-text-fill-color:#1a0f14}
-#modal.cs-modal .sheet .btn.d,#cfm.cs-modal .cfmb.d{background:#000!important;border-color:#ff5a6e!important;color:#ff5a6e!important;-webkit-text-fill-color:#ff5a6e}
-#modal.cs-modal .sheet .minibtn{background:transparent!important;border:1px solid #f0a9c1!important;color:#f0a9c1!important;-webkit-text-fill-color:#f0a9c1;border-radius:999px!important}
-#modal.cs-modal .sheet .sw{background:#4a474d!important}#modal.cs-modal .sheet .sw.on{background:#f0a9c1!important}

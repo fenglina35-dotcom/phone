@@ -56,11 +56,11 @@ assert.match(functionSource('renderGS'),/gsManualReply\(\)/);
 assert.match(functionSource('gsSend'),/manualReplySceneOn\('games'\).*gsRender\(\).*gsReply\(\)/);
 assert.match(functionSource('gsDice'),/manualReplySceneOn\('games'\).*gsRender\(\).*gsReply\(\)/);
 
-assert.match(functionSource('renderRP'),/manualReplySceneOn\('roleplay'\)/);
+assert.match(functionSource('renderRP'),/renderDateScene\(id,rpData\(id\),true\)/);assert.match(functionSource('renderDateScene'),/manualReplySceneOn\(story\?'roleplay':'offline'\)/);
 assert.match(functionSource('rpSay'),/!manualReplySceneOn\('roleplay'\).*rpAI\(\)/);
 assert.match(functionSource('rpSaveNarrate'),/goOn\|\|!manualReplySceneOn\('roleplay'\)/);
 
-assert.match(functionSource('renderOff'),/manualReplySceneOn\('offline'\)/);
+assert.match(functionSource('renderOff'),/renderDateScene\(id,o,false\)/);
 assert.match(functionSource('offSay'),/!manualReplySceneOn\('offline'\).*offAI\(\)/);
 assert.match(functionSource('offNarrate'),/narrateMode=!offNarrationMode\(\)/);
 assert.doesNotMatch(functionSource('offNarrate'),/prompt\(/);

@@ -50,8 +50,8 @@ assert.match(glass,/\.wx-chat-premium \.chatbg \.msgt\{display:none!important\}/
 assert.match(app,/const ts=\(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML\(m\)\)\|\|\(m\.time\?`<div class="msgt">\$\{hm\(m\.time\)\}<\/div>`:''\)/,'default-off or unavailable Beijing clock preserves the legacy timestamp render path');
 assert.match(glass,/\.wx-chat-premium \.chatbg \.tstamp span\{[^}]*background:transparent!important;[^}]*box-shadow:none!important/,'center date and time text remains without a dark badge');
 
-assert.match(app,/class="off-nav-actions">\$\{replyTop\}/,'offline reply action lives in the upper-right navigation area');
-assert.match(app,/class="off-reply-top"/);
+assert.match(app,/class="off-nav-actions">\$\{story\?'':reply\}/,'offline reply action lives in the upper-right navigation area');
+assert.match(app,/story\?'off-reply-top rp-reply-bottom':'off-reply-top'/);
 assert.doesNotMatch(app,/class="offactions"/,'the easy-to-mistap full-width reply strip is removed');
 /* v1328 起它也是玻璃的（她说「让他回那个按钮颜色应该也是液态玻璃的，偏灰的那种」），
    高度照旧 27px，别又被撑大。 */

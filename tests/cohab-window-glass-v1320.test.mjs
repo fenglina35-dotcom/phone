@@ -78,8 +78,8 @@ test("看更早保住的是「离底部多远」，不是 scrollTop", () => {
 test("三个渲染入口都走这个窗口", () => {
   for (const [name, app] of Object.entries(apps)) {
     const hits = app.match(/_win=offWindowRows\(id,/g) || [];
-    assert.equal(hits.length, 2, `${name}: 共同生活和一次性约会各一处`);
-    assert.equal((app.match(/body=_win\.more\+_win\.rows\.map\(/g) || []).length, 2, name);
+    assert.equal(hits.length, 1, `${name}: 共同生活入口保留`);assert.match(app,/:offWindowRows\(id,o\.msgs\)/,`${name}: 约会和剧情共用渲染仍走同一窗口`);
+    assert.equal((app.match(/body=_win\.more\+_win\.rows\.map\(/g) || []).length, 1, name);assert.match(app,/body=win\.more\+win\.rows\.map\(/);
   }
   for (const [name, th] of Object.entries(theaters)) {
     assert.match(th, /_win=offWindowRows\(id,rows\),body=_win\.more\+_win\.rows\.map\(/, name);

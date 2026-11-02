@@ -60,35 +60,35 @@ function offStageAttrs(c){const t=offTheme(c),classic=t.skin==='classic',bg=(!cl
 function offSkinSet(id,skin){const c=getC(id);if(!c)return;
   offTheme(c).skin=skin==='classic'?'classic':'glass';save();closeModal();render();
   setTimeout(()=>offAppearance(id),60);}
-function offFieldHTML(placeholder){return `<div class="off-field"><textarea id="off_in" rows="1" placeholder="${esc(typeof offInputPlaceholder==='function'?offInputPlaceholder(placeholder):placeholder)}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea></div>`;}
-function offAppearance(id){const c=getC(id);if(!c)return;const t=offTheme(c);
+function offFieldHTML(placeholder,scene){const story=scene==='roleplay',p=story?(_rp&&_rp.narrateMode?'输入第三人称动作 / 场景旁白…':placeholder):typeof offInputPlaceholder==='function'?offInputPlaceholder(placeholder):placeholder;return `<div class="off-field"><textarea id="off_in" rows="1" placeholder="${esc(p)}" oninput="offInputAutoSize(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();${story?'rpSay':'offSay'}();}"></textarea></div>`;}
+function offAppearance(id,scene){const story=scene==='roleplay',action=story?'rp':'off',c=story?rpThemeContact(id):getC(id);if(!c)return;const t=offTheme(c);
   const row=(k,label,hint)=>`<div class="field"><label>${label}${hint?`<small style="display:block;color:#888">${hint}</small>`:''}</label>`
-    +`<div class="avline"><input type="color" value="${t[k]}" oninput="offThemeSet('${id}','${k}',this.value)" style="width:56px;height:34px;padding:0;border:1px solid #38383a;border-radius:8px;background:#2c2c2e">`
+    +`<div class="avline"><input type="color" value="${t[k]}" oninput="${action}ThemeSet('${id}','${k}',this.value)" style="width:56px;height:34px;padding:0;border:1px solid #38383a;border-radius:8px;background:#2c2c2e">`
     +`<span style="color:#8a8a8f;font-size:12px">${t[k]}</span></div></div>`;
   const glass=t.skin!=='classic';
-  openModal(`<h3>线下外观</h3>
+  openModal(`<h3>${story?'角色扮演外观':'线下外观'}</h3>
    ${glass?`<div class="hint">和信息页同一套玻璃：气泡是磨砂的，边上那条高光会跟着背景的颜色走。颜色改完立刻就能看见。</div>
    <div class="field"><label>聊天背景<small style="display:block;color:#888">按原图质量存（2600px），不会压糊</small></label>
-     <div class="avline"><button class="btn imblue" style="flex:1" onclick="offBgPick('${id}')">选图片</button>
-     ${t.bg?`<button class="btn g" style="flex:1;margin-left:8px" onclick="offBgClear('${id}')">恢复默认</button>`:''}</div></div>
+     <div class="avline"><button class="btn imblue" style="flex:1" onclick="${action}BgPick('${id}')">选图片</button>
+     ${t.bg?`<button class="btn g" style="flex:1;margin-left:8px" onclick="${action}BgClear('${id}')">恢复默认</button>`:''}</div></div>
    ${row('me','我的气泡')}
    ${row('meInk','我的字')}
    ${row('them','ta的气泡')}
    ${row('themInk','ta的字')}
    ${row('nar','旁白的字','就是中间那些动作描写')}`
    :`<div class="hint">「原来的」就是改之前那一套，样子是固定的：黑底、方一点的气泡、宋体旁白。背景和配色只对「玻璃」生效，切回玻璃就能接着调。</div>`}
-   <div class="btns"><button class="btn g" onclick="offThemeReset('${id}')">配色恢复默认</button><button class="btn p" onclick="closeModal()">好了</button></div>`);}
-function offThemeSet(id,key,val){const c=getC(id);if(!c||!(key in OFF_THEME_DEF))return;
+   <div class="btns"><button class="btn g" onclick="${action}ThemeReset('${id}')">配色恢复默认</button><button class="btn p" onclick="closeModal()">好了</button></div>`);}
+function offThemeSet(id,key,val,scene){const c=scene==='roleplay'?rpThemeContact(id):getC(id);if(!c||!(key in OFF_THEME_DEF))return;
   const t=offTheme(c);t[key]=offColorOk(val,OFF_THEME_DEF[key]);save();
   /* 不重画整页：直接改舞台上那个变量，弹窗不会被关掉，她能一边调一边看 */
   const st=document.querySelector('.offstage');if(st){st.style.setProperty('--offc-'+({me:'me',meInk:'me-ink',them:'them',themInk:'them-ink',nar:'nar'})[key],t[key]);if(key==='me'||key==='them')st.style.setProperty('--offc-'+key+'-soft',offRgba(t[key],key==='me'?.62:.52));}}
-function offThemeReset(id){const c=getC(id);if(!c)return;const t=offTheme(c);
+function offThemeReset(id,scene){const c=scene==='roleplay'?rpThemeContact(id):getC(id);if(!c)return;const t=offTheme(c);
   for(const k in OFF_THEME_DEF)t[k]=OFF_THEME_DEF[k];save();closeModal();render();toast('配色恢复默认了');}
-function offBgPick(id){const c=getC(id);if(!c)return;
+function offBgPick(id,scene){const c=scene==='roleplay'?rpThemeContact(id):getC(id);if(!c)return;
   pickFile('image/*',async f=>{let src='';try{src=await compressChatBackground(f);}catch(_){}
     if(!src){toast('这张图读不出来，换一张');return;}
     offTheme(c).bg=src;save();closeModal();render();toast('线下背景换好了');});}
-function offBgClear(id){const c=getC(id);if(!c)return;offTheme(c).bg='';save();closeModal();render();toast('已恢复默认背景');}
+function offBgClear(id,scene){const c=scene==='roleplay'?rpThemeContact(id):getC(id);if(!c)return;offTheme(c).bg='';save();closeModal();render();toast('已恢复默认背景');}
 function offData(id){S.offline=S.offline&&typeof S.offline==='object'&&!Array.isArray(S.offline)?S.offline:{};let o=S.offline[id];if(!o||typeof o!=='object'||Array.isArray(o))o=S.offline[id]={};o.loc=typeof o.loc==='string'?o.loc:'';o.when=typeof o.when==='string'?o.when:'';o.msgs=Array.isArray(o.msgs)?o.msgs:[];o.memory=Array.isArray(o.memory)?o.memory:[];o.history=Array.isArray(o.history)?o.history:[];o.started=!!o.started;o.daypart=typeof o.daypart==='string'?o.daypart:'';return o;}
 function cohabRoot(){S.cohabitation=S.cohabitation&&typeof S.cohabitation==='object'&&!Array.isArray(S.cohabitation)?S.cohabitation:{};const r=S.cohabitation;r.homes=r.homes&&typeof r.homes==='object'&&!Array.isArray(r.homes)?r.homes:{};if(typeof r.enabled!=='boolean')r.enabled=false;if(typeof r.paused!=='boolean')r.paused=!r.enabled;return r;}
 function cohabDefaultCid(){const r=cohabRoot(),valid=id=>id&&getC(id)&&!getC(id).deleted;if(valid(r.cid))return r.cid;const couple=S.couple&&valid(S.couple.cid)&&S.couple.cid,first=(S.contacts||[]).find(c=>c&&!c.deleted&&!c.blocked);r.cid=couple||first&&first.id||'';return r.cid;}

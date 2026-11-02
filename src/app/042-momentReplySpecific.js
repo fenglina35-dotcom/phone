@@ -31,7 +31,7 @@ function openModal(html){
   m.classList.toggle('wxmodal-green',wxPages.includes(p));
   m.classList.toggle('north-glass-modal',glassThemeOn());
   appSolidMark(m,p);
-  $('#modalSheet').classList.toggle('north-offline-sheet',['off','offline'].includes(p));
+  $('#modalSheet').classList.toggle('north-offline-sheet',['off','offline','rp'].includes(p));
   $('#modalSheet').innerHTML=html;$('#modalSheet').classList.toggle('north-spec-sheet',!!m.querySelector('.north-spec-layout'));if(m.querySelector('.north-spec-layout'))$('#modalSheet').scrollTop=0;m.classList.toggle('north-travel-modal',p==='travel'||!!m.querySelector('.cth-dialog,.ctg-dialog,.ctf-dialog,.ctn-dialog,.ctt-dialog'));m.classList.add('show');
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
 }

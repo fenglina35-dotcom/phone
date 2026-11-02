@@ -33,11 +33,11 @@ for (const file of ['app.js', 'native/private-small-phone/XcodeProject/PhoneComp
     assert(/offReplyRouteIndex\(c,o\)/.test(body), 'route from the settings');
     assert(/aux:offReplyAux\(c,o\)/.test(body), 'main reply model from the settings');
     assert(/cohabDiagnostic:\{hostId:'off:'\+c\.id/.test(body), 'recorded for the diagnostic');
-    assert(s.includes("offSettingSet('${id}','replyApiRoute',this.value)") && s.includes("offModelDiagnosticShow('${id}')"), 'settings and diagnostic in 约会设定');
+    assert(s.includes("${action}SettingSet('${id}','replyApiRoute',this.value)") && s.includes("${story?'rpDiagnostic':'offModelDiagnosticShow'}('${id}')"), 'settings and diagnostic in 约会设定');
   });
 }
 for (const file of ['cohab-model-diagnostics.js', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-model-diagnostics.js'])
-  test(file + ': 单次约会 has its own 模型与路线诊断', () => { const s = fs.readFileSync(file, 'utf8'); assert(s.includes("window.offModelDiagnosticOpen=function(id)") && s.includes("records.get(scope('off:'+id))")); });
+  test(file + ': 单次约会 has its own 模型与路线诊断', () => { const s = fs.readFileSync(file, 'utf8'); assert(s.includes("window.offModelDiagnosticOpen=function(id)") && s.includes("records.get(scope((story?'rp:':'off:')+id))")); });
 
 // OFF_MODAL_GLASS_V1 (2026-10-30, her request): boxes opened inside 单次约会 use the same glass frame as 共同生活.
 for (const file of ['cohab-theater.js', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/cohab-theater.js']) {

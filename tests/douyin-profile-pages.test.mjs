@@ -230,7 +230,7 @@ test('every onclick in app.js resolves to a function that exists', () => {
   for (const w of ['Math', 'String', 'Number', 'Date', 'JSON', 'Array', 'Object', 'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'if', 'for', 'while', 'switch', 'return', 'typeof', 'new', 'function', 'setTimeout', 'confirm', 'alert', 'encodeURIComponent', 'decodeURIComponent']) defined.add(w);
   const missing = new Map();
   for (const m of app.matchAll(/onclick="([^"]*)"/g)) {
-    for (const call of m[1].matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) {
+    for(const handler of m[1].includes('${action}')?['off','rp'].map(prefix=>m[1].replaceAll('${action}',prefix)):[m[1]])for (const call of handler.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) {
       if (defined.has(call[1]) || call[1].startsWith('_')) continue;
       if (!missing.has(call[1])) missing.set(call[1], app.slice(0, m.index).split('\n').length);
     }

@@ -10,7 +10,7 @@ const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
 assert.match(source,/function offManualSummary\(id\)/);
 assert.match(source,/总结完成后约会不会结束，可以继续聊天/);
-assert.match(source,/onclick="offManualSummary\('\$\{id\}'\)"/);
+assert.match(source,/onclick="\$\{action\}ManualSummary\('\$\{id\}'\)"/);
 const manualSummary=source.slice(source.indexOf('async function offManualSummary'),source.indexOf('async function offEnd'));
 assert.doesNotMatch(manualSummary,/offlineDeactivate/);
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
@@ -648,11 +648,11 @@ assert.match(source, /function tvStartDate\(tid\)[\s\S]*?offBeginSession\(trip\.
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:'\uff08'\+tvMD\(trip\.date\)/);
 
 assert.match(source, /const item=items\[i\],timing=offRevealTiming\(item\)/);
-assert.match(source, /d\.msgs\.some\(m=>m\._reveal\)/);
+assert.match(source, /o\.msgs\.some\(m=>m\._reveal\)/);
 assert.match(source, /who:'\u65c1\u767d',source:'me',text:v/);
 assert.match(source, /m\.who==='\u65c1\u767d'&&m\.source==='me'/);
-assert.match(source, /class="rpnar/);
-assert.match(source, /class="bubble rpbubble"/);
+assert.match(source, /class="offnar /);
+assert.match(source, /class="bubble offbubble"/);
 
 assert.match(html, /\.offstage\{/);
 assert.match(html, /\.offintro\{/);

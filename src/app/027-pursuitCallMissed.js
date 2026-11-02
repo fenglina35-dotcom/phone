@@ -1,3 +1,21 @@
+/* 电话结果 */
+function pursuitCallMissed(call,why){const meta=call&&call.meta,c=meta&&getC(meta.roleId),st=pursuitState(c);if(!st)return true;pursuitMark(c,why==='decline'?'declined':'missed',r=>r.act==='call_own'||r.act==='call_stranger');if(st.status==='active'){st.nextAt=Date.now()+pursuitGap();pursuitPlanAhead(c);}save();return true;}
+function pursuitCallAnswered(call){const meta=call&&call.meta,c=meta&&getC(meta.roleId);if(!pursuitState(c))return;pursuitMark(c,'answered',r=>r.act==='call_own'||r.act==='call_stranger');pursuitEnd(c,'answered');}
+function pursuitCallPrompt(c,meta){const num=meta&&meta.num||phRoleNumber(c);return pursuitPrompt(c)+'\n\n# 当前场景：电话\n'+(meta&&meta.stranger?'你是用陌生号码 '+phFmt(num)+' 打给'+S.me.name+'的，她接起来前不知道是你。接通后什么时候说出是你、怎么说，由你自己决定。':'你是用自己的手机号 '+phFmt(num)+' 打给'+S.me.name+'的，她知道是你还接了。')+'她接了电话，这是你的机会：你的目的仍然是让她把你从微信黑名单里拉出来。像真人打电话一样说话，一次一两句。';}
+/* 短信：她回了就结束追回；用陌生号码发的短信，她回复时由角色本人接着回 */
+function pursuitOnUserSms(num){const n=phNorm(num);for(const c of S.contacts||[]){const st=pursuitState(c);if(!st)continue;const mine=phNorm(phRoleNumber(c))===n,stranger=!!st.strangerNum&&phNorm(st.strangerNum)===n;if(!mine&&!stranger)continue;if(st.status==='active'){pursuitMark(c,'replied',r=>r.act==='sms'||r.act==='apply');pursuitEnd(c,'replied');}return {cid:c.id,stranger};}return null;}
+function pursuitSmsPrompt(c,num){const st=pursuitState(c);if(!st)return '';const stranger=!!st.strangerNum&&phNorm(st.strangerNum)===phNorm(num);return (stranger?'\n- 你现在是用陌生号码 '+phFmt(num)+' 和她发短信，她可能还不知道是你，要不要、什么时候说出是你，由你决定。':'');}
+function phRoleAvatar(c){const p=phState();return (c&&p.roleAvatars&&p.roleAvatars[c.id])||((c&&c.avatar)||'');}
+function phAllContacts(){const p=phState(),rows=[];S.contacts.filter(c=>!c.deleted).forEach(c=>rows.push({kind:'role',id:c.id,num:phRoleNumber(c),name:c.remark||c.name,avatar:phRoleAvatar(c),region:p.regions[phNorm(phRoleNumber(c))]||'',blocked:!!c.blocked||!!p.blocked[phNorm(phRoleNumber(c))]}));p.contacts.forEach(x=>{if(!x.deleted)rows.push({kind:'custom',id:x.id,num:x.num,name:x.name||x.num,avatar:x.avatar||'',region:x.region||p.regions[phNorm(x.num)]||'',blocked:!!x.blocked||!!p.blocked[phNorm(x.num)]});});return rows;}
+function phFind(n){const key=phNorm(n);return phAllContacts().find(x=>phNorm(x.num)===key)||null;}
+function phName(n){const x=phFind(n);return x?(x.name||x.num):phFmt(n);}
+function phDefaultAvatar(cls){return `<div class="avatar ${cls||'sm'} phdefav">${svgIc('user',cls==='lg'?50:26,'#f5f5f7',1.7)}</div>`;}
+function phAvatar(n,cls){const x=phFind(n),v=x&&x.avatar;if(v)return av(v,cls||'sm');return phDefaultAvatar(cls);}
+function phWhen(t){const d=new Date(t||Date.now()),now=new Date();if(d.toDateString()===now.toDateString())return hm(t);const y=new Date(now);y.setDate(now.getDate()-1);if(d.toDateString()===y.toDateString())return '昨天';return (d.getMonth()+1)+'月'+d.getDate()+'日';}
+function phRegion(n){const p=phState(),key=phNorm(n),x=phFind(n);if(p.regions[key])return p.regions[key];if(x&&x.region)return x.region;const d=(''+phDigits(n)).replace(/^\+?86/,'');if(d==='110')return '报警服务';if(d==='119')return '消防救援';if(d==='120')return '急救中心';if(d==='122')return '交通报警';if(d==='10086')return '中国移动';if(/^025/.test(d))return '江苏 南京';if(/^0512/.test(d))return '江苏 苏州';if(/^1\d{10}$/.test(d)){const a=['江苏 苏州','上海','广东 深圳','浙江 杭州','北京','四川 成都','湖北 武汉'];return a[Math.abs(phHash(d))%a.length];}return '未知地区';}
+function phSound(type,key){if(!S.settings.sound)return;const map={sms:[[1046,.07],[1396,.08]],call:[[880,.22]],connect:[[740,.06],[988,.08]],key:[[697,.055],[852,.06]],end:[[330,.08],[247,.1]]},seq=(map[type]||map.call).map(x=>x.slice());if(type==='key'&&key){const d=String(key).charCodeAt(0)%7;seq[0][0]=620+d*38;seq[1][0]=760+d*42;}playMediaTone(seq,{key:'phone-soft-v3-'+type+'-'+(key||''),level:type==='key'?.09:(type==='call'?.12:.11),gap:.035,wave:'sine',decay:type==='call'});}
+function phMyAliasNumber(){const p=phState();if(!p.aliasNum){p.aliasNum=phRandomNumber();save(300);}return p.aliasNum;}
+function phLineLabel(line){return line==='alias'?'匿名号':'主号';}
 function phSetLine(line){const p=phState();p.line=line==='alias'?'alias':'main';if(p.line==='alias')phMyAliasNumber();save();const page=cur();if(page&&page.p==='phonesms'){const n=phDigits(page.num),x=phFind(n);if(x&&x.kind==='role'){openPhoneSMS(n,p.line==='alias'?phSmsKey(n,'alias',phMyAliasNumber()):n);return;}}render();}
 function phLineSwitchHTML(){const p=phState(),line=p.line==='alias'?'alias':'main';return `<div class="phlineswitch"><button class="${line==='main'?'on':''}" onclick="phSetLine('main')">主号</button><button class="${line==='alias'?'on':''}" onclick="phSetLine('alias')">匿名号</button></div>${line==='alias'?`<div class="phaliasnote">当前匿名号 ${esc(phFmt(phMyAliasNumber()))}</div>`:''}`;}
 function phEnsureAliasThread(c,num,kind){const p=phState(),targetNum=phDigits(num||phRoleNumber(c)),aliasNum=phMyAliasNumber(),old=p.aliasThreads[targetNum]||{};p.aliasThreads[targetNum]=Object.assign({},old,{cid:c.id,name:c.remark||c.name,ts:Date.now(),kind:kind||old.kind||'sms',asStranger:true,aliasNum,targetNum,blocked:old.blocked&&phNorm(old.aliasNum)===phNorm(aliasNum),blockedAt:old.blockedAt});if(!p.regions[phNorm(targetNum)])p.regions[phNorm(targetNum)]=phRegion(targetNum);return p.aliasThreads[targetNum];}
@@ -481,25 +499,3 @@ function phFxBarHTML(){if(!phFxHas())return '';
   const text=String(_phFx.prev||''),runs=phFxRuns(text,_phFx.ch||[]),
     tags=[_phFx.bfx?phFxName(PH_FX_BUBBLE,_phFx.bfx):'',_phFx.sfx?phFxName(PH_FX_SCREEN,_phFx.sfx):''].filter(Boolean).join(' · ');
   return `<div class="imsg-fxbar"><b>${runs.map(phFxRunHTML).join('')||'（还没打字）'}</b>${tags?`<small>${esc(tags)}</small>`:''}<button onclick="phFxDrop()" aria-label="清掉效果">×</button></div>`;}
-/* ===== 放效果 ===== */
-/* ===== 字撑大了，气泡跟着鼓一下 =====
-   她说「字体放大一般气泡就会不够用了，所以气泡也可以跟着像被里面的字撑了一样，
-   就跟一个皮球被撑大了一点，然后缩回去了……如果是比较小的就不会，缩小是同样的道理」。
-   所以撑多少不是拍脑袋定的，是量出来的：放大的那几个字放大之后多要多少像素，
-   气泡就跟着宽多少像素。多要的不到 8px（比如一整条长消息里只有一个字在放大），
-   气泡就一动不动——「如果是比较小的就不会」。 */
-const PH_FX_SWELL={big:1.95,small:.36};
-function phFxSwell(node){if(!node||!node.classList)return;
-  node.classList.remove('imb-swell');node.style.removeProperty('--sw');
-  const em=node.querySelector('.imfx-big,.imfx-small');if(!em)return;
-  const peak=em.classList.contains('imfx-big')?PH_FX_SWELL.big:PH_FX_SWELL.small;
-  const w=em.getBoundingClientRect().width,bw=node.getBoundingClientRect().width;
-  if(!w||!bw)return;
-  const grow=w*(peak-1);                       /* 这几个字多要（或少要）多少像素 */
-  /* 两个条件都要满足才撑：多要的像素得够多（>=8px），而且得占到气泡宽度的一成二。
-     长句子的气泡本来就有富余，里头一个字放大它照样装得下——那就一动不动，
-     这就是她说的「如果是比较小的就不会」。 */
-  if(Math.abs(grow)<8||Math.abs(grow)/bw<.12)return;
-  const sw=Math.max(.9,Math.min(1.16,(bw+grow)/bw));
-  if(Math.abs(sw-1)<.012)return;
-  node.style.setProperty('--sw',sw.toFixed(3));node.classList.add('imb-swell');}

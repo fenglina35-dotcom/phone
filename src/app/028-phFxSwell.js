@@ -1,3 +1,25 @@
+/* ===== 放效果 ===== */
+/* ===== 字撑大了，气泡跟着鼓一下 =====
+   她说「字体放大一般气泡就会不够用了，所以气泡也可以跟着像被里面的字撑了一样，
+   就跟一个皮球被撑大了一点，然后缩回去了……如果是比较小的就不会，缩小是同样的道理」。
+   所以撑多少不是拍脑袋定的，是量出来的：放大的那几个字放大之后多要多少像素，
+   气泡就跟着宽多少像素。多要的不到 8px（比如一整条长消息里只有一个字在放大），
+   气泡就一动不动——「如果是比较小的就不会」。 */
+const PH_FX_SWELL={big:1.95,small:.36};
+function phFxSwell(node){if(!node||!node.classList)return;
+  node.classList.remove('imb-swell');node.style.removeProperty('--sw');
+  const em=node.querySelector('.imfx-big,.imfx-small');if(!em)return;
+  const peak=em.classList.contains('imfx-big')?PH_FX_SWELL.big:PH_FX_SWELL.small;
+  const w=em.getBoundingClientRect().width,bw=node.getBoundingClientRect().width;
+  if(!w||!bw)return;
+  const grow=w*(peak-1);                       /* 这几个字多要（或少要）多少像素 */
+  /* 两个条件都要满足才撑：多要的像素得够多（>=8px），而且得占到气泡宽度的一成二。
+     长句子的气泡本来就有富余，里头一个字放大它照样装得下——那就一动不动，
+     这就是她说的「如果是比较小的就不会」。 */
+  if(Math.abs(grow)<8||Math.abs(grow)/bw<.12)return;
+  const sw=Math.max(.9,Math.min(1.16,(bw+grow)/bw));
+  if(Math.abs(sw-1)<.012)return;
+  node.style.setProperty('--sw',sw.toFixed(3));node.classList.add('imb-swell');}
 function phFxSwellAll(){const box=$('#smsbody');if(!box)return;
   box.querySelectorAll('.imsg-b').forEach(phFxSwell);}
 /* ===== 爆发：把字贴到屏幕层上飞 =====
@@ -476,33 +498,3 @@ function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num
 //@@ end
 /* 语音条在上下文和列表预览里怎么写：把原文和译文都带上，
    不然下一轮角色就不知道自己刚才用语音说了什么 */
-function phSmsVoiceLine(m){const t=String((m&&m.text)||'');
-  return '[语音]'+t+(m&&m.trans?'（中文：'+m.trans+'）':'');}
-function phSmsLineText(m){return m&&m.voice?phSmsVoiceLine(m):(m&&m.img?phSmsImgLine(m):(m&&m.text)||'');}
-function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;num=phDigits(num);sk=sk||num;
-  /* 只有真角色那条线认语音标签：陌生号那边压根没拿到这个用法 */
-  const vt=c&&typeof parseVoiceTagLine==='function'?parseVoiceTagLine(phCleanSmsText(text)):null;
-  const tag=vt?null:phFxParseTags(phCleanSmsText(text));
-  if(!vt){text=tag.text.slice(0,240);if(!text)return;}
-  const viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,arr=phSmsArr(num,sk);
-  const m={id:uid(),from:'them',text,time:Date.now(),read:viewing};
-  if(vt){
-    const say=[...String(vt.text||'')].slice(0,VOICE_MAX_CHARS).join('').trim();
-    if(!say)return;
-    /* 复用微信那一套：type/role/content 都按微信语音消息的形状存，
-       warmVoiceMsg、speakMsg、refreshVoiceBubble 就能原样拿来用 */
-    m.voice=1;m.type='voice';m.role='assistant';m.content=say;m.text=say;
-    const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(say):null,_say=_vx?_vx.text:say;if(_vx){m.content=_say;m.text=_say;m.voicePerf=_vx.perf;m.voiceSpatial=_vx.spatial;}
-    m.trans=String(vt.trans||'').trim();
-    if(vt.cue)m.voiceCue=vt.cue;
-    m.dur=voiceEstimatedSeconds(say);if(_vx)m.dur=voiceEstimatedSeconds(_say);
-    m.showText=false;
-  }
-  else{if(tag.fx)m.fx=tag.fx;if(tag.bfx)m.bfx=tag.bfx;if(tag.sfx)m.sfx=tag.sfx;}
-  arr.push(m);if(arr.length>300)arr.splice(0,arr.length-300);
-  /* 镜像进微信的还是干净正文，标签和效果都不带过去 */
-  phMirrorSMS(num,'them',m.voice?(m.text+(m.trans?'（'+m.trans+'）':'')):text);save();phSound('sms');
-  if(m.voice&&c&&ttsApiOn(c)){m._ttsLoading=true;scheduleVoiceWarm(m,c,voiceProgressiveOn());}
-  if(!viewing)phSmsNotify(num,m.voice?'给你发来一条语音':text,c);
-  if(viewing){render();if(phMsgHasFx(m))setTimeout(()=>phFxPlay(m,$('#smsbody')),140);}
-  return m;}

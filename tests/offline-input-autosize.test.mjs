@@ -52,7 +52,7 @@ test('offline textarea uses a normal caret line height instead of a 42px caret',
 test('ordinary offline date and common life share a first-render autosize listener',()=>{
   /* v1328 起两处输入框都走同一个 offFieldHTML()，所以 textarea 只写了一次、被用了两次 */
   assert.equal((web.match(/<textarea id="off_in"/g)||[]).length,1);
-  assert.equal((web.match(/\$\{offFieldHTML\('/g)||[]).length,2);
+  assert.equal((web.match(/\$\{offFieldHTML\(/g)||[]).length,2);
   assert.match(functionSource(web,'offFieldHTML'),/<div class="off-field"><textarea id="off_in"/);
   assert.match(web,/document\.addEventListener\('input',e=>\{const ta=e&&e\.target;if\(ta&&ta\.id==='off_in'\)offInputAutoSize\(ta\);\},\{passive:true\}\)/);
   assert.match(functionSource(web,'offNarrationDecorate'),/document\.activeElement!==ta\)offInputAutoSize\(ta\)/);

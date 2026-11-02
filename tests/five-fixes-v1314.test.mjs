@@ -113,13 +113,13 @@ test('外观里能改五种颜色，也能换背景，而且不压画质', () =>
     assert.match(x, /const OFF_THEME_DEF=\{me:'#26262a',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'\}/, '我的气泡默认和 ta 一样（2026-10-18）');
     assert.match(x, /if\(!t\._meLikeTaV1\)\{if\(t\.me===OFF_THEME_WARM_ME&&t\.meInk==='#181614'\)/, '以前默认浅黄的迁一次');
     assert.match(x, /const OFF_THEME_OLD_ME='#0a84ff';/);
-    assert.match(x, /function offAppearance\(id\)/);
-    assert.match(x, /function offThemeSet\(id,key,val\)/);
-    assert.match(x, /function offBgPick\(id\)/);
+    assert.match(x, /function offAppearance\(id,scene\)/);
+    assert.match(x, /function offThemeSet\(id,key,val,scene\)/);
+    assert.match(x, /function offBgPick\(id,scene\)/);
     assert.match(grab(x, 'offBgPick'), /compressChatBackground\(f\)/, '背景要走不压画质那条');
-    assert.match(grab(x, 'renderOff'), /offAppearance\('\$\{id\}'\)/, '单次约会的 meta 里要有入口');
+    assert.match(grab(x, 'renderDateScene'), /\$\{action\}Appearance\('\$\{id\}'\)/, '单次约会的 meta 里要有入口');
     assert.match(x, /<button type="button" onclick="offAppearance\('\$\{id\}'\)">外观<\/button>/, '共同生活里也要有入口');
-    assert.match(grab(x, 'renderOff'), /const _st=offStageAttrs\(c\);/);
+    assert.match(grab(x, 'renderDateScene'), /offStageAttrs\(story\?rpThemeContact\(id\):c\)/);
     assert.match(x, /class="offstage cohab-stage\$\{_st\.cls\}\$\{_manualReply\?' cohab-has-reply':''\}" style="\$\{_st\.style\}"/, '共同生活也套同一套外观');
   }
 });

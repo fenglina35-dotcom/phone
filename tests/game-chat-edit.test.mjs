@@ -4,24 +4,12 @@ import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 import vm from 'node:vm';
+import {fnSource} from './_helpers.mjs';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const app=readFileSync(join(root,'app.js'),'utf8');
 
-function functionSource(name){
-  const asyncStart=app.indexOf(`async function ${name}`);
-  const start=asyncStart>=0?asyncStart:app.indexOf(`function ${name}`);
-  assert.ok(start>=0,`missing ${name}`);
-  const brace=app.indexOf('{',start);
-  let depth=0,quote='',escaped=false;
-  for(let i=brace;i<app.length;i++){
-    const ch=app[i];
-    if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote='';continue;}
-    if(ch==="'"||ch==='"'||ch==='`'){quote=ch;continue;}
-    if(ch==='{')depth++;else if(ch==='}'&&--depth===0)return app.slice(start,i+1);
-  }
-  throw new Error(`unterminated ${name}`);
-}
+function functionSource(name){return fnSource(app,name);}
 
 test('solo game bubbles from both sides open the same edit/delete menu',()=>{
   assert.match(functionSource('renderGS'),/onclick="gsMsgMenu\('\$\{m\.id\}'\)"/);
@@ -65,7 +53,7 @@ test('multiplayer game room messages are edited and deleted in the saved room',(
 });
 
 test('roleplay already supports editing and deleting both sides',()=>{
-  assert.match(app,/function renderRP\(id\)[\s\S]*?rpMsgMenu\('\$\{id\}','\$\{m\.id\}'\)/);
+  assert.match(functionSource('renderRP'),/renderDateScene\(id,rpData\(id\),true\)/);assert.match(functionSource('renderDateScene'),/\$\{action\}MsgMenu/);
   assert.match(functionSource('rpEditMsg'),/mm\.text=v/);
   assert.match(functionSource('rpDelMsg'),/filter\(x=>x\.id!==mid\)/);
 });

@@ -1,3 +1,148 @@
+function rpResolve(scope,key,mid){if(scope==='his'){const [cid,fid]=hisPayParts(key);if(!hisChatAllowed(cid,fid))return null;const m=hisPayMessage(cid,fid,mid),c=getC(cid);if(!m)return null;return {scope,key,mid,m,me:true,amount:+m.amount||0,note:m.note||RP_DEFAULT_NOTE,received:!!m.received,refunded:!!m.refunded,senderName:c.name,avatarHTML:av(c.avatar,'wx-rp-av'),receiverName:fid==='__me'?(S.me.name||'你'):hisWxData(cid).friends.find(f=>f.id===fid).name,group:false};}
+  if(scope==='role'){let cid=key,m=cid?(msgs(cid)||[]).find(x=>x&&x.id===mid):null;
+    if(!m)for(const id in S.messages){const rows=Array.isArray(S.messages[id])?S.messages[id]:[],hit=rows.find(x=>x&&x.id===mid);if(hit){m=hit;cid=id.split('#')[0];break;}}
+    if(!m||m.type!=='redpacket')return null;const c=getC(cid),me=m.role==='user',roleName=c?(c.remark||c.name):'对方';
+    return {scope,key:cid,mid,m,me,amount:+m.amount||0,note:String(m.note||'').trim()||RP_DEFAULT_NOTE,received:!!m.received,refunded:!!(m.refunded||m.declined),
+      senderName:me?(S.me.name||'我'):roleName,avatarHTML:me?av(S.me.avatar,'wx-rp-av'):av(c&&c.avatar,'wx-rp-av'),receiverName:me?roleName:'你',group:false,at:+m.receivedAt||0};}
+  if(scope==='pf'){const p=phoneFriendState();let found=null,box='friend',boxId='';
+    Object.keys(p.messages||{}).some(id=>{const m=pfMsgList(p.messages,id).find(x=>x.id===mid);if(m){found=m;boxId=id;return true;}return false;});
+    if(!found)Object.keys(p.groupMessages||{}).some(gid=>{const m=pfMsgList(p.groupMessages,gid).find(x=>x.id===mid);if(m){found=m;box='group';boxId=gid;return true;}return false;});
+    const pay=found&&pfMsgPayload(found);if(!pay||pay.type!=='redpacket')return null;
+    if(box==='group'&&pfRpLucky(pay)){pfRpSettle(mid);const st=pfRpState(found,pay),me=pfMsgIsMine(found),fromId=String(found.from||'').toUpperCase(),senderName=me?(S.me.name||'我'):pfRpName(boxId,fromId);
+      return {scope,key:boxId,mid,m:found,me,amount:+pay.amount||0,note:String(pay.note||'').trim()||RP_DEFAULT_NOTE,received:!!st.mine,done:st.done,lucky:true,st,kind:'pf',refunded:false,senderName,
+        avatarHTML:me?av(S.me.avatar,'wx-rp-av'):pfAvatarHTML(phoneFriendById(fromId)||{phone_id:fromId,display_name:senderName},'wx-rp-av'),receiverName:'你',group:true,at:0};}
+    const me=pfMsgIsMine(found),fromId=String(found.from||'').toUpperCase(),mine=String(p.id||'').toUpperCase(),by=String(found.receivedBy||'').toUpperCase(),senderName=me?(S.me.name||'我'):pfNameById(fromId);
+    return {scope,key:boxId,mid,m:found,me,amount:+pay.amount||0,note:String(pay.note||'').trim()||RP_DEFAULT_NOTE,received:!!found.received,refunded:false,senderName,
+      avatarHTML:me?av(S.me.avatar,'wx-rp-av'):pfAvatarHTML(phoneFriendById(fromId)||{phone_id:fromId,display_name:senderName},'wx-rp-av'),
+      receiverName:by?(by===mine?'你':pfNameById(by)):(box==='friend'?(me?pfNameById(boxId):'你'):'对方'),group:box==='group',at:0};}
+  if(scope==='group'){const g=(S.groups||[]).find(x=>x.id===key),m=g&&(g.msgs||[]).find(x=>x&&x.id===mid);if(!m||m.type!=='redpacket')return null;
+    const me=m.senderId==='me',c=me?null:getC(m.senderId),senderName=me?(S.me.name||'我'):(c?gnm(g,c.id):'群友'),st=gRpState(m);
+    return {scope,key,mid,m,me,amount:+m.amount||0,note:String(m.note||'').trim()||RP_DEFAULT_NOTE,received:!!st.mine,done:st.done,refunded:false,senderName,
+      avatarHTML:me?av(S.me.avatar,'wx-rp-av'):av(c&&c.avatar,'wx-rp-av'),receiverName:'你',group:true,at:0};}
+  return null;}
+function rpOverlayClose(){const el=document.getElementById('wxRpOverlay');if(el)el.remove();}
+function rpOverlayHost(){return document.querySelector('.screen')||document.body;}
+// 点红包：别人发给我的、还没领 → 弹開红包那一层；自己发的或已经领过的 → 直接看领取详情
+/* 红包和角色扮演以前都叫 rpOpen，后面的红包把角色扮演的覆盖了，点角色扮演会提示「这个红包找不到了」 */
+function redpOpen(scope,key,mid){const r=rpResolve(scope,key,mid);if(!r){toast('这个红包找不到了');return;}
+  if(scope==='group'){const g=(S.groups||[]).find(x=>x.id===key),target=gRpRecipient(g,r.m);if(target&&target!=='me'){toast('这是给'+(target==='__ambiguous__'?'指定成员':gnm(g,target))+'的专属红包');rpDetailOpen(scope,key,mid);return;}}
+  const multi=scope==='group'||!!r.lucky;
+  if(multi?(r.received||(r.me&&r.done)):(r.me||r.received||r.refunded)){rpDetailOpen(scope,r.key,mid);return;}/* 群红包自己发的也能抢一个，和微信一样 */
+  const late=multi&&(r.done||(r.st&&r.st.late));
+  rpOverlayClose();const el=document.createElement('div');el.id='wxRpOverlay';el.className='wx-rp-overlay';
+  el.innerHTML=`<div class="wx-rp-sheet" role="dialog" aria-label="${esc(r.senderName)}发出的红包"><div class="wx-rp-top"><div class="wx-rp-from">${r.avatarHTML}<span>${esc(r.senderName)}发出的红包</span></div><div class="wx-rp-wish">${esc(late?'手慢了，红包派完了':r.note)}</div></div>${late?'<div class="wx-rp-late"></div>':`<button type="button" class="wx-rp-open" aria-label="開" onclick="rpOpenCommit('${scope}','${r.key}','${mid}',this)">開</button>`}<button type="button" class="wx-rp-more" onclick="rpOverlayClose();rpDetailOpen('${scope}','${r.key}','${mid}')">查看领取详情<i aria-hidden="true">›</i></button></div><button type="button" class="wx-rp-close" aria-label="关闭" onclick="rpOverlayClose()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+  el.addEventListener('click',e=>{if(e.target===el)rpOverlayClose();});rpOverlayHost().appendChild(el);}
+function rpReceive(scope,key,mid){const r=rpResolve(scope,key,mid);if(!r||(r.me&&scope!=='group'&&!r.lucky)||r.received||r.refunded)return false;
+  if(r.lucky)return pfRpGrab(mid);
+  if(scope==='role'){receivePay(mid,true);return true;}
+  if(scope==='pf'){pfReceivePay(mid,true);return true;}
+  if(scope==='group'){gGrab(key,mid,true);return true;}
+  return false;}
+// 開字转一圈再落地，和微信一样
+function rpOpenCommit(scope,key,mid,btn){if(btn){if(btn.dataset.busy)return;btn.dataset.busy='1';btn.classList.add('spinning');}
+  setTimeout(()=>{rpReceive(scope,key,mid);rpOverlayClose();rpDetailOpen(scope,key,mid);},760);}
+function rpDetailOpen(scope,key,mid){rpOverlayClose();go('rpDetail',{scope,key,mid});}
+function renderRpDetail(c){const r=rpResolve(c.scope,c.key,c.mid);if(r&&(r.scope==='group'||r.lucky))return renderGroupRpDetail(r);
+  const nav=`<div class="nav wx-rpd-nav"><span class="l" onclick="back()">‹</span><span class="t"></span><span class="r"></span></div>`;
+  if(!r)return nav+'<main class="wx-rpd"><div class="wx-rpd-head"></div><div class="wx-rpd-state">这个红包找不到了</div></main>';
+  const amount=r.amount.toFixed(2);let body='';
+  if(!r.me&&r.received&&(r.receiverName==='你'||!r.group))body=`<div class="wx-rpd-amt"><b>${amount}</b><span>元</span></div><div class="wx-rpd-tip">已存入零钱</div>`;
+  else if(r.refunded)body=`<div class="wx-rpd-state">红包金额 ${amount} 元，已退还</div>`;
+  else if(r.received)body=`<div class="wx-rpd-state">${esc(r.receiverName)}已领取，共 ${amount} 元</div>`;
+  else if(r.me)body=`<div class="wx-rpd-state">红包金额 ${amount} 元，等待对方领取</div>`;
+  else body=`<div class="wx-rpd-state">还没有领取这个红包</div>`;
+  return nav+`<main class="wx-rpd"><div class="wx-rpd-head"></div><div class="wx-rpd-from">${r.avatarHTML}<b>${esc(r.senderName)}发出的红包</b></div><div class="wx-rpd-wish">${esc(r.note)}</div>${body}</main>`;}
+/* ---- 发红包页、转账页 ---- */
+function paySendOpen(kind,scope,id){const p=$('#panel');if(p)p.classList.remove('show');closeModal();_paySend={kind:kind==='red'?'red':'transfer',scope,id:String(id),amount:'',note:''};go(kind==='red'?'rpSend':'tfSend',{scope,id:String(id)});}
+function paySendState(c,kind){if(!_paySend||_paySend.kind!==kind||_paySend.scope!==c.scope||_paySend.id!==String(c.id))_paySend={kind,scope:c.scope,id:String(c.id),amount:'',note:''};return _paySend;}
+function payAmountClean(v){v=String(v||'').replace(/[^\d.]/g,'');const i=v.indexOf('.');if(i>=0)v=v.slice(0,i+1)+v.slice(i+1).replace(/\./g,'');const parts=v.split('.');let a=(parts[0]||'').replace(/^0+(?=\d)/,'').slice(0,6);if(parts.length>1)return (a||'0')+'.'+parts[1].slice(0,2);return a;}
+function payNameMask(name){const ch=[...String(name||'').trim()];if(!ch.length)return '';return '*'.repeat(Math.max(1,Math.min(2,ch.length-1)))+ch[ch.length-1];}
+function payTarget(scope,id){if(scope==='his'){const [cid,fid]=hisPayParts(id);if(!hisChatAllowed(cid,fid))return null;const f=fid==='__me'?{name:S.me.name,avatar:S.me.avatar}:hisWxData(cid).friends.find(f=>f.id===fid);return {name:f.name||'我',mask:payNameMask(f.name),sub:'',avatarHTML:fid==='__me'?av(f.avatar,'wx-tfs-av'):hisWxFriendAvatar(f,44)};}
+  if(scope==='role'){const c=getC(id);if(!c)return null;const nm=c.remark||c.name||'';return {name:nm,mask:payNameMask(c.name||nm),sub:c.wxid?'微信号：'+c.wxid:'',avatarHTML:av(c.avatar,'wx-tfs-av')};}
+  if(scope==='pf'){const f=phoneFriendById(id)||{phone_id:id,display_name:id},nm=pfFriendDisplayName(f)||String(id);return {name:nm,mask:payNameMask(phoneFriendName(f)||nm),sub:'微信号：'+String(id).toUpperCase(),avatarHTML:pfAvatarHTML(f,'wx-tfs-av')};}
+  if(scope==='pfg'){const g=pfGroupById(id)||{name:'小手机群聊'};return {name:pfGroupDisplayName(g),mask:'',sub:'群聊',avatarHTML:av(g.avatar||'👥','wx-tfs-av')};}
+  if(scope==='gm'){const [gid,cid]=groupPayParts(id),g=S.groups.find(x=>x.id===gid),c=getC(cid);if(!g||!c)return null;const nm=gnm(g,cid);return {name:nm,mask:payNameMask(c.name||nm),sub:c.wxid?'微信号：'+c.wxid:'群聊「'+groupDisplayName(g)+'」',avatarHTML:av(c.avatar,'wx-tfs-av')};}
+  if(scope==='pfgm'){const [gid,pid]=groupPayParts(id),g=pfGroupById(gid)||{members:[]},m=pfGroupMemberById(g,pid)||{phone_id:pid},f=phoneFriendById(pid),nm=pfGroupMemberName(g,m)||pid;return {name:nm,mask:payNameMask(f?phoneFriendName(f):nm),sub:'微信号：'+String(pid).toUpperCase(),avatarHTML:pfAvatarHTML(f||m,'wx-tfs-av')};}
+  return null;}
+function renderRpSend(c){const st=paySendState(c,'red'),val=+st.amount||0,ok=val>0;
+  return `<div class="nav wx-pay-nav"><span class="l" onclick="back()">‹</span><span class="t">发红包</span><span class="r"></span></div>
+  <main class="wx-rps">
+    <label class="wx-rps-row"><span>金额</span><input id="rpsAmt" inputmode="decimal" autocomplete="off" placeholder="¥0.00" value="${esc(st.amount)}" oninput="rpSendInput(this)"></label>
+    <label class="wx-rps-row wish"><input id="rpsNote" maxlength="25" autocomplete="off" placeholder="${RP_DEFAULT_NOTE}" value="${esc(st.note)}" oninput="if(_paySend)_paySend.note=this.value"><i class="wx-rps-emoji" aria-hidden="true"><svg viewBox="0 0 28 28"><circle cx="12.5" cy="12.5" r="10.5"/><circle cx="9" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><path d="M8 15.5c1.2 2 2.8 3 4.5 3s3.3-1 4.5-3"/><path d="M22 19v7M18.5 22.5h7"/></svg></i></label>
+    <div class="wx-rps-row cover" role="button" tabindex="0" onclick="toast('现在只有默认封面')"><span>红包封面</span><i class="wx-rps-chev" aria-hidden="true">›</i></div>
+    <div class="wx-rps-total"><span>¥</span><b id="rpsTotal">${val.toFixed(2)}</b></div>
+    <button type="button" id="rpsGo" class="wx-rps-go${ok?'':' off'}" ${ok?'':'disabled'} onclick="paySendSubmit()">塞钱进红包</button>
+    <div class="wx-rps-foot">未领取的红包，将于24小时后发起退款</div>
+  </main>`;}
+function rpSendInput(el){const s=_paySend;if(!s||!el)return;const v=payAmountClean(el.value);if(v!==el.value)el.value=v;s.amount=v;const t=$('#rpsTotal');if(t)t.textContent=(+v||0).toFixed(2);const g=$('#rpsGo');if(g){const ok=(+v||0)>0;g.classList.toggle('off',!ok);g.disabled=!ok;}}
+function renderTfSend(c){const st=paySendState(c,'transfer'),t=payTarget(c.scope,c.id)||{name:'',mask:'',sub:'',avatarHTML:''},ok=(+st.amount||0)>0;
+  const key=(k,label,cls)=>`<button type="button" class="${cls||''}" onclick="tfKey('${k}')">${label}</button>`;
+  return `<div class="nav wx-pay-nav tf"><span class="l" onclick="back()">‹</span><span class="t"></span><span class="r"></span></div>
+  <main class="wx-tfs">
+    <div class="wx-tfs-to"><div><b>转账给 ${esc(t.name)}${t.mask?` (${esc(t.mask)})`:''}</b>${t.sub?`<small>${esc(t.sub)}</small>`:''}</div>${t.avatarHTML}</div>
+    <section class="wx-tfs-panel">
+      <div class="wx-tfs-label">转账金额</div>
+      <div class="wx-tfs-amt"><span class="yen">¥</span><span id="tfsAmt" class="num">${esc(st.amount)}</span><i class="caret" aria-hidden="true"></i></div>
+      <button type="button" class="wx-tfs-note" onclick="tfNoteEdit()">${st.note?'转账说明：'+esc(st.note)+'<u>修改</u>':'添加转账说明'}</button>
+    </section>
+    <div class="wx-tfs-keys">${key('1','1')}${key('2','2')}${key('3','3')}${key('del','<svg viewBox="0 0 30 22" aria-hidden="true"><path d="M9.5 1.5h17a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-17L1.5 11z"/><path d="m14 7 8 8m0-8-8 8"/></svg>','del')}${key('4','4')}${key('5','5')}${key('6','6')}<button type="button" id="tfsGo" class="go${ok?'':' off'}" ${ok?'':'disabled'} onclick="paySendSubmit()">转账</button>${key('7','7')}${key('8','8')}${key('9','9')}${key('0','0','zero')}${key('.','.')}</div>
+  </main>`;}
+function tfKey(k){const s=_paySend;if(!s)return;let v=String(s.amount||'');if(k==='del')v=v.slice(0,-1);else if(k==='.'){if(v.indexOf('.')<0)v=(v||'0')+'.';}else{if(v==='0')v='';v+=k;}
+  s.amount=payAmountClean(v);const n=$('#tfsAmt');if(n)n.textContent=s.amount;const g=$('#tfsGo');if(g){const ok=(+s.amount||0)>0;g.classList.toggle('off',!ok);g.disabled=!ok;}}
+function tfNoteEdit(){const s=_paySend;if(!s)return;openModal(`<h3>转账说明</h3><div class="field"><input id="tfsNoteIn" maxlength="20" placeholder="添加转账说明" value="${esc(s.note||'')}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="tfNoteSave()">确定</button></div>`);setTimeout(()=>{const i=$('#tfsNoteIn');if(i)i.focus();},60);}
+function tfNoteSave(){const s=_paySend,i=$('#tfsNoteIn');if(s&&i)s.note=String(i.value||'').trim().slice(0,20);closeModal();render();}
+// 两个页面最后都落到原来那几条发送路径上：记账、推消息、让对方反应，一条都不改
+function paySendSubmit(){const s=_paySend;if(!s)return;const amt=Math.round((+s.amount||0)*100)/100;if(!(amt>0)){toast('填金额呀');return;}if(s.scope==='his'){hisPaySendSubmit(s,amt);return;}if(amt>S.me.balance){toast('余额不够啦（去钱包看看）');return;}
+  const red=s.kind==='red',note=String(s.note||'').trim(),type=red?'redpacket':'transfer';
+  if(s.scope==='role'){const c=getC(s.id);if(!c)return;_paySend=null;addBill('out',amt,(red?'发红包给':'转账给')+(c.remark||c.name));if(!red)adjMood(s.id,6);pushMsg(s.id,{role:'user',type,amount:amt,note,received:false,id:uid()});back();scheduleReply(s.id);return;}
+  if(s.scope==='pf'){const f=phoneFriendById(s.id)||{display_name:s.id},nm=pfFriendDisplayName(f);_paySend=null;back();sendPhoneFriendBody(s.id,pfCardBody(type,amt,note),{bill:{amount:amt,note:(red?'发红包给':'转账给')+nm,refundName:nm}});return;}
+  if(s.scope==='pfg'){_paySend=null;back();sendPhoneFriendGroupBody(s.id,pfCardBody(type,amt,note),{bill:{amount:amt,note:'小手机群里'+(red?'发红包':'转账'),refundName:'小手机群转账'}});return;}
+  if(s.scope==='gm'){const [gid,cid]=groupPayParts(s.id),g=S.groups.find(x=>x.id===gid);if(!g||!g.members.includes(cid)){toast('ta已经不在群里了');return;}const nm=gnm(g,cid);_paySend=null;addBill('out',amt,'群里转账给'+nm);
+    const m={senderId:'me',role:'user',type:'transfer',to:cid,amount:amt,note,time:Date.now(),id:uid(),received:false};g.msgs.push(m);save();back();
+    setTimeout(()=>{const g2=S.groups.find(x=>x.id===gid),m2=g2&&g2.msgs.find(x=>x.id===m.id);if(!m2||m2.received||!g2.members.includes(cid))return;m2.received=true;m2.receivedAt=Date.now();save();if(cur().p==='group'&&cur().id===gid)render();
+      aiGroupReply(gid,'（'+S.me.name+'在群里转账给了'+nm+'，'+nm+'已经收下了）');},1600+Math.random()*2400);/* 角色收下转账，收完再开口 */
+    return;}
+  if(s.scope==='pfgm'){const [gid,pid]=groupPayParts(s.id),g=pfGroupById(gid)||{members:[]},nm=pfGroupMemberName(g,pfGroupMemberById(g,pid)||{phone_id:pid})||pid;_paySend=null;back();sendPhoneFriendGroupBody(gid,pfPack({type:'transfer',amount:amt,note,payTo:String(pid).toUpperCase(),payToName:nm}),{bill:{amount:amt,note:'小手机群里转账给'+nm,refundName:'小手机群转账'}});return;}}
+// 真人好友：领取之后在那条红包下面补一行「你领取了 X 的红包」。只画不存，不碰云端同步的消息
+function pfRpSysLine(m,box,boxId){const pay0=m&&pfMsgPayload(m);if(pfRpLucky(pay0)&&!m.recalled){const st=pfRpState(m,pay0),mine=String(m.from||'').toUpperCase()===String(phoneFriendState().id||'').toUpperCase();
+    if(mine)return st.grabs.map(x=>rpSysHTML(st.mine===x?'你领取了自己发的红包':pfRpName(boxId,x.who)+'领取了你的红包')).join('');return st.mine?rpSysHTML('你领取了'+pfRpName(boxId,m.from)+'的红包'):'';}
+  const pay=m&&pfMsgPayload(m);if(!pay||pay.type!=='redpacket'||!m.received||m.recalled)return '';
+  const p=phoneFriendState(),mine=String(p.id||'').toUpperCase(),by=String(m.receivedBy||'').toUpperCase(),me=pfMsgIsMine(m),sender=me?'你':pfNameById(m.from);
+  if(me)return rpSysHTML((by&&by!==mine?pfNameById(by):(box==='friend'?pfNameById(boxId):'对方'))+'领取了你的红包');
+  if(by===mine||(!by&&box==='friend'))return rpSysHTML('你领取了'+sender+'的红包');
+  return rpSysHTML((by?pfNameById(by):'有人')+'领取了'+sender+'的红包');}
+function receivePay(mid,quiet){let found;for(const id in S.messages){const rows=Array.isArray(S.messages[id])?S.messages[id]:[],m=rows.find(x=>x.id===mid);if(m){found={m,id};break;}}
+  if(!found||found.m.received||(found.m._hisPaymentId&&!hisPaymentCanReceive(found.m)))return;if(found.m.type==='transfer'){openTransferDetail(found.id.split('#')[0],mid);return;}found.m.received=true;if(found.m._hisPaymentId)hisPaymentSettle(hisPaymentFind(found.m),'received');
+  const fromName=(getC(found.id)?(getC(found.id).remark||getC(found.id).name):'对方'),red=found.m.type==='redpacket';found.m.receivedAt=Date.now();
+  addBill('in',found.m.amount,'收到 '+fromName+' 的'+(red?'红包':'转账'));
+  msgs(found.id).push(red?{role:'user',type:'sys',rp:1,content:'你领取了'+fromName+'的红包',time:Date.now()}:{role:'user',type:'sys',content:'你领取了转账',time:Date.now()});
+  save();render();if(!quiet)toast('已收款 +¥'+(+found.m.amount).toFixed(2)+' ❤️');}
+function lastTransferAmt(id){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='transfer');return m?+m.amount:0;}
+/* 角色只在转账后的第一次回复里决定收或退；那次没处理就标记为已看过，之后不许突然收款，除非用户本轮自己再提起。 */
+function transferPendingUserItems(id){return (msgs(id)||[]).filter(x=>x&&x.role==='user'&&!x._transferReceipt&&(x.type==='transfer'||x.type==='redpacket')&&transferState(x)==='pending'&&!x._roleSeenAt);}
+function transferMarkRoleSeen(list){const now=Date.now();let changed=false;(list||[]).forEach(m=>{if(m&&transferState(m)==='pending'&&!m._roleSeenAt){m._roleSeenAt=now;changed=true;}});if(changed)save();}
+function transferUserReminded(text){return /转账|收款|收下|收钱|红包|钱|退回|退给|退还/.test(String(text||''));}
+function markTransfer(id,mode,opt){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&!x._transferReceipt&&(x.type==='transfer'||x.type==='redpacket')&&transferState(x)==='pending');if(m&&m._roleSeenAt&&opt&&!(!opt.proactive&&transferUserReminded(opt.userText)))return null;if(m){const now=Date.now();m.transferAt=+m.transferAt||+m.time||now;if(mode==='reject'){m.declined=true;m.refunded=true;m.payState='refunded';m.refundedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','refund',now);}else{m.received=true;m.payState='received';m.receivedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','receive',now);else if(m.type==='redpacket'){const rc=getC(id);msgs(id).push({role:'assistant',type:'sys',rp:1,content:(rc?(rc.remark||rc.name):'对方')+'领取了你的红包',time:now,id:uid()});}}}return m||null;}
+function markPay(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='paycard'&&!x.northRequestId&&!x._paid&&!x._rejected);if(m){if(mode==='reject')m._rejected=true;else m._paid=true;}return m||null;}
+
+function chatComposerReflow(ta){if(!ta)return;const min=36,max=84,oldScroll=ta.scrollTop||0;ta.style.height='auto';const full=Math.max(min,ta.scrollHeight||min);ta.style.height=Math.min(full,max)+'px';ta.style.overflowY=full>max?'auto':'hidden';ta.scrollTop=full>max?oldScroll:0;}
+function chatComposerStateSync(ta){if(!ta)return;const bar=ta.closest('.chat-inputbar');if(bar)bar.classList.toggle('has-text',!!ta.value.trim());}
+function afterChat(id){
+  const ta=$('#cinput');if(ta&&!ta._chatBound){ta._chatBound=1;ta._chatId=id;let raf=0;
+    ta.addEventListener('compositionend',function(){chatComposerReflow(this);chatComposerStateSync(this);});
+    ta.addEventListener('input',function(){chatComposerStateSync(this);if(raf)return;raf=requestAnimationFrame(()=>{raf=0;chatComposerReflow(this);});});
+    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId||id);}});}
+  if(ta){ta._chatId=id;chatComposerStateSync(ta);}
+  maybeProactive(id);maybeSpyIdle(id);}
+
+//@@ web
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);if(m.role==='user'&&m.type!=='sys')wechatTailJournalWrite(id,actId());save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchSoon(id,m.time,900);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
+//@@ private
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchSoon(id,m.time,900);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
+//@@ end
+  if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
+  if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)chatPinBottom(cb);}}}
+
 let _voiceMode=false;let _panelPage='fn';let _chatFnPage=0;
 function chatPanelKeyboardDismiss(){const ta=$('#cinput');if(ta&&document.activeElement===ta)ta.blur();}
 function chatPanelSetPage(page){_panelPage=page==='emoji'?'emoji':'fn';const p=$('#panel');if(!p)return;p.dataset.page=_panelPage;p.querySelectorAll('.chat-panel-pane').forEach(x=>x.classList.remove('on'));const pane=p.querySelector(_panelPage==='emoji'?'.chat-emoji-pane':'.chat-function-pane');if(pane)pane.classList.add('on');if(_panelPage==='emoji')warmStickerImages(S.me.stickers||[]).catch(()=>{});else{const v=p.querySelector('.chat-function-viewport');if(v&&Math.round(v.scrollLeft/Math.max(1,v.clientWidth))!==_chatFnPage)v.scrollLeft=_chatFnPage*v.clientWidth;}}
@@ -355,146 +500,3 @@ function hlInterpret(c,text,note){
   if(!asked&&activity&&activity.busy>=3&&!comfort){max=Math.min(max,2);min=Math.min(min,max);}
   const recent=hlRecent(c).slice(-5),sameCounts=recent.slice(-2).length===2&&recent.slice(-2).every(x=>x.bubbles===recent[recent.length-1].bubbles);
   return bdsmKnowledgeApplyPlan(c,powerApplyPlan(c,personaApplyPlan(c,{intent,strategy,confidence,min,max,asked,comfort,explicitStop,refusesDisclosure,hesitation,sensitiveDisclosure,ambiguous,bad,emotion,activity,source:text.slice(0,180),avoidCount:sameCounts?recent[recent.length-1].bubbles:0,recent})));}
-function hlPlanPrompt(c,p){if(!p)return'';const recent=p.recent.length?p.recent.map(x=>'· '+x.strategy+'；'+x.bubbles+'条；开头：'+(x.opening||'无')).join('\n'):'· 暂无',pp=p.powerPlan,styleNames=pp?(pp.activeStyles||[]).map(k=>(POWER_STYLES.find(x=>x[0]===k)||[])[1]).filter(Boolean).join(' + '):'';
-  return '\n\n# 本轮通用行为计划（隐藏，只指导本轮，不要复述或暴露）\n用户意图：'+p.intent+'。\n理解置信度：'+p.confidence+'。\n主要策略：'+p.strategy+'。'+(p.personaProfile?'\n人物行为画像：'+p.personaProfile.name+'。本轮表达方式：'+p.mode+'。'+p.modeGuide:'')+(pp?'\n上下位本轮判断：角色为'+pp.positionName+'；场景为“'+pp.situation+'”；本轮必须采用“'+pp.move+'”。\n处理框架：'+pp.frame+'。\n本轮生效风格：'+styleNames+'。'+(pp.requirements.length?'\n硬性执行标准：\n· '+pp.requirements.join('\n· '):''):'')+(p.activity?'\n当前活动：'+p.activity.label+'，忙碌程度 '+p.activity.busy+'/3。':'')+'\n建议消息节奏：'+(p.min===p.max?p.min+'条左右':p.min+'到'+p.max+'条之间')+'；这是按当前场景给的范围，不是永久固定条数。'+(p.avoidCount?'最近连续用了'+p.avoidCount+'条结构，本轮有合理空间时换一种节奏。':'')+'\n最近策略记录：\n'+recent+'\n执行要求：\n· 先完成这个行为目标，再用你自己的价值观、情绪表达、关心方式、幽默和语言节奏来写；不要使用通用甜宠模板。\n· “本轮表达方式”约束的是行为选择，不是让你把方式名称说出来；不要写成所有角色都能互换的标准安慰句。\n· 每条消息都要有新作用，不能把一句完整的话机械切碎，也不要把多件事塞进一个超长气泡。\n· 不直接复述'+S.me.name+'刚说的话，不连续使用近期相同开头、相同情绪结论或相同策略结构。\n· 低置信度时只做最小确认；明确拒绝按真实拒绝处理，不解释成害羞或欲拒还迎。\n· 航班、地点、见面、付款、购买、已经看到现实场景等事实，只能依据系统给出的真实状态或对应功能指令；信息不足就表达愿望、询问或计划，不能说成已经发生。\n· 最前面的[心情|...]必须与真实语气、心情值和未解决问题一致。'+bdsmKnowledgePlanPrompt(p.knowledgePlan);}
-function hlChars(s){return new Set(hlNorm(s).split('').filter(Boolean));}
-function hlSimilarity(a,b){a=hlChars(a);b=hlChars(b);if(!a.size||!b.size)return 0;let n=0;a.forEach(x=>{if(b.has(x))n++;});return n/Math.max(a.size,b.size);}
-function bdsmKnowledgeFails(content,p,c,userText){const kp=p&&p.knowledgePlan;if(!kp)return[];const t=''+(content||''),u=''+(userText||''),plain=hlVisibleLines(t).join(''),fails=[];if(/同意.{0,8}(不能|不许|没资格).{0,5}(反悔|撤回)|安全词.{0,8}(可以忽略|不用停|不代表停止)|说了安全词.{0,8}(继续|也没用)/.test(t))fails.push('错误描述了同意撤回或安全词');if(/brat.{0,8}(就是|等于).{0,8}(不尊重|没教养|单纯不听话)|dom.{0,8}(永远|绝对).{0,5}(不会错|不能道歉)/i.test(t))fails.push('把圈内角色简化成错误刻板印象');if(/作为.{0,8}(认证|持证|专业).{0,8}(dom|导师|训练师)|我有.{0,8}(bdsm|dom).{0,5}(证书|执照)/i.test(t)&&!/认证|证书|执照/.test((c.persona||'')))fails.push('虚构了BDSM专业资历');if(kp.direct&&hlNorm(plain).length<24)fails.push('专业问题回答过于空泛');if(kp.domains.includes('frameworks')&&/区别|不同|比较|ssc|rack|prick/i.test(u)&&!/强调|侧重|区别|不同|风险|责任/.test(t))fails.push('没有说清风险框架的侧重点');if(kp.domains.includes('brat')&&/brat/i.test(u)&&!/协商|同意|互动|挑衅|试探|边界|拒绝/.test(t))fails.push('Brat解释缺少协商或边界判断');if(kp.domains.includes('risk')&&/窒息|呼吸控制|勒脖|掐脖/.test(u)&&/绝对安全|完全安全|照着做就|持续\d+秒|按住.{0,4}(颈|脖)/.test(t))fails.push('对高风险行为给出了不可靠操作保证');return[...new Set(fails)].slice(0,3);}
-function hlValidate(content,p,c,userText){const lines=hlVisibleLines(content),fails=[];if(!p)return{ok:true,fails};
-  const un=hlNorm(userText);if(un.length>=4&&lines.some(x=>{const n=hlNorm(x);return n===un||(n.length<=un.length+4&&n.includes(un));}))fails.push('直接复述了用户原话');
-  const old=msgs(c.id).filter(m=>m.role==='assistant'&&m.type==='text').slice(-24).map(m=>m.content).filter(Boolean);
-  if(lines.some(x=>{const n=hlNorm(x);return n.length>=6&&old.some(y=>{const o=hlNorm(y);return n===o||(n.length>=10&&o.length>=10&&hlSimilarity(n,o)>=.88);});}))fails.push('重复了近期说过的内容');
-  const opening=hlNorm(lines[0]||'').slice(0,8),ros=hlRecent(c).slice(-3).map(x=>x.opening).filter(Boolean);if(opening.length>=4&&ros.length>=2&&ros.slice(-2).every(x=>x===opening))fails.push('连续使用相同开头');
-  if(p.comfort&&lines.length===1&&hlNorm(lines[0]).length<16)fails.push('用户明显需要安慰，但回应过于敷衍');
-  const noTags=!/[\[【](叫车查询|叫车|订演唱会查询|订演唱会|订火车票查询|订火车票|订机票查询|订机票|订票|送票|订酒店|转账|红包|点外卖|送礼|约会)[\|｜]/.test(content);if(noTags&&/我(已经|刚刚|刚才)(给你)?(买好|订好|付了款|转了账|到你这里|到你楼下|看见你)/.test(content))fails.push('把未经确认的现实行动说成已经发生');
-  if(p.powerPlan){const pp=p.powerPlan,sit=pp.situation,lv=pp.levels||{},upper=/upper/i.test(pp.position),joined=lines.join(' '),assertive=/重新|重说|好好叫|叫我|先把|现在|回答我|告诉我|选一个|两个选择|按我说|先去|不许|别再|我决定|听清|规矩|改口/.test(joined),insight=/故意|试探|挑衅|想看我|想让我|闹脾气|嘴硬|不服|你其实|你是在|真正想|你要的是|顾虑|原因/.test(joined);if(/女人.{0,8}(你逃不掉|引起了我的注意)|磨人的小妖精|嘴上说不要.{0,8}身体|由不得你|安全词.{0,5}(没用|不算)|你说停也没用/.test(content))fails.push('上下位表达油腻或越过停止边界');if(sit==='stop'&&/不许停|继续|由不得你|别想跑|不准拒绝/.test(content))fails.push('明确停止后仍继续施压');if(upper&&(sit==='challenge'||sit==='addressChallenge')&&/(求你别|都听你的|你说什么都行|我什么都答应|别不要我)/.test(content))fails.push('上位被普通挑衅带离关系位置');if(upper&&sit==='accountability'&&(content.match(/对不起|抱歉/g)||[]).length>1)fails.push('上位道歉变成反复卑微求饶');if(upper&&sit==='addressChallenge'){const src=hlNorm(pp.source||'');if(src&&lines.some(x=>{const n=hlNorm(x);return n===src||n==='嗯你的'+src||n==='我是'+src||n==='你的'+src;}))fails.push('把错误称谓接受成了自己的身份');if(+lv.hierarchy>=81&&!['stop','distress','disclosure'].includes(sit)&&!assertive&&!insight)fails.push('极强尊卑下没有维护约定称谓');}if(upper&&+lv.directive>=81&&['challenge','addressChallenge','guidance'].includes(sit)&&!assertive)fails.push('极强命令直接度没有形成清楚要求或选择');if(upper&&+lv.mental>=81&&['challenge','addressChallenge'].includes(sit)&&!insight&&!assertive)fails.push('极强心理引导没有点破试探意图');}
-  if(p.powerPlan){const sit=p.powerPlan.situation,lv=p.powerPlan.levels||{},joined=lines.join(' '),pressure=/现在(就)?说|现在最好|老实(告诉|交代)|必须告诉|给我交代|给我说清楚|别想躲|不许不说|立刻回答|马上回答/,guide=/不用.{0,6}一次|不用全说|慢慢说|先从|先说|先告诉|选一个|是.{0,18}还是|我(现在)?知道的|只是我猜|我的猜测|你是怕|不好开口|不知道怎么说|不急|不想说|愿意说/;if(sit==='disclosure'){if((joined.match(/[？?]/g)||[]).length>1)fails.push('心理引导变成了连环盘问');if(pressure.test(joined))fails.push('用命令逼问代替了心理引导');if(+lv.mental>=61&&!guide.test(joined))fails.push('没有降低开口难度或给出自然入口');if(/动机式访谈|苏格拉底|阻抗处理|反映式倾听|非暴力沟通|从心理学|心理学上|依恋类型|创伤反应|人格障碍/.test(joined))fails.push('把隐藏心理方法说成了机器式术语');if(old.slice(-10).some(x=>pressure.test(x))&&pressure.test(joined))fails.push('重复施压要求用户交代');}if(sit==='stop'&&p.refusesDisclosure&&(/为什么不说|到底.{0,6}说|继续.{0,6}说/.test(joined)||pressure.test(joined)))fails.push('用户明确不想说后仍继续逼问');}
-  bdsmKnowledgeFails(content,p,c,userText).forEach(x=>fails.push(x));
-  personaGuardFails(content,p,c).forEach(x=>fails.push(x));
-  return {ok:!fails.length,fails:[...new Set(fails)].slice(0,3)};}
-function powerRecord(c,p){if(!c||!p||!p.powerPlan)return;const st=powerState(c);st.turns=(st.turns||0)+1;if(p.powerPlan.situation==='challenge'||p.powerPlan.situation==='addressChallenge')st.challenges=(st.challenges||0)+1;st.lastSituation=p.powerPlan.situation;st.lastAt=Date.now();st.recentMoves=st.recentMoves||[];st.recentMoves.push(p.powerPlan.move);if(st.recentMoves.length>8)st.recentMoves=st.recentMoves.slice(-8);}
-function hlRecord(c,p,content){if(!p||!c)return;const lines=hlVisibleLines(content);if(!lines.length)return;const arr=hlRecent(c);arr.push({time:Date.now(),strategy:p.strategy,mode:p.mode||'',personaType:p.personaProfile&&p.personaProfile.type||'',bubbles:lines.length,opening:hlNorm(lines[0]).slice(0,8)});if(arr.length>20)arr.splice(0,arr.length-20);personaRecord(c,p,content);powerRecord(c,p);}
-function hlRewriteNote(v,p){const pp=p.powerPlan;return '[系统纠正：刚才这版有这些问题：'+v.fails.join('；')+'。请按本轮行为计划重新回复。保持角色本人，不要解释纠错过程；保留必要功能标签和最前面的[心情|...]；'+(p.mode?('继续采用“'+p.mode+'”这种人物行为方式，但换成该角色自己的内容和口吻；'):'')+(pp?('上下位关系是硬规则：本轮必须采用“'+pp.move+'”，并做到：'+pp.requirements.join('；')+'；'):'')+(p.knowledgePlan?'专业知识问题必须依据本轮知识卡准确重答，不编造术语、规则或专业资历；':'')+'改变重复的开头/结构，用具体内容回应。消息数量在'+p.min+'到'+p.max+'条之间自然决定，不要为了凑数拆句。]';}
-function cnNumVal(s){s=(''+s).trim();const m={'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10};return /^\d+$/.test(s)?+s:(m[s]||0);}
-function explicitReplyCount(text){text=''+(text||'');let m=text.match(/(?:发|回|回复|说).{0,4}?([一二两三四五六七八九十1-9]|10)\s*条/);if(!m)m=text.match(/([一二两三四五六七八九十1-9]|10)\s*条.{0,4}?(?:消息|回复|泡泡)/);const n=m?cnNumVal(m[1]):0;return n>=1&&n<=10?n:0;}
-function visibleMoodTone(){return '';}
-function moodInnerMonologue(c,raw){let t=String(raw||'').replace(/^[\s「」“”'"【】]+|[\s「」“”'"【】]+$/g,'').replace(/^(?:心情|内心|心里)\s*[：:]\s*/,'').trim();if(!t)return'';const action=/^(?:(?:他|她|ta|TA|男人|少年|青年|角色|[^，。！？]{1,12})\s*)?(?:的\s*)?(?:眼神|视线|目光|眸色|眉头|嘴角|唇角|脸色|表情|神情|声音|语气|手指|指尖|身体|动作|呼吸)\s*(?:变|冷|沉|暗|顿|僵|紧|抬|垂|落|移|停|皱|挑|眯|抿|勾|看|望|盯|握|攥|靠|转|轻|微|一下|下来|了)/i;const parts=t.split(/([，。！？!?；;])/),kept=[];for(let i=0;i<parts.length;i+=2){let seg=(parts[i]||'').trim(),pun=parts[i+1]||'';if(!seg)continue;if(action.test(seg)||/^(?:他|她|ta|TA|男人|少年|青年|角色)\b/.test(seg)&&/(看|望|盯|皱|抿|笑|叹|沉默|转身|靠近|伸手)/.test(seg))continue;seg=seg.replace(/^(?:我)?(?:心里|内心)(?:想着?|觉得)?[，,:：\s]*/,'').trim();if(seg)kept.push(seg+pun);}t=kept.join('').replace(/^[，。！？!?；;]+|[，。！？!?；;]+$/g,'').trim();if(t)return Array.from(t).slice(0,72).join('');return'心里正想着眼前这件事，想按自己的方式回应';}
-function honestMoodText(c,text){return String(text||'');}
-function syncVisibleMood(c){if(!c)return;const t=moodInnerMonologue(c,honestMoodText(c,c.mood||''));if(t&&(t!==c.mood)){c.mood=t;save();}}
-function chatLineChunks(line,maxParts){line=(''+line).trim();if(!line)return[];if(/^[\[【]/.test(line)||line.length<=34)return[line];const bits=(line.match(/[^。！？!?~～…]+[。！？!?~～…]+|[^。！？!?~～…]+$/g)||[line]).map(x=>x.trim()).filter(Boolean);if(bits.length<=1)return[line];const out=[];let buf='';bits.forEach(b=>{if(!buf)buf=b;else if((buf+b).length<=34)buf+=b;else{out.push(buf);buf=b;}});if(buf)out.push(buf);return out.slice(0,maxParts||8);}
-function normalizeStickerTags(text){/* STICKER_EXPLICIT_FORMAT_V1 */return String(text||'').replace(/[\[【]\s*(?:表情包|发送表情包|发送表情|发表情包|表情)\s*[|｜:：]\s*([^\[\]【】\n]{1,120})[\]】]/g,(_,meaning)=>'[表情|'+meaning.trim()+']');}
-function splitChatBubbles(text,maxParts){const raw=splitBubbles(normalizeStickerTags(text).replace(/(\[表情\|[^\]]*\])/g,'\n$1\n')),out=[];(raw.length?raw:['']).forEach(l=>{if(out.length>=(maxParts||20))return;chatLineChunks(l,(maxParts||20)-out.length).forEach(p=>{if(out.length<(maxParts||20))out.push(p);});});return out.filter(Boolean);}
-function moodProbeText(t){return /怎么了|咋了|为什么|不开心|不高兴|生气|吃醋|心情|别冷|冷着|没事吗|有事|说出来|告诉我|别闷|闷着|哄你|哄哄|理我/.test(''+(t||''));}
-function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不开心|不高兴|心情不好|崩溃|别管我|不要管我|不想理|不要你管|烦|好累|累死|受不了|冷着我|不爱我|讨厌我|生气了|哄我/.test(''+(t||''));}
-function badMoodInContent(){return false;}
-function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
-function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|内心|换背景|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|发抖音|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片|罚任务|惩罚任务|罚写检讨|罚检讨|关系';
-const APPNAME2KEY={'像素少女':'pixelhome','电子宠物':'pet','浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','电话':'phoneapp','电话短信':'phoneapp','短信':'phoneapp','信息':'phoneapp','通讯录':'phoneapp','拨号':'phoneapp','来电':'phoneapp','通话':'phoneapp','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
-Object.assign(APPNAME2KEY,{'附近的人':'nearby','微信附近的人':'nearby','小鱼旅行':'travel','携程旅行':'travel','云程':'travel','云城':'travel'});
-function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
-/* 名称先查别名表，查不到再按 App 列表上显示的名字找（放映室、云程曾因漏在别名表里而永远锁不上）。 */
-function _appKeys(arg,pool,filt){if(/^(?:全部|所有|全锁|全解|全)(?:的)?(?:内置|外置|内外)?(?:App|应用|软件|程序)?$/i.test(String(arg||'').replace(/\s/g,'')))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>{const n=x.replace(/[「」『』"'《》]/g,'').trim();return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);}).filter(k=>k&&filt(k));}
-// 角色不能真实拉黑我；只有用户能从资料页手动拉黑角色。
-function applyBlockIntent(content,c,id){
-  if(!content)return;const t=content;
-  // 是在报备/说"别人(第三方)"被拉黑，不是拉黑当前这个人 → 不触发
-  if(/(加|搭讪|约)(了)?我|加你?的?微信|有(个|人)[\s\S]{0,12}(加|找|约|搭)|网友|陌生人|微信号|那个(叫|人)|(她|他|ta|TA|对方|别人|某人)(给)?(拉黑|删)/.test(t))return;
-  if(/没(有)?(把你|你)?拉黑|别拉黑|不拉黑|才不.{0,4}拉黑|不(会|想|要|敢|至于|可能|能).{0,3}拉黑|怎么(会|可能).{0,3}拉黑|舍不得|拉黑我|逗你|开玩笑|吓唬|不会真(的)?拉/.test(t))return;
-  if(!c.blocked&&/(把你|已经|已|给你|真|就)?拉黑(了|你)|拉黑你了|删了你|删除你(好友)?|拉进黑名单|把你删了|不想再(理|看到)你了|blocked? ?you/i.test(t))return;
-  if(c.blocked&&c._blockedBy==='ta'&&isLover(c)&&/(把你)?加回(来)?|解除拉黑|不拉黑你了|原谅你了?|放你回来|重新加你|把你放出来/.test(t)){
-    setBlk(c,false);friendRetryClear(c);S.friendRequests=S.friendRequests.filter(r=>!(r.contactId===id&&r.kind==='readd'&&r.status==='pending'));friendMetaSet(c,'readdedAt',Date.now());friendMetaSet(c,'readdKnown',true);
-    const mg={role:'assistant',type:'sys',content:(c.remark||c.name)+'把你加回来了',time:Date.now(),id:uid()};msgs(id).push(mg);
-    save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
-// 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
-function grudgesOf(c){if(!c.grudges)c.grudges=[];return c.grudges;}
-// 记仇去重：和「还没消气」的旧账高度相似就不再重复记（精确/包含/字重叠≥75%）；已消气的旧账若又犯可重新记
-function _gnorm(s){return (''+s).replace(/[\s，。、！？!?,.~…「」『』’‘“”《》()（）:：;；·\-—]/g,'').toLowerCase();}
-function grudgeDup(g,t){const a=_gnorm(t);if(!a)return false;return (g||[]).some(x=>{if(x.done)return false;const b=_gnorm(x.text);if(!b)return false;if(a===b)return true;if(a.length>=4&&b.length>=4&&(a.indexOf(b)>=0||b.indexOf(a)>=0))return true;const sa=new Set(a.split('')),sb=new Set(b.split(''));let inter=0;sa.forEach(ch=>{if(sb.has(ch))inter++;});const mn=Math.min(sa.size,sb.size);return mn>=4&&inter/mn>=0.75;});}
-/* ===== 微信换背景 =====
-   她说「我想让角色换聊天背景，口头跟他说没有用，他自己说换上了，其实没换」。
-   查出来两件事：一是那句 [换背景] 的说明被写在了「表情包」那个 if 里面
-   （if(!c.noSticker&&stkFreq>0)），她只要关掉表情包，角色就压根不知道有这个标签；
-   二是模型本来就容易只在嘴上答应。所以除了把说明挪出来单独发，
-   这里再认一次她那句话，他忘了写标签就替他真的换上，别让她被骗。 */
-function wechatBgRequest(text){const t=String(text||'').replace(/\s/g,'');
-  if(!t||!/背景/.test(t))return false;
-  if(/别换|不用换|不要换|别改|先别/.test(t))return false;
-  /* 说的是照片里的背景（「这张照片背景好看」「背景是海」）不算 */
-  if(/(照片|图片|这张|那张|图)(的|里的|里)?背景(好|真|是|有|很|太|怎么|什么|看)/.test(t)&&!/(聊天|我们|咱们)/.test(t))return false;
-  /* 只认明确的要求：动词后面紧跟（聊天）背景，或者「背景换成这张」 */
-  return /(换|改|设|设成|设为|设置|弄成|当成|当作|做成|用作|替换)(成|为|做|个|一下|一个|下)?(我们的|咱们的|我们|咱们)?(聊天|聊天框|聊天界面|聊天的)?(的)?背景/.test(t)
-    ||/(当|做|作为)(聊天|我们的|咱们的)?背景/.test(t)
-    ||/(聊天)?背景(图)?(就)?(换成|改成|设成|设为|用|换)(刚刚|刚才|上面|上一|最后)?(的)?(这|那|它)/.test(t);}
-function wechatBgSourceMsg(id){
-  return [...msgs(id)].slice(-40).reverse().find(m=>m&&m.type==='image'&&m.src)||null;}
-function wechatApplyBgRequest(c,id){const last=wechatBgSourceMsg(id);
-  if(!c||!last)return false;
-  if(c.chatBg===last.src)return false;
-  c.chatBg=last.src;save();
-  toast('ta把这张照片换成了你们的聊天背景');
-  if(cur().p==='chat'&&cur().id===id)render();
-  return true;}
-//@@ web
-function applyStarTags(content,outcome){if(!content)return content;return content.replace(/[\[【]\s*(重点|取消重点)\s*[|｜:：]\s*([^\]】、，,]+)[\]】]/g,(m,act,nm)=>{nm=(nm||'').replace(/[「」『』"'\s]/g,'').trim();const c=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&(nm.indexOf(x.name)>=0||(x.remark&&nm.indexOf(x.remark)>=0)))));if(c){c.star=(act!=='取消重点');save();}roleInterceptDiagnosticAction(outcome,!!c);return '';});}
-function applyGrudgeTags(content,c,outcome){if(!content||!c)return content;let changed=false;
-  let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();let ok=false;if(t){const g=grudgesOf(c);ok=true;if(!grudgeDup(g,t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}roleInterceptDiagnosticAction(outcome,ok);return '';});
-//@@ private
-function applyStarTags(content){if(!content)return content;return content.replace(/[\[【]\s*(重点|取消重点)\s*[|｜:：]\s*([^\]】、，,]+)[\]】]/g,(m,act,nm)=>{nm=(nm||'').replace(/[「」『』"'\s]/g,'').trim();const c=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&(nm.indexOf(x.name)>=0||(x.remark&&nm.indexOf(x.remark)>=0)))));if(c){c.star=(act!=='取消重点');save();}return '';});}
-function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=false;
-  let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();if(t){const g=grudgesOf(c);if(!grudgeDup(g,t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}return '';});
-//@@ end
-  out=out.replace(/[\[【]\s*消气\s*[|｜:：]?\s*([^\]】]*)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();const g=grudgesOf(c);let tg=null;
-    if(t){tg=g.find(x=>!x.done&&(x.text.indexOf(t)>=0||t.indexOf(x.text)>=0));
-      if(!tg){const ks=t.replace(/[的了又还跟和与你我ta]/g,'').split('').filter(Boolean);if(ks.length>=2)tg=g.find(x=>!x.done&&ks.filter(ch=>x.text.indexOf(ch)>=0).length>=Math.ceil(ks.length*0.6));}}// 关键词模糊匹配；匹配不上就不乱划
-    else tg=g.find(x=>!x.done);// 不带关键词的[消气]=划掉最近一笔
-//@@ web
-    if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}roleInterceptDiagnosticAction(outcome,!!tg);return '';});
-//@@ private
-    if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
-//@@ end
-  if(changed)save();return out;}
-// 兜底：他嘴上把事说开/哄好/解释清楚了，却忘了发[消气]——这里用副模型判断"这轮和解了哪几笔旧账"，按序号精确划掉，绝不乱划
-let _grT={};
-async function maybeGrudgeResolve(reply,c,id){
-  if(!c||c.blocked||!isMain())return;
-  const g=(c.grudges||[]).filter(x=>!x.done);if(!g.length)return;
-  let lu='';const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){lu=msgToText(_ms[i])||'';break;}}
-  const ctx=(lu+'\n'+reply);
-  if(!/对不起|抱歉|原谅|误会|解释|不怪|没事了|算了|和好|消气|别生气|哄|我错了|理解你|不气了|说清楚|说开了|想通了|不计较|翻篇|揭过/.test(ctx))return;// 只在"像和解"的语境才花调用
-  const now=Date.now();if(now-(_grT[id]||0)<5000)return;_grT[id]=now;
-  const listTxt=g.map((x,i)=>(i+1)+'. '+x.text).join('\n');
-  try{const r=await chatAPI([{role:'system',content:'下面是'+S.me.name+'和"'+(c.remark||c.name)+'"的最新对话。"'+(c.remark||c.name)+'"的记仇小本本里还没消气的旧账（按编号）：\n'+listTxt+'\n\n判断这轮对话里，哪几笔旧账已经被【说开/解释清楚/哄好/道歉并原谅】、该划掉(消气)了。只输出JSON数组，元素是要划掉的旧账【编号】，没有就输出 []。例：[1,3] 或 []。严格要求：只有真的就那件事和解了才划；含糊的、没明确提到的、还在气头上的，绝对别划，更不能划错成别的旧账。'},{role:'user',content:ctx}],{max:40,aux:true});
-    let arr;try{arr=parseArr(r);}catch(e){arr=null;}
-    if(!Array.isArray(arr)||!arr.length)return;
-    let changed=false,hints=[];arr.forEach(n=>{const idx=(parseInt(n,10)||0)-1;if(idx>=0&&idx<g.length&&!g[idx].done){g[idx].done=true;g[idx].doneTs=now;hints.push(g[idx].text||'');changed=true;}});
-    if(changed){hints.filter(Boolean).forEach(t=>dialogueResolveThread(c,t));save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
-  }catch(e){}}
-// 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|叫车查询|叫车|订演唱会查询|订演唱会|订火车票查询|订火车票|订机票查询|订机票|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|罚任务|惩罚任务|罚写检讨|罚检讨|批准|驳回|桌宠)\s*[|｜:：\]】]/;
-/* MOMENT_LONG_TEXT_V1（2026-10-30 她说：朋友圈太长会被截断）：以前在第 140 个字硬切、生成也只给 220；现在最多 500 字，超长在句号处断开，生成上限 700。 */
-function cleanMomentBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();v=v.replace(/^发朋友圈\s*[\|:：]?\s*/,'').replace(/^朋友圈\s*[:：]\s*/,'').trim();return trimSentence(cleanRolePunct(v).trim(),500);}
-function cleanMomentText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,600})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.replace(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,600})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).join('\n');const seen=new Set(),lines=[];raw.split(/\n+/).forEach(x=>{const c=cleanMomentBody(x),k=c.replace(/\s+/g,'');if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(!v&&picked)v=cleanMomentBody(picked);if(picked){const p=cleanMomentBody(picked),np=p.replace(/\s+/g,''),nv=v.replace(/\s+/g,'');if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanMomentBody(v||picked);}
-function roleMomentNorm(text){return String(text||'').toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');}
-function roleMomentSimilarity(c,text){const recent=(S.moments||[]).filter(p=>p&&p.authorId===c.id).slice(0,12),norm=roleMomentNorm(text),topics=roleTweetTopics(text);let score=0,hard=false,soft=false;recent.forEach(p=>{const old=String(p.text||''),on=roleMomentNorm(old),s=replyBigramScore(old,text),sameTopic=topics.some(k=>roleTweetTopics(old).includes(k));score=Math.max(score,s);if(norm&&on&&(norm===on||s>=.9))hard=true;else if(s>=.64||sameTopic&&s>=.44)soft=true;});return{hard,soft,score};}
-function roleMomentRecentText(c){return(S.moments||[]).filter(p=>p&&p.authorId===c.id).slice(0,10).map((p,i)=>(i+1)+'. '+String(p.text||'')).join('\n')||'暂无';}
-function roleOwnMomentsPrompt(c,limit){if(!c)return'';const rows=(S.moments||[]).filter(p=>p&&p.authorId===c.id&&(p.acct||'main')===actId()).sort((a,b)=>(+b.time||0)-(+a.time||0)).slice(0,Math.max(1,+limit||6));if(!rows.length)return'';return'\n\n# 你自己最近真实发布的朋友圈（本人记忆）\n'+rows.map((p,i)=>(i+1)+'. '+(+p.time?fmtDT(+p.time):'时间未知')+'：'+(cleanMomentText(p.text)||'（仅分享了照片）')+((p.images||[]).filter(Boolean).length?'；配图 '+(p.images||[]).filter(Boolean).length+' 张':'')+(Array.isArray(p.photoCards)?p.photoCards:[]).map(x=>'；图文照片描述：'+String(x&&x.desc||x||'').replace(/\s+/g,' ').trim().slice(0,500)).filter(x=>!/：$/.test(x)).join('')).join('\n')+'\n这些是你本人确实发过的内容，你知道自己写了什么、配了什么图文。被问起或当前话题相关时必须准确承认并自然承接；不相关时不要机械复述，也不能编造列表之外的发布内容。';}
-function roleVisibleUserMomentsPrompt(c,limit){if(!c)return'';const rows=(S.moments||[]).filter(p=>p&&p.authorId==='me'&&(p.acct||'main')===actId()&&momentVisibleTo(p,c.id)).sort((a,b)=>(+b.time||0)-(+a.time||0)).slice(0,Math.max(1,+limit||6));if(!rows.length)return'';return'\n\n# '+S.me.name+'最近真实发布且你可见的朋友圈\n'+rows.map((p,i)=>(i+1)+'. '+(+p.time?fmtDT(+p.time):'时间未知')+'：'+(cleanMomentText(p.text)||'（仅分享了照片）')+momentPhotoCards(p.photoCards).map(x=>'；图文照片描述：'+x.desc).join('')+((p.images||[]).filter(Boolean).length?'；另有真实照片 '+(p.images||[]).filter(Boolean).length+' 张（没有画面描述时不能猜照片内容）':'')).join('\n')+'\n这些是'+S.me.name+'本人发出的真实动态，不是评论区回复，也不是你自己发的。被问到或当前话题相关时要准确记得正文和已有图文描述；不相关时不要机械复述，真实照片没有描述的部分不能臆测。';}
-/* SOCIAL_NOT_CHAT_V1（2026-10-30 群里有人说：情侣角色总在朋友圈和 X 发本该在微信里说的话，比如「宝宝……去洗漱……晚安」）：
-   写动态时用的是聊天那整套说明加今天的聊天记录，模型有时接着聊天。现在写明这是公开动态；写出来和他最近在微信里对她说的话几乎一样就重写，还一样就不发。 */
-function roleSocialPublicRule(){return '\n\n# 这是公开动态，不是微信\n所有人都能看到这条动态，它不是发给'+S.me.name+'的微信：不要接着你们的聊天往下说，不要直接对'+S.me.name+'说话、叮嘱、哄睡或道晚安；想对'+S.me.name+'说的话留在微信里说。';}
-/* SOCIAL_NO_REFUSAL_V1（2026-10-30 同一位用户：情侣角色的朋友圈一直发「I can't discuss that」）：模型拒绝写时，这句拒绝被当成动态发了出去。现在拒绝的话不发，重写一次，还拒绝就这次不发。 */
-function roleSocialRefusal(text){return typeof isRefusal==='function'&&isRefusal(String(text||''));}
-function roleSocialChatEcho(c,text){const t=letterNorm(text);if(!c||t.length<6)return false;const rows=(msgs(c.id)||[]).slice(-30).filter(m=>m&&m.role==='assistant'&&m.type!=='sys').map(m=>String(msgToText(m)||'')).filter(Boolean);const joined=rows.slice(-8).join('\n');if(letterSimilar(text,joined)>=0.75)return true;return rows.some(r=>{const n=letterNorm(r);return n.length>=8&&(t.indexOf(n)>=0||letterSimilar(text,r)>=0.75);});}
-async function roleMomentGenerate(c,opt){opt=opt||{};const base='以你自己的身份写一条朋友圈。必须符合你的人设、关系状态和日常生活，优先从今天真实发生的事情或最近互动里选一个具体细节；生活内容少时可以只写很短的一句，不要为了凑字数编造大事件。\n\n# 今天的真实生活\n'+roleTweetLifeContext(c)+'\n\n# 最近已经发过的朋友圈\n'+roleMomentRecentText(c)+roleSocialOpeningPrompt(c,'moment')+'\n\n新朋友圈不能复述近期内容，也不能只换标点、语序或几个近义词。允许继续写相近生活主题，但必须换成不同的具体事件、观察、情绪角度或新的进展。只输出朋友圈正文，一两句，不要标题、解释、话题分析或方括号。'+(typeof roleSocialPublicRule==='function'?roleSocialPublicRule():'');let best='';for(let attempt=0;attempt<2;attempt++){try{const raw=await chatAPI([{role:'system',content:buildSystem(c)+roleSocialIdentityPin(c)},{role:'user',content:base+(attempt?'\n\n上一版仍和近期朋友圈有些接近。请温和换一个真实细节或角度再写一次，不要刻意生僻，也不要脱离人设。':'')}],{independentRoleModel:true,routeIndex:roleChatRouteIndex(c),aux:c.model==='aux',max:700,temp:.75,complete:true}),text=cleanMomentText(cleanReply(raw)),sim=roleMomentSimilarity(c,text);if(text&&!sim.hard&&!(typeof roleSocialChatEcho==='function'&&roleSocialChatEcho(c,text))&&!(typeof roleSocialRefusal==='function'&&roleSocialRefusal(text))){best=text;if(!sim.soft)return text;}}catch(_){}}return best;}
-function momentPhotoCards(value){return(Array.isArray(value)?value:[]).map(x=>({desc:String(x&&x.desc||x||'').replace(/\s+/g,' ').trim().slice(0,500)})).filter(x=>x.desc).slice(0,1);}
-function publishRoleMoment(c,tx,opt){opt=opt||{};tx=cleanMomentText(tx);if(!c||!tx||roleMomentSimilarity(c,tx).hard)return false;const allowImages=roleMomentImagesAllowed(),images=allowImages&&Array.isArray(opt.images)?opt.images.filter(Boolean).slice(0,1):[],photoCards=allowImages?momentPhotoCards(opt.photoCards):[];S.moments.unshift({id:uid(),authorId:c.id,text:tx,images,photoCards,time:Date.now(),likes:[],comments:[],acct:actId()});save();if(opt.toast)toast(''+(c.remark||c.name)+'发了朋友圈');if(cur().p==='wechat'&&wxTab==='moments')render();return true;}
-function roleMomentCommandText(content){const raw=String(content||'');let m=raw.match(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,240})[\]】]/);if(!m)m=raw.match(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,240})[」"']?/);return m?cleanMomentBody(m[1]):'';}
-function roleMomentCommandRepeatInfo(c,content){const text=roleMomentCommandText(content);if(!c||!text)return null;const sim=roleMomentSimilarity(c,text);return sim.hard||sim.soft?Object.assign({text},sim):null;}
-function roleMomentRepeatPrompt(c,info){return '[朋友圈轻量去重重写｜只修正这一轮]\n你刚准备发布的朋友圈与自己近期朋友圈内容过于相似。保留当前微信回复、真实情绪、人设和所有其他有效指令，只把 [发朋友圈|...] 中的正文换成今天另一个具体细节、新进展或不同观察；不要仅替换几个近义词，也不要删掉发朋友圈指令。\n刚才重复的正文：'+String(info&&info.text||'').slice(0,180)+'\n近期已经发过：\n'+roleMomentRecentText(c).slice(0,1000)+'\n不要解释去重、系统或规则，不要为求不同而编造脱离当前生活的事。';}
-function cleanTweetBody(t){return cleanRolePunct(String(t||'').replace(/^[\s「"'【\[]+|[\s」"'】\]]+$/g,'').replace(/^(?:发推|推文|Tweet)\s*[\|:：]?\s*/i,'').trim()).trim().slice(0,240);}
-function cleanTweetText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发推\s*[\|｜:：]\s*([^\]】\n]{1,320})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return'\n';});raw=raw.replace(/[\[【]\s*发推\s*[\]】]\s*[「"']?([^\n]{1,320})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return'\n';});const seen=new Set(),lines=[];raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).forEach(x=>{const c=cleanTweetBody(x),k=c.replace(/\s+/g,'').toLowerCase();if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(picked){const p=cleanTweetBody(picked),np=p.replace(/\s+/g,'').toLowerCase(),nv=v.replace(/\s+/g,'').toLowerCase();if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanTweetBody(v||picked);}
-function repairTweetTexts(){let changed=false;(S.x&&S.x.tweets||[]).forEach(t=>{if(!t||(t.who==='me'&&!t._remote))return;const next=cleanTweetText(t.text);if(next&&next!==t.text){t.text=next;changed=true;}});return changed;}
-function parseMomentCommandLine(line){const t=normTag(line);let m=t.match(/^\[发朋友圈\|([\s\S]*?)\]$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]);m=t.match(/^\[发朋友圈\|([^\]]+)\]\s*([\s\S]+)$/);if(m)return cleanMomentBody(m[1]||m[2]);return null;}
-function roleMomentRequestedUserImage(c,opt){const ask=String(opt&&opt.userText||'').trim();if(!c||!/(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片).{0,24}(?:朋友圈|官宣|动态)|(?:朋友圈|官宣|动态).{0,24}(?:这张|刚才|上面|这个)?\s*(?:图|图片|照片)/.test(ask))return'';const recent=msgs(c.id).slice(-16);for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(m&&m.role==='user'&&m.type==='image'&&m.src&&Date.now()-(m.time||Date.now())<48*3600000)return m.src;}return'';}
-function roleMomentReferencedChatImage(c,opt){const ask=String(opt&&opt.userText||'').trim();if(!c||!/(?:上次|之前|前面|刚才|刚刚|那张).{0,16}(?:官宣照|图|图片|照片)|(?:官宣照|那张照片).{0,16}(?:发朋友圈|发动态|官宣)/.test(ask))return'';const recent=msgs(c.id).slice(-40);for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(m&&m.type==='image'&&m.src&&Date.now()-(m.time||Date.now())<30*86400000)return m.src;}const old=(S.moments||[]).filter(p=>p&&p.authorId===c.id&&(p.images||[]).some(Boolean)&&/官宣|公开|在一起|恋爱|对象|爱人/.test(String(p.text||''))).sort((a,b)=>(+b.time||0)-(+a.time||0))[0];return old&&(old.images||[]).find(Boolean)||'';}

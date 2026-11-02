@@ -12,7 +12,7 @@ test('offline and common life can delete chat history by day, older than 1 or 3 
     assert.match(s,/删除这一天的记录/);assert.match(s,/删除一天前的记录/);assert.match(s,/删除三天前的记录/);assert.match(s,/'全部删除'/);
     assert.match(s,/if\(!await uiConfirm\('删除'\+label\+'的 '\+n\+' 条聊天记录？删除后不能恢复'\)\)return;/);
     assert.match(s,/\/\* 删完后空着的日期分隔也一起去掉 \*\//);
-    assert.equal((s.match(/onclick="offDelHistory\('\$\{id\}'\)">删除聊天记录<\/button>/g)||[]).length,2,'线下和共同生活两个多选栏都有');
+    assert.match(s,/story\?'rpDelHistory':'offDelHistory'/,'共用页面按场景选择同一个删除记录功能');assert.match(s,/onclick="offDelHistory\('\$\{id\}'\)">删除聊天记录<\/button>/,'共同生活保留删除入口');
   }
   for(const p of ['cohab-theater.js',P+'cohab-theater.js'])assert.match(read(p),/onclick="offDelHistory\('\$\{id\}'\)">删除聊天记录<\/button>/,'多人剧场的共同生活页也有');
 });
@@ -20,8 +20,8 @@ test('offline and common life can delete chat history by day, older than 1 or 3 
 test('the narration button state survives deletes and re-renders and is what gets sent',()=>{
   for(const p of ['app.js',P+'app.js']){const s=read(p);
     assert.match(s,/const _offNarrateById=\{\};/);
-    assert.match(s,/function offNarrateBtnHTML\(\)\{const on=offNarrationMode\(\);/);
-    assert.match(s,/placeholder="\$\{esc\(typeof offInputPlaceholder==='function'\?offInputPlaceholder\(placeholder\):placeholder\)\}"/);
+    assert.match(s,/function offNarrateBtnHTML\(scene\)/);
+    assert.match(s,/offInputPlaceholder\(placeholder\):placeholder/);
     assert.match(s,/<div class="inputbar offinput\$\{offNarrationMode\(\)\?' narration-mode':''\}">\$\{offNarrateBtnHTML\(\)\}/);
   }
   const t=read('cohab-theater.js');
