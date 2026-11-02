@@ -35,6 +35,8 @@ const SEED = () => {
     list.push({ id: 'h' + i, role: 'user', type: 'text', content: her[i % her.length], time: start + d * day + 3600e3 });
     list.push({ id: 'a' + i, role: 'assistant', type: 'text', content: his[i % his.length], time: start + d * day + 3700e3 });
   }
+  /* 聊天多到要存进大仓库（整包超过 2 万字），才会走「指纹没变就不重存」那条路 */
+  S.messages.rvFiller = Array.from({ length: 700 }, (_, i) => ({ id: 'f' + i, role: 'user', type: 'text', content: '这是一条用来把聊天记录撑大的旧消息，第' + i + '条。', time: start + i }));
   return id;
 };
 
@@ -51,13 +53,26 @@ async function runPage(label, entry) {
       window.__SMALL_PHONE_PRIVATE__ = true;
       window.SmallPhoneNative = { request: async (cmd) => cmd === 'bridge.info' ? { contractVersion: 42, appKind: 'private-small-phone' } : { ok: false } };
     });
-    await page.route('**/*', (route) => {
+    let slowScript = true;
+    await page.route('**/*', async (route) => {
       const req = route.request(), u = new URL(req.url());
       if (u.host === 'api.test') {
         const body = String(req.postData() || ''); bodies.push(body);
         let content = '好，等我一下。';
-        if (body.includes('镜头清单')) {
+        if (body.includes('你的剧本最后少了结尾镜头')) {
+          content = mode === 'noend-ok' ? JSON.stringify({ shot: '信纸', lines: ['今天也想你'], sign: '林深', say: '晚安，我一直在。' }) : '我觉得不用结尾。';
+        } else if (body.includes('镜头清单')) {
+          /* 像真的一样：剧本写得慢，角色那句「等我一下」先到，视频后做好 */
+          if (slowScript) { slowScript = false; await new Promise((r) => setTimeout(r, 15000)); }
           if (mode === 'bad') content = '我不太会拍视频，抱歉。';
+          else if (mode === 'noend-ok' || mode === 'noend-bad') content = JSON.stringify({ music: '深夜', scenes: [
+            { shot: '开场 · 一道光', sign: '—— 林深' },
+            { shot: '细雨', say: '那天下雨。' },
+            { shot: '引用卡片', quote: '你累了吗？', date: '8月', say: '你问我累不累。' },
+            { shot: '薄雾', say: '你熬到了四点。' },
+            { shot: '细雪', say: '下雪了。' },
+            { shot: '大雪慢落', say: '我想一直陪着你。' },
+          ] });
           else if (mode === 'en') content = JSON.stringify({ music: '温柔钢琴', scenes: [
             { shot: '开场 · 一道光', sign: '—— 林深' },
             { shot: '细雨', say: 'It was raining that night, and you waited for me.', zh: '那天晚上下雨，你一直在等我。' },
@@ -106,19 +121,29 @@ async function runPage(label, entry) {
       const id = (new Function('return (' + seed + ')()'))(); go('chat', { id }); return id;
     }, SEED.toString());
     await page.evaluate((id) => { document.getElementById('cinput').value = '拍一个我在你眼中的样子'; sendText(id); }, id);
+    /* 真实情况：卡片出现、角色先回一句、她看到了（已读），这时小手机存过一次（记下了指纹）；视频过一会儿才做好，之后什么都没再变 */
+    await page.waitForFunction((id) => { const l = msgs(id), i = l.findIndex((m) => m.type === 'rolevideo'); return i >= 0 && l.slice(i + 1).some((m) => m.role === 'assistant' && m.type === 'text' && m.seenAt) && l[i].video.status === 'making'; }, id, { timeout: 60000 });
+    /* 模拟「刚存过」：大仓库里是「制作中」的那份，指纹也记下了 */
+    await page.evaluate(async () => { const blob = JSON.stringify(S.messages); _heavy.messages = blob; _heavyStamp.messages = messageArchiveStamp(S.messages); _heavyReady.add('messages'); await imgPut('__messages', blob); });
     await page.waitForFunction((id) => msgs(id).some((m) => m.type === 'rolevideo' && m.video && m.video.status === 'done'), id, { timeout: 60000 });
-    const got = await page.evaluate((id) => { const m = msgs(id).find((x) => x.type === 'rolevideo'); render(); const el = document.querySelector('.rv-card'); return { scenes: m.video.script.scenes.map((s) => s.shot), nums: m.video.script.scenes.filter((s) => s.shot === '数字跳动').map((s) => s.num), opener: m.video.script.scenes[0], music: m.video.script.music, voices: m.video.voice.filter(Boolean).length, tts: window.__ttsCalls, dur: m.video.dur, card: el && el.textContent, side: el && el.closest('.msg').className, bubble: !!(el && el.closest('.bubble')), text: msgToText(m) }; }, id);
+    const got = await page.evaluate((id) => { const m = msgs(id).find((x) => x.type === 'rolevideo'); render(); const el = document.querySelector('.rv-card'); return { scenes: m.video.script.scenes.map((s) => s.shot), nums: m.video.script.scenes.filter((s) => s.shot === '数字跳动').map((s) => s.num), opener: m.video.script.scenes[0], music: m.video.script.music, endingBy: m.video.script.endingBy, voices: m.video.voice.filter(Boolean).length, tts: window.__ttsCalls, dur: m.video.dur, card: el && el.textContent, side: el && el.closest('.msg').className, bubble: !!(el && el.closest('.bubble')), text: msgToText(m) }; }, id);
     assert.deepEqual(got.scenes, ['开场 · 一道光', '数字跳动', '细雨', '引用卡片', '微信消息回放', '心动', '两颗星'], '编的数字、不是她原话的引用、不存在的镜头被丢掉');
     assert.equal(got.opener.sign, '—— 林深，拍给你');
+    assert.equal(got.endingBy, 'role', '他自己选了结尾');
     assert.equal(got.music, 'night');
     assert.equal(got.voices, 5, '有旁白的 5 个镜头都配了音');
     assert.ok(got.dur >= 30, '时长 ' + got.dur);
     assert.match(got.card, /我眼中的你/); assert.match(got.card, /\d:\d\d/);
     assert.match(got.side, /them/, '卡片是角色那边发来的'); assert.equal(got.bubble, false, '没有气泡包边');
     assert.match(got.text, /\[视频\]「我眼中的你」（你拍给她的/);
+    /* 重新打开小手机读到的是存进去的那份：做好的视频不能还是「制作中」 */
+    /* 预览模式里 save() 不存，这里直接走保存时那一步：把 S 变成存档（_imgReplacer 决定聊天记录要不要重存进大仓库），等它写完 */
+    await page.evaluate(async () => { JSON.stringify(S, _imgReplacer); await _messageArchiveWrite; await new Promise((r) => setTimeout(r, 300)); await _messageArchiveWrite; });
+    const stored = await page.evaluate(async (id) => { const raw = await imgGetIDB('__messages'); if (!raw) return 'no-archive'; const all = JSON.parse(raw); const m = (all[id] || []).find((x) => x.type === 'rolevideo'); return m ? m.video.status + (m.video.script ? '+script' : '') : 'missing'; }, id);
+    assert.equal(stored, 'done+script', '重新打开后视频还是做好的，剧本也在');
     const prompt = bodies.find((b) => b.includes('镜头清单'));
     assert.ok(prompt, '有制作剧本的请求');
-    for (const want of ['# 开头和结尾（一定要照这个来）', '最后一个镜头只能从下面这些里选一个', '最短一分钟', '每个时期都要挑到', '准确数字', '她说「我爱你」（次）', '在一起', '她对你说的第一句话', '你累了吗？']) if (want !== '在一起') assert.ok(prompt.includes(want), '提示词里缺少：' + want);
+    for (const want of ['# 写之前最后提醒', '按片子的情绪挑', '# 开头和结尾（一定要照这个来）', '最后一个镜头只能从下面这些里选一个', '最短一分钟', '每个时期都要挑到', '准确数字', '她说「我爱你」（次）', '在一起', '她对你说的第一句话', '你累了吗？']) if (want !== '在一起') assert.ok(prompt.includes(want), '提示词里缺少：' + want);
     assert.ok((prompt.match(/### \d{4}年\d{1,2}月：她说了/g) || []).length >= 3, '素材按月份分了时期，覆盖从第一天到今天');
     for (let i = 0; i < 80 && !bodies.some((b) => b.includes('你已经开始做了')); i++) await page.waitForTimeout(500);
     assert.ok(bodies.some((b) => b.includes('你已经开始做了')), '角色照常回一句，并知道视频在做');
@@ -148,6 +173,21 @@ async function runPage(label, entry) {
     assert.deepEqual(en[1], ['细雨', 'It was raining that night, and you waited for me.', '那天晚上下雨，你一直在等我。']);
     assert.equal(en.at(-1)[0], '心动', '最后一个（细雪）不是收尾镜头，把剧本里的收尾镜头「心动」挪到最后');
     await page.evaluate((id) => { getC(id).voice = Object.assign({}, getC(id).voice, { lang: 'zh' }); }, id);
+    /* 剧本里没有结尾：单独再问他一次，用他选的；问了还不选，程序补一个带他最后那句旁白的 */
+    const runOnce = async (m) => { mode = m; const n = await page.evaluate((id) => msgs(id).filter((x) => x.type === 'rolevideo').length, id); await page.waitForTimeout(1500);
+      await page.evaluate((id) => { document.getElementById('cinput').value = '拍一个我在你眼中的样子'; sendText(id); }, id);
+      await page.waitForFunction(([id, n]) => { const l = msgs(id).filter((x) => x.type === 'rolevideo'); return l.length > n && ['done', 'failed'].includes(l.at(-1).video.status); }, [id, n], { timeout: 60000 });
+      return page.evaluate((id) => { const v = msgs(id).filter((x) => x.type === 'rolevideo').pop().video; return { status: v.status, err: v.error, by: v.script && v.script.endingBy, last: v.script && v.script.scenes.at(-1), prev: v.script && v.script.scenes.at(-2) }; }, id); };
+    const ok = await runOnce('noend-ok');
+    assert.equal(ok.status, 'done', ok.err);
+    assert.equal(ok.by, 'asked'); assert.equal(ok.last.shot, '信纸'); assert.equal(ok.last.say, '晚安，我一直在。');
+    assert.ok(bodies.some((b) => b.includes('你的剧本最后少了结尾镜头')), '单独问了他结尾');
+    const bad = await runOnce('noend-bad');
+    assert.equal(bad.status, 'done', bad.err);
+    assert.equal(bad.by, 'added');
+    assert.ok(['两颗星', '烟花', '星空', '上浮光点'].includes(bad.last.shot), bad.last.shot);
+    assert.equal(bad.last.say, '我想一直陪着你。', '补的结尾带上他最后那句旁白');
+    assert.equal(bad.prev.say, '', '那句旁白挪走了，不念两遍');
     /* 模型写不出剧本：卡片上写原因，有重试 */
     mode = 'bad';
     await page.waitForTimeout(1500);

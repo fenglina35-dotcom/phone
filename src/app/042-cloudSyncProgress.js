@@ -301,7 +301,7 @@ function lgGL(){if(_lg.gl&&!_lg.gl.isContextLost())return _lg.gl;if(_lg.failed)r
   const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,LG_VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,LG_FS));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
   const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   /* 上下文丢了只影响「以后重烤」，已经烤好放进组件的画布不受影响，所以不会掉材质 */
-  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();},false);
+  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();lgLog('lost','画玻璃的画布被系统收走了（切后台或内存紧张）');_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();},false);
   Object.assign(_lg,{gl,canvas:cv,prog,buf,tex:null,texSrc:''});return gl;}catch(e){console.warn('液态玻璃不可用',e);_lg.failed=true;return null;}}
 /* 没有图片的默认背景（目前只有查他手机那张渐变）：照着 CSS 画一张，当壁纸用 */
 function lgDefaultWall(src){const cv=document.createElement('canvas');cv.width=1024;cv.height=2048;const x=cv.getContext('2d'),W=1024,H=2048;
@@ -318,7 +318,7 @@ function lgTexture(src){const gl=lgGL();if(!gl)return Promise.resolve(false);if(
       const g=lgGL();if(!g)return resolve(false);const tex=g.createTexture();g.bindTexture(g.TEXTURE_2D,tex);g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL,false);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,cv);g.generateMipmap(g.TEXTURE_2D);
       g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
       /* v1720：主屏壁纸和信息页聊天背景各留一张，来回切换不用重新读图 */
-      _lg.texs.set(src,{tex,w,h});while(_lg.texs.size>2){const k=_lg.texs.keys().next().value;g.deleteTexture(_lg.texs.get(k).tex);_lg.texs.delete(k);}_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;resolve(true);}catch(e){console.warn('液态玻璃壁纸读取失败',e);resolve(false);}};img.onerror=()=>resolve(false);img.src=src;});
+      _lg.texs.set(src,{tex,w,h});while(_lg.texs.size>2){const k=_lg.texs.keys().next().value;g.deleteTexture(_lg.texs.get(k).tex);_lg.texs.delete(k);}_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;resolve(true);}catch(e){console.warn('液态玻璃壁纸读取失败',e);resolve(false);}};img.onerror=()=>{lgLog('wall','壁纸图片读不出来');resolve(false);};img.src=src;});
   _lg.loading={src,p};p.finally(()=>{if(_lg.loading&&_lg.loading.p===p)_lg.loading=null;});return p;}
 /* 组件在「自己那一页停好」时相对整块桌面的位置；翻页时整页一起滑，所以这个位置不随滑动变化 */
 function lgGeometry(host,desk){const r=host.getBoundingClientRect(),d=desk.getBoundingClientRect();if(r.width<8||r.height<8)return null;let x=r.left-d.left,y=r.top-d.top;const page=host.closest('.apppage'),swipe=page&&page.parentElement;if(page&&swipe){const pr=page.getBoundingClientRect(),sr=swipe.getBoundingClientRect();x=r.left-pr.left+sr.left-d.left;}
@@ -334,7 +334,7 @@ function lgDraw(g,cfg,ox,oy,target,scale){const gl=lgGL(),t=gl&&_lg.texs.get(g.s
   gl.uniform2f(u('uSize'),g.w,g.h);gl.uniform2f(u('uOrigin'),ox,oy);gl.uniform4f(u('uMap'),(g.dw-mw)/2,(g.dh-mh)/2,mw,mh);const bx=o.box||[0,0,g.w,g.h],rd=o.rad||[g.radius,g.radius,g.radius,g.radius],tl=o.tail||[0,0];gl.uniform4f(u('uBox'),bx[0],bx[1],bx[2],bx[3]);gl.uniform4f(u('uRad'),rd[0],rd[1],rd[2],rd[3]);gl.uniform2f(u('uTail'),tl[0],tl[1]);const sh=o.shade||[0,0.5,0.5,0];gl.uniform4f(u('uShade'),sh[0],sh[1],sh[2],sh[3]);gl.uniform1f(u('uDeskH'),g.dh);
   gl.uniform1f(u('uBlur'),cfg.blur);gl.uniform1f(u('uIor'),cfg.ior);gl.uniform1f(u('uBend'),cfg.bend);gl.uniform1f(u('uDisp'),cfg.disp);gl.uniform1f(u('uThick'),o.thick||cfg.thick);gl.uniform1f(u('uEdgeBlur'),cfg.edgeBlur);gl.uniform1f(u('uTint'),o.tintAmt!=null?o.tintAmt:cfg.tint);gl.uniform1f(u('uSat'),cfg.sat);gl.uniform1f(u('uHi'),cfg.hi);gl.uniform1f(u('uRim'),cfg.rim);
   const tc=o.tint||(cfg.tone==='white'?[0.94,0.95,0.97]:[0.04,0.04,0.05]);gl.uniform3f(u('uTintColor'),tc[0],tc[1],tc[2]);const ang=cfg.angle*Math.PI/180;gl.uniform2f(u('uLight'),Math.cos(ang),-Math.sin(ang));
-  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);const ctx=target.getContext('2d');if(!ctx)return false;ctx.clearRect(0,0,W,H);ctx.drawImage(cv,0,CH-h,w,h,0,0,W,H);return true;}
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);try{const px=new Uint8Array(4);gl.readPixels(Math.floor(w/2),Math.floor(h/2),1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);if(px[3]>200&&px[0]+px[1]+px[2]<6){lgLog('black','画出来是纯黑（壁纸贴图可能是空的），已丢掉贴图重新读');try{gl.deleteTexture(t.tex);}catch(_){}_lg.texs.delete(g.src);return false;}}catch(_){}const ctx=target.getContext('2d');if(!ctx){lgLog('no2d','组件画布拿不到画笔（手机画布内存可能满了）');return false;}ctx.clearRect(0,0,W,H);ctx.drawImage(cv,0,CH-h,w,h,0,0,W,H);return true;}
 function lgBake(g,cfg){if(!lgGL()||!_lg.tex)return null;const dpr=Math.min(2,window.devicePixelRatio||1),out=document.createElement('canvas');out.className='lg-canvas';out.width=Math.max(1,Math.round(g.w*dpr));out.height=Math.max(1,Math.round(g.h*dpr));out.setAttribute('aria-hidden','true');if(!lgDraw(g,cfg,g.x,g.y,out,1))return null;out._lgShift=0;out._lgScale=1;return out;}
 function lgAttachTo(host,canvas,key){const old=host.querySelector(':scope>canvas.lg-canvas');if(old&&old!==canvas)old.remove();if(canvas.parentNode!==host)host.insertBefore(canvas,host.firstChild);canvas.dataset.lgKey=key;if(getComputedStyle(host).position==='static')host.style.position='relative';host.classList.add('lg-host','lg-ready');}
 function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').forEach(c=>{c.remove();if(![..._lg.cache.values()].includes(c))lgFree(c);});(root||document).querySelectorAll('.lg-host').forEach(h=>h.classList.remove('lg-host','lg-ready'));}
@@ -342,6 +342,11 @@ function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').for
    iOS 给所有画布的总内存有上限。镜片缓存最多 24 张大图、聊天气泡还有很多张，用满后新画布拿不到画笔，烤镜片失败，
    组件就露出私人版垫在下面的实心黑底，而且没有人再试一次，直到刷新。现在：①丢掉的画布把内存还回去（宽高设 0）；
    ②缓存复用前确认画布还在（宽高不是 0、还拿得到画笔），不行就重烤（不读像素：读像素是以前卡顿的做法，门禁不许）；③烤失败过一会儿自动再试，最多 6 次。 */
+/* HOME_GLASS_BLACK_GUARD_V1（2026-11-02 第三次：组件还是会变黑。两次修法都没好，这次先拿证据再说）：
+   ①每次画完看一眼正中间那个点（用画玻璃的 GL 画布读 1 个像素，不碰组件画布），纯黑就不贴上去，组件保持原来的半透明样子，并丢掉这张壁纸贴图重新读；
+   ②每次失败记下原因和时间（lgDiag，本机最多 30 条），「一键体检 → 主屏玻璃」里能看到，下次变黑照着证据修。 */
+function lgLog(kind,detail){try{const k='lgDiag',a=JSON.parse(localStorage.getItem(k)||'[]');a.push({at:Date.now(),kind:String(kind),detail:String(detail||'').slice(0,120)});localStorage.setItem(k,JSON.stringify(a.slice(-30)));}catch(_){}}
+function lgDiagRows(){try{return JSON.parse(localStorage.getItem('lgDiag')||'[]');}catch(_){return[];}}
 function lgFree(cv){try{if(cv&&!cv.isConnected){cv.width=0;cv.height=0;}}catch(_){}}
 function lgCanvasOk(cv){if(!cv||!cv.width||!cv.height)return false;try{return !!cv.getContext('2d');}catch(_){return false;}}
 function lgFreeCache(){_lg.cache.forEach(cv=>lgFree(cv));_lg.cache.clear();}

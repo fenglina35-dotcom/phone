@@ -406,6 +406,12 @@ const ATMOS=A.map(x=>x.n);
 const OPENERS=['开场 · 一道光','开场 · 锁屏亮起','开场 · 从你那句话开始'];
 /* 结尾只能从这些里选（她说：要告诉角色开头结尾用什么，不然他不会选） */
 const ENDINGS=['两颗星','光点聚成字','信纸','心动','呼吸','低语','烟花','星空','上浮光点'];
+/* ENDING_CHOICE_V2（2026-11-02 她：生成了两次都是两颗星，不知道是他选的还是没选）：清单每次打乱，不让第一个总是两颗星；
+   提示词最后再提醒一遍；他没选就单独再问他一次；还没选才由程序补，补的从不用填字的几个里随机挑，带上他最后那句旁白；记下结尾是谁定的。 */
+const ENDING_DESC={'两颗星':'两颗光点从两边靠近、绕着彼此转、连上一条线。','光点聚成字':'满屏光点汇成你写的一句短话（text），再被吹散。','信纸':'信纸上一行行写出你的话，最后落款（lines、sign）。','心动':'一个字像心跳一样怦怦跳（text、sub）。','呼吸':'两三个字像在呼吸一样亮起又暗下（text、sub）。','低语':'很小很淡的三句话，像在她耳边说（lines）。','烟花':'一朵朵烟花炸开又熄灭，只靠旁白收尾。','星空':'满天星星慢慢转，只靠旁白收尾。','上浮光点':'白色小光点慢慢往上升，只靠旁白收尾。'};
+const ENDING_PLAIN=['两颗星','烟花','星空','上浮光点'];
+function shuffled(list){const a=list.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function endingLines(order){return order.map(n=>'- 「'+n+'」'+ENDING_DESC[n]).join('\n')}
 const MUSICS=MOODS.map(m=>m.n);
 function shotMeta(n){const m=META[n];if(m)return{cyc:m[0],hold:m[1],desc:m[2],slots:m[3]};const s=SHOTS[n];return s&&s.g==='A'?{cyc:0,hold:null,desc:s.fx.d,slots:n==='老电视'?'text：画面里那行字（≤6字）':''}:null}
 function allowedShots(){return OPENERS.concat(ATMOS,Object.keys(META).filter(n=>!OPENERS.includes(n)))}
@@ -468,8 +474,8 @@ function materialText(c,M){
 function shotList(){return allowedShots().map(n=>{const m=shotMeta(n);return '- 「'+n+'」'+m.desc+(m.slots?'  要填：'+m.slots:'')}).join('\n')}
 function voiceLang(c){try{if(typeof ttsContentLang==='function'){const l=ttsContentLang(c);return l&&l!=='zh'?l:''}}catch(_){}return ''}
 function voiceLangLabel(l){return typeof voiceLangName==='function'&&voiceLangName(l)||({'英':'英语','日':'日语','韩':'韩语','粤':'粤语','法':'法语','德':'德语','俄':'俄语'})[l]||'外语'}
-function promptText(c,M,ask){
-  const her=(S.me&&S.me.name)||'她',me=c.name||'我',lang=voiceLang(c),ln=lang?voiceLangLabel(lang):'';
+function promptText(c,M,ask,order){
+  order=order||shuffled(ENDINGS);const her=(S.me&&S.me.name)||'她',me=c.name||'我',lang=voiceLang(c),ln=lang?voiceLangLabel(lang):'';
   return ['# 这次要做的事',
 '「'+her+'」刚刚对你说：「'+ask+'」。她想知道：在你眼里，她是什么样的人。',
 '你要像导演一样，用下面「镜头清单」里的镜头，拍一部竖屏小视频送给她。长度由你自己决定：最短一分钟左右，两分钟、三分钟都可以，看你想说多少。片名固定是「'+TITLE+'」，程序会放在开场镜头里，你不用写片名。除此以外，讲什么、怎么排、每个镜头上写什么、旁白怎么说、配什么音乐，全部由你决定。',
@@ -492,14 +498,8 @@ function promptText(c,M,ask){
 '- 「开场 · 一道光」黑屏里一道细光拉开，片名在光里慢慢变清楚，下面一行是你的落款。适合安静、郑重地开始。要填 sign。',
 '- 「开场 · 锁屏亮起」她的手机锁屏亮起，弹进你发来的一条通知，点开就是片名。适合像给她一个惊喜。要填 note。',
 '- 「开场 · 从你那句话开始」先回放她刚才让你拍视频的那句原话，你回她一句，镜头推进你的消息变成片名。适合接着她的话开始。要填 reply、line。',
-'结尾：最后一个镜头只能从下面这些里选一个，旁白（say）写你最想对她说的那一句，可以落款：',
-'- 「两颗星」两颗光点从两边靠近、绕着彼此转、连上一条线。',
-'- 「光点聚成字」满屏光点汇成你写的一句短话（text），再被吹散。',
-'- 「信纸」信纸上一行行写出你的话，最后落款（lines、sign）。',
-'- 「心动」一个字像心跳一样怦怦跳（text、sub）。',
-'- 「呼吸」两三个字像在呼吸一样亮起又暗下（text、sub）。',
-'- 「低语」很小很淡的三句话，像在她耳边说（lines）。',
-'- 「烟花」「星空」「上浮光点」安静的画面，只靠旁白收尾。',
+'结尾：最后一个镜头只能从下面这些里选一个。结尾很重要，要按这部片子的情绪认真挑最合适的那个，不要随便选第一个。旁白（say）写你最想对她说的那一句，可以落款：',
+endingLines(order),
 '',
 '# 镜头清单（只能用这里的名字，一字不差）',
 '带「要填」的镜头，要把那些空填好；氛围镜头（下雪、下雨、星空这类）没有字，只靠旁白。',
@@ -519,7 +519,10 @@ materialText(c,M),
 (lang?'  {"shot":"细雨","say":"（这里用'+ln+'写）","zh":"那天下雨，你一直等我回消息。"},':'  {"shot":"细雨","say":"那天下雨，你一直等我回消息。"},'),
 '  {"shot":"引用卡片","quote":"她的一句原话","date":"10月30日","say":"……"}',
 ']}',
-'上面只是格式示范，内容要换成你们自己的。'].join('\n');
+'上面只是格式示范，内容要换成你们自己的。',
+'',
+'# 写之前最后提醒',
+'第一个镜头必须是三个开场之一。最后一个镜头必须从这几个结尾里选一个：'+order.map(n=>'「'+n+'」').join('、')+'，按片子的情绪挑，旁白写你最想对她说的那句话。'].join('\n');
 }
 
 /* ---------- 剧本：解析、检查 ---------- */
@@ -575,12 +578,15 @@ function checkScript(obj,c,M,ask){const foreign=!!voiceLang(c);
   if(!out.length||!OPENERS.includes(out[0].shot)){const k=out.findIndex(x=>OPENERS.includes(x.shot));if(k>0)out.unshift(out.splice(k,1)[0]);else out.unshift({shot:'开场 · 一道光',say:'',sign:'—— '+him})}
   const rest=out.slice(1).filter(x=>!OPENERS.includes(x.shot));const scenes=[out[0]].concat(rest);
   /* 最后一个镜头要是收尾镜头：不是的话，把最后出现的收尾镜头挪到最后；一个都没有就补一个「两颗星」 */
-  if(!ENDINGS.includes(scenes[scenes.length-1].shot)){let k=-1;for(let i=scenes.length-1;i>0;i--)if(ENDINGS.includes(scenes[i].shot)){k=i;break}if(k>0)scenes.push(scenes.splice(k,1)[0]);else scenes.push({shot:'两颗星',say:''})}
+  let endingBy='role';
+  if(!ENDINGS.includes(scenes[scenes.length-1].shot)){let k=-1;for(let i=scenes.length-1;i>0;i--)if(ENDINGS.includes(scenes[i].shot)){k=i;break}
+    if(k>0){scenes.push(scenes.splice(k,1)[0]);endingBy='moved'}
+    else{const last=scenes[scenes.length-1],end={shot:ENDING_PLAIN[Math.floor(Math.random()*ENDING_PLAIN.length)],say:''};if(last&&last.say&&scenes.length>2){end.say=last.say;if(last.zh)end.zh=last.zh;last.say='';delete last.zh}scenes.push(end);endingBy='added'}}
   if(scenes.length<6)return{error:'剧本里能用的镜头太少（只有 '+scenes.length+' 个），模型可能没按要求写'};
   const now=new Date(),wk=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][now.getDay()],hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   scenes.forEach(o=>{o.her=her;o.him=him;o.time=hh;o.day=(now.getMonth()+1)+'月'+now.getDate()+'日 '+wk;if(o.shot==='开场 · 一道光'){o.date=now.getFullYear()+' · '+String(now.getMonth()+1).padStart(2,'0')+' · '+String(now.getDate()).padStart(2,'0');if(!o.sign)o.sign='—— '+him}if(o.shot==='开场 · 从你那句话开始')o.ask=cut(ask,16)});
   const music=MOODS.find(m=>norm(m.n)===norm(obj.music))||MOODS[0];
-  return{scenes,music:music.id};
+  return{scenes,music:music.id,endingBy};
 }
 
 /* ---------- 时间轴 ---------- */
@@ -595,14 +601,20 @@ const JOBS=new Map();
 const TRIGGER_A=/你眼[里中裡]|眼[里中裡]的我|在你眼[里中裡]/,TRIGGER_B=/样子|樣子|视频|視頻|拍|什么样|怎样|怎么样|甚麼樣/;
 function matches(t){t=String(t||'');return TRIGGER_A.test(t)&&TRIGGER_B.test(t)}
 function msgOf(cid,mid){return (typeof msgs==='function'?msgs(cid):[]).find(m=>m&&m.id===mid)}
-function setState(cid,m,patch){Object.assign(m.video,patch);paintCard(cid,m);if(patch.status&&typeof save==='function')save()}
+/* MESSAGES_CHANGED_V1（2026-11-02 她：视频做好了，重开小手机却显示做到一半被打断）：聊天多了存进大仓库时，保存前先算指纹，指纹没变就不重存；
+   指纹只看每个聊天头一条和最后两条的文字、时间，看不出视频状态变了。视频状态一变，就把指纹作废，下次保存整包重存。 */
+function messagesChanged(){try{if(typeof _heavyStamp!=='undefined'&&_heavyStamp)delete _heavyStamp.messages}catch(_){}}
+function setState(cid,m,patch){Object.assign(m.video,patch);paintCard(cid,m);if(patch.status||patch.done!=null){messagesChanged();if(typeof save==='function')save()}}
 async function runModel(c,messages,useAux){return await chatAPI(messages,{independentRoleModel:true,routeIndex:typeof roleChatRouteIndex==='function'?roleChatRouteIndex(c):undefined,aux:useAux,max:12000,temp:.85,complete:true})}
 async function make(cid,mid){const c=getC(cid),m=msgOf(cid,mid);if(!c||!m||!m.video)return;if(JOBS.has(mid))return;JOBS.set(mid,true);
   const v=m.video;let tick=0;try{
    if(!v.script){setState(cid,m,{status:'making',stage:'script',pct:2,error:''});const t0=Date.now();tick=setInterval(()=>{const s=(Date.now()-t0)/1000;v.pct=Math.min(38,Math.round(2+36*(1-Math.exp(-s/45))));paintCard(cid,m)},700);
-    const M=collect(c),ask=v.ask||'',msgsIn=[{role:'system',content:buildSystem(c)},{role:'user',content:promptText(c,M,ask)}];const main=c.model==='aux',reasons=[];let got=null;
-    for(const aux of [main,!main]){try{const raw=await runModel(c,msgsIn,aux),r=checkScript(parseJSON(raw),c,M,ask);if(r.error){reasons.push((aux?'副模型':'主模型')+'：'+r.error);continue}got=r;break}catch(e){reasons.push((aux?'副模型':'主模型')+'：'+String(e&&e.message||e||'请求失败').slice(0,120))}}
-    clearInterval(tick);tick=0;if(!got)throw new Error(reasons.join('\n')||'剧本没有写出来');v.script=got;v.voice=null;v.pct=40;if(typeof save==='function')save()}
+    const M=collect(c),ask=v.ask||'',order=shuffled(ENDINGS),msgsIn=[{role:'system',content:buildSystem(c)},{role:'user',content:promptText(c,M,ask,order)}];const main=c.model==='aux',reasons=[];let got=null;
+    for(const aux of [main,!main]){try{const raw=await runModel(c,msgsIn,aux),obj=parseJSON(raw);let r=checkScript(obj,c,M,ask);if(r.error){reasons.push((aux?'副模型':'主模型')+'：'+r.error);continue}
+      if(r.endingBy==='added'){try{const ask2=endingAsk(order),raw2=await runModel(c,msgsIn.concat([{role:'assistant',content:String(raw||'').slice(0,20000)},{role:'user',content:ask2}]),aux),one=parseJSON(raw2),sc=one&&(one.shot?one:Array.isArray(one.scenes)?one.scenes[one.scenes.length-1]:null);
+        if(sc&&ENDINGS.includes(findShot(sc.shot))){const r2=checkScript(Object.assign({},obj,{scenes:obj.scenes.concat([sc])}),c,M,ask);if(!r2.error&&r2.endingBy==='role'){r=r2;r.endingBy='asked'}}}catch(_){}}
+      got=r;break}catch(e){reasons.push((aux?'副模型':'主模型')+'：'+String(e&&e.message||e||'请求失败').slice(0,120))}}
+    clearInterval(tick);tick=0;if(!got)throw new Error(reasons.join('\n')||'剧本没有写出来');v.script=got;v.voice=null;v.pct=40;messagesChanged();if(typeof save==='function')save()}
    /* 配音：私人版是角色自己的音色，网页版用你配好的声音；没配声音就只有字幕和音乐 */
    const lines=v.script.scenes.map(o=>o.say||'');v.voice=Array.isArray(v.voice)&&v.voice.length===lines.length?v.voice:lines.map(()=>null);
    const canVoice=typeof ttsApiOn==='function'&&ttsApiOn(c)&&typeof ttsArr==='function';if(!canVoice)v.noVoice='没有配置语音（设置里的声音），这次只有字幕和音乐';
@@ -614,6 +626,7 @@ async function make(cid,mid){const c=getC(cid),m=msgOf(cid,mid);if(!c||!m||!m.vi
 function maybeStart(c,text){if(!c||!matches(text))return false;const list=msgs(c.id);if(list.some(m=>m&&m.type==='rolevideo'&&m.video&&m.video.status==='making'&&JOBS.has(m.id)))return false;
   const m={id:uid(),role:'assistant',type:'rolevideo',time:Date.now()+1500,video:{status:'making',stage:'script',pct:1,ask:String(text||'').slice(0,60)}};
   setTimeout(()=>{list.push(m);if(typeof save==='function')save();if(typeof render==='function'&&typeof cur==='function'&&cur().p==='chat'&&cur().id===c.id)render();make(c.id,m.id)},1200);return true}
+function endingAsk(order){return '你的剧本最后少了结尾镜头。结尾很重要，请从这几个里按片子的情绪挑一个：'+order.map(n=>'「'+n+'」'+ENDING_DESC[n]).join('；')+'。只输出这一个镜头的 JSON，比如 {"shot":"信纸","lines":["……"],"sign":"……","say":"你最想对她说的那句话"}，不要别的文字。'}
 function replyNote(){return '[程序提示｜只给你看] 她刚让你拍一个「'+TITLE+'」的小视频。你已经开始做了，做好会自动发给她。这条回复自然地回应一句就好（比如答应、让她等一下），不要说你不会拍视频，也不要提前讲视频内容。'}
 function retry(cid,mid){const m=msgOf(cid,mid);if(!m||!m.video||JOBS.has(mid))return;m.video.status='making';m.video.error='';paintCard(cid,m);make(cid,mid)}
 function text(m){const v=m&&m.video||{};return '[视频]「'+TITLE+'」'+(v.status==='done'?'（你拍给她的，'+(v.dur||0)+'秒）':v.status==='failed'?'（没做成）':'（你正在做）')}
