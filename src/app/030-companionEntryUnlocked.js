@@ -1,3 +1,51 @@
+const renderCompanionPageRoleAutonomyCore=renderCompanionPage;
+renderCompanionPage=function(c,SEC,HD){return renderCompanionPageRoleAutonomyCore(c,SEC,HD)
+  .replace('3小时未回才检查；查完必须发消息或来电','3小时未回才检查；查看后由角色自主决定是否联系')
+  .replace('查完必须发消息或来电','查看后由角色自主决定是否联系');};
+const renderCompanionPageUnifiedPhoneCore=renderCompanionPage;
+renderCompanionPage=function(c,SEC,HD){return renderCompanionPageUnifiedPhoneCore(c,SEC,HD)
+  .replaceAll('外置 iPhone','真实 iPhone').replaceAll('外置屏幕使用','屏幕使用')
+  .replaceAll('外置同步 App','真实 App').replaceAll('外置足迹点','足迹点')
+  .replaceAll('外置最近同步','最近读取').replaceAll('外置逐 App 时长','逐 App 时长')
+  .replaceAll('外置：','真实手机：').replaceAll('外置稳定 ID','设备稳定 ID')
+  .replaceAll('外置编号','设备编号').replaceAll('内置关联：','页面联动：')
+  .replaceAll('内置：未关联（外置仍可单独锁定或解锁）','未关联小手机页面（不影响真实控制）')
+  .replaceAll('内外统一每日限额','统一每日限额').replaceAll('内外统一限额','统一限额')
+  .replaceAll('等待外置每日足迹同步','等待真实手机足迹').replaceAll('外置真实定位数据','真实定位数据')
+  .replaceAll('外置坐标（技术信息）','坐标（技术信息）').replaceAll('伴生设备','真实手机')
+  .replaceAll('伴生 App','真实手机服务');};
+const renderCompanionPageHeartCareCore=renderCompanionPage;
+renderCompanionPage=function(c,SEC,HD){return renderCompanionPageHeartCareCore(c,SEC,HD)
+  .replace('难过时参考最新心率','难过或怀疑时尝试查看心率')
+  .replace('只作关心线索，不判断撒谎、哭泣或疾病','每次重新读取；只作关心线索，不能判断撒谎、哭泣或疾病');};
+const companionAutomationCandidateTruthCore=companionAutomationCandidate;
+companionAutomationCandidate=function(c,st,now){return companionAutomationCandidateTruthCore(c,st,now);};
+const COMPANION_ENTRY_GATE_KEY='north-companion-entry-unlocked-v1';
+function companionEntryUnlocked(){try{return localStorage.getItem(COMPANION_ENTRY_GATE_KEY)==='1';}catch(_){return false;}}
+function companionEntryPasswordOK(value){return String(value||'').trim()==='206414';}
+function companionEnter(targetId){const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(companionEntryUnlocked()){if(target){coupleOpen('device',target);return;}couTab(3);return;}openModal(`<h3>伴生设备暂未公开</h3><div class="hint" style="line-height:1.7;margin-bottom:12px">功能仍在完善中，首次进入需要验证。验证成功后，这个浏览器以后不再询问。</div><div class="field"><label>进入密码</label><input id="companion_entry_password" type="password" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="请输入 6 位密码" onkeydown="if(event.key==='Enter')companionSubmitEntry('${target}')"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="companionSubmitEntry('${target}')">进入伴生设备</button></div>`);setTimeout(()=>{const el=$('#companion_entry_password');if(el)el.focus();},60);}
+function companionSubmitEntry(targetId){const el=$('#companion_entry_password'),value=el&&el.value;if(!companionEntryPasswordOK(value)){toast('密码不正确');if(el){el.value='';el.focus();}return;}try{localStorage.setItem(COMPANION_ENTRY_GATE_KEY,'1');}catch(_){}closeModal();const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(target){coupleOpen('device',target);return;}couTab(3);}
+let _couTab=1;
+//@@ web
+function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t)t.setAttribute('data-on',on?'1':'0');});if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}if(n===3)companionPollSnapshot(true);}
+//@@ private
+function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t)t.setAttribute('data-on',on?'1':'0');});if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}_companionPanelHealthPending=n===3;if(n===3)companionPollSnapshot(true);}
+//@@ end
+function coupleAlbumStore(){if(!S.couple)return[];if(!Array.isArray(S.couple.album))S.couple.album=[];return S.couple.album;}
+function coupleAlbumHidden(){if(!S.couple)return[];if(!Array.isArray(S.couple.albumHidden))S.couple.albumHidden=[];return S.couple.albumHidden;}
+async function coupleAlbumSaveRecent(c,text,category){if(typeof photoAlbumCoupleAllowed!=='function'||!photoAlbumCoupleAllowed(c))return false;const image=[...(msgsForAccount(c.id,'main')||[])].reverse().find(m=>m&&m.type==='image'&&m.src&&!m.pending&&!m._deleted);if(!image)return false;if(!image.id)image.id=uid();return photoAlbumRoleSave(c,image,text,category);}
+//@@ private
+/* [存共同相册] 和共用相册组件的 [回忆相册] 会记录这个动作有没有执行成功。网页版在回复拦截诊断模块里定义它，私人版没有那套模块，
+   以前一旦角色回复里带这两个标签就报「Can't find variable: roleInterceptDiagnosticAction」，模型已经回了（也扣了费）却整轮显示失败。这里补上与网页相同的最小实现。 */
+function roleInterceptDiagnosticAction(outcome,ok){if(outcome){outcome.matched=(+outcome.matched||0)+1;if(ok)outcome.handled=(+outcome.handled||0)+1;else outcome.failed=(+outcome.failed||0)+1;}return !!ok;}
+//@@ end
+async function coupleAlbumConsumeSaveTag(content,c,outcome,userText){content=String(content||'');const re=/[\[【]\s*存共同相册(?:\s*[|｜]([^\]】]+))?\s*[\]】]/g,tags=[...content.matchAll(re)];content=content.replace(re,'');for(const tag of tags){const fields=String(tag[1]||'').split(/[|｜]/),categorized=fields.length>1;roleInterceptDiagnosticAction(outcome,await coupleAlbumSaveRecent(c,categorized?fields.slice(1).join('｜').trim():String(tag[1]||'').trim(),categorized?fields[0].trim():undefined));}if(typeof photoAlbumConsumeLikes==='function')content=await photoAlbumConsumeLikes(content,c,outcome,userText);return typeof photoAlbumConsumeMemory==='function'?photoAlbumConsumeMemory(content,c,outcome,userText):content;}
+function coupleAlbumItems(c){if(!c||!S.couple||S.couple.cid!==c.id)return[];const out=[],seen=new Set(),hidden=new Set(coupleAlbumHidden()),add=x=>{if(!x||!x.src)return;const key=String(x.source||'')+':'+String(x.id||'');if(hidden.has(key)||seen.has(key))return;seen.add(key);out.push(x);};
+  coupleAlbumStore().forEach(x=>add({id:x.id,source:'album',src:x.src,owner:x.owner==='ta'?'ta':'me',desc:String(x.desc||''),visionState:x.visionState||'',visionError:x.visionError||'',time:+x.time||0,manual:true}));
+  (msgsForAccount(c.id,'main')||[]).forEach(m=>{if(m&&m.type==='image'&&m.src&&!m.pending&&m._coupleAlbumSaved===true){if(!m.id)m.id=uid();add({id:m.id,source:'wechat',src:m.src,owner:m.role==='assistant'?'ta':'me',desc:String(m.desc||''),visionState:m.visionState||'',visionError:m.visionError||'',time:+m.time||0,manual:false});}});
+  return out.sort((a,b)=>(+b.time||0)-(+a.time||0));}
+function coupleAlbumPromptRows(c){return typeof photoAlbumRoleRows==='function'?photoAlbumRoleRows(c).filter(r=>r.desc&&r.visionState==='success').slice(0,20).map(r=>String(r.desc).slice(0,300)):[];}
+function coupleAlbumPrompt(c){return typeof photoAlbumRolePrompt==='function'?photoAlbumRolePrompt(c):'';}
 async function coupleAlbumDescribe(c,item,sourceFactory){const prompt='这是你们共同相册里的一张真实照片。请仔细、客观地用中文描述主体、人物、动作、场景、关键文字和最明显的细节，用2到3句自然白话说清楚，让聊天角色以后能准确记得画面；不要编造看不见的内容。';const ok=await runVisionForMessage(c.id,item,sourceFactory,prompt);await saveNowAsync();if(cur().p==='couple')render();return ok;}
 function coupleAlbumUpload(){if(appLocked('album'))return;go('album');photoAlbumUploadOpen('共享相簿');}
 async function coupleAlbumRetry(id){const c=S.couple&&getC(S.couple.cid),item=coupleAlbumStore().find(x=>String(x.id)===String(id));if(!c||!item||!item.src||item.visionState==='pending')return;closeModal();toast('正在重新理解这张照片');const ok=await coupleAlbumDescribe(c,item,()=>visionDataURLSource(item.src,1200,.74));toast(ok?'角色已经能看到这张共同相册照片':'识图仍失败：'+String(item.visionError||'请检查图片理解线路').slice(0,90));coupleAlbumOpen();}
@@ -450,53 +498,3 @@ function cWeight(c){return (c.star?2:0)+(c.gender==='男'?1:0);}
 function readdDiscoveryLine(c,since){const at=friendMetaGet(c,'readdedAt'),dur=friendMetaGet(c,'blockDur');if(!c||!at)return '';if(since&&at<=since)return '';return '·好友记录：她在'+fmtDT(at)+'重新通过了你的好友申请'+(dur?'（之前把你拉黑了'+dur+'）':'')+'，这是加回记录，不是第一次认识。\n';}
 function friendRequestActivity(exceptId,since){try{friendRequestsInit();const arr=S.friendRequests.filter(r=>r.contactId!==exceptId&&friendRequestVisible(r)&&(!since||friendRequestTime(r)>since)).sort((a,b)=>friendRequestTime(b)-friendRequestTime(a)).slice(0,8);if(!arr.length)return'';return '·她微信“好友 → 新的朋友”里：'+arr.map(r=>{const c=getC(r.contactId),nm=c?(c.remark||c.name):'未知申请',st=r.status==='accepted'?'已同意':r.status==='rejected'?'已拒绝':'待处理';return '['+factStamp(friendRequestTime(r))+'] '+nm+'（'+st+'；'+(r.source||'好友申请')+'；来意：'+(r.intent||r.msg||'想认识她')+'）';}).join('；')+'\n';}catch(_){return'';}}
 function travelTicketDiscoveryLine(exceptId,markSeen){const arr=(S.travel&&S.travel.trips||[]).filter(tr=>!tr.flightV2&&!tr.railV2&&tr.meet===false&&tr.payer==='me'&&tr.status==='upcoming').slice(-5);if(!arr.length)return '';let ch=false;if(markSeen)arr.forEach(tr=>{if(!tr._seenByChar&&(!tr.cid||tr.cid===exceptId)){tr._seenByChar=true;ch=true;}});if(ch)save(500);return '·她的小鱼旅行机票：'+arr.map(tr=>tvMD(tr.date)+' '+tr.from+'→'+tr.to+'（她自己订票自己去玩，没有发代付）').join('、')+'\n';}
-function travelHotelDiscoveryLine(){const arr=(S.travel&&S.travel.hotels||[]).filter(h=>tvHotelOwned(h)&&(typeof NorthTravelOrders==='undefined'||NorthTravelOrders.visible(h,'hotel'))).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8);if(!arr.length)return'';return '·她的小鱼旅行酒店订单：'+arr.map(h=>tvMD(h.checkIn)+'入住「'+h.hotelName+'」'+h.nights+'晚，'+tvHotelRoomText(h.roomType)+'，入住人'+tvHotelGuestText(h)+'，'+tvHotelStatusText(h.status)).join('；')+'\n';}
-function myActivity(exceptId,since){let s='';since=since||0;
-  if(typeof NorthMarketBusiness!=='undefined'&&getC(exceptId))s+=NorthMarketBusiness.roleFacts(getC(exceptId));
-  const self=getC(exceptId);const _rl=readdDiscoveryLine(self,since);if(_rl){s+=_rl;if(self){friendMetaSet(self,'readdKnown',true);save(500);}}
-  s+=friendRequestActivity(exceptId,since);
-  s+=travelTicketDiscoveryLine(exceptId,true);
-  if(typeof NorthConcertBooking!=='undefined')s+=NorthConcertBooking.inspection(since);if(typeof NorthTravelTaxi!=='undefined')s+=NorthTravelTaxi.inspection(since);
-  if(typeof NorthTravelOrders!=='undefined')s+=NorthTravelOrders.inspection(since);
-  const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,3);
-  if(others.length)s+='·她最近在跟这些人聊（附最近几句往来内容）：\n'+others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-6).map(mm=>{const t=msgToText(mm);return t?('['+factStamp(mm.time||Date.now())+'] '+(mm.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,42)):'';}).filter(Boolean).join('\n');return '【'+nm+cMark(o.c)+' 最新 '+factStamp(o.lm.time)+'】\n'+recent;}).join('\n')+'\n';
-  s+=phoneFriendActivity(since);
-  s+=phActivity(since);
-  // 她最近新加的好友（带添加时间，让你分得清哪些是刚加的、哪些是老早就有的，别把老友当新欢乱吃醋）
-  const _newc=S.contacts.filter(x=>!x.deleted&&x.id!==exceptId&&x.createdAt&&(Date.now()-x.createdAt<7*86400000)&&x.createdAt>since).sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);
-  if(_newc.length)s+='·她最近新加的好友：'+_newc.map(x=>(x.remark||x.name)+cMark(x)+'（'+factStamp(x.createdAt)+'加的，距今'+fmtDur(Date.now()-x.createdAt)+'）').join('、')+'\n';
-  // 她最近和别人的通话记录（语音/视频，别把几天前的说成刚刚）
-  const _calls=[];S.contacts.forEach(x=>{if(x.deleted||x.id===exceptId)return;const cm=[...msgs(x.id)].reverse().find(m=>m._call&&m.time&&m.time>since);if(cm)_calls.push({nm:(x.remark||x.name),mk:cMark(x),t:cm.time,k:cm._ck==='video'?'视频':'语音'});});
-  _calls.sort((a,b)=>b.t-a.t);
-  if(_calls.length)s+='·她最近和别人的通话：'+_calls.slice(0,4).map(o=>o.nm+o.mk+'('+o.k+'通话 '+factStamp(o.t)+')').join('、')+'\n';
-  /* 真实 iPhone 数值只允许由本次独立读取会话注入，普通查手机摘要不得带缓存。 */
-  const bills=(S.me.bills||[]).filter(b=>!since||!b.ts||b.ts>since).slice(-3);
-  if(bills.length)s+='·她最近花钱：'+bills.map(b=>'['+factStamp(b.ts||Date.now())+'] '+b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
-  const lns=lifeNotesForRole(self).filter(n=>!since||!n.ts||n.ts>since).slice(0,5);
-  if(lns.length)s+='·关于用户的情绪与约定：'+lns.map(n=>fmtDT(n.ts||Date.now())+' '+lifeNoteReadableText(n)+'（'+lifeNoteAuthorship(n,self)+'）').join('；')+'\n';
-  const liked=S.moments.filter(p=>((p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name))&&p.time>since);
-//@@ web
-  if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return '['+factStamp(p.time||Date.now())+'] '+(p.authorId==='me'?'自己':((getC(p.authorId)&&getC(p.authorId).name)||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
-//@@ private
-  if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return '['+factStamp(p.time||Date.now())+'] '+(p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
-//@@ end
-  if(S.me.status)s+='·她自己写的动态："'+S.me.status+'"\n';
-  const myTw=(S.x&&S.x.tweets||[]).filter(t=>t.who==='me'&&t.time>since).slice(0,3);
-  if(myTw.length)s+='·她最近发的推文：'+myTw.map(t=>'['+factStamp(t.time||Date.now())+'] 「'+t.text.slice(0,24)+'」').join('、')+'\n';
-  if(!since&&S.x&&S.x._mylog&&S.x._mylog.length){const xRows=S.x._mylog.slice(-5).map(xlogText).filter(Boolean);if(xRows.length)s+='·她在X的其它动态：'+xRows.join('；')+'\n';}
-  {const liveBattery=webBatteryFactText();if(!privatePhoneAccountAvailable()&&liveBattery)s+='·'+liveBattery+'\n';}
-  if(S.browser&&S.browser.history&&S.browser.history.length)s+='·她最近在浏览器搜了：'+S.browser.history.slice(0,4).map(h=>'['+factStamp(h.time||Date.now())+'] '+h.q).join('、')+'\n';
-  // 抖音（搜索/点赞/私信）—— 这些没有逐条时间戳，全量查时一起看
-  const dh=(S.dy&&S.dy.history||[]).slice(0,6);if(dh.length)s+='·她抖音搜过：'+dh.join('、')+'\n';
-  const dl=(S.dy&&S.dy.liked||[]).slice(0,6);if(dl.length)s+='·她抖音点赞：'+dl.map(v=>'@'+(v.author||'')+(v.desc?'「'+(''+v.desc).slice(0,16)+'」':'')).join('；')+'\n';
-  // 抖音/X 私信：带时间，只报"自上次查看以来有新消息"的会话（双重保险防重复提旧事）
-  const _dmLine=(arr,label)=>{const list=(arr||[]).filter(d=>(d.msgs||[]).some(m=>(m.time||0)>since));if(!list.length)return '';
-    return '·'+label+(since?'（只列自上次后有新消息的）':'')+'：'+list.slice(0,5).map(d=>{const nw=d.msgs.filter(m=>(m.time||0)>since);const show=(nw.length?nw:d.msgs).slice(-2);const lt=show[show.length-1];const tt=(lt&&lt.time)?factStamp(lt.time)+' ':'';return tt+d.name+'('+show.map(m=>(m.from==='me'?S.me.name:d.name)+'"'+(''+(m.text||'')).slice(0,24)+'"').join(' / ')+')';}).join('；')+'\n';};
-  s+=_dmLine(S.dy&&S.dy.dms,'她抖音私信');
-  s+=_dmLine(S.x&&S.x.dms,'她X私信');
-  // 购物订单
-  const ords=shopOrderRows().filter(o=>!o.refunded).slice(0,5);if(ords.length)s+='·她最近网购下单：'+ords.map(o=>(o.time?'['+o.time+'] ':'')+shopOrderFact(o)).join('、')+'\n';
-  // 线下约会记录（什么时候·和谁·在哪约会）
-  const _dates=[];Object.keys(S.offline||{}).forEach(cid=>{const o=S.offline[cid];const cc=getC(cid);if(!cc||cc.deleted||!o)return;if(!((o.memory&&o.memory.length)||(o.msgs&&o.msgs.length)||o.started))return;const last=(o.memory&&o.memory.length)?offMemText(o.memory[o.memory.length-1]).slice(0,30):'';_dates.push((o.when||offMemLabel(o))+' 和'+(cc.remark||cc.name)+(o.loc?'在'+o.loc:'')+'约会'+(last?'，'+last:''));});
-  if(_dates.length)s+='·她的线下约会记录：'+_dates.slice(0,3).join('；')+'\n';
-  return s||'（手机上没什么新动静）';}

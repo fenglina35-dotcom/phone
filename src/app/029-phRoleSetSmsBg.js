@@ -1,3 +1,51 @@
+/* 她说「把这张换成背景」，角色回一行 [换背景]，就真的拿最近那张图换上去 */
+function phRoleSetSmsBg(num,sk){const arr=phSmsArr(num,sk).slice(-24).reverse(),hit=arr.find(m=>m&&m.img);
+  if(!hit)return false;phSmsBgSet(num,hit.img);render();toast('ta把这张照片换成了聊天背景');return true;}
+function openPhoneSMS(num,sk){num=phDigits(num);phFxReset();_phSmsSel=null;const p=phState();sk=sk||phCurrentSmsKey(num);p.line=phSmsIsAliasKey(sk)?'alias':'main';(p.sms[sk]||[]).forEach(m=>{if(m.from==='them')m.read=true;});p.read[sk]=Date.now();save();go('phonesms',{num,sk});}
+function renderPhoneSMS(num,sk,inspection){num=inspection?String(num):phDigits(num);sk=inspection?'spy:'+inspection.id+':'+num:(sk||phCurrentSmsKey(num));
+  if(!inspection){if(phImsgOn(num,sk))return renderPhoneIMsg(num,sk,(phState().sms[sk]||[]),phFind(phDigits(num)));}
+  const arr=inspection?inspection.arr:(phState().sms[sk]||[]),alias=inspection?true:phSmsIsAliasKey(sk),aliasNum=phSmsAliasNumFromKey(sk),x=inspection?null:phFind(num),roleChat=x&&x.kind==='role',headAv=alias?phDefaultAvatar('lg'):phAvatar(num,'lg'),headName=inspection?inspection.name:alias?'匿名号':phName(num),meta=inspection?('信息 · 短信<br>'+esc(phFmt(num))):alias?('匿名号 '+phFmt(aliasNum)+'<br>发给 '+phName(num)+' · '+phFmt(num)):('信息 · 短信<br>'+phFmt(num));const html=`<div class="smschat"><div class="smshead"><button class="phbtn back" onclick="back()">‹</button>${headAv}<div class="smsname" onclick="go('phonecontact',{num:'${esc(num)}'})">${esc(headName)} ›</div><div class="smsmeta">${meta}</div></div><div class="smsbody" id="smsbody"><div class="smsdate">${arr.length?fmtDT(arr[0].time):fmtDT(Date.now())}</div>${arr.map(m=>`<div class="smsmsg ${m.from==='me'?'me':'them'}" data-chat-motion-row="${esc(naturalMotionRowKey(m))}"><div class="smsbubble" onclick="phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')">${m.img?`<img src="${storedImageDisplaySource(m.img)}" alt="" style="display:block;max-width:100%;width:180px;border-radius:10px">`:esc(m.text)}</div></div>`).join('')}${!inspection&&phSmsTypingOn(num,sk)?'<div class="smsmsg them"><div class="smsbubble typing"><span></span><span></span><span></span></div></div>':''}</div><div class="smslinebar">${roleChat&&alias?phLineSwitchHTML():''}</div><div class="smsbar"><button onclick="go('phonecontact',{num:'${esc(num)}'})">+</button><textarea id="smsin" placeholder="信息 · 短信" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}"></textarea><button onclick="phSendSms('${esc(num)}','${esc(sk)}')">↑</button></div></div>`;return inspection?spyPhoneSanitize(html,inspection.id):html;}
+function phSmsArr(num,sk){const p=phState();sk=sk||phCurrentSmsKey(num);return p.sms[sk]||(p.sms[sk]=[]);}
+function phMirrorSMS(num,from,text){const x=phFind(num);if(!x||x.kind!=='role')return;const c=getC(x.id);if(!c)return;const who=from==='me'?S.me.name:(c.remark||c.name),line='[电话短信记录] '+fmtDT(Date.now())+'，'+who+'在短信里说：'+String(text||'').replace(/\n/g,' ').slice(0,180);msgs(c.id).push({role:from==='me'?'user':'assistant',type:'sys',content:line,time:Date.now(),id:uid(),_silent:true,_phoneCtx:true});save(500);}
+function phPushSpoofSmsCtx(c,num,from,text){if(!c||!text)return;const who=from==='me'?S.me.name:'你',to=from==='me'?'你':S.me.name,line='[陌生短信记录] '+fmtDT(Date.now())+'，你用陌生号码 '+phFmt(num)+' 和 '+S.me.name+' 发短信。'+who+' 对 '+to+' 说：'+String(text||'').replace(/\n/g,' ').slice(0,180)+'。这是短信，不是电话。';msgs(c.id).push({role:from==='me'?'user':'assistant',type:'sys',content:line,time:Date.now(),id:uid(),_silent:true,_phoneCtx:true});save(500);}
+function phSendSms(num,sk){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();if(!text)return;num=phDigits(num);const p=phState(),x=phFind(num),thread=p.aliasThreads&&p.aliasThreads[num],useAlias=phSmsIsAliasKey(sk)||(p.line==='alias'&&x&&x.kind==='role'),spoofThread=!useAlias&&thread&&thread.spoof&&thread.cid;let alias=null;if(useAlias){const c=getC(x&&x.id);alias=c&&phEnsureAliasThread(c,num,'sms');sk=sk||phSmsKey(num,'alias',alias.aliasNum);}else sk=sk||num;if(p.blocked[phNorm(num)]){toast('已屏蔽，不能发送');return;}if(useAlias&&phAliasBlocked(alias,alias&&alias.aliasNum)){toast('对方已拉黑这个陌生身份');return;}phFxSync();const _fxRuns=phFxRuns(text,(_phFx.ch||[]).slice(0,text.length)),
+    _fxOn=_fxRuns.some(r=>r&&r.e&&r.e.length),_bfx=_phFx.bfx,_sfx=_phFx.sfx;
+  ta.value='';phSmsTyping();phFxReset();const arr=phSmsArr(num,sk),_m={id:uid(),from:'me',text,time:Date.now(),read:true,line:useAlias?'alias':'main',aliasTo:useAlias&&alias&&alias.cid,aliasNum:useAlias&&alias&&alias.aliasNum,spoofTo:spoofThread&&thread.cid};
+  if(_fxOn)_m.fx=_fxRuns;if(_bfx)_m.bfx=_bfx;if(_sfx)_m.sfx=_sfx;
+  arr.push(_m);if(arr.length>300)arr.splice(0,arr.length-300);const _pz=!useAlias&&typeof pursuitOnUserSms==='function'?pursuitOnUserSms(num):null;if(!useAlias&&!spoofThread&&!(_pz&&_pz.stranger))phMirrorSMS(num,'me',text);save();render();
+  if(_bfx||_sfx||_fxOn)setTimeout(()=>phFxPlay(_m,$('#smsbody')),40);
+  if(_pz&&_pz.stranger)setTimeout(()=>phRoleSmsReply(_pz.cid,num,text,num),650+Math.random()*650);else if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,text,alias.aliasNum,sk),500+Math.random()*500);else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,text),450+Math.random()*450);else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,text,num),650+Math.random()*650);else setTimeout(()=>phAutoSmsReply(num,text),700+Math.random()*900);}
+async function phRoleSmsReply(id,num,userText,sk){const c=getC(id);if(!c||(c.blocked&&!pursuitState(c))||phState().blocked[phNorm(num)])return;sk=sk||num;/* 微信被拉黑不等于短信不能回：追回里她回了短信，他要接得上 */
+  const range=phSmsBubbleRange(c),rows=phCtxRows(),_want=phFxWantFromText(userText);
+  phSmsTypingSet(num,sk,true);
+  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+phSmsLineText(m)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+(typeof pursuitSmsPrompt==='function'?pursuitSmsPrompt(c,num):'')+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phSmsVoiceHelp(c)+phFxTagHelp()+phFxWantPrompt(_want);let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
+  r=String(r||'');const wantBg=/[\[【]\s*换背景\s*[\]】]/.test(r);r=r.replace(/[\[【]\s*换背景\s*[\]】]/g,' ');
+  let parts=phSmsBubbles(r,range.max);
+  if(wantBg&&!phRoleSetSmsBg(num,sk)&&!parts.length)parts=['我没找到你说的那张照片，你再发我一次？'];
+  if(!parts.length)return;
+  phSmsTypingSet(num,sk,false);
+  const _sent=await phDeliverSmsBubbles(num,sk,parts,c);
+  phSmsApplyWantedFx(num,sk,_sent,_want);}catch(e){}finally{phSmsTypingSet(num,sk,false);}}
+function phStrangerProfile(num){const d=phNorm(num),sp=phSpecialInfo(num);if(sp)return {name:sp.name,kind:'公共服务',region:phRegion(num)};if(/^10\d{4,}/.test(d))return {name:'验证码平台',kind:'验证码/平台通知',region:'平台短信'};if(/^95/.test(d)||/^400/.test(d))return {name:'生活服务',kind:'客服/营销',region:'服务号码'};if(/^1\d{10}$/.test(d)){const pool=['陌生人','快递外卖','生活服务','营销号码','旧联系人','暧昧错发','装熟骚扰','奇怪通知'];return {name:phFmt(num),kind:pool[Math.abs(phHash(d))%pool.length],region:phRegion(num)};}return {name:phFmt(num),kind:'陌生号码',region:phRegion(num)};}
+function phRandomSmsText(num,pf,now){pf=pf||phStrangerProfile(num);now=now||Date.now();const code=String(Math.abs(phHash(now+':'+num))).slice(0,6).padStart(6,'0'),pool={
+  '验证码/平台通知':['验证码 '+code+'，5分钟内有效。不是本人操作请忽略。','你的动态安全码是 '+code+'，别告诉任何人。','登录确认码 '+code+'。如果不是你，可能是有人手滑填错号码。'],
+  '客服/营销':['尊贵用户，今晚的神秘权益已为你点亮，回复1领取空气礼包。','您有一份过期三年的好运待签收，回复“我信了”查看。','系统检测到你最近魅力值偏高，客服建议适当低调。'],
+  '生活服务':['您好，你预约的“情绪回收服务”已排队，今晚有人负责听你叹气。','小区温馨提示：今晚风很大，适合把想说的话发出去。','你的云端心事包裹正在派送，签收人需要保持可爱。'],
+  '快递外卖':['你的包裹备注写着“别让她自己扛”，请问放门口还是放在心上？','外卖小哥迷路了，他说地址像是写到了某个人心里。','快件异常：收件人太让人惦记，系统无法冷静派送。'],
+  '营销号码':['限时活动：回复“想你”可获得一份不值钱但很暧昧的关心。','恭喜你被抽中成为今晚第一个被打扰的人，奖品是这条短信。','本号码只负责随机出现，不负责解释为什么想找你。'],
+  '旧联系人':['这么久没联系，你是不是把我从记忆里删了？','我换号码了，猜猜我是谁。猜错也没关系，我会继续装神秘。','刚刚路过一个地方，突然想起你。别问我是谁，问就是不太方便说。'],
+  '暧昧错发':['睡了吗？算了，当我没问。可我确实想知道。','你今天是不是心情不好？别问我怎么知道的。','如果这条发错了，那也挺好，至少我终于有理由跟你说话。'],
+  '装熟骚扰':['别装不认识我，你上次也是这么说的。','我知道现在打扰你不合适，但我偏偏就是想试一下。','你再不回，我就默认你在认真想我是谁。'],
+  '奇怪通知':['月亮客服提醒：今晚有人偷偷想你，工单无法关闭。','系统提示：你有一条未读心动，来源不明，风险等级：微妙。','匿名广播：请保持手机畅通，可能会有奇怪的人想靠近你。'],
+  '陌生人':['冒昧问一句，你相信号码也会认错人吗？','我好像发错人了，不过你的号码看起来挺有缘。','别紧张，我只是一个路过的陌生号码。可能路过得有点刻意。']
+};const arr=pool[pf.kind]||pool['陌生人'];return arr[Math.abs(phHash(num+':'+now+':sms'))%arr.length];}
+async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='role')return;if(phState().blocked[phNorm(num)])return;const pf=phStrangerProfile(num),arr=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:pf.name)+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n');let r='';try{const sys='你在小手机里模拟真实短信对话。号码身份：'+pf.name+'；类型：'+pf.kind+'；地区：'+pf.region+'。你不是任何恋爱角色，不能知道用户微信隐私或角色记忆。回复要像真实短信，短一点，但可以更有趣：装熟、撩人、嘴欠、奇怪生活服务、花里胡哨的骚扰短信、暧昧错发都可以。禁止真实诈骗、真实链接、真实转账/加群/贷款引导；可以做成明显玩笑或虚构服务。只输出短信正文。';r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n用户刚发：'+userText}],{max:160,temp:.86});}catch(e){}
+  r=phCleanSmsText(cleanReply(r||'')).slice(0,180);if(!r)r=phRandomSmsText(num,pf);phReceiveSms(num,r,null);}
+//@@ web
+function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151520;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
+//@@ private
+function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
+//@@ end
 /* 语音条在上下文和列表预览里怎么写：把原文和译文都带上，
    不然下一轮角色就不知道自己刚才用语音说了什么 */
 function phSmsVoiceLine(m){const t=String((m&&m.text)||'');
@@ -450,51 +498,3 @@ const renderCompanionPageAutomationCore=renderCompanionPage;
 renderCompanionPage=function(c,SEC,HD){const html=renderCompanionPageAutomationCore(c,SEC,HD),st=companionState(),allowed=st.roleAccess&&st.permissions.appControl,row=`<div class="it" style="align-items:flex-start;opacity:${allowed?1:.48}"><span><b style="display:block;font-size:13px;color:#eee">手动解锁立即告诉角色</b><small style="display:block;margin-top:3px;color:#777;line-height:1.45">必开规则；只接受真实执行成功记录，排除角色自己下达的解锁命令</small></span><span class="sw ${allowed?'on':''}" onclick="companionToggleAutomation('manualUnlockAlert')"></span></div>`;return html.replace('<div style="padding:10px 13px 12px;color:#777;font-size:11px;line-height:1.65">睡眠与应用使用记录',row+'<div style="padding:10px 13px 12px;color:#777;font-size:11px;line-height:1.65">睡眠与应用使用记录');};
 const renderCompanionPageDailyHealthCore=renderCompanionPage;
 renderCompanionPage=function(c,SEC,HD){return renderCompanionPageDailyHealthCore(c,SEC,HD).replace('每日睡眠记录必查','每日睡眠与步数必查').replace('睡眠和应用使用记录按你设置的时段每天各查看一次','睡眠与步数、应用使用记录按你设置的时段每天各查看一次').replace('睡眠与应用使用记录是每日必查项','睡眠与步数、应用使用记录是每日必查项').replace('当天睡眠查看','当天睡眠与步数查看').replace('页面完全关闭时不能伪装成本机常驻监控。','普通退到后台或锁屏后，这些规则由服务器及伴生 App 继续执行；若用户上划强制退出，iOS 可能不再唤醒 App，这时绝不会把旧数据冒充成新数据。');};
-const renderCompanionPageRoleAutonomyCore=renderCompanionPage;
-renderCompanionPage=function(c,SEC,HD){return renderCompanionPageRoleAutonomyCore(c,SEC,HD)
-  .replace('3小时未回才检查；查完必须发消息或来电','3小时未回才检查；查看后由角色自主决定是否联系')
-  .replace('查完必须发消息或来电','查看后由角色自主决定是否联系');};
-const renderCompanionPageUnifiedPhoneCore=renderCompanionPage;
-renderCompanionPage=function(c,SEC,HD){return renderCompanionPageUnifiedPhoneCore(c,SEC,HD)
-  .replaceAll('外置 iPhone','真实 iPhone').replaceAll('外置屏幕使用','屏幕使用')
-  .replaceAll('外置同步 App','真实 App').replaceAll('外置足迹点','足迹点')
-  .replaceAll('外置最近同步','最近读取').replaceAll('外置逐 App 时长','逐 App 时长')
-  .replaceAll('外置：','真实手机：').replaceAll('外置稳定 ID','设备稳定 ID')
-  .replaceAll('外置编号','设备编号').replaceAll('内置关联：','页面联动：')
-  .replaceAll('内置：未关联（外置仍可单独锁定或解锁）','未关联小手机页面（不影响真实控制）')
-  .replaceAll('内外统一每日限额','统一每日限额').replaceAll('内外统一限额','统一限额')
-  .replaceAll('等待外置每日足迹同步','等待真实手机足迹').replaceAll('外置真实定位数据','真实定位数据')
-  .replaceAll('外置坐标（技术信息）','坐标（技术信息）').replaceAll('伴生设备','真实手机')
-  .replaceAll('伴生 App','真实手机服务');};
-const renderCompanionPageHeartCareCore=renderCompanionPage;
-renderCompanionPage=function(c,SEC,HD){return renderCompanionPageHeartCareCore(c,SEC,HD)
-  .replace('难过时参考最新心率','难过或怀疑时尝试查看心率')
-  .replace('只作关心线索，不判断撒谎、哭泣或疾病','每次重新读取；只作关心线索，不能判断撒谎、哭泣或疾病');};
-const companionAutomationCandidateTruthCore=companionAutomationCandidate;
-companionAutomationCandidate=function(c,st,now){return companionAutomationCandidateTruthCore(c,st,now);};
-const COMPANION_ENTRY_GATE_KEY='north-companion-entry-unlocked-v1';
-function companionEntryUnlocked(){try{return localStorage.getItem(COMPANION_ENTRY_GATE_KEY)==='1';}catch(_){return false;}}
-function companionEntryPasswordOK(value){return String(value||'').trim()==='206414';}
-function companionEnter(targetId){const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(companionEntryUnlocked()){if(target){coupleOpen('device',target);return;}couTab(3);return;}openModal(`<h3>伴生设备暂未公开</h3><div class="hint" style="line-height:1.7;margin-bottom:12px">功能仍在完善中，首次进入需要验证。验证成功后，这个浏览器以后不再询问。</div><div class="field"><label>进入密码</label><input id="companion_entry_password" type="password" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="请输入 6 位密码" onkeydown="if(event.key==='Enter')companionSubmitEntry('${target}')"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="companionSubmitEntry('${target}')">进入伴生设备</button></div>`);setTimeout(()=>{const el=$('#companion_entry_password');if(el)el.focus();},60);}
-function companionSubmitEntry(targetId){const el=$('#companion_entry_password'),value=el&&el.value;if(!companionEntryPasswordOK(value)){toast('密码不正确');if(el){el.value='';el.focus();}return;}try{localStorage.setItem(COMPANION_ENTRY_GATE_KEY,'1');}catch(_){}closeModal();const target=String(targetId||'').replace(/[^a-z0-9_-]/gi,'');if(target){coupleOpen('device',target);return;}couTab(3);}
-let _couTab=1;
-//@@ web
-function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t)t.setAttribute('data-on',on?'1':'0');});if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}if(n===3)companionPollSnapshot(true);}
-//@@ private
-function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{const p=$('#coupage'+i),t=$('#coutab'+i),on=i===n;if(p)p.style.display=on?'block':'none';if(t)t.setAttribute('data-on',on?'1':'0');});if(n===3){const p3=$('#coupage3');if(p3&&!p3.innerHTML.trim()&&typeof coupleDash3==='function')p3.innerHTML=coupleDash3();}_companionPanelHealthPending=n===3;if(n===3)companionPollSnapshot(true);}
-//@@ end
-function coupleAlbumStore(){if(!S.couple)return[];if(!Array.isArray(S.couple.album))S.couple.album=[];return S.couple.album;}
-function coupleAlbumHidden(){if(!S.couple)return[];if(!Array.isArray(S.couple.albumHidden))S.couple.albumHidden=[];return S.couple.albumHidden;}
-async function coupleAlbumSaveRecent(c,text,category){if(typeof photoAlbumCoupleAllowed!=='function'||!photoAlbumCoupleAllowed(c))return false;const image=[...(msgsForAccount(c.id,'main')||[])].reverse().find(m=>m&&m.type==='image'&&m.src&&!m.pending&&!m._deleted);if(!image)return false;if(!image.id)image.id=uid();return photoAlbumRoleSave(c,image,text,category);}
-//@@ private
-/* [存共同相册] 和共用相册组件的 [回忆相册] 会记录这个动作有没有执行成功。网页版在回复拦截诊断模块里定义它，私人版没有那套模块，
-   以前一旦角色回复里带这两个标签就报「Can't find variable: roleInterceptDiagnosticAction」，模型已经回了（也扣了费）却整轮显示失败。这里补上与网页相同的最小实现。 */
-function roleInterceptDiagnosticAction(outcome,ok){if(outcome){outcome.matched=(+outcome.matched||0)+1;if(ok)outcome.handled=(+outcome.handled||0)+1;else outcome.failed=(+outcome.failed||0)+1;}return !!ok;}
-//@@ end
-async function coupleAlbumConsumeSaveTag(content,c,outcome,userText){content=String(content||'');const re=/[\[【]\s*存共同相册(?:\s*[|｜]([^\]】]+))?\s*[\]】]/g,tags=[...content.matchAll(re)];content=content.replace(re,'');for(const tag of tags){const fields=String(tag[1]||'').split(/[|｜]/),categorized=fields.length>1;roleInterceptDiagnosticAction(outcome,await coupleAlbumSaveRecent(c,categorized?fields.slice(1).join('｜').trim():String(tag[1]||'').trim(),categorized?fields[0].trim():undefined));}if(typeof photoAlbumConsumeLikes==='function')content=await photoAlbumConsumeLikes(content,c,outcome,userText);return typeof photoAlbumConsumeMemory==='function'?photoAlbumConsumeMemory(content,c,outcome,userText):content;}
-function coupleAlbumItems(c){if(!c||!S.couple||S.couple.cid!==c.id)return[];const out=[],seen=new Set(),hidden=new Set(coupleAlbumHidden()),add=x=>{if(!x||!x.src)return;const key=String(x.source||'')+':'+String(x.id||'');if(hidden.has(key)||seen.has(key))return;seen.add(key);out.push(x);};
-  coupleAlbumStore().forEach(x=>add({id:x.id,source:'album',src:x.src,owner:x.owner==='ta'?'ta':'me',desc:String(x.desc||''),visionState:x.visionState||'',visionError:x.visionError||'',time:+x.time||0,manual:true}));
-  (msgsForAccount(c.id,'main')||[]).forEach(m=>{if(m&&m.type==='image'&&m.src&&!m.pending&&m._coupleAlbumSaved===true){if(!m.id)m.id=uid();add({id:m.id,source:'wechat',src:m.src,owner:m.role==='assistant'?'ta':'me',desc:String(m.desc||''),visionState:m.visionState||'',visionError:m.visionError||'',time:+m.time||0,manual:false});}});
-  return out.sort((a,b)=>(+b.time||0)-(+a.time||0));}
-function coupleAlbumPromptRows(c){return typeof photoAlbumRoleRows==='function'?photoAlbumRoleRows(c).filter(r=>r.desc&&r.visionState==='success').slice(0,20).map(r=>String(r.desc).slice(0,300)):[];}
-function coupleAlbumPrompt(c){return typeof photoAlbumRolePrompt==='function'?photoAlbumRolePrompt(c):'';}

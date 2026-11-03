@@ -1,3 +1,66 @@
+/* 指针那条线已经把这一下处理掉了，后面补发的 click 就别再翻一次 */
+let _phFxPickDone=0;
+function phFxPickTap(i){if(_phFxPickDone){_phFxPickDone=0;return;}
+  i=+i;const at=_phFxPick.indexOf(i);
+  if(at>=0)_phFxPick.splice(at,1);else phFxPickSet(_phFxPick.concat(i));
+  phFxTextModal();}
+/* 按住第一个字往旁边拖：拖过的字跟着第一个字的动作（选或取消选） */
+function phFxPickDown(i){i=+i;_phFxDrag=_phFxPick.indexOf(i)>=0?'off':'on';_phFxPickDone=1;phFxPickPaint(i);}
+function phFxPickOver(i){if(_phFxDrag)phFxPickPaint(+i);}
+function phFxPickUp(){if(_phFxDrag){_phFxDrag=null;phFxTextModal();}}
+function phFxPickPaint(i){const at=_phFxPick.indexOf(i);
+  if(_phFxDrag==='on'&&at<0)phFxPickSet(_phFxPick.concat(i));
+  else if(_phFxDrag==='off'&&at>=0)_phFxPick.splice(at,1);
+  const el=document.querySelector(`.imfx-pick b[data-i="${i}"]`);
+  if(el)el.classList.toggle('on',_phFxPick.indexOf(i)>=0);}
+function phFxPickAll(){const n=String((($('#smsin')||{}).value)||'').length,pick=[];
+  const all=_phFxPick.length>=n&&n>0;
+  if(!all)for(let i=0;i<n;i++)pick.push(i);
+  phFxPickSet(pick);phFxTextModal();}
+function phFxSelKeys(){const ch=_phFx.ch||[],out={},idx=_phFxPick;
+  for(const k of PH_FX_ALL){let all=idx.length>0;for(const i of idx)if(!(ch[i]&&ch[i][k])){all=false;break;}if(all)out[k]=1;}
+  return out;}
+function phFxToggle(k){if(!_phFxPick.length){toast('先挑要变的那几个字');return;}
+  const ch=_phFx.ch||[],on=!phFxSelKeys()[k],motion=PH_FX_TEXT.some(x=>x[0]===k);
+  ch.length=Math.max(ch.length,String(_phFx.prev||'').length);/* 和整句话一样长，别留半截 */
+  for(const i of _phFxPick){const o=Object.assign({},ch[i]||null);
+    if(motion)for(const x of PH_FX_TEXT)delete o[x[0]];/* 动作效果一次只留一个，和 iMessage 一样 */
+    if(on)o[k]=1;else delete o[k];
+    ch[i]=phFxSig(o)?o:null;}
+  _phFx.ch=ch;phFxTextModal();}
+function phFxClearSel(){const ch=_phFx.ch||[];for(const i of _phFxPick)ch[i]=null;_phFx.ch=ch;phFxTextModal();}
+function phFxTextModal(){const ta=$('#smsin');if(!ta)return;const text=String(ta.value||''),
+  on=phFxSelKeys(),ch=_phFx.ch||[],chars=Array.from(text),
+  /* 预览的是整句话，这样她一眼就看得出「只有爱在动」 */
+  demo=phFxRuns(text,ch).map(phFxRunHTML).join(''),
+  n=chars.length,all=_phFxPick.length>=n&&n>0;
+  let at=0;const cells=chars.map(c=>{const i=at;at+=c.length;
+    return `<b data-i="${i}" class="${_phFxPick.indexOf(i)>=0?'on':''}${ch[i]?' has':''}" onpointerdown="phFxPickDown(${i})" onpointerenter="phFxPickOver(${i})" onclick="phFxPickTap(${i})">${c===' '?'&nbsp;':esc(c)}</b>`;}).join('');
+  openModal(`<h3>文字效果</h3><div class="hint">默认一个字都不选，点一下选中那个字，按住往旁边拖能连选；想整条都加就点下面的「全选」</div>
+  <div class="imfx-pick" onpointerup="phFxPickUp()" onpointercancel="phFxPickUp()" onpointerleave="phFxPickUp()">${cells}</div>
+  <button class="minibtn" style="margin:0 0 8px" onclick="phFxPickAll()">${all?'一个都不选':'全选'}</button>
+  <div class="hint" style="margin-top:0">发出去是这样：</div>
+  <div class="imfx-demo">${demo||'&nbsp;'}</div>
+  <div class="imfx-style">${PH_FX_STYLE.map(x=>`<button class="${on[x[0]]?'on':''}" style="${x[0]==='b'?'font-weight:800':x[0]==='i'?'font-style:italic':x[0]==='u'?'text-decoration:underline':'text-decoration:line-through'}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <div class="imfx-sheet">${PH_FX_TEXT.map(x=>`<button class="${on[x[0]]?'on':''}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <button class="btn g" style="margin-top:10px" onclick="phFxClearSel()">清掉选中这几个字的效果</button>
+  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();render()">好了</button>`);}
+/* ===== 带效果发送（长按发送键） ===== */
+let _phFxHold=0;
+function phFxHoldStart(num,sk){clearTimeout(_phFxHold);_phFxHold=setTimeout(()=>{_phFxHold=0;phFxSendHold(num,sk);},420);}
+function phFxHoldStop(){if(_phFxHold){clearTimeout(_phFxHold);_phFxHold=0;}}
+function phFxSendHold(num,sk){phFxSync();_phFxTab='bubble';phFxSendModal(num,sk);}
+function phFxTab(t){_phFxTab=t==='screen'?'screen':'bubble';phFxSendModal(_phFxNum,_phFxSk);}
+let _phFxNum='',_phFxSk='';
+function phFxSendModal(num,sk){_phFxNum=num;_phFxSk=sk;
+  const list=_phFxTab==='screen'?PH_FX_SCREEN:PH_FX_BUBBLE,cur=_phFxTab==='screen'?_phFx.sfx:_phFx.bfx;
+  openModal(`<h3>带效果发送</h3>
+  <div class="imfx-tabs"><button class="${_phFxTab==='bubble'?'on':''}" onclick="phFxTab('bubble')">气泡</button><button class="${_phFxTab==='screen'?'on':''}" onclick="phFxTab('screen')">屏幕</button></div>
+  <div class="hint">${_phFxTab==='screen'?'整屏放一次，对方打开也会看到':'这条气泡飞出来的方式'}</div>
+  <div class="imfx-sheet">${list.map(x=>`<button class="${cur===x[0]?'on':''}" onclick="phFxPick('${_phFxTab}','${x[0]}')">${x[1]}</button>`).join('')}</div>
+  <button class="btn g" style="margin-top:10px" onclick="phFxPick('${_phFxTab}','')">不要这个效果</button>
+  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phSendSms('${esc(num)}','${esc(sk)}')">发送</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal();render()">先不发</button>`);}
 function phFxPick(tab,k){if(tab==='screen')_phFx.sfx=k;else _phFx.bfx=k;phFxSendModal(_phFxNum,_phFxSk);}
 function phFxDrop(){_phFx.bfx='';_phFx.sfx='';_phFx.ch=[];render();}
 /* 输入框上面那条：发之前就能看见 */
@@ -455,51 +518,3 @@ function phSendSmsImage(num,sk,src,opt){num=phDigits(num);const p=phState(),x=ph
     else setTimeout(()=>phAutoSmsReply(num,line),700+Math.random()*900);};
   if(!(opt&&opt.hold))fire();
   return {m,sk,fire};}
-/* 她说「把这张换成背景」，角色回一行 [换背景]，就真的拿最近那张图换上去 */
-function phRoleSetSmsBg(num,sk){const arr=phSmsArr(num,sk).slice(-24).reverse(),hit=arr.find(m=>m&&m.img);
-  if(!hit)return false;phSmsBgSet(num,hit.img);render();toast('ta把这张照片换成了聊天背景');return true;}
-function openPhoneSMS(num,sk){num=phDigits(num);phFxReset();_phSmsSel=null;const p=phState();sk=sk||phCurrentSmsKey(num);p.line=phSmsIsAliasKey(sk)?'alias':'main';(p.sms[sk]||[]).forEach(m=>{if(m.from==='them')m.read=true;});p.read[sk]=Date.now();save();go('phonesms',{num,sk});}
-function renderPhoneSMS(num,sk,inspection){num=inspection?String(num):phDigits(num);sk=inspection?'spy:'+inspection.id+':'+num:(sk||phCurrentSmsKey(num));
-  if(!inspection){if(phImsgOn(num,sk))return renderPhoneIMsg(num,sk,(phState().sms[sk]||[]),phFind(phDigits(num)));}
-  const arr=inspection?inspection.arr:(phState().sms[sk]||[]),alias=inspection?true:phSmsIsAliasKey(sk),aliasNum=phSmsAliasNumFromKey(sk),x=inspection?null:phFind(num),roleChat=x&&x.kind==='role',headAv=alias?phDefaultAvatar('lg'):phAvatar(num,'lg'),headName=inspection?inspection.name:alias?'匿名号':phName(num),meta=inspection?('信息 · 短信<br>'+esc(phFmt(num))):alias?('匿名号 '+phFmt(aliasNum)+'<br>发给 '+phName(num)+' · '+phFmt(num)):('信息 · 短信<br>'+phFmt(num));const html=`<div class="smschat"><div class="smshead"><button class="phbtn back" onclick="back()">‹</button>${headAv}<div class="smsname" onclick="go('phonecontact',{num:'${esc(num)}'})">${esc(headName)} ›</div><div class="smsmeta">${meta}</div></div><div class="smsbody" id="smsbody"><div class="smsdate">${arr.length?fmtDT(arr[0].time):fmtDT(Date.now())}</div>${arr.map(m=>`<div class="smsmsg ${m.from==='me'?'me':'them'}" data-chat-motion-row="${esc(naturalMotionRowKey(m))}"><div class="smsbubble" onclick="phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')">${m.img?`<img src="${storedImageDisplaySource(m.img)}" alt="" style="display:block;max-width:100%;width:180px;border-radius:10px">`:esc(m.text)}</div></div>`).join('')}${!inspection&&phSmsTypingOn(num,sk)?'<div class="smsmsg them"><div class="smsbubble typing"><span></span><span></span><span></span></div></div>':''}</div><div class="smslinebar">${roleChat&&alias?phLineSwitchHTML():''}</div><div class="smsbar"><button onclick="go('phonecontact',{num:'${esc(num)}'})">+</button><textarea id="smsin" placeholder="信息 · 短信" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}"></textarea><button onclick="phSendSms('${esc(num)}','${esc(sk)}')">↑</button></div></div>`;return inspection?spyPhoneSanitize(html,inspection.id):html;}
-function phSmsArr(num,sk){const p=phState();sk=sk||phCurrentSmsKey(num);return p.sms[sk]||(p.sms[sk]=[]);}
-function phMirrorSMS(num,from,text){const x=phFind(num);if(!x||x.kind!=='role')return;const c=getC(x.id);if(!c)return;const who=from==='me'?S.me.name:(c.remark||c.name),line='[电话短信记录] '+fmtDT(Date.now())+'，'+who+'在短信里说：'+String(text||'').replace(/\n/g,' ').slice(0,180);msgs(c.id).push({role:from==='me'?'user':'assistant',type:'sys',content:line,time:Date.now(),id:uid(),_silent:true,_phoneCtx:true});save(500);}
-function phPushSpoofSmsCtx(c,num,from,text){if(!c||!text)return;const who=from==='me'?S.me.name:'你',to=from==='me'?'你':S.me.name,line='[陌生短信记录] '+fmtDT(Date.now())+'，你用陌生号码 '+phFmt(num)+' 和 '+S.me.name+' 发短信。'+who+' 对 '+to+' 说：'+String(text||'').replace(/\n/g,' ').slice(0,180)+'。这是短信，不是电话。';msgs(c.id).push({role:from==='me'?'user':'assistant',type:'sys',content:line,time:Date.now(),id:uid(),_silent:true,_phoneCtx:true});save(500);}
-function phSendSms(num,sk){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();if(!text)return;num=phDigits(num);const p=phState(),x=phFind(num),thread=p.aliasThreads&&p.aliasThreads[num],useAlias=phSmsIsAliasKey(sk)||(p.line==='alias'&&x&&x.kind==='role'),spoofThread=!useAlias&&thread&&thread.spoof&&thread.cid;let alias=null;if(useAlias){const c=getC(x&&x.id);alias=c&&phEnsureAliasThread(c,num,'sms');sk=sk||phSmsKey(num,'alias',alias.aliasNum);}else sk=sk||num;if(p.blocked[phNorm(num)]){toast('已屏蔽，不能发送');return;}if(useAlias&&phAliasBlocked(alias,alias&&alias.aliasNum)){toast('对方已拉黑这个陌生身份');return;}phFxSync();const _fxRuns=phFxRuns(text,(_phFx.ch||[]).slice(0,text.length)),
-    _fxOn=_fxRuns.some(r=>r&&r.e&&r.e.length),_bfx=_phFx.bfx,_sfx=_phFx.sfx;
-  ta.value='';phSmsTyping();phFxReset();const arr=phSmsArr(num,sk),_m={id:uid(),from:'me',text,time:Date.now(),read:true,line:useAlias?'alias':'main',aliasTo:useAlias&&alias&&alias.cid,aliasNum:useAlias&&alias&&alias.aliasNum,spoofTo:spoofThread&&thread.cid};
-  if(_fxOn)_m.fx=_fxRuns;if(_bfx)_m.bfx=_bfx;if(_sfx)_m.sfx=_sfx;
-  arr.push(_m);if(arr.length>300)arr.splice(0,arr.length-300);const _pz=!useAlias&&typeof pursuitOnUserSms==='function'?pursuitOnUserSms(num):null;if(!useAlias&&!spoofThread&&!(_pz&&_pz.stranger))phMirrorSMS(num,'me',text);save();render();
-  if(_bfx||_sfx||_fxOn)setTimeout(()=>phFxPlay(_m,$('#smsbody')),40);
-  if(_pz&&_pz.stranger)setTimeout(()=>phRoleSmsReply(_pz.cid,num,text,num),650+Math.random()*650);else if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,text,alias.aliasNum,sk),500+Math.random()*500);else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,text),450+Math.random()*450);else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,text,num),650+Math.random()*650);else setTimeout(()=>phAutoSmsReply(num,text),700+Math.random()*900);}
-async function phRoleSmsReply(id,num,userText,sk){const c=getC(id);if(!c||(c.blocked&&!pursuitState(c))||phState().blocked[phNorm(num)])return;sk=sk||num;/* 微信被拉黑不等于短信不能回：追回里她回了短信，他要接得上 */
-  const range=phSmsBubbleRange(c),rows=phCtxRows(),_want=phFxWantFromText(userText);
-  phSmsTypingSet(num,sk,true);
-  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+phSmsLineText(m)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+(typeof pursuitSmsPrompt==='function'?pursuitSmsPrompt(c,num):'')+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phSmsVoiceHelp(c)+phFxTagHelp()+phFxWantPrompt(_want);let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
-  r=String(r||'');const wantBg=/[\[【]\s*换背景\s*[\]】]/.test(r);r=r.replace(/[\[【]\s*换背景\s*[\]】]/g,' ');
-  let parts=phSmsBubbles(r,range.max);
-  if(wantBg&&!phRoleSetSmsBg(num,sk)&&!parts.length)parts=['我没找到你说的那张照片，你再发我一次？'];
-  if(!parts.length)return;
-  phSmsTypingSet(num,sk,false);
-  const _sent=await phDeliverSmsBubbles(num,sk,parts,c);
-  phSmsApplyWantedFx(num,sk,_sent,_want);}catch(e){}finally{phSmsTypingSet(num,sk,false);}}
-function phStrangerProfile(num){const d=phNorm(num),sp=phSpecialInfo(num);if(sp)return {name:sp.name,kind:'公共服务',region:phRegion(num)};if(/^10\d{4,}/.test(d))return {name:'验证码平台',kind:'验证码/平台通知',region:'平台短信'};if(/^95/.test(d)||/^400/.test(d))return {name:'生活服务',kind:'客服/营销',region:'服务号码'};if(/^1\d{10}$/.test(d)){const pool=['陌生人','快递外卖','生活服务','营销号码','旧联系人','暧昧错发','装熟骚扰','奇怪通知'];return {name:phFmt(num),kind:pool[Math.abs(phHash(d))%pool.length],region:phRegion(num)};}return {name:phFmt(num),kind:'陌生号码',region:phRegion(num)};}
-function phRandomSmsText(num,pf,now){pf=pf||phStrangerProfile(num);now=now||Date.now();const code=String(Math.abs(phHash(now+':'+num))).slice(0,6).padStart(6,'0'),pool={
-  '验证码/平台通知':['验证码 '+code+'，5分钟内有效。不是本人操作请忽略。','你的动态安全码是 '+code+'，别告诉任何人。','登录确认码 '+code+'。如果不是你，可能是有人手滑填错号码。'],
-  '客服/营销':['尊贵用户，今晚的神秘权益已为你点亮，回复1领取空气礼包。','您有一份过期三年的好运待签收，回复“我信了”查看。','系统检测到你最近魅力值偏高，客服建议适当低调。'],
-  '生活服务':['您好，你预约的“情绪回收服务”已排队，今晚有人负责听你叹气。','小区温馨提示：今晚风很大，适合把想说的话发出去。','你的云端心事包裹正在派送，签收人需要保持可爱。'],
-  '快递外卖':['你的包裹备注写着“别让她自己扛”，请问放门口还是放在心上？','外卖小哥迷路了，他说地址像是写到了某个人心里。','快件异常：收件人太让人惦记，系统无法冷静派送。'],
-  '营销号码':['限时活动：回复“想你”可获得一份不值钱但很暧昧的关心。','恭喜你被抽中成为今晚第一个被打扰的人，奖品是这条短信。','本号码只负责随机出现，不负责解释为什么想找你。'],
-  '旧联系人':['这么久没联系，你是不是把我从记忆里删了？','我换号码了，猜猜我是谁。猜错也没关系，我会继续装神秘。','刚刚路过一个地方，突然想起你。别问我是谁，问就是不太方便说。'],
-  '暧昧错发':['睡了吗？算了，当我没问。可我确实想知道。','你今天是不是心情不好？别问我怎么知道的。','如果这条发错了，那也挺好，至少我终于有理由跟你说话。'],
-  '装熟骚扰':['别装不认识我，你上次也是这么说的。','我知道现在打扰你不合适，但我偏偏就是想试一下。','你再不回，我就默认你在认真想我是谁。'],
-  '奇怪通知':['月亮客服提醒：今晚有人偷偷想你，工单无法关闭。','系统提示：你有一条未读心动，来源不明，风险等级：微妙。','匿名广播：请保持手机畅通，可能会有奇怪的人想靠近你。'],
-  '陌生人':['冒昧问一句，你相信号码也会认错人吗？','我好像发错人了，不过你的号码看起来挺有缘。','别紧张，我只是一个路过的陌生号码。可能路过得有点刻意。']
-};const arr=pool[pf.kind]||pool['陌生人'];return arr[Math.abs(phHash(num+':'+now+':sms'))%arr.length];}
-async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='role')return;if(phState().blocked[phNorm(num)])return;const pf=phStrangerProfile(num),arr=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:pf.name)+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n');let r='';try{const sys='你在小手机里模拟真实短信对话。号码身份：'+pf.name+'；类型：'+pf.kind+'；地区：'+pf.region+'。你不是任何恋爱角色，不能知道用户微信隐私或角色记忆。回复要像真实短信，短一点，但可以更有趣：装熟、撩人、嘴欠、奇怪生活服务、花里胡哨的骚扰短信、暧昧错发都可以。禁止真实诈骗、真实链接、真实转账/加群/贷款引导；可以做成明显玩笑或虚构服务。只输出短信正文。';r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n用户刚发：'+userText}],{max:160,temp:.86});}catch(e){}
-  r=phCleanSmsText(cleanReply(r||'')).slice(0,180);if(!r)r=phRandomSmsText(num,pf);phReceiveSms(num,r,null);}
-//@@ web
-function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151520;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
-//@@ private
-function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
-//@@ end

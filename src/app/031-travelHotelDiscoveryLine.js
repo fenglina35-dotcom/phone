@@ -1,3 +1,53 @@
+function travelHotelDiscoveryLine(){const arr=(S.travel&&S.travel.hotels||[]).filter(h=>tvHotelOwned(h)&&(typeof NorthTravelOrders==='undefined'||NorthTravelOrders.visible(h,'hotel'))).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8);if(!arr.length)return'';return '·她的小鱼旅行酒店订单：'+arr.map(h=>tvMD(h.checkIn)+'入住「'+h.hotelName+'」'+h.nights+'晚，'+tvHotelRoomText(h.roomType)+'，入住人'+tvHotelGuestText(h)+'，'+tvHotelStatusText(h.status)).join('；')+'\n';}
+function myActivity(exceptId,since){let s='';since=since||0;
+  if(typeof NorthMarketBusiness!=='undefined'&&getC(exceptId))s+=NorthMarketBusiness.roleFacts(getC(exceptId));
+  const self=getC(exceptId);const _rl=readdDiscoveryLine(self,since);if(_rl){s+=_rl;if(self){friendMetaSet(self,'readdKnown',true);save(500);}}
+  s+=friendRequestActivity(exceptId,since);
+  s+=travelTicketDiscoveryLine(exceptId,true);
+  if(typeof NorthConcertBooking!=='undefined')s+=NorthConcertBooking.inspection(since);if(typeof NorthTravelTaxi!=='undefined')s+=NorthTravelTaxi.inspection(since);
+  if(typeof NorthTravelOrders!=='undefined')s+=NorthTravelOrders.inspection(since);
+  const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,3);
+  if(others.length)s+='·她最近在跟这些人聊（附最近几句往来内容）：\n'+others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-6).map(mm=>{const t=msgToText(mm);return t?('['+factStamp(mm.time||Date.now())+'] '+(mm.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,42)):'';}).filter(Boolean).join('\n');return '【'+nm+cMark(o.c)+' 最新 '+factStamp(o.lm.time)+'】\n'+recent;}).join('\n')+'\n';
+  s+=phoneFriendActivity(since);
+  s+=phActivity(since);
+  // 她最近新加的好友（带添加时间，让你分得清哪些是刚加的、哪些是老早就有的，别把老友当新欢乱吃醋）
+  const _newc=S.contacts.filter(x=>!x.deleted&&x.id!==exceptId&&x.createdAt&&(Date.now()-x.createdAt<7*86400000)&&x.createdAt>since).sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);
+  if(_newc.length)s+='·她最近新加的好友：'+_newc.map(x=>(x.remark||x.name)+cMark(x)+'（'+factStamp(x.createdAt)+'加的，距今'+fmtDur(Date.now()-x.createdAt)+'）').join('、')+'\n';
+  // 她最近和别人的通话记录（语音/视频，别把几天前的说成刚刚）
+  const _calls=[];S.contacts.forEach(x=>{if(x.deleted||x.id===exceptId)return;const cm=[...msgs(x.id)].reverse().find(m=>m._call&&m.time&&m.time>since);if(cm)_calls.push({nm:(x.remark||x.name),mk:cMark(x),t:cm.time,k:cm._ck==='video'?'视频':'语音'});});
+  _calls.sort((a,b)=>b.t-a.t);
+  if(_calls.length)s+='·她最近和别人的通话：'+_calls.slice(0,4).map(o=>o.nm+o.mk+'('+o.k+'通话 '+factStamp(o.t)+')').join('、')+'\n';
+  /* 真实 iPhone 数值只允许由本次独立读取会话注入，普通查手机摘要不得带缓存。 */
+  const bills=(S.me.bills||[]).filter(b=>!since||!b.ts||b.ts>since).slice(-3);
+  if(bills.length)s+='·她最近花钱：'+bills.map(b=>'['+factStamp(b.ts||Date.now())+'] '+b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
+  const lns=lifeNotesForRole(self).filter(n=>!since||!n.ts||n.ts>since).slice(0,5);
+  if(lns.length)s+='·关于用户的情绪与约定：'+lns.map(n=>fmtDT(n.ts||Date.now())+' '+lifeNoteReadableText(n)+'（'+lifeNoteAuthorship(n,self)+'）').join('；')+'\n';
+  const liked=S.moments.filter(p=>((p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name))&&p.time>since);
+//@@ web
+  if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return '['+factStamp(p.time||Date.now())+'] '+(p.authorId==='me'?'自己':((getC(p.authorId)&&getC(p.authorId).name)||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
+//@@ private
+  if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return '['+factStamp(p.time||Date.now())+'] '+(p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
+//@@ end
+  if(S.me.status)s+='·她自己写的动态："'+S.me.status+'"\n';
+  const myTw=(S.x&&S.x.tweets||[]).filter(t=>t.who==='me'&&t.time>since).slice(0,3);
+  if(myTw.length)s+='·她最近发的推文：'+myTw.map(t=>'['+factStamp(t.time||Date.now())+'] 「'+t.text.slice(0,24)+'」').join('、')+'\n';
+  if(!since&&S.x&&S.x._mylog&&S.x._mylog.length){const xRows=S.x._mylog.slice(-5).map(xlogText).filter(Boolean);if(xRows.length)s+='·她在X的其它动态：'+xRows.join('；')+'\n';}
+  {const liveBattery=webBatteryFactText();if(!privatePhoneAccountAvailable()&&liveBattery)s+='·'+liveBattery+'\n';}
+  if(S.browser&&S.browser.history&&S.browser.history.length)s+='·她最近在浏览器搜了：'+S.browser.history.slice(0,4).map(h=>'['+factStamp(h.time||Date.now())+'] '+h.q).join('、')+'\n';
+  // 抖音（搜索/点赞/私信）—— 这些没有逐条时间戳，全量查时一起看
+  const dh=(S.dy&&S.dy.history||[]).slice(0,6);if(dh.length)s+='·她抖音搜过：'+dh.join('、')+'\n';
+  const dl=(S.dy&&S.dy.liked||[]).slice(0,6);if(dl.length)s+='·她抖音点赞：'+dl.map(v=>'@'+(v.author||'')+(v.desc?'「'+(''+v.desc).slice(0,16)+'」':'')).join('；')+'\n';
+  // 抖音/X 私信：带时间，只报"自上次查看以来有新消息"的会话（双重保险防重复提旧事）
+  const _dmLine=(arr,label)=>{const list=(arr||[]).filter(d=>(d.msgs||[]).some(m=>(m.time||0)>since));if(!list.length)return '';
+    return '·'+label+(since?'（只列自上次后有新消息的）':'')+'：'+list.slice(0,5).map(d=>{const nw=d.msgs.filter(m=>(m.time||0)>since);const show=(nw.length?nw:d.msgs).slice(-2);const lt=show[show.length-1];const tt=(lt&&lt.time)?factStamp(lt.time)+' ':'';return tt+d.name+'('+show.map(m=>(m.from==='me'?S.me.name:d.name)+'"'+(''+(m.text||'')).slice(0,24)+'"').join(' / ')+')';}).join('；')+'\n';};
+  s+=_dmLine(S.dy&&S.dy.dms,'她抖音私信');
+  s+=_dmLine(S.x&&S.x.dms,'她X私信');
+  // 购物订单
+  const ords=shopOrderRows().filter(o=>!o.refunded).slice(0,5);if(ords.length)s+='·她最近网购下单：'+ords.map(o=>(o.time?'['+o.time+'] ':'')+shopOrderFact(o)).join('、')+'\n';
+  // 线下约会记录（什么时候·和谁·在哪约会）
+  const _dates=[];Object.keys(S.offline||{}).forEach(cid=>{const o=S.offline[cid];const cc=getC(cid);if(!cc||cc.deleted||!o)return;if(!((o.memory&&o.memory.length)||(o.msgs&&o.msgs.length)||o.started))return;const last=(o.memory&&o.memory.length)?offMemText(o.memory[o.memory.length-1]).slice(0,30):'';_dates.push((o.when||offMemLabel(o))+' 和'+(cc.remark||cc.name)+(o.loc?'在'+o.loc:'')+'约会'+(last?'，'+last:''));});
+  if(_dates.length)s+='·她的线下约会记录：'+_dates.slice(0,3).join('；')+'\n';
+  return s||'（手机上没什么新动静）';}
 let _walSel=null;
 function openWallet(){S.me.bills.forEach(b=>{if(!b.id)b.id=uid();});const sel=_walSel;
   openModal(`<h3>钱包</h3>
@@ -448,55 +498,3 @@ function hisSendCode(cid){const c=getC(cid);if(!c)return;const ph=getSpy(c).phon
     // 角色手机瞬间收到验证码 → 第一时间主动给她发微信反应；要不要给码看他心情，但决定给就必须报这个真实码
     if(!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+'刚在"登录你的微信→找回密码"里点了发送验证码，你手机【瞬间收到一条短信】：你的微信验证码是 '+code+'（3分钟内有效）。你立刻反应过来——ta想登录你的微信。请你【第一时间】主动给ta发条微信，按你的人设和心情反应（追问ta要干嘛/吃醋/警惕/调侃/宠溺都行）。要不要把验证码告诉ta由你决定；【但只要你决定告诉ta，就必须一字不差报出这个真实验证码「'+code+'」，绝对不能编一个假的、也不能记错——报错ta就登不进去】。别把这条系统提示原样念出来。]');}
   hisCodeModal(cid);}
-function hisCodeModal(cid){const c=getC(cid);if(!c)return;const ph=getSpy(c).phone||'';
-  openModal('<h3>输入验证码</h3><div class="hint">验证码已发到 ta 的手机（'+esc(ph)+'）。ta马上会在微信上收到、给你发消息。<br>去微信<b>问ta要验证码</b>，拿到后回来填进登录。</div>'
-   +'<div id="hf_cd" style="text-align:center;color:#f0913b;font-size:13px;margin:0 0 8px"></div>'
-   +'<div class="field"><label>验证码</label><input id="hf_code" type="tel" inputmode="numeric" maxlength="6" placeholder="6位验证码"></div>'
-   +'<div class="btns"><button class="btn g" onclick="hisCodeStop();closeModal()">取消</button><button class="btn p" onclick="hisVerifyCode(\''+cid+'\')">验证并登录</button></div>');
-  hisCodeStop();const tick=()=>{const cc=getC(cid);const el=document.getElementById('hf_cd');if(!el){hisCodeStop();return;}const lc=cc&&cc._loginCode;if(!lc){el.textContent='';hisCodeStop();return;}const left=Math.max(0,Math.ceil((lc.exp-Date.now())/1000));if(left<=0){el.textContent='⌛ 验证码已过期，关掉重新获取';hisCodeStop();return;}el.textContent='⏳ 验证码 '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' 后过期';};tick();_hisCdT=setInterval(tick,1000);}
-function hisVerifyCode(cid){const c=getC(cid);if(!c)return;const lc=c._loginCode;const v=(($('#hf_code')||{}).value||'').trim();
-  if(!lc||lc.exp<Date.now()){toast('验证码已过期，关掉重新获取');return;}
-  if(v!==String(lc.code)){toast('验证码不对');return;}
-  hisCodeStop();c._loginCode=null;save();closeModal();_hisSync=true;hisStartSession(cid);}
-function hisStartSession(cid){hisSeed(cid);if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);
-  const dur=(60+Math.floor(Math.random()*60))*1000;/* 1~2分钟内随机被发现 */
-  _hisLogin={cid,until:Date.now()+dur,timer:setTimeout(hisKicked,dur)};_hisTab='chat';
-  stack=stack.filter(s=>s.p!=='hislogin');go('hiswx');}
-function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);_hisLogin=null;}
-function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
-  toast('你的微信已在另一台设备登录，已退出');hisOnExit(cid,true);}
-function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
-// 无痕退出：他当下【不会发现】，也不写"偷登记录"到他记忆；但你冒充他发给自己的消息(_forged)会留着，等下次聊天他自己识破
-function hisLogoutStealth(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已无痕退出');
-  const d=hisWxData(cid);(d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));d.log=[];save();}
-/* 退出/被挤下线后：①立刻把【完整聊天记录+操作】写进他的记忆(让他被问时全看得到、答得上来) ②稍后他主动来反应 */
-function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);
-  // 只汇报【这次登录期间忆北真正动手发的】对话——她本人这次发的消息才有 mine 标记；
-  // 我自己以前发的旧消息(r:'me'但无mine)只当背景、绝不能算成"她回的"，避免我把自己回的当成她回的。
-  const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.mine)).map(f=>{
-    const arr=f.msgs||[];const fromIdx=arr.findIndex(m=>m.mine);const recent=arr.slice(Math.max(0,fromIdx-2));// 从她第一条动手起(带前2条上下文)
-    const body=recent.map(m=>{const who=m.mine?'【'+(S.me.name||'玩家')+'冒充我发的】':(m.r==='me'?'（我之前发的旧消息）':f.name+'：');const tm=m.t?hm(m.t)+' ':'';return tm+who+m.c;}).join('  ');
-    return '【这次'+(S.me.name||'玩家')+'用我的号主动跟「'+f.name+'」聊了】'+body;
-  }).join('\n');
-  // 汇报完清掉本次的 mine 标记：下次她若没再动这个人，就不会被旧记录反复翻出来说事
-  (d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));
-  // 其它操作（发朋友圈/删好友/加好友/删记录），逐条发消息的旧日志去掉（聊天用上面完整版）
-  const acts=(d.log||[]).map(x=>x.txt).filter(t=>!/给「[^」]*」发了/.test(t));d.log=[];
-  // 你冒充他、给自己发的假消息(_forged)：正常退出=他这次就一起发现；加进汇报并标记为已知，避免聊天里(buildSystem)再重复触发
-  const forged=msgs(cid).filter(m=>m._forged&&!m._forgedSeen);if(forged.length)forged.forEach(m=>{m._forgedSeen=true;});
-  const parts=[];if(acts.length)parts.push(acts.join('；'));if(chats)parts.push(chats);
-  if(forged.length)parts.push('还【冒充你、假装成你的口吻】给ta自己发送了这些消息或付款（你本人没有主动操作）：'+forged.map(m=>'「'+hisMessageDescription(m)+'」').join('、')+'（这是ta在自导自演、伪造你发的消息）');
-  let summary=parts.join('\n');save();if(!summary){return;}
-  let mem=summary;if(mem.length>1600)mem=mem.slice(0,1600)+'…';
-  // 写进记忆(去重更新)：他从此【完整知道】、你问起他都答得上来；靠"闹一次翻篇"的提示避免反复念叨
-  c.memory=c.memory||[];const TAG='【偷登我微信·完整记录】';c.memory=c.memory.filter(m=>(''+m).indexOf(TAG)<0);
-  c.memory.push(TAG+(S.me.name||'玩家')+'偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
-  if(c.blocked)return;
-  const delay=caught?(1.8+Math.random()*2.5):(forged.length?(60+Math.random()*60):(8+Math.random()*12));/* 自导自演伪造过消息的：退出1~2分钟后才发现 */
-  setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
-function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
-  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【'+(S.me.name||'玩家')+'冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
-  scheduleReply(cid,note);}
-function renderHisWxUtility(cid,kind){if(!_hisLogin||_hisLogin.cid!==cid)return '';const c=getC(cid);if(!c)return '';const d=hisWxData(cid),bank=S.spy&&S.spy[cid]||{},balance=spyBalance(c,bank);let rows=[];if(kind==='favorites')rows=Array.isArray(d.favorites)?d.favorites:[];if(kind==='bills')rows=bank.wallet||[];if(kind==='album'){contactRoleMoments(cid).forEach(p=>(p.images||[]).filter(Boolean).forEach(src=>rows.push({pid:p.id,src,time:+p.time||0})));rows.sort((a,b)=>b.time-a.time);}
-  return `<div class="page wx-directory-page${S.me.wxTheme==='white'?' wxlight':''}" style="position:absolute;inset:0" data-role-wechat-utility="${kind}" data-role-id="${esc(cid)}">${window.wxRoleUtilityAppearance?window.wxRoleUtilityAppearance(kind,c,balance,rows):'<div class="empty">页面加载中</div>'}</div>`;
-}

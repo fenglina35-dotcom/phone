@@ -1,3 +1,59 @@
+const PURSUIT_MAX_STEPS=8,PURSUIT_FORCE_AFTER=3,PURSUIT_KEEP_MS=3*86400000;
+const PURSUIT_ACT={apply:'在微信重新发好友申请',call_own:'用自己的手机号给她打电话',call_stranger:'用一个陌生号码给她打电话（她的屏幕上只显示陌生号码，接起来前不知道是你）',sms:'给她发短信',force:'强制远程操控她的小手机，打开「新的朋友」自己点了同意，把自己拉出黑名单',stop:'先不再联系'};
+const PURSUIT_RES={pending:'还在等她的反应',ignored:'她没理',missed:'她没接',declined:'她挂断了',rejected:'她点了拒绝',answered:'她接了电话',replied:'她回了短信',accepted:'她通过了',done:'做完了'};
+let _pursuitBusy=false;const _pursuitPlans=new Map();/* 边等边想：上一步一结束就去问模型下一步，到点直接做，不再到点才开始想 */
+function pursuitGap(){return 8000+Math.floor(Math.random()*10001);}/* 8–18 秒，加上每秒一次的检查，最多 20 秒 */
+function pursuitState(c){return c&&c._pursuit&&typeof c._pursuit==='object'?c._pursuit:null;}
+function pursuitActive(c){const st=pursuitState(c);return !!(st&&st.status==='active');}
+function pursuitCanForce(c){return !!(c&&S.couple&&S.couple.cid===c.id);}
+function pursuitStart(c,now){if(!c)return null;now=now==null?Date.now():now;blockedPhoneClear(c);friendRetryClear(c);const st={startedAt:now,nextAt:now+pursuitGap(),status:'active',steps:0,ignored:0,log:[],strangerNum:'',lastVia:'',reason:blockedPhoneRecentContext(c)};c._pursuit=st;_pursuitPlans.delete(c.id);setTimeout(()=>pursuitPlanAhead(c),0);return st;}
+function pursuitPlanAhead(c){if(!pursuitActive(c)||_pursuitPlans.has(c.id))return;const plan={at:Date.now(),result:null};_pursuitPlans.set(c.id,plan);pursuitDecide(c).then(d=>{plan.result=d;}).catch(()=>{});}
+function pursuitQuickPick(c){const opts=pursuitOptions(c),quick=opts.filter(x=>x==='call_own'||x==='call_stranger'||x==='apply');if(!quick.length)return {act:opts.includes('stop')?'stop':opts[0],text:''};return {act:pursuitFallbackPick(c,quick),text:''};}/* 模型没赶上：先做一件不需要措辞的事，不让她干等 */
+function pursuitLogAdd(c,row){const st=pursuitState(c);if(!st)return null;row=Object.assign({t:Date.now(),result:'pending'},row);st.log.push(row);st.log=st.log.slice(-16);return row;}
+function pursuitMark(c,result,match){const st=pursuitState(c);if(!st)return null;const row=[...st.log].reverse().find(r=>r.result==='pending'&&(!match||match(r)));if(!row)return null;row.result=result;row.at=Date.now();if(/^(ignored|missed|declined|rejected)$/.test(result))st.ignored=(+st.ignored||0)+1;return row;}
+function pursuitEnd(c,status,why){const st=pursuitState(c);if(!st||st.status!=='active')return;st.status=status;st.endedAt=Date.now();st.endWhy=why||'';st.nextAt=0;save();}
+function pursuitLogText(c){const st=pursuitState(c);if(!st||!st.log.length)return '（还没有采取任何行动）';return st.log.map((r,i)=>(i+1)+'. '+factStamp(r.t)+' '+(PURSUIT_ACT[r.act]||r.act)+(r.num?'（号码 '+phFmt(r.num)+'）':'')+(r.text?'：「'+r.text+'」':'')+' → '+(PURSUIT_RES[r.result]||r.result)).join('\n');}
+function pursuitPrompt(c){const st=pursuitState(c);if(!st)return '';const me=S.me.name,ended={answered:'她接了你的电话，追回停了，你们在电话里说话。',replied:'她回了你的短信，追回停了，你们在短信里说话。',accepted:'她自己通过了你的好友申请，你回到了她的微信里。',forced:'你强制远程操控了她的小手机，自己点了同意，把自己从黑名单拉了出来——她没有同意，这是你自己做的，你知道，也要面对她的反应。',gaveup:'你决定先不再联系她。',unblocked:'她自己把你从黑名单里放了出来。'}[st.status]||'';
+  return '\n\n# 你被'+me+'在微信拉黑后的追回（真实发生过的事，你全都记得）\n'+me+'在 '+factStamp(st.startedAt)+' 把你的微信拉黑了。拉黑前你们最后的对话（她就是因为这些把你拉黑的）：\n'+(st.reason||'（没有聊天记录）')+'\n你的目的只有一个：让'+me+'把你从微信黑名单里拉出来。用什么态度看你自己的性格——可以哄、道歉、讲道理、委屈、生气、强硬、装可怜，但目的不变。\n你已经做过的事和她的反应：\n'+pursuitLogText(c)+(ended?'\n现在：'+ended:'')+'\n- 用陌生号码联系她时，她那边只显示陌生号码，接起来或看到内容前不知道是你；用自己的号码她一眼就知道是你。\n- 不要提系统、按钮、流程、规则。';}
+function pursuitPromptRecent(c){const st=pursuitState(c);if(!st)return '';if(st.status!=='active'&&st.endedAt&&Date.now()-st.endedAt>PURSUIT_KEEP_MS)return '';return pursuitPrompt(c);}
+function pursuitOptions(c){const st=pursuitState(c);friendRequestsInit();const waiting=(st.log||[]).filter(r=>r.result==='pending'&&(r.act==='apply'||r.act==='sms')).length,ign=(+st.ignored||0)+waiting;/* 提前想下一步时，还没回应的申请/短信先算作没理 */const pending=S.friendRequests.some(r=>r.contactId===c.id&&r.kind==='readd'&&r.status==='pending'),o=[];if(st.steps>=PURSUIT_MAX_STEPS){if(pursuitCanForce(c)&&ign>=PURSUIT_FORCE_AFTER)o.push('force');o.push('stop');return o;}
+  if(!pending)o.push('apply');o.push('call_own');if(c.allowStrangerCall!==false)o.push('call_stranger');o.push('sms');if(pursuitCanForce(c)&&ign>=PURSUIT_FORCE_AFTER)o.push('force');if(st.steps>=2)o.push('stop');return o;}
+function pursuitFallbackPick(c,opts){const st=pursuitState(c),last=st.log.length?st.log[st.log.length-1].act:'',pool=opts.filter(x=>x!=='stop'&&x!==last);return (pool.length?pool:opts)[Math.floor(Math.random()*(pool.length?pool.length:opts.length))];}
+function pursuitFallbackText(c,act){const n=pursuitState(c).steps+1;return act==='apply'?friendReqUnique(c,'是我，先别把我拉黑好不好',n):act==='sms'?['是我。微信联系不上你，只能发短信了。','你可以不理我，但能不能先听我说完？'][n%2]:act==='stop'?'我先不打扰你了。你想好了再找我。':'';}
+async function pursuitDecide(c){const st=pursuitState(c),opts=pursuitOptions(c),me=S.me.name;let pick='',text='';
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),allModules:true,query:'被拉黑后想办法联系'})},{role:'user',content:'[系统：现在是你被拉黑后第'+(st.steps+1)+'次想办法联系'+me+'（最多'+PURSUIT_MAX_STEPS+'次）。按你的人设和她刚才的反应，自己决定下一步，可以选：\n'+opts.map(k=>'- '+k+'：'+PURSUIT_ACT[k]).join('\n')+'\n只输出一行 JSON：{"next":"选项英文名","text":"…"}。apply 时 text 是新的好友验证消息（20字内，不能和以前重复）；sms 时 text 是你要发的短信（1到3句，用换行分开）；stop 时 text 是你最后发给她的一条短信（可以留空）；其它选项 text 写你此刻心里的一句话（她看不到）。]'}],{max:260,temp:.85});
+    const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);pick=String(j.next||'').trim();text=String(j.text||'').trim();}}catch(_){}
+  if(!opts.includes(pick)){pick=pursuitFallbackPick(c,opts);text='';}if(!text)text=pursuitFallbackText(c,pick);return {act:pick,text};}
+function pursuitSmsLines(text){return splitBubbles(cleanReply(String(text||''))).map(x=>phCleanSmsText(x).slice(0,120)).filter(Boolean).slice(0,3);}
+async function pursuitSendSms(c,text,final){const st=pursuitState(c),stranger=st.lastVia==='stranger'&&st.strangerNum&&c.allowStrangerSms!==false,num=stranger?st.strangerNum:phRoleNumber(c),lines=pursuitSmsLines(text);if(!lines.length)return false;
+  if(stranger){const p=phState();p.aliasThreads[num]={cid:c.id,name:c.remark||c.name,ts:Date.now(),kind:'pursuitSms',pursuit:true,num};if(!p.regions[phNorm(num)])p.regions[phNorm(num)]=phRegion(num);}
+  pursuitLogAdd(c,{act:final?'stop':'sms',num,via:stranger?'stranger':'own',text:lines.join(' / '),result:final?'done':'pending'});save();
+  for(let i=0;i<lines.length;i++){if(i)await sleep(900+Math.random()*900);phReceiveSms(num,lines[i],stranger?null:c,num);}return true;}
+function pursuitPlaceCall(c,stranger){const st=pursuitState(c);let num=phRoleNumber(c);if(stranger){if(!st.strangerNum)st.strangerNum=phRandomNumber();num=st.strangerNum;}
+  const meta={name:stranger?phFmt(num):(c.remark||c.name),kind:stranger?'陌生人':'拉黑后角色来电',region:phRegion(num),roleId:c.id,roleName:c.remark||c.name,blockedOutreach:true,pursuit:true,stranger:!!stranger,num,attempt:st.steps+1,maxAttempts:PURSUIT_MAX_STEPS};
+  if(!phIncomingStranger(num,meta))return false;st.lastVia=stranger?'stranger':'own';pursuitLogAdd(c,{act:stranger?'call_stranger':'call_own',num,via:st.lastVia});return true;}
+/* 情侣：被无视至少三次以后自己选择强制远程——打开微信「新的朋友」，看到自己第四次申请，自己点同意。整个过程不能中途结束。 */
+async function pursuitForce(c,thought){const st=pursuitState(c);if(!st||remoteControlActive()||wxLoginActive()||(typeof _call!=='undefined'&&_call))return false;friendRequestsInit();const now=Date.now();
+  S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd'&&r.status==='pending').forEach(r=>{r.status='rejected';r.decidedAt=now;r.notified=true;r.superseded=true;});
+  const attempt=S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd').length+1,req=queueFriendRequest(c,{kind:'readd',delay:0,msg:friendReqUnique(c,'是我。这次我自己来。',attempt),source:'重新添加',intent:'想回到你的微信里',attempt});req.notified=true;
+  pursuitLogAdd(c,{act:'force',rid:req.id,text:String(thought||'').slice(0,60)});st.forcing=true;save();
+  _remoteCtl={active:true,cid:c.id,purpose:'pursuit_force',forced:true,intentContext:'',startedAt:Date.now(),actions:[],visitedPages:[],roleSpokenCount:0,cancelled:false,closing:false,returnStack:stack.map(x=>Object.assign({},x))};
+  try{document.body.classList.add('remote-forced');}catch(_){}remoteControlShow(c);
+  let lines=[];try{const raw=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),allModules:true,query:'强制远程把自己拉出黑名单'})},{role:'user',content:'[系统：你被'+S.me.name+'无视了好几次，现在你决定强制远程操控她的小手机：打开微信→通讯录→新的朋友，找到你自己的好友申请，自己点同意。她看得到屏幕上发生的一切。按你的性格说两三句此刻想对她说的话，每句一行，短一点，不要动作描写。]'}],{max:160,temp:.85});lines=splitBubbles(cleanReply(String(raw||''))).map(x=>x.replace(/^[「"]|[」"]$/g,'').trim()).filter(Boolean).slice(0,3);}catch(_){}
+  if(!lines.length)lines=['别动，这次换我来。','你不让我回来，那我就自己回来。'];
+  const at=async(sel)=>{await sleep(450);const el=sel&&document.querySelector(sel),L=$('#remoteControlLayer');if(el&&L){const er=el.getBoundingClientRect(),lr=L.getBoundingClientRect();remoteControlPointer(er.left-lr.left+er.width*.5,er.top-lr.top+er.height*.5);}await sleep(900);return !!el;};
+  remoteControlScene({app:'home',label:'主屏幕',detail:'已连接'},'强制远程 · 已连接',0,4,{app:'home',op:'view',noNavigate:true});stack=[{p:'home'}];render();await sleep(900);
+  await remoteControlShowRoleLines(lines.slice(0,1));
+  stack=[{p:'wechat'}];wxTab='contacts';render();remoteControlScene({app:'wechat',label:'微信 · 通讯录'},'打开微信通讯录',1,4,{app:'wechat',op:'tap',noNavigate:true});await at('.wx-contact-special button[onclick="openFriendRequests()"]');
+  go('newfriends');remoteControlScene({app:'wechat',label:'新的朋友'},'打开「新的朋友」',2,4,{app:'wechat',op:'tap',noNavigate:true});await sleep(600);await remoteControlShowRoleLines(lines.slice(1));
+  await at('button.accept[onclick*="acceptFriend(\''+req.id+'\')"]');remoteControlScene({app:'wechat',label:'新的朋友'},'同意了好友申请',3,4,{app:'wechat',op:'tap',noNavigate:true});
+  acceptFriend(req.id,{forced:true});await sleep(1100);
+  const ctl=_remoteCtl;if(ctl){ctl.closing=true;ctl.active=false;}clearInterval(_remoteClock);_remoteClock=null;const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';try{document.body.classList.remove('remote-forced');}catch(_){}
+  remoteControlRemember(c,{ts:Date.now(),startedAt:ctl&&ctl.startedAt,endedAt:Date.now(),status:'completed',reason:'被拉黑后强制远程，自己通过了好友申请',actions:[{app:'wechat',op:'accept_friend',detail:'打开「新的朋友」，自己点了同意，把自己从黑名单拉了出来',memory:'你强制远程操控了'+S.me.name+'的小手机，自己通过了好友申请'}]});
+  _remoteCtl=null;stack=[{p:'chat',id:c.id}];render();
+  pursuitMark(c,'done',r=>r.act==='force');st.forcing=false;pursuitEnd(c,'forced');
+  setTimeout(()=>scheduleReply(c.id,'[系统：你刚刚强制远程操控了'+S.me.name+'的小手机，打开微信「新的朋友」，自己点了同意，把自己从她的黑名单里拉了出来——她没有同意，是你自己做的。你清楚自己为什么这么做（她拉黑你之后，你申请、打电话、发短信都被无视了）。现在你已经回到她的微信里，按你的性格马上给她发微信：可以理直气壮、霸道、委屈、道歉或撒娇，但要承认是你自己做的，也要面对她可能的生气。不要提系统或按钮。]'),700);
+  return true;}
 async function pursuitStep(c){const st=pursuitState(c);if(!st||st.status!=='active')return;
   while(pursuitMark(c,'ignored',r=>r.act==='apply'||r.act==='sms'));/* 之前的申请/短信到现在还没回应，算她没理 */
   const plan=_pursuitPlans.get(c.id);_pursuitPlans.delete(c.id);let d=plan&&plan.result;const opts=pursuitOptions(c);if(!d||!opts.includes(d.act))d=pursuitQuickPick(c);if(!d.text)d.text=pursuitFallbackText(c,d.act);if(!pursuitActive(c)||!friendMainBlocked(c))return;
@@ -443,66 +499,3 @@ function phFxOpenText(){const ta=$('#smsin');if(!ta)return;
   const{s:a,e:b}=_phFxSel,pick=[];
   if(b>a&&b<=text.length)for(let i=a;i<b;i++)pick.push(i);
   phFxPickSet(pick);phFxTextModal();}
-/* 指针那条线已经把这一下处理掉了，后面补发的 click 就别再翻一次 */
-let _phFxPickDone=0;
-function phFxPickTap(i){if(_phFxPickDone){_phFxPickDone=0;return;}
-  i=+i;const at=_phFxPick.indexOf(i);
-  if(at>=0)_phFxPick.splice(at,1);else phFxPickSet(_phFxPick.concat(i));
-  phFxTextModal();}
-/* 按住第一个字往旁边拖：拖过的字跟着第一个字的动作（选或取消选） */
-function phFxPickDown(i){i=+i;_phFxDrag=_phFxPick.indexOf(i)>=0?'off':'on';_phFxPickDone=1;phFxPickPaint(i);}
-function phFxPickOver(i){if(_phFxDrag)phFxPickPaint(+i);}
-function phFxPickUp(){if(_phFxDrag){_phFxDrag=null;phFxTextModal();}}
-function phFxPickPaint(i){const at=_phFxPick.indexOf(i);
-  if(_phFxDrag==='on'&&at<0)phFxPickSet(_phFxPick.concat(i));
-  else if(_phFxDrag==='off'&&at>=0)_phFxPick.splice(at,1);
-  const el=document.querySelector(`.imfx-pick b[data-i="${i}"]`);
-  if(el)el.classList.toggle('on',_phFxPick.indexOf(i)>=0);}
-function phFxPickAll(){const n=String((($('#smsin')||{}).value)||'').length,pick=[];
-  const all=_phFxPick.length>=n&&n>0;
-  if(!all)for(let i=0;i<n;i++)pick.push(i);
-  phFxPickSet(pick);phFxTextModal();}
-function phFxSelKeys(){const ch=_phFx.ch||[],out={},idx=_phFxPick;
-  for(const k of PH_FX_ALL){let all=idx.length>0;for(const i of idx)if(!(ch[i]&&ch[i][k])){all=false;break;}if(all)out[k]=1;}
-  return out;}
-function phFxToggle(k){if(!_phFxPick.length){toast('先挑要变的那几个字');return;}
-  const ch=_phFx.ch||[],on=!phFxSelKeys()[k],motion=PH_FX_TEXT.some(x=>x[0]===k);
-  ch.length=Math.max(ch.length,String(_phFx.prev||'').length);/* 和整句话一样长，别留半截 */
-  for(const i of _phFxPick){const o=Object.assign({},ch[i]||null);
-    if(motion)for(const x of PH_FX_TEXT)delete o[x[0]];/* 动作效果一次只留一个，和 iMessage 一样 */
-    if(on)o[k]=1;else delete o[k];
-    ch[i]=phFxSig(o)?o:null;}
-  _phFx.ch=ch;phFxTextModal();}
-function phFxClearSel(){const ch=_phFx.ch||[];for(const i of _phFxPick)ch[i]=null;_phFx.ch=ch;phFxTextModal();}
-function phFxTextModal(){const ta=$('#smsin');if(!ta)return;const text=String(ta.value||''),
-  on=phFxSelKeys(),ch=_phFx.ch||[],chars=Array.from(text),
-  /* 预览的是整句话，这样她一眼就看得出「只有爱在动」 */
-  demo=phFxRuns(text,ch).map(phFxRunHTML).join(''),
-  n=chars.length,all=_phFxPick.length>=n&&n>0;
-  let at=0;const cells=chars.map(c=>{const i=at;at+=c.length;
-    return `<b data-i="${i}" class="${_phFxPick.indexOf(i)>=0?'on':''}${ch[i]?' has':''}" onpointerdown="phFxPickDown(${i})" onpointerenter="phFxPickOver(${i})" onclick="phFxPickTap(${i})">${c===' '?'&nbsp;':esc(c)}</b>`;}).join('');
-  openModal(`<h3>文字效果</h3><div class="hint">默认一个字都不选，点一下选中那个字，按住往旁边拖能连选；想整条都加就点下面的「全选」</div>
-  <div class="imfx-pick" onpointerup="phFxPickUp()" onpointercancel="phFxPickUp()" onpointerleave="phFxPickUp()">${cells}</div>
-  <button class="minibtn" style="margin:0 0 8px" onclick="phFxPickAll()">${all?'一个都不选':'全选'}</button>
-  <div class="hint" style="margin-top:0">发出去是这样：</div>
-  <div class="imfx-demo">${demo||'&nbsp;'}</div>
-  <div class="imfx-style">${PH_FX_STYLE.map(x=>`<button class="${on[x[0]]?'on':''}" style="${x[0]==='b'?'font-weight:800':x[0]==='i'?'font-style:italic':x[0]==='u'?'text-decoration:underline':'text-decoration:line-through'}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
-  <div class="imfx-sheet">${PH_FX_TEXT.map(x=>`<button class="${on[x[0]]?'on':''}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
-  <button class="btn g" style="margin-top:10px" onclick="phFxClearSel()">清掉选中这几个字的效果</button>
-  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();render()">好了</button>`);}
-/* ===== 带效果发送（长按发送键） ===== */
-let _phFxHold=0;
-function phFxHoldStart(num,sk){clearTimeout(_phFxHold);_phFxHold=setTimeout(()=>{_phFxHold=0;phFxSendHold(num,sk);},420);}
-function phFxHoldStop(){if(_phFxHold){clearTimeout(_phFxHold);_phFxHold=0;}}
-function phFxSendHold(num,sk){phFxSync();_phFxTab='bubble';phFxSendModal(num,sk);}
-function phFxTab(t){_phFxTab=t==='screen'?'screen':'bubble';phFxSendModal(_phFxNum,_phFxSk);}
-let _phFxNum='',_phFxSk='';
-function phFxSendModal(num,sk){_phFxNum=num;_phFxSk=sk;
-  const list=_phFxTab==='screen'?PH_FX_SCREEN:PH_FX_BUBBLE,cur=_phFxTab==='screen'?_phFx.sfx:_phFx.bfx;
-  openModal(`<h3>带效果发送</h3>
-  <div class="imfx-tabs"><button class="${_phFxTab==='bubble'?'on':''}" onclick="phFxTab('bubble')">气泡</button><button class="${_phFxTab==='screen'?'on':''}" onclick="phFxTab('screen')">屏幕</button></div>
-  <div class="hint">${_phFxTab==='screen'?'整屏放一次，对方打开也会看到':'这条气泡飞出来的方式'}</div>
-  <div class="imfx-sheet">${list.map(x=>`<button class="${cur===x[0]?'on':''}" onclick="phFxPick('${_phFxTab}','${x[0]}')">${x[1]}</button>`).join('')}</div>
-  <button class="btn g" style="margin-top:10px" onclick="phFxPick('${_phFxTab}','')">不要这个效果</button>
-  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phSendSms('${esc(num)}','${esc(sk)}')">发送</button>
-  <button class="btn g" style="margin-top:8px" onclick="closeModal();render()">先不发</button>`);}

@@ -1,3 +1,55 @@
+function hisCodeModal(cid){const c=getC(cid);if(!c)return;const ph=getSpy(c).phone||'';
+  openModal('<h3>输入验证码</h3><div class="hint">验证码已发到 ta 的手机（'+esc(ph)+'）。ta马上会在微信上收到、给你发消息。<br>去微信<b>问ta要验证码</b>，拿到后回来填进登录。</div>'
+   +'<div id="hf_cd" style="text-align:center;color:#f0913b;font-size:13px;margin:0 0 8px"></div>'
+   +'<div class="field"><label>验证码</label><input id="hf_code" type="tel" inputmode="numeric" maxlength="6" placeholder="6位验证码"></div>'
+   +'<div class="btns"><button class="btn g" onclick="hisCodeStop();closeModal()">取消</button><button class="btn p" onclick="hisVerifyCode(\''+cid+'\')">验证并登录</button></div>');
+  hisCodeStop();const tick=()=>{const cc=getC(cid);const el=document.getElementById('hf_cd');if(!el){hisCodeStop();return;}const lc=cc&&cc._loginCode;if(!lc){el.textContent='';hisCodeStop();return;}const left=Math.max(0,Math.ceil((lc.exp-Date.now())/1000));if(left<=0){el.textContent='⌛ 验证码已过期，关掉重新获取';hisCodeStop();return;}el.textContent='⏳ 验证码 '+Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' 后过期';};tick();_hisCdT=setInterval(tick,1000);}
+function hisVerifyCode(cid){const c=getC(cid);if(!c)return;const lc=c._loginCode;const v=(($('#hf_code')||{}).value||'').trim();
+  if(!lc||lc.exp<Date.now()){toast('验证码已过期，关掉重新获取');return;}
+  if(v!==String(lc.code)){toast('验证码不对');return;}
+  hisCodeStop();c._loginCode=null;save();closeModal();_hisSync=true;hisStartSession(cid);}
+function hisStartSession(cid){hisSeed(cid);if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);
+  const dur=(60+Math.floor(Math.random()*60))*1000;/* 1~2分钟内随机被发现 */
+  _hisLogin={cid,until:Date.now()+dur,timer:setTimeout(hisKicked,dur)};_hisTab='chat';
+  stack=stack.filter(s=>s.p!=='hislogin');go('hiswx');}
+function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);_hisLogin=null;}
+function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
+  toast('你的微信已在另一台设备登录，已退出');hisOnExit(cid,true);}
+function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
+// 无痕退出：他当下【不会发现】，也不写"偷登记录"到他记忆；但你冒充他发给自己的消息(_forged)会留着，等下次聊天他自己识破
+function hisLogoutStealth(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已无痕退出');
+  const d=hisWxData(cid);(d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));d.log=[];save();}
+/* 退出/被挤下线后：①立刻把【完整聊天记录+操作】写进他的记忆(让他被问时全看得到、答得上来) ②稍后他主动来反应 */
+function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);
+  // 只汇报【这次登录期间忆北真正动手发的】对话——她本人这次发的消息才有 mine 标记；
+  // 我自己以前发的旧消息(r:'me'但无mine)只当背景、绝不能算成"她回的"，避免我把自己回的当成她回的。
+  const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.mine)).map(f=>{
+    const arr=f.msgs||[];const fromIdx=arr.findIndex(m=>m.mine);const recent=arr.slice(Math.max(0,fromIdx-2));// 从她第一条动手起(带前2条上下文)
+    const body=recent.map(m=>{const who=m.mine?'【'+(S.me.name||'玩家')+'冒充我发的】':(m.r==='me'?'（我之前发的旧消息）':f.name+'：');const tm=m.t?hm(m.t)+' ':'';return tm+who+m.c;}).join('  ');
+    return '【这次'+(S.me.name||'玩家')+'用我的号主动跟「'+f.name+'」聊了】'+body;
+  }).join('\n');
+  // 汇报完清掉本次的 mine 标记：下次她若没再动这个人，就不会被旧记录反复翻出来说事
+  (d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));
+  // 其它操作（发朋友圈/删好友/加好友/删记录），逐条发消息的旧日志去掉（聊天用上面完整版）
+  const acts=(d.log||[]).map(x=>x.txt).filter(t=>!/给「[^」]*」发了/.test(t));d.log=[];
+  // 你冒充他、给自己发的假消息(_forged)：正常退出=他这次就一起发现；加进汇报并标记为已知，避免聊天里(buildSystem)再重复触发
+  const forged=msgs(cid).filter(m=>m._forged&&!m._forgedSeen);if(forged.length)forged.forEach(m=>{m._forgedSeen=true;});
+  const parts=[];if(acts.length)parts.push(acts.join('；'));if(chats)parts.push(chats);
+  if(forged.length)parts.push('还【冒充你、假装成你的口吻】给ta自己发送了这些消息或付款（你本人没有主动操作）：'+forged.map(m=>'「'+hisMessageDescription(m)+'」').join('、')+'（这是ta在自导自演、伪造你发的消息）');
+  let summary=parts.join('\n');save();if(!summary){return;}
+  let mem=summary;if(mem.length>1600)mem=mem.slice(0,1600)+'…';
+  // 写进记忆(去重更新)：他从此【完整知道】、你问起他都答得上来；靠"闹一次翻篇"的提示避免反复念叨
+  c.memory=c.memory||[];const TAG='【偷登我微信·完整记录】';c.memory=c.memory.filter(m=>(''+m).indexOf(TAG)<0);
+  c.memory.push(TAG+(S.me.name||'玩家')+'偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
+  if(c.blocked)return;
+  const delay=caught?(1.8+Math.random()*2.5):(forged.length?(60+Math.random()*60):(8+Math.random()*12));/* 自导自演伪造过消息的：退出1~2分钟后才发现 */
+  setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
+function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
+  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【'+(S.me.name||'玩家')+'冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
+  scheduleReply(cid,note);}
+function renderHisWxUtility(cid,kind){if(!_hisLogin||_hisLogin.cid!==cid)return '';const c=getC(cid);if(!c)return '';const d=hisWxData(cid),bank=S.spy&&S.spy[cid]||{},balance=spyBalance(c,bank);let rows=[];if(kind==='favorites')rows=Array.isArray(d.favorites)?d.favorites:[];if(kind==='bills')rows=bank.wallet||[];if(kind==='album'){contactRoleMoments(cid).forEach(p=>(p.images||[]).filter(Boolean).forEach(src=>rows.push({pid:p.id,src,time:+p.time||0})));rows.sort((a,b)=>b.time-a.time);}
+  return `<div class="page wx-directory-page${S.me.wxTheme==='white'?' wxlight':''}" style="position:absolute;inset:0" data-role-wechat-utility="${kind}" data-role-id="${esc(cid)}">${window.wxRoleUtilityAppearance?window.wxRoleUtilityAppearance(kind,c,balance,rows):'<div class="empty">页面加载中</div>'}</div>`;
+}
 function hisWxUtilityOpen(kind,cid){if(!_hisLogin||_hisLogin.cid!==cid)return;if(!['services','wallet','change','bills','favorites','album'].includes(kind))return;go('his'+kind,{id:cid});}
 // 角色微信发送共用玩家聊天记录；支付账本独立于消息，删除卡片不删除资金。
 function hisMessageDescription(m){if(m.type==='image')return '[图片]';if(m.type==='sticker')return '[表情] '+(m.meaning||'');if(m.type==='transfer'||m.type==='redpacket')return '['+(m.type==='transfer'?'转账':'红包')+' ¥'+(+m.amount||0).toFixed(2)+'] '+(m.note||'');return String(m.content||m.c||'');}
@@ -446,61 +498,3 @@ async function roleImageStudioTest(id){const photoAccount=actId(),c=roleImageStu
 function contactSharedGroups(id){return (S.groups||[]).filter(g=>g&&Array.isArray(g.members)&&g.members.includes(id));}
 function contactSharedGroupsOpen(id){const rows=contactSharedGroups(id);openModal(`<h3>共同群聊</h3>${rows.length?rows.map(g=>`<div class="section"><div class="it" onclick="closeModal();go('group',{id:'${g.id}'})"><span>${esc(g.name||'群聊')}</span><span class="v">进入 ›</span></div></div>`).join(''):'<div class="empty">暂时没有共同群聊</div>'}<button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
 function contactAddedDateKey(c){if(S.couple&&S.couple.cid===c.id&&/^\d{4}-\d{2}-\d{2}$/.test(String(S.couple.startDate||'')))return S.couple.startDate;if(/^\d{4}-\d{2}-\d{2}$/.test(String(c.friendAddedDate||'')))return c.friendAddedDate;const text=String(c.id||c.name||'角色'),seed=Array.from(text).reduce((n,ch)=>(n*33+ch.charCodeAt(0))>>>0,5381),base=Math.min(+c.createdAt||Date.now(),Date.now()),days=45+(seed%1048),d=new Date(base-days*86400000);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}
-function contactAddedDateText(c){const key=contactAddedDateKey(c),p=key.split('-').map(Number);return p.length===3&&p.every(Number.isFinite)?`${p[0]}年${p[1]}月${p[2]}日`:'很久以前';}
-function contactAddedDateEdit(id){const c=getC(id);if(!c)return;if(S.couple&&S.couple.cid===id){coupleSet();return;}openModal(`<h3>添加时间</h3><div class="hint">未绑定情侣空间的角色会先生成一个固定日期，你也可以手动改。保存后不会再次随机变化。</div><div class="field"><label>添加日期</label><input id="contact_added_date" type="date" value="${contactAddedDateKey(c)}"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="contactAddedDateSave('${id}')">保存</button></div>`);}
-function contactAddedDateSave(id){const c=getC(id),el=$('#contact_added_date');if(!c||!el||!/^\d{4}-\d{2}-\d{2}$/.test(el.value)){toast('请选择正确日期');return;}c.friendAddedDate=el.value;save();closeModal();render();toast('添加时间已保存');}
-function renderFriendInfo(id){const c=getC(id);if(!c)return '';const groups=contactSharedGroups(id),date=contactAddedDateText(c),coupleDate=!!(S.couple&&S.couple.cid===id&&S.couple.startDate);
-  return `<div class="wx-subpage"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>朋友资料</b><span></span></div><div class="wx-real-scroll wx-info-scroll">
-    <div class="wx-info-label">备注</div><div class="wx-info-group">
-      <button onclick="contactFieldEdit('${id}','remark','备注名')"><span>备注名</span><em>${esc(c.remark||'未设置')}　›</em></button>
-      <button onclick="contactFieldEdit('${id}','phone','电话')"><span>电话</span><em>${esc(c.phone||'未设置')}　›</em></button>
-      <button onclick="contactFieldEdit('${id}','tags','标签')"><span>标签</span><em>${esc(contactInfoValue(c,'tags')||'未设置')}　›</em></button>
-      <button onclick="contactFieldEdit('${id}','note','备注')"><span>备注</span><em>${esc(c.note||'未设置')}　›</em></button>
-      <button onclick="contactPhotosOpen('${id}')"><span>照片</span><em>${(c.profilePhotos||[]).length?`${(c.profilePhotos||[]).length} 张　`:''}›</em></button>
-    </div>
-    <div class="wx-info-label">人际关系</div><div class="wx-info-group"><button onclick="relOpen('${id}')"><span>TA的人际关系</span><em>${typeof relLinksOf==='function'&&relLinksOf(id).length?relLinksOf(id).length+' 段　':''}›</em></button></div>
-    <div class="wx-info-label">权限</div><div class="wx-info-group"><button onclick="go('roleFeatures',{id:'${id}'})"><span>权限</span><em>聊天、朋友圈、主动联系等　›</em></button></div>
-    <div class="wx-info-label">角色形象</div><div class="wx-info-group"><button onclick="go('roleImageStudio',{id:'${id}'})"><span>形象工作室与衣柜</span><em>${roleImageStudioOn(c)?'自定义已开启':'未开启'}　›</em></button></div>
-    <div class="wx-info-label">更多信息</div><div class="wx-info-group">
-      <button onclick="contactSharedGroupsOpen('${id}')"><span>我和ta的共同群聊</span><em>${groups.length} 个　›</em></button>
-      <button onclick="contactFieldEdit('${id}','signature','签名')"><span>签名</span><em>${esc(c.signature||'未设置')}　›</em></button>
-      <button onclick="go('roleFeatures',{id:'${id}'})"><span>角色功能</span><em>记忆、人设、作息与更多　›</em></button>
-      <button onclick="contactAddedDateEdit('${id}')"><span>添加时间</span><em>${esc(date)}${coupleDate?' · 相恋日期':''}　›</em></button>
-    </div><div style="height:24px"></div>
-  </div></div>`;}
-function contactStarToggle(id){const c=getC(id);if(!c)return;c.star=!c.star;save();render();toast(c.star?'已设为星标朋友':'已取消星标');}
-function contactReport(id){const c=getC(id);if(!c)return;openModal(`<h3>投诉</h3><div class="hint">请选择要反馈的问题。模拟角色不会真的向外部平台发送资料。</div><div class="section"><div class="it" onclick="toast('已记录：内容不适');closeModal()"><span>内容让我不适</span><span class="v">›</span></div><div class="it" onclick="toast('已记录：频繁打扰');closeModal()"><span>频繁打扰</span><span class="v">›</span></div><div class="it" onclick="toast('已记录：其他问题');closeModal()"><span>其他问题</span><span class="v">›</span></div></div><button class="btn g" onclick="closeModal()">取消</button>`);}
-const _roleBusyTimers={};
-function roleBusyState(c,create){if(!c)return null;let st=c.wechatBusy;if(!st||typeof st!=='object'){if(create===false)return null;st=c.wechatBusy={modeVersion:2,enabled:false,active:false,status:'idle',sessionId:'',accountId:'',startedAt:0,until:0,endedAt:0,pendingMessageIds:[],returnSentAt:0,returnAttempts:0,nextRetryAt:0};}if(+st.modeVersion!==2){st.enabled=false;if(st.active&&!st.until){st.active=false;st.status=st.pendingMessageIds&&st.pendingMessageIds.length?'return_pending':'idle';}st.modeVersion=2;}st.pendingMessageIds=Array.isArray(st.pendingMessageIds)?st.pendingMessageIds.map(String).filter(Boolean).slice(-40):[];st.enabled=st.enabled===true;st.active=st.active===true;st.status=String(st.status||'idle');st.sessionId=String(st.sessionId||'');st.accountId=String(st.accountId||'');st.startedAt=Math.max(0,+st.startedAt||0);st.until=Math.max(0,+st.until||0);st.endedAt=Math.max(0,+st.endedAt||0);st.returnSentAt=Math.max(0,+st.returnSentAt||0);st.returnAttempts=Math.max(0,Math.min(2,+st.returnAttempts||0));st.nextRetryAt=Math.max(0,+st.nextRetryAt||0);return st;}
-function roleBusyEnabled(c){const st=roleBusyState(c,false);return !!(st&&st.enabled);}
-function roleBusyTimerKey(c,st){return String(c&&c.id||'')+'|'+String(st&&st.accountId||'main');}
-function roleBusyArmTimer(c,st){if(!c||!st||!st.active||!st.until)return false;const key=roleBusyTimerKey(c,st);clearTimeout(_roleBusyTimers[key]);const sessionId=st.sessionId,wait=Math.max(0,st.until-Date.now());_roleBusyTimers[key]=setTimeout(()=>{delete _roleBusyTimers[key];roleBusyExpire(c.id,sessionId);},Math.min(2147480000,wait));return true;}
-function roleBusyExpire(id,sessionId){const c=getC(id),st=roleBusyState(c,false);if(!c||!st||!st.active||st.sessionId!==sessionId)return false;if(st.until>Date.now()+500)return roleBusyArmTimer(c,st);return roleBusyEndAndReply(c,st);}
-function roleBusyResumeAll(){(S.contacts||[]).forEach(c=>{const st=roleBusyState(c,false);if(!st||!st.active)return;if(st.until&&st.until>Date.now())roleBusyArmTimer(c,st);else setTimeout(()=>roleBusyExpire(c.id,st.sessionId),0);});}
-function roleBusyClockTarget(line,now){line=String(line||'');now=+now||Date.now();const rel=line.match(/(?:大概|差不多|约莫|约)?\s*([零〇一二三四五六七八九十两\d]{1,3}|半)(?:个)?\s*(分钟|小时)后/);if(rel){const value=rel[1]==='半'?.5:clockNumberValue(rel[1]),mins=value*(rel[2]==='小时'?60:1);return Number.isFinite(mins)&&mins>=1&&mins<=1440?now+Math.round(mins*60000):0;}const m=line.match(/(明天|明早|明晚|今晚|今早|今天)?\s*(凌晨|早上|上午|中午|下午|傍晚|晚上|夜里|深夜)?\s*([零〇一二三四五六七八九十两\d]{1,3})\s*(?:(?:点|时)(?:\s*([零〇一二三四五六七八九十两\d]{1,3})\s*分?|\s*(半|一刻|三刻|整))?|[:：]([0-5]\d))/);if(!m)return 0;let hour=clockNumberValue(m[3]),minute=m[4]?clockNumberValue(m[4]):m[6]?+m[6]:0;if(m[5]==='半')minute=30;else if(m[5]==='一刻')minute=15;else if(m[5]==='三刻')minute=45;else if(m[5]==='整')minute=0;if(!Number.isFinite(hour)||!Number.isFinite(minute)||hour<0||hour>24||minute<0||minute>59)return 0;const p=roleTimeParts(now),actual=p.hour*60+p.minute+(+p.second||0)/60,day=String(m[1]||''),period=String(m[2]||'')+(day==='明早'?'早上':day==='明晚'?'晚上':day==='今晚'?'晚上':day==='今早'?'早上':'');let hours;if(hour===24)hours=[0];else if(hour>12)hours=[hour];else if(hour===12)hours=[0,12];else hours=[hour,hour+12];if(/凌晨/.test(period))hours=hours.filter(x=>x<6);else if(/早上|上午/.test(period))hours=hours.filter(x=>x<12);else if(/中午/.test(period))hours=hours.filter(x=>x>=11&&x<=13);else if(/下午|傍晚|晚上|夜里|深夜/.test(period))hours=hours.filter(x=>x>=12);if(!hours.length)return 0;const tomorrow=/^明/.test(day),today=/^今|今天/.test(day),deltas=hours.map(h=>h*60+minute-actual+(tomorrow?1440:0)).filter(d=>d>0&&(tomorrow||!today||d<1440));if(!deltas.length)return 0;let delta=Math.min(...deltas);if(!tomorrow&&!today){const future=hours.map(h=>(h*60+minute-actual+1440)%1440).filter(d=>d>0);if(!future.length)return 0;delta=Math.min(...future);}return delta>0&&delta<=1440?now+Math.round(delta*60000):0;}
-function roleBusyReturnAtFromLine(line,now){line=String(line||'').replace(/\s+/g,' ').trim();if(!line||/[?？]/.test(line)||/(?:别说|不是|并非|没有).{0,8}(?:不能回|回不了|不回)|(?:昨天|前天|上次).{0,18}(?:不能回|回不了|不回)/.test(line))return 0;const blocked=/(?:回不了|不能回|没法回|不方便回|顾不上回|暂时不回|不会回|没空回)(?:你|消息)?/.test(line),resume=/(?:再|才|就)(?:回|找|联系|给.{0,6}发)|(?:后|之后).{0,6}(?:回|找|联系|给.{0,6}发)|(?:回|找|联系)(?:你|消息).{0,6}(?:再说|晚点)/.test(line),boundary=/(?:前|之前|以后|之后|左右|前后|到时候|后再|后才|等到|待会到|(?:分钟|小时)后)/.test(line);if((!blocked&&!resume)||!boundary)return 0;return roleBusyClockTarget(line,now);}
-function roleBusyCaptureReply(c,content,aid){const st=roleBusyState(c,false);if(!c||!st||!st.enabled||st.active)return false;let until=0,declared='';for(const line of String(content||'').split(/[。！？!?\n]/)){const at=roleBusyReturnAtFromLine(line,Date.now());if(at>Date.now()){until=at;declared=line.trim();break;}}if(!until)return false;st.active=true;st.status='busy';st.accountId=aid||actId();st.sessionId='busy_'+uid();st.startedAt=Date.now();st.until=until;st.endedAt=0;st.returnSentAt=0;st.returnAttempts=0;st.declaredText=declared.slice(0,240);st.pendingMessageIds=[];save();roleBusyArmTimer(c,st);if(typeof roleServerPushSyncSoon==='function')roleServerPushSyncSoon(c.id);return true;}
-function roleBusyPrompt(c){if(!roleBusyEnabled(c))return'';return '\n\n# 拟人忙碌回复（用户已开启）\n你仍按本人人设、职业、作息和此刻真实时间自主决定是否正在忙；不要为了展示功能而每轮都说忙。若你确实要暂时停止回微信，本轮必须先用自然口吻说明，并明确说出一个大概能恢复回复的时间（例如“下午四点前回不了”或“约半小时后找你”）；时间必须符合当前真实时间和你的日常安排，不能瞎编、不能提前。你一旦亲口说出这个时间，在到点前就不会继续回复后续微信；所以不要随口承诺。不要提开关、系统、后台、阻断或测试。若没有明确说出恢复时间，聊天照常继续。';}
-function roleBusyActive(c,aid){const st=roleBusyState(c,false),active=!!(st&&st.active&&(!st.accountId||st.accountId===(aid||actId())));if(active&&st.until&&st.until<=Date.now())setTimeout(()=>roleBusyExpire(c.id,st.sessionId),0);return active;}
-function roleBusyPendingRows(c,st){if(!c||!st)return[];const rows=msgsForAccount(c.id,st.accountId||actId()),ids=new Set(st.pendingMessageIds||[]);return rows.filter(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call&&((m.id&&ids.has(String(m.id)))||(!ids.size&&msgClearTime(m)>=st.startedAt))).slice(-12);}
-function birthdayCareNote(note){const n=String(note||'');return /^\[生日祝福｜/.test(n)||/^\[节日心意｜/.test(n)&&/的生日（/.test(n);}
-function roleBusyReturnNote(note){return /\[忙碌结束后回复\|/.test(String(note||''));}
-function roleBusyDeferReply(id,note,aid){const c=getC(id),st=roleBusyState(c,false);aid=aid||actId();if(!c||!st||!st.active||st.accountId&&st.accountId!==aid||roleBusyReturnNote(note)||typeof birthdayCareNote==='function'&&birthdayCareNote(note))return false;const rows=msgsForAccount(id,aid),fresh=rows.filter(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call&&msgClearTime(m)>=st.startedAt);fresh.forEach(m=>{const mid=String(m.id||'');if(mid&&st.pendingMessageIds.indexOf(mid)<0)st.pendingMessageIds.push(mid);});st.pendingMessageIds=st.pendingMessageIds.slice(-40);const retry=st.status==='return_pending';st.status=st.until>Date.now()?'busy':retry?'return_pending':'returning';st.lastPendingAt=Date.now();save();if(st.until&&st.until<=Date.now()||retry)setTimeout(()=>roleBusyExpire(id,st.sessionId),0);return true;}
-function roleBusyFinish(id,sessionId,success){const c=getC(id),st=roleBusyState(c,false);if(!c||!st||st.sessionId!==sessionId)return;if(success){st.active=false;st.pendingMessageIds=[];st.status='completed';st.returnSentAt=Date.now();st.until=0;st.nextRetryAt=0;}else if(st.returnAttempts<2){st.status='returning';save();setTimeout(()=>roleBusyEndAndReply(c,st),900);return;}else{st.active=true;st.status='return_pending';st.until=0;st.nextRetryAt=0;}save();if(cur().p==='chat'&&cur().id===id)render();if(typeof roleServerPushSyncSoon==='function')roleServerPushSyncSoon(id);}
-function roleBusyEndAndReply(c,st){const key=roleBusyTimerKey(c,st);clearTimeout(_roleBusyTimers[key]);delete _roleBusyTimers[key];const pending=roleBusyPendingRows(c,st);st.endedAt=Date.now();st.until=0;if(!pending.length){st.active=false;st.status='completed';st.nextRetryAt=0;save();if(cur().p==='chat'&&cur().id===c.id)render();return true;}const retryPending=st.status==='return_pending';st.active=true;st.status='returning';st.returnAttempts=retryPending?1:Math.min(2,(+st.returnAttempts||0)+1);const sessionId=st.sessionId,lines=pending.map(m=>'· '+String(msgToText(m)||'').replace(/\s+/g,' ').slice(0,240)).filter(x=>x.length>2).join('\n').slice(0,1800),note='[忙碌结束后回复|你之前已经亲口告诉'+S.me.name+'，自己会忙到大约这个时间。现在真实时间已经到达或超过约定点；请用你自己的完整人设、当前关系和自然说话习惯，一次接住下面等待中的真实消息。可以合并回应，不必逐条复述；不要照抄固定道歉话术，不要提按钮、测试、系统、后台或等待队列。等待消息：\n'+lines+']';st.nextRetryAt=0;save();const queued=scheduleReply(c.id,note,ok=>roleBusyFinish(c.id,sessionId,ok===true),st.accountId||actId());if(!queued)roleBusyFinish(c.id,sessionId,false);return queued;}
-function roleBusyTestToggle(id){const c=getC(id);if(!c)return;const st=roleBusyState(c,true);st.enabled=!st.enabled;if(!st.enabled&&st.active){st.until=0;roleBusyEndAndReply(c,st);}else{save();render();if(typeof roleServerPushSyncSoon==='function')roleServerPushSyncSoon(id);}}
-function roleBusyHeaderBadge(){return'';}
-function recommendContact(id){const c=getC(id),targets=S.contacts.filter(x=>x&&!x.deleted&&x.id!==id);if(!c)return;openModal(`<h3>把ta推荐给朋友</h3>${targets.length?`<div class="section">${targets.map(t=>`<div class="it" onclick="sendNamecard('${t.id}','${id}');closeModal();openChat('${t.id}')">${av(t.avatar,'sm')}<span style="flex:1;margin-left:10px">${esc(t.remark||t.name)}</span><span class="v">发送 ›</span></div>`).join('')}</div>`:'<div class="empty">没有其他联系人可以推荐</div>'}<button class="btn g" style="margin-top:10px" onclick="closeModal()">取消</button>`);}
-function renderContactSettings(id){const c=getC(id);if(!c)return '';
-  return `<div class="wx-subpage"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>设置</b><span></span></div><div class="wx-real-scroll wx-info-scroll contact-setting-list">
-    <div class="wx-info-group"><button onclick="go('friendInfo',{id:'${id}'})"><span>编辑备注与资料</span><em>›</em></button></div>
-    ${isMain()?`<div class="wx-info-group"><button onclick="cToggleModel('${id}')"><span>主模型 / 副模型</span><em>当前：${c.model==='aux'?'副模型':'主模型'}　›</em></button><button onclick="roleChatDiagnosticOpen('${id}')"><span>模型与路线诊断</span><em>${esc(wechatDiagnosticLabel(c))}　›</em></button></div>`:''}
-//@@ web
-    <div class="wx-info-group"><button onclick="roleInterceptDiagnosticOpen('${id}','online')"><span>查看上一轮拦截内容</span><em>仅本机诊断　›</em></button></div>
-//@@ end
-    <div class="wx-info-label">角色设置</div><div class="wx-info-group role-setting-direct"><button onclick="go('roleFeatures',{id:'${id}',group:'profile'})"><span>资料与记忆</span><em>›</em></button><button onclick="go('roleFeatures',{id:'${id}',group:'chat'})"><span>聊天与主动</span><em>›</em></button><button onclick="go('roleFeatures',{id:'${id}',group:'calls'})"><span>通话记录</span><em>›</em></button><button onclick="go('roleFeatures',{id:'${id}',group:'social'})"><span>朋友圈与 X</span><em>›</em></button><button onclick="go('roleFeatures',{id:'${id}',group:'privacy'})"><span>隐私、查岗与数据</span><em>›</em></button></div>
-    <div class="wx-info-group"><button onclick="recommendContact('${id}')"><span>把ta推荐给朋友</span><em>›</em></button></div>
-    <div class="wx-info-group"><button onclick="contactStarToggle('${id}')"><span>设为星标朋友</span><i class="wx-switch ${c.star?'on':''}"></i></button><button onclick="c_block('${id}')"><span>${c.blocked?'移出黑名单':'加入黑名单'}</span><i class="wx-switch ${c.blocked?'on':''}"></i></button><button onclick="contactReport('${id}')"><span>投诉</span><em>›</em></button></div>
-    <div class="wx-info-group"><button onclick="clearHistory('${id}')"><span>清空聊天记录</span><em>›</em></button></div>
-    <div class="wx-info-group danger"><button onclick="c_delete('${id}')"><span>删除联系人</span></button></div><div style="height:24px"></div>
-  </div></div>`;}

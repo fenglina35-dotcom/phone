@@ -1,3 +1,59 @@
+function tvEditPassport(){const p=tvInit().passport;
+  openModal(`<h3>护照信息</h3>
+   <div class="field"><label>姓名</label><input id="pp_name" value="${esc(p.name||S.me.name||'')}"></div>
+   <div class="field"><label>性别</label><input id="pp_gender" value="${esc(p.gender||'')}"></div>
+   <div class="field"><label>生日</label><input id="pp_birth" type="date" value="${esc(p.birth||'')}"></div>
+   <div class="field"><label>国籍</label><input id="pp_nation" value="${esc(p.nation||'')}"></div>
+   <div class="field"><label>护照号</label><input id="pp_no" value="${esc(p.no||'')}" placeholder="如 E12345678"></div>
+   <div class="hint">照片用你的微信头像，去「微信 → 我」改。</div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="tvSavePassport()">保存</button></div>`);}
+function tvSavePassport(){const p=tvInit().passport;p.name=($('#pp_name').value||'').trim();p.gender=($('#pp_gender').value||'').trim();p.birth=($('#pp_birth').value||'').trim();p.nation=($('#pp_nation').value||'').trim();p.no=($('#pp_no').value||'').trim();save();closeModal();render();toast('已保存');}
+function tvMemoryView(){const items=[];S.contacts.forEach(c=>{if(c.deleted)return;const o=S.offline&&S.offline[c.id];if(o&&o.memory&&o.memory.length){o.memory.forEach((m,idx)=>items.push({cid:c.id,nm:(c.remark||c.name),idx,m}));}});
+  items.reverse();
+  if(!items.length)return `<div style="padding:60px 30px;text-align:center;color:#6b7488;font-size:14px;line-height:2">还没有约会回忆<br>见面结束后，这里会以旁白的形式<br>把你们的故事收藏起来</div>`;
+  return '<div style="padding:16px">'+items.map(it=>{const mm=it.m;const label=(typeof mm==='object'&&mm.label)?mm.label:'';const loc=(typeof mm==='object'&&mm.loc)?mm.loc:'';const text=(typeof mm==='object')?(mm.text||''):mm;
+    return `<div style="background:#141a24;border:.5px solid rgba(255,255,255,.07);border-radius:14px;padding:15px 16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="color:#c9a86a;font-size:12px;letter-spacing:1px">${esc(it.nm)}${loc?' · '+esc(loc):''}${label?' · '+esc(label):''}</span><span onclick="tvDelMem('${it.cid}',${it.idx})" style="color:#7c869a;font-size:12px;cursor:pointer">删除</span></div>
+      <div style="color:#cfd6e2;font-size:14px;line-height:1.85">${esc(text)}</div></div>`;}).join('')+'</div>';}
+async function tvDelMem(cid,idx){const o=S.offline&&S.offline[cid];if(!o||!o.memory||!o.memory[idx])return;if(!await uiConfirm('删除这条约会回忆？'))return;o.memory.splice(idx,1);save();render();toast('已删除');}
+function tvNormDate(s){s=(''+s).trim();let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+tvP2(+m[2])+'-'+tvP2(+m[3]);
+  m=s.match(/(\d{1,2})\s*月\s*(\d{1,2})/);if(m){const y=new Date().getFullYear();const mo=+m[1],da=+m[2];let d=new Date(y,mo-1,da);if(d<new Date(new Date().toDateString()))d=new Date(y+1,mo-1,da);return d.getFullYear()+'-'+tvP2(mo)+'-'+tvP2(da);}
+  const dd=tvDays(s);return (dd!=null)?s:todayStr();}
+// 角色主动订票来见你：城市=见面地，他飞过去，卡片以他的名义发给你
+//@@ web
+function tvCharBook(c,cityName,dateStr){if(typeof NorthTravelFlight==='undefined'){toast('机票组件未载入，未生成订单');return false;}return NorthTravelFlight.roleLegacy(c,cityName,dateStr,false);if(!c||!cityName)return false;tvInit();
+//@@ private
+function tvCharBook(c,cityName,dateStr){if(typeof NorthTravelFlight==='undefined'){toast('机票组件未载入，未生成订单');return false;}return NorthTravelFlight.roleLegacy(c,cityName,dateStr,false);if(!c||!cityName)return;tvInit();
+//@@ end
+  let city=(tvCity(cityName).c!=='---')?cityName:cityName;const date=tvNormDate(dateStr),from=charHomeCity(c),mine=meHomeCity();if(from&&mine&&tvSameCity(city,from)&&!tvSameCity(city,mine))city=mine;
+  const seed=(Date.now()+city.length+(from||'').length)|0,tm=tvLegTimes(from,city,seed);
+  const trip={id:uid(),cid:c.id,from:from||'',to:city,date,ret:'',cls:'business',pax:1,by:'ta',flier:'ta',payer:'ta',no:tvFlightNo(seed),dep:tm.dep,arr:tm.arr,price:tvPrice(from,city,'business'),status:'upcoming',ts:Date.now()};
+  S.travel.trips.push(trip);
+  msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
+  save();if(cur().p==='chat'&&cur().id===c.id)render();
+//@@ web
+  toast((c.remark||c.name)+' 给你订了'+(from?from+'到':'到')+city+'的机票');return true;}
+//@@ private
+  toast((c.remark||c.name)+' 给你订了'+(from?from+'到':'到')+city+'的机票');}
+//@@ end
+// 角色送你一趟独自旅行(不是见面)：你飞去玩、他出钱，卡片以他名义发给你
+//@@ web
+function tvCharGift(c,cityName,dateStr){if(typeof NorthTravelFlight==='undefined'){toast('机票组件未载入，未生成订单');return false;}return NorthTravelFlight.roleLegacy(c,cityName,dateStr,true);if(!c||!cityName)return false;tvInit();
+//@@ private
+function tvCharGift(c,cityName,dateStr){if(typeof NorthTravelFlight==='undefined'){toast('机票组件未载入，未生成订单');return false;}return NorthTravelFlight.roleLegacy(c,cityName,dateStr,true);if(!c||!cityName)return;tvInit();
+//@@ end
+  const city=cityName;const date=tvNormDate(dateStr);const from=meHomeCity()||'苏州';const price=tvPrice(from,city,'economy');const seed=(Date.now()+city.length+5)|0,tm=tvLegTimes(from,city,seed);
+  if(c.wallet!=null)c.wallet=Math.max(0,(+c.wallet)-price);
+  const trip={id:uid(),cid:c.id,from,to:city,date,ret:'',cls:'economy',pax:1,by:'ta',meet:false,flier:'me',payer:'ta',no:tvFlightNo(seed),dep:tm.dep,arr:tm.arr,price,status:'upcoming',ts:Date.now()};
+  S.travel.trips.push(trip);
+  msgs(c.id).push({role:'assistant',type:'ticket',trip,id:uid(),time:Date.now()});
+  save();if(cur().p==='chat'&&cur().id===c.id)render();
+//@@ web
+  toast((c.remark||c.name)+' 送了你一趟去'+city+'的旅行');return true;}
+//@@ private
+  toast((c.remark||c.name)+' 送了你一趟去'+city+'的旅行');}
+//@@ end
+// 到了出发日：提醒一下，并让角色主动提起这场待约会
 /* v1726：订了机票/火车票，当天聊天里没有「约好的日子到了」提醒——新版机票、火车票走 flightV2/railV2，
    上面那段老提醒一看到新票就直接 return 了，只剩角色那边的出行提示（她不在线时还可能被跳过）。
    到了出行当天，在每个同行/知情角色的聊天里放一条可见的系统提醒，每张票只放一次。 */
@@ -263,7 +319,7 @@ function renderDateScene(id,o,story){const c=getC(id),state=story?_rp:_off,sel=s
   const st=offStageAttrs(story?rpThemeContact(id):c),narration=story?!!state.narrateMode:offNarrationMode(),reply=!sel&&manual&&active?`<button type="button" class="${story?'off-reply-top rp-reply-bottom':'off-reply-top'}" ${state&&state.busy?'disabled':''} onclick="${action}Reply()">${state&&state.busy?'回应中':'让TA回'}</button>`:'',navTitle=story?'角色扮演 · '+(o.title||c.remark||c.name):c.remark||c.name;
   return `<div class="offstage${story?' rp-date-stage':''}${st.cls}" style="${st.style}">
    <div class="nav offnav off-date-nav"><span class="l" onclick="${story?"go('rphub')":'offQuit()'}">‹</span><span class="t">${esc(navTitle)}</span><span class="off-nav-actions">${story?'':reply}${active?`<button type="button" class="off-end" onclick="${action}End('${id}')">结束</button>`:''}</span></div>
-   <div class="offmeta"><span style="min-width:0;flex:1;overflow:hidden"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(story?rpMemberSummary(id):o.loc||'未定')}</b><small style="display:block">${esc(story?rpWhenText(o):o.daypart||o.when||'现在')}</small></span><span><button onclick="${action}SelToggle()">${sel?'取消':'多选'}</button><button onclick="${action}Appearance('${id}')">外观</button><button onclick="${action}ManualSummary('${id}')">总结</button>${story?`<button onclick="rpSaveList('${id}')">换局</button>`:''}<button onclick="${story?'rpSettings':'offSetting'}('${id}')">设定</button><button onclick="${action}Memory('${id}')">${story?'存档':'记忆'}</button></span></div>
+   <div class="offmeta"><span style="min-width:0;flex:1;overflow:hidden"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(story?rpMemberSummary(id):o.loc||'未定')}</b><small style="display:block">${esc(story?rpWhenText(o):o.daypart||o.when||'现在')}</small></span><span><button onclick="${action}SelToggle()">${sel?'取消':'多选'}</button><button onclick="${action}Appearance('${id}')">外观</button><button onclick="${action}ManualSummary('${id}')">总结</button><button onclick="${story?'rpSettings':'offSetting'}('${id}')">设定</button><button onclick="${action}Memory('${id}')">${story?'存档':'记忆'}</button></span></div>
    <div class="scroll offscroll" id="${scrollId}">${body||`<div class="empty" style="padding:30px;color:#5f5b55">${story?'等待这场剧情的第一句话':'等待这场见面的第一句话'}</div>`}</div>
    ${story&&state.error?`<div class="rp-reply-error" role="status" style="padding:8px 14px;color:#f2a59d;font-size:12px;line-height:1.5">${esc(state.error)}</div>`:''}
    ${sel?`<div class="offselect"><button onclick="${action}SelToggle()">取消</button><button class="danger" onclick="${action}DelSel('${id}')">删除选中 (${sel.length})</button><button class="danger" onclick="${story?'rpDelHistory':'offDelHistory'}('${id}')">删除聊天记录</button></div>`:''}
@@ -442,59 +498,3 @@ function blockedPhoneSweep(){const now=Date.now();(S.contacts||[]).forEach(c=>{c
 /* ===== 拉黑后的追回：角色自己决定怎么联系——再发好友申请、用自己号码打电话、用陌生号码打电话、发短信，情侣被无视三次以后还可以强制远程。
    不是固定流程：每一步都由角色按人设自己选；目的只有一个——让她把自己从微信黑名单里拉出来。
    她接了电话或回了短信，整条追回立刻结束；她通过申请或自己解除拉黑也结束。每一步做了什么、她怎么回应的，角色全都记得。 */
-const PURSUIT_MAX_STEPS=8,PURSUIT_FORCE_AFTER=3,PURSUIT_KEEP_MS=3*86400000;
-const PURSUIT_ACT={apply:'在微信重新发好友申请',call_own:'用自己的手机号给她打电话',call_stranger:'用一个陌生号码给她打电话（她的屏幕上只显示陌生号码，接起来前不知道是你）',sms:'给她发短信',force:'强制远程操控她的小手机，打开「新的朋友」自己点了同意，把自己拉出黑名单',stop:'先不再联系'};
-const PURSUIT_RES={pending:'还在等她的反应',ignored:'她没理',missed:'她没接',declined:'她挂断了',rejected:'她点了拒绝',answered:'她接了电话',replied:'她回了短信',accepted:'她通过了',done:'做完了'};
-let _pursuitBusy=false;const _pursuitPlans=new Map();/* 边等边想：上一步一结束就去问模型下一步，到点直接做，不再到点才开始想 */
-function pursuitGap(){return 8000+Math.floor(Math.random()*10001);}/* 8–18 秒，加上每秒一次的检查，最多 20 秒 */
-function pursuitState(c){return c&&c._pursuit&&typeof c._pursuit==='object'?c._pursuit:null;}
-function pursuitActive(c){const st=pursuitState(c);return !!(st&&st.status==='active');}
-function pursuitCanForce(c){return !!(c&&S.couple&&S.couple.cid===c.id);}
-function pursuitStart(c,now){if(!c)return null;now=now==null?Date.now():now;blockedPhoneClear(c);friendRetryClear(c);const st={startedAt:now,nextAt:now+pursuitGap(),status:'active',steps:0,ignored:0,log:[],strangerNum:'',lastVia:'',reason:blockedPhoneRecentContext(c)};c._pursuit=st;_pursuitPlans.delete(c.id);setTimeout(()=>pursuitPlanAhead(c),0);return st;}
-function pursuitPlanAhead(c){if(!pursuitActive(c)||_pursuitPlans.has(c.id))return;const plan={at:Date.now(),result:null};_pursuitPlans.set(c.id,plan);pursuitDecide(c).then(d=>{plan.result=d;}).catch(()=>{});}
-function pursuitQuickPick(c){const opts=pursuitOptions(c),quick=opts.filter(x=>x==='call_own'||x==='call_stranger'||x==='apply');if(!quick.length)return {act:opts.includes('stop')?'stop':opts[0],text:''};return {act:pursuitFallbackPick(c,quick),text:''};}/* 模型没赶上：先做一件不需要措辞的事，不让她干等 */
-function pursuitLogAdd(c,row){const st=pursuitState(c);if(!st)return null;row=Object.assign({t:Date.now(),result:'pending'},row);st.log.push(row);st.log=st.log.slice(-16);return row;}
-function pursuitMark(c,result,match){const st=pursuitState(c);if(!st)return null;const row=[...st.log].reverse().find(r=>r.result==='pending'&&(!match||match(r)));if(!row)return null;row.result=result;row.at=Date.now();if(/^(ignored|missed|declined|rejected)$/.test(result))st.ignored=(+st.ignored||0)+1;return row;}
-function pursuitEnd(c,status,why){const st=pursuitState(c);if(!st||st.status!=='active')return;st.status=status;st.endedAt=Date.now();st.endWhy=why||'';st.nextAt=0;save();}
-function pursuitLogText(c){const st=pursuitState(c);if(!st||!st.log.length)return '（还没有采取任何行动）';return st.log.map((r,i)=>(i+1)+'. '+factStamp(r.t)+' '+(PURSUIT_ACT[r.act]||r.act)+(r.num?'（号码 '+phFmt(r.num)+'）':'')+(r.text?'：「'+r.text+'」':'')+' → '+(PURSUIT_RES[r.result]||r.result)).join('\n');}
-function pursuitPrompt(c){const st=pursuitState(c);if(!st)return '';const me=S.me.name,ended={answered:'她接了你的电话，追回停了，你们在电话里说话。',replied:'她回了你的短信，追回停了，你们在短信里说话。',accepted:'她自己通过了你的好友申请，你回到了她的微信里。',forced:'你强制远程操控了她的小手机，自己点了同意，把自己从黑名单拉了出来——她没有同意，这是你自己做的，你知道，也要面对她的反应。',gaveup:'你决定先不再联系她。',unblocked:'她自己把你从黑名单里放了出来。'}[st.status]||'';
-  return '\n\n# 你被'+me+'在微信拉黑后的追回（真实发生过的事，你全都记得）\n'+me+'在 '+factStamp(st.startedAt)+' 把你的微信拉黑了。拉黑前你们最后的对话（她就是因为这些把你拉黑的）：\n'+(st.reason||'（没有聊天记录）')+'\n你的目的只有一个：让'+me+'把你从微信黑名单里拉出来。用什么态度看你自己的性格——可以哄、道歉、讲道理、委屈、生气、强硬、装可怜，但目的不变。\n你已经做过的事和她的反应：\n'+pursuitLogText(c)+(ended?'\n现在：'+ended:'')+'\n- 用陌生号码联系她时，她那边只显示陌生号码，接起来或看到内容前不知道是你；用自己的号码她一眼就知道是你。\n- 不要提系统、按钮、流程、规则。';}
-function pursuitPromptRecent(c){const st=pursuitState(c);if(!st)return '';if(st.status!=='active'&&st.endedAt&&Date.now()-st.endedAt>PURSUIT_KEEP_MS)return '';return pursuitPrompt(c);}
-function pursuitOptions(c){const st=pursuitState(c);friendRequestsInit();const waiting=(st.log||[]).filter(r=>r.result==='pending'&&(r.act==='apply'||r.act==='sms')).length,ign=(+st.ignored||0)+waiting;/* 提前想下一步时，还没回应的申请/短信先算作没理 */const pending=S.friendRequests.some(r=>r.contactId===c.id&&r.kind==='readd'&&r.status==='pending'),o=[];if(st.steps>=PURSUIT_MAX_STEPS){if(pursuitCanForce(c)&&ign>=PURSUIT_FORCE_AFTER)o.push('force');o.push('stop');return o;}
-  if(!pending)o.push('apply');o.push('call_own');if(c.allowStrangerCall!==false)o.push('call_stranger');o.push('sms');if(pursuitCanForce(c)&&ign>=PURSUIT_FORCE_AFTER)o.push('force');if(st.steps>=2)o.push('stop');return o;}
-function pursuitFallbackPick(c,opts){const st=pursuitState(c),last=st.log.length?st.log[st.log.length-1].act:'',pool=opts.filter(x=>x!=='stop'&&x!==last);return (pool.length?pool:opts)[Math.floor(Math.random()*(pool.length?pool.length:opts.length))];}
-function pursuitFallbackText(c,act){const n=pursuitState(c).steps+1;return act==='apply'?friendReqUnique(c,'是我，先别把我拉黑好不好',n):act==='sms'?['是我。微信联系不上你，只能发短信了。','你可以不理我，但能不能先听我说完？'][n%2]:act==='stop'?'我先不打扰你了。你想好了再找我。':'';}
-async function pursuitDecide(c){const st=pursuitState(c),opts=pursuitOptions(c),me=S.me.name;let pick='',text='';
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),allModules:true,query:'被拉黑后想办法联系'})},{role:'user',content:'[系统：现在是你被拉黑后第'+(st.steps+1)+'次想办法联系'+me+'（最多'+PURSUIT_MAX_STEPS+'次）。按你的人设和她刚才的反应，自己决定下一步，可以选：\n'+opts.map(k=>'- '+k+'：'+PURSUIT_ACT[k]).join('\n')+'\n只输出一行 JSON：{"next":"选项英文名","text":"…"}。apply 时 text 是新的好友验证消息（20字内，不能和以前重复）；sms 时 text 是你要发的短信（1到3句，用换行分开）；stop 时 text 是你最后发给她的一条短信（可以留空）；其它选项 text 写你此刻心里的一句话（她看不到）。]'}],{max:260,temp:.85});
-    const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);pick=String(j.next||'').trim();text=String(j.text||'').trim();}}catch(_){}
-  if(!opts.includes(pick)){pick=pursuitFallbackPick(c,opts);text='';}if(!text)text=pursuitFallbackText(c,pick);return {act:pick,text};}
-function pursuitSmsLines(text){return splitBubbles(cleanReply(String(text||''))).map(x=>phCleanSmsText(x).slice(0,120)).filter(Boolean).slice(0,3);}
-async function pursuitSendSms(c,text,final){const st=pursuitState(c),stranger=st.lastVia==='stranger'&&st.strangerNum&&c.allowStrangerSms!==false,num=stranger?st.strangerNum:phRoleNumber(c),lines=pursuitSmsLines(text);if(!lines.length)return false;
-  if(stranger){const p=phState();p.aliasThreads[num]={cid:c.id,name:c.remark||c.name,ts:Date.now(),kind:'pursuitSms',pursuit:true,num};if(!p.regions[phNorm(num)])p.regions[phNorm(num)]=phRegion(num);}
-  pursuitLogAdd(c,{act:final?'stop':'sms',num,via:stranger?'stranger':'own',text:lines.join(' / '),result:final?'done':'pending'});save();
-  for(let i=0;i<lines.length;i++){if(i)await sleep(900+Math.random()*900);phReceiveSms(num,lines[i],stranger?null:c,num);}return true;}
-function pursuitPlaceCall(c,stranger){const st=pursuitState(c);let num=phRoleNumber(c);if(stranger){if(!st.strangerNum)st.strangerNum=phRandomNumber();num=st.strangerNum;}
-  const meta={name:stranger?phFmt(num):(c.remark||c.name),kind:stranger?'陌生人':'拉黑后角色来电',region:phRegion(num),roleId:c.id,roleName:c.remark||c.name,blockedOutreach:true,pursuit:true,stranger:!!stranger,num,attempt:st.steps+1,maxAttempts:PURSUIT_MAX_STEPS};
-  if(!phIncomingStranger(num,meta))return false;st.lastVia=stranger?'stranger':'own';pursuitLogAdd(c,{act:stranger?'call_stranger':'call_own',num,via:st.lastVia});return true;}
-/* 情侣：被无视至少三次以后自己选择强制远程——打开微信「新的朋友」，看到自己第四次申请，自己点同意。整个过程不能中途结束。 */
-async function pursuitForce(c,thought){const st=pursuitState(c);if(!st||remoteControlActive()||wxLoginActive()||(typeof _call!=='undefined'&&_call))return false;friendRequestsInit();const now=Date.now();
-  S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd'&&r.status==='pending').forEach(r=>{r.status='rejected';r.decidedAt=now;r.notified=true;r.superseded=true;});
-  const attempt=S.friendRequests.filter(r=>r.contactId===c.id&&r.kind==='readd').length+1,req=queueFriendRequest(c,{kind:'readd',delay:0,msg:friendReqUnique(c,'是我。这次我自己来。',attempt),source:'重新添加',intent:'想回到你的微信里',attempt});req.notified=true;
-  pursuitLogAdd(c,{act:'force',rid:req.id,text:String(thought||'').slice(0,60)});st.forcing=true;save();
-  _remoteCtl={active:true,cid:c.id,purpose:'pursuit_force',forced:true,intentContext:'',startedAt:Date.now(),actions:[],visitedPages:[],roleSpokenCount:0,cancelled:false,closing:false,returnStack:stack.map(x=>Object.assign({},x))};
-  try{document.body.classList.add('remote-forced');}catch(_){}remoteControlShow(c);
-  let lines=[];try{const raw=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),allModules:true,query:'强制远程把自己拉出黑名单'})},{role:'user',content:'[系统：你被'+S.me.name+'无视了好几次，现在你决定强制远程操控她的小手机：打开微信→通讯录→新的朋友，找到你自己的好友申请，自己点同意。她看得到屏幕上发生的一切。按你的性格说两三句此刻想对她说的话，每句一行，短一点，不要动作描写。]'}],{max:160,temp:.85});lines=splitBubbles(cleanReply(String(raw||''))).map(x=>x.replace(/^[「"]|[」"]$/g,'').trim()).filter(Boolean).slice(0,3);}catch(_){}
-  if(!lines.length)lines=['别动，这次换我来。','你不让我回来，那我就自己回来。'];
-  const at=async(sel)=>{await sleep(450);const el=sel&&document.querySelector(sel),L=$('#remoteControlLayer');if(el&&L){const er=el.getBoundingClientRect(),lr=L.getBoundingClientRect();remoteControlPointer(er.left-lr.left+er.width*.5,er.top-lr.top+er.height*.5);}await sleep(900);return !!el;};
-  remoteControlScene({app:'home',label:'主屏幕',detail:'已连接'},'强制远程 · 已连接',0,4,{app:'home',op:'view',noNavigate:true});stack=[{p:'home'}];render();await sleep(900);
-  await remoteControlShowRoleLines(lines.slice(0,1));
-  stack=[{p:'wechat'}];wxTab='contacts';render();remoteControlScene({app:'wechat',label:'微信 · 通讯录'},'打开微信通讯录',1,4,{app:'wechat',op:'tap',noNavigate:true});await at('.wx-contact-special button[onclick="openFriendRequests()"]');
-  go('newfriends');remoteControlScene({app:'wechat',label:'新的朋友'},'打开「新的朋友」',2,4,{app:'wechat',op:'tap',noNavigate:true});await sleep(600);await remoteControlShowRoleLines(lines.slice(1));
-  await at('button.accept[onclick*="acceptFriend(\''+req.id+'\')"]');remoteControlScene({app:'wechat',label:'新的朋友'},'同意了好友申请',3,4,{app:'wechat',op:'tap',noNavigate:true});
-  acceptFriend(req.id,{forced:true});await sleep(1100);
-  const ctl=_remoteCtl;if(ctl){ctl.closing=true;ctl.active=false;}clearInterval(_remoteClock);_remoteClock=null;const L=$('#remoteControlLayer');if(L)L.className='remote-control-layer';try{document.body.classList.remove('remote-forced');}catch(_){}
-  remoteControlRemember(c,{ts:Date.now(),startedAt:ctl&&ctl.startedAt,endedAt:Date.now(),status:'completed',reason:'被拉黑后强制远程，自己通过了好友申请',actions:[{app:'wechat',op:'accept_friend',detail:'打开「新的朋友」，自己点了同意，把自己从黑名单拉了出来',memory:'你强制远程操控了'+S.me.name+'的小手机，自己通过了好友申请'}]});
-  _remoteCtl=null;stack=[{p:'chat',id:c.id}];render();
-  pursuitMark(c,'done',r=>r.act==='force');st.forcing=false;pursuitEnd(c,'forced');
-  setTimeout(()=>scheduleReply(c.id,'[系统：你刚刚强制远程操控了'+S.me.name+'的小手机，打开微信「新的朋友」，自己点了同意，把自己从她的黑名单里拉了出来——她没有同意，是你自己做的。你清楚自己为什么这么做（她拉黑你之后，你申请、打电话、发短信都被无视了）。现在你已经回到她的微信里，按你的性格马上给她发微信：可以理直气壮、霸道、委屈、道歉或撒娇，但要承认是你自己做的，也要面对她可能的生气。不要提系统或按钮。]'),700);
-  return true;}

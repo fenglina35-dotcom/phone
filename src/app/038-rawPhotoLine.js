@@ -1,3 +1,99 @@
+/* 第一行只写「我发了一张照片」「[发了一张照片]」，画面写在下一行：并成一张照片 */
+/* 「原话不过滤」一直开着（modelOutputUnfiltered 恒为 true），角色回复和后台消息都走原样显示，只认行首的 [图片|…]；这里只把确实是「发了照片+画面」的整行换成标签，别的话一个字不动 */
+function rawPhotoLine(line){const t=normalizeImageLine(String(line==null?'':line).trim());return /^\[图片\|[^\]]+\]$/.test(t)?t:line;}
+function photoIntroOnly(line){const r=photoIntroRest(line);return !!r&&(!r.rest||/^(?:给你看看|给你看|你看看|你看|看看)[。！!～~…]*$/.test(r.rest));}
+function mergePhotoIntroLines(lines){const out=[];lines=Array.isArray(lines)?lines:[];for(let i=0;i<lines.length;i++){const line=lines[i],next=lines[i+1];if(photoIntroOnly(line)&&next!=null&&photoDescLooksReal(photoLineUnwrap(next))){out.push('[图片|'+cleanPhotoDescText(photoLineUnwrap(next))+']');i++;continue;}out.push(line);}return out;}
+function isPhotoPromptFragment(line){
+  const s=(line||'').trim();if(!s||s.length>160)return false;
+  return /(低头|侧影|背影|逆光|遮挡|脸看不清|不露正脸|自然光|无文字水印|真实照片|照片质感|俯拍|手持感|构图|镜头|光线|背景|不换背景|水印|自拍|男友视角)/.test(s)&&!/[吗呢吧呀哦哈？?！!]/.test(s);
+}
+/* 生成照片的提示词：贴合角色身形气质、不露脸、场景照描述。
+   【必须简短】——长提示词会让生图明显变慢甚至超时失败，所以人设只取要点、整体压到200字内。 */
+/* ROLE_PHOTO_CANDID_V1：角色「生活抓拍·不露脸」拍照风格（聊天设置里按角色开关，默认关）。
+   她说角色照片张张都是拿手机挡脸，太死板。原来的写法在三层都把模型推向手机挡脸：charImgPrompt 的构图锁和「人物构图优先选」把手机挡脸排第一，
+   sanitizeRolePhotoScene 还把描述里的「自拍」改成「手机完全遮住脸的对镜自拍」，genImage 最后加的英文规则也要求用手机挡住整张脸、尽量别把头裁出去。
+   开启后：照片说明由 rolePhotoCandidPrompt 单独生成，不经过上面任何一段；每张从手、身体局部、背影、逆光侧影、他的视角、影子倒影里挑一种构图；
+   genImage 里再认一次（设置项、照片说明里的标记、角色开关任一命中都算），换成新的英文规则，并删掉任何残留的旧写法。关掉就和原来完全一样。 */
+const ROLE_PHOTO_CANDID_MARK='【拍照风格·生活抓拍不露脸】';
+const ROLE_PHOTO_CANDID_SHOTS=[
+  {key:'hands',label:'手部特写',cn:'手部特写：他的一只或两只手正拿着、握着或摆弄这件事里的东西（杯子、方向盘、书、钢笔、袖扣、手表），手是画面主角，手指修长、骨节分明、比例自然，带一点小臂和挽起的袖口；头和脸不在画面里',en:'close-up of his hands holding or using an object from the scene, long elegant fingers, distinct knuckles, subtle veins on the back of the hands and forearm, rolled sleeve, natural five-finger anatomy; head and face out of frame'},
+  {key:'torso',label:'下巴以下的上半身',cn:'从下巴往下拍上半身：画面上沿在下巴以下，拍到宽肩、胸口、领口和手臂，手里拿着东西或在做这件事；能看出结实的身材和肌肉线条，头和脸不在画面里',en:'upper-body shot cropped just below the chin, broad shoulders, chest and arms filling the frame, open collar or fitted shirt, muscular build visible, hands busy with the scene; head and face out of frame'},
+  {key:'back',label:'背影',cn:'背影：他背对镜头站在或走在场景里，拍到肩背和整体身形，衣服贴合身材，姿态放松好看；看不到脸',en:'back view of him standing or walking in the scene, broad shoulders and back, tall well-proportioned figure, clothes fitting his build, relaxed confident posture; face not visible'},
+  {key:'side',label:'侧身逆光',cn:'侧身逆光：他侧身站在窗边或灯下，头转向另一边，光从背后或侧面照过来，勾出肩膀、手臂和身体轮廓；脸转开或在暗处，看不清五官',en:'side view with backlight from a window or lamp, head turned away from the camera, rim light outlining shoulders, arms and torso; face turned away or in shadow, features unreadable'}
+];
+function rolePhotoCandidOn(c){return !!(c&&c.photoStyle==='candid');}
+const ROLE_PHOTO_BODY_MAX=300;
+function rolePhotoCandidBody(c){return String(c&&c.photoBody||'').replace(/\s+/g,' ').trim().slice(0,ROLE_PHOTO_BODY_MAX);}
+function rolePhotoCandidShot(text,pick){text=String(text||'');const by=k=>ROLE_PHOTO_CANDID_SHOTS.find(x=>x.key===k);if(pick&&by(pick))return by(pick);if(/手指|手掌|手腕|双手|你的手|他的手|拍手|手部/.test(text))return by('hands');if(/背影|背面|背对/.test(text))return by('back');if(/侧影|剪影|逆光/.test(text))return by('side');if(/锁骨|腹肌|胸肌|肌肉|腰|胳膊|小臂|肩膀|身材|穿着|穿搭|衣服/.test(text))return by('torso');const pool=['hands','hands','torso','torso','back','side'];return by(pool[Math.floor(Math.random()*pool.length)]);}
+/* 描述里的旧说法换掉：自拍改成随手抓拍，露脸要求和手机挡脸一律去掉（不露脸由构图保证） */
+function rolePhotoCandidScene(raw){return String(raw||'').replace(/(?:用)?手机(?:完全|整个)?(?:遮住|挡住|遮挡|挡|遮)(?:了)?(?:整张|半张)?(?:脸|面部|五官)?(?:的)?/g,'').replace(/对镜自拍|镜子自拍|镜中自拍|手持自拍|自拍照|自拍/g,'随手抓拍').replace(/(?:露出|展示|看清|拍清)?\s*(?:完整)?\s*(?:正脸|侧脸|脸部特写|面部特写)|露脸|看镜头/g,'').replace(/[，,、]{2,}/g,'，').replace(/\s+/g,' ').trim();}
+/* 收尾保险：开了新风格时，任何残留的旧写法（手机挡脸、只许手机全挡的对镜自拍）整句删掉 */
+const ROLE_PHOTO_OLD_WORDING_RE=/手机[^。；;！!\n]{0,14}(?:遮|挡)|(?:遮|挡)[^。；;！!\n]{0,10}手机|对镜自拍|镜中自拍|phone (?:fully )?cover|with a phone|phone fully covers|Mirror selfies? (?:are )?allowed/i;
+function rolePhotoCandidStrip(text){const parts=String(text||'').split(/([。；;！!\n]|\.\s)/),out=[];for(let i=0;i<parts.length;i+=2){const piece=parts[i]+(parts[i+1]||'');if(!ROLE_PHOTO_OLD_WORDING_RE.test(piece))out.push(piece);}return out.join('').trim();}
+function rolePhotoOldWordingPresent(text){return ROLE_PHOTO_OLD_WORDING_RE.test(String(text||''));}
+/* ROLE_PHOTO_CANDID_V2（第二版：她说第一版拍得丑——人设长相身材整句带入，只留四种构图，写清好看的画面与要避开的毛病，不再要求拍糊）。人设里写长相、身材的句子整句带进照片说明（以前只截前 80 字，写在后面的「帅、壮、肌肉」常被截掉）；写五官的句子换成一句「长相非常帅气精致」，免得模型去画脸 */
+function rolePhotoCandidLook(c){const text=String(c&&c.persona||'').replace(/\s+/g,' ').trim();if(!text)return'';const parts=text.split(/[。！？!?\n；;]/).map(x=>x.trim()).filter(Boolean),looks=[];let handsome=false;for(const part of parts){if(!/(帅|俊|英俊|精致|好看|颜值|身材|身高|米[0-9]|[0-9]{3}\s*cm|肌肉|腹肌|胸肌|壮|结实|健硕|宽肩|肩宽|窄腰|腰|腿|手|指|骨节|青筋|皮肤|肤色|白皙|冷白|小麦色|体型|高大|挺拔|纹身)/.test(part))continue;if(/(眼|眉|鼻|唇|嘴|脸|五官|睫毛|下颌|颧骨|泪痣|酒窝)/.test(part)){handsome=true;continue;}looks.push(part);if(looks.join('，').length>220)break;}return (handsome?'长相非常帅气精致，':'')+looks.join('，').slice(0,240);}
+function rolePhotoCandidPrompt(c,desc,opt){opt=opt||{};
+  const rawScene=rolePhotoCandidScene((desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180))||'一张日常生活照';
+  const directUserRequest=opt.test?String(desc||''):(rolePhotoContextRequest(c)||rolePhotoLatestUserImageRequest(c)),request=rolePhotoCandidScene(directUserRequest),requestText=(request+' '+rawScene).trim();
+  /* 只有她明确只要景物，或拍的是夜景、天空、天气、宠物这类，才不让他入镜；咖啡、饭菜、花这类东西改成他的手拿着，正是最好看的抓拍 */const objectOnly=!opt.shot&&!/(本人|你自己|你的手|他的手|手|背影|侧影|剪影|身材|穿着|穿搭|入镜|看看你|想看你|拍你|肌肉|腹肌)/.test(requestText)&&(rolePhotoSceneOnlyRequest(directUserRequest)||rolePhotoClothesOnlyRequest(directUserRequest)||/(夜景|风景|街景|天空|晚霞|朝霞|日出|日落|月亮|星空|云层|天气|下雨|下雪|窗外的|小猫|猫咪|狗狗|宠物)/.test(requestText)&&!/(你|他)(?:在|正)/.test(requestText));
+  const body=rolePhotoCandidBody(c),look=rolePhotoCandidLook(c);
+  let p=ROLE_PHOTO_CANDID_MARK+'【用户图片要求·最高优先级】'+(request||rawScene)+'。';
+  p+=rolePhotoSceneLogic(c,requestText);
+  p+=rolePhotoPeoplePolicy(c,requestText,directUserRequest);
+  p+='这次拍到的是：'+rawScene+'。';
+  if(objectOnly){p+='画面只拍眼前的东西或景色本身，是他拍给对方看的：主体清楚，质感真实，光线好看。ZERO PEOPLE, NO CHARACTER IN FRAME。';}
+  else{const shot=rolePhotoCandidShot(requestText,opt.shot),g=rolePhotoGender(c),female=g.cn==='成年女性';
+    p+='【本张构图】'+shot.cn+'。Composition: '+shot.en+'.';
+    p+='【人物】当前角色本人，'+(female?'成年女性':'成年男性')+'。'+(look?'人设外貌：'+look+'。':'')+(body?'身体特征：'+body+'。':'');
+    p+=female?'Subject: a strikingly beautiful, refined adult woman with an elegant figure and graceful natural pose.':'Subject: a strikingly handsome, refined adult man, tall with broad shoulders and a strong, well-defined muscular build, large beautiful hands with long fingers, distinct knuckles and subtle veins, clean well-fitted clothes, relaxed natural pose.';
+    p+='整张照片绝对不出现脸和五官，靠构图做到（头在画面外、背对、头转开、逆光），不靠任何东西挡在脸前。';
+  }
+  p+='【画面质感】Realistic photo shot on a recent iPhone, true-to-life skin and fabric texture, subject in sharp focus with gentle background blur, tasteful cinematic composition, natural directional light whose tone fits the time and place (cool daylight, warm lamp light or moody contrast, not always golden).';
+  p+='【避开】extra, missing, short or stubby fingers, malformed hands, distorted or extra limbs, awkward cropping, plastic or waxy skin, wax-figure look, oversaturated colors, constant yellow tint, heavy grain, motion blur, stiff pose, collage, text, watermark.';
+  return p.slice(0,2600);
+}
+async function rolePhotoCandidTest(id,shotKey){const photoAccount=actId(),c=getC(id),el=$('#rpc_scene');if(!c)return;if(!S.settings.imgGen||!imageGenerationAvailable()){toast('请先在 AI 账户开启并配置图片生成');return;}const scene=(el&&el.value.trim())||'随手拍一张你现在正在做的事';const shot=rolePhotoCandidShot(scene,shotKey),prompt=rolePhotoCandidPrompt(c,scene,{test:true,shot:shot.key});aiLoad('正在按「生活抓拍·不露脸」试拍…');try{const url=await genImage(prompt,{roleId:id,accountId:photoAccount,photoStyle:'candid'}),src=await stableImageSrc(url);if(getC(id)!==c)return;openModal(`<h3>试拍预览</h3><div class="hint">这张没有发进聊天。构图：${esc(shot.label)}</div><img src="${src}" alt="试拍预览" style="display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:12px;margin:12px 0"><div class="btns" style="flex-direction:column;gap:8px"><button class="btn p" onclick="closeModal();rolePhotoCandidTest('${id}')">再试一张</button><button class="btn g" onclick="closeModal()">关闭预览</button></div>`);}catch(e){toast('试拍失败：'+String(e&&e.message||'图片接口没有返回结果').slice(0,100),7000);}finally{aiDone();}}
+function rolePhotoCandidToggle(id){const c=getC(id);if(!c)return;if(rolePhotoCandidOn(c))delete c.photoStyle;else c.photoStyle='candid';save();render();if(c.proactive&&c.proactive.serverPush)roleServerPushSyncSoon(id);toast(rolePhotoCandidOn(c)?'已换成生活抓拍·不露脸':'已恢复原来的拍法');}
+function rolePhotoBodySave(id){const c=getC(id),el=$('#rpc_body');if(!c||!el)return;const v=String(el.value||'').replace(/\s+/g,' ').trim().slice(0,ROLE_PHOTO_BODY_MAX);if(v)c.photoBody=v;else delete c.photoBody;save();toast('身体特征已保存');}
+function charImgPrompt(c,desc){
+  if(rolePhotoCandidOn(c))return rolePhotoCandidPrompt(c,desc);
+  const per=c&&c.persona?(''+c.persona).replace(/\s+/g,' ').trim().slice(0,80):'';
+  const lk=(c&&c.imgLock)||buildImgLock(c||{});
+  const rawScene=(desc||'一张日常生活照').replace(/\s+/g,' ').trim().slice(0,180),studio=typeof roleImageStudioForScene==='function'&&roleImageStudioForScene(c,rawScene+' '+rolePhotoContextRequest(c)),scene=studio?rawScene:sanitizeRolePhotoScene(rawScene);
+  const directUserRequest=rolePhotoContextRequest(c)||rolePhotoLatestUserImageRequest(c),requestText=(directUserRequest+' '+rawScene).trim(),pairWithUser=rolePhotoPairWithUser(directUserRequest),directSceneOnly=rolePhotoSceneOnlyRequest(directUserRequest);
+  const directObjectOnly=rolePhotoClothesOnlyRequest(directUserRequest),outfitHit=!directObjectOnly&&rolePhotoOutfitRequest(requestText),clothesOnly=directObjectOnly||(!outfitHit&&rolePhotoClothesOnlyRequest(rawScene));
+  const withObjectSelf=/(你.*(抱|拿|牵|喂|逗).*(小猫|猫|狗|宠物|动物)|和.*(小猫|猫|狗|宠物|动物).*合照|你.*和.*(小猫|猫|狗|宠物|动物))/.test(requestText);
+  const objectHit=/(小猫|猫|狗|宠物|动物|物品|东西|礼物|商品|摆件|戒尺|鞋|包|书|文件|杯子|饭|菜|咖啡|风景|夜景|街景|城市灯光|路灯|天空|晚霞|朝霞|日出|日落|月亮|星空|云层|天气|下雨|下雪|窗外|房间|桌面|工具|器具|电脑|键盘|屏幕|花|树|建筑|车|门|床|沙发)/.test(requestText)||clothesOnly;
+  const activityOnly=/(你在干嘛|你在干吗|在干嘛|在干吗|干什么|忙什么|做什么|看看你在|发张图看看你|发张图片看看你)/.test(requestText);
+  const explicitSelf=/(自拍|本人|你本人|你自己|你的样子|现在的样子|看看你|看你|想看你|想看看你|把你|拍你|你也入镜|你入镜|露脸|正脸|侧脸|背影|半身|全身|身材|肌肉|腹肌|低头|侧影|镜子|镜中|男友视角|给我看看你本人|给我看看你自己)/.test(requestText);
+  const wantsSelf=!directSceneOnly&&(explicitSelf||outfitHit||withObjectSelf||pairWithUser)&&!activityOnly&&!clothesOnly;
+  const objectOnly=(objectHit&&!wantsSelf)||activityOnly;
+  if(studio)return roleImageStudioPrompt(c,{scene,requestText,objectOnly,userRequest:directUserRequest});
+  let p='【用户图片要求·最高优先级】'+(directUserRequest||scene)+'。先从这里提取主体、颜色、款式、穿戴方式和构图；“对/是”表示确认上一句，“重新发/再拍”表示沿用原要求重试。若后面的AI画面描述冲突，以这里为准。';
+  p+=rolePhotoSceneLogic(c,requestText);
+  p+=rolePhotoPeoplePolicy(c,requestText,directUserRequest);
+  p+=wantsSelf?roleVisualIdentity(c):'【拍摄者身份】这张照片是当前聊天角色本人拿手机拍给用户看的，用户和接收照片的人默认在镜头外；不是图库素材，也不是陌生人的照片。';
+  p+='【最高优先级构图锁】整张图片绝对不能出现任何人的脸或可辨认五官。不能出现眼睛、鼻子、嘴巴、正面、侧面脸部、镜中脸部或脸部轮廓。人物入镜时尽量保留头部轮廓和发型，但必须用手机、手、阴影、头发、帽檐、口罩、物体遮挡或背身角度把整张脸完全遮住；不要默认把整个头部裁到画面外。真实手机随手拍照片，生活流，不像棚拍，不像海报，不夸张修图。';
+  p+='这次拍到的是：'+scene+'。';
+  if(objectOnly){
+    p+='拍摄方式像角色本人拿手机给用户拍眼前的物品或场景；用户和接收照片的人在镜头外。第一人称视角，近距离，轻微手持感，构图自然。';
+    if(activityOnly)p+='画面主体是他眼前正在做的事、桌面、工具、书本、电脑或手边环境；可以有手部边缘，但不要出现头、脸、半身、镜中自拍或手机遮脸的人影。';
+    else if(clothesOnly)p+='画面主体必须是用户明确要求单独拍摄的服装或饰品本身，比如挂着、叠放、平铺、装在盒中或放在床椅桌面上；不要出现他本人、脸、头发、身体、手、镜中自拍或手机遮脸的人影。';
+    else p+='画面主体必须是物品、动物或场景本身；如果是夜景、风景、街景、天空、晚霞或天气，就采用角色眼前第一人称向外拍摄的纯场景构图；如果是猫/狗/宠物，就只拍宠物本身。ZERO PEOPLE, NO CHARACTER IN FRAME。不要出现他本人、脸、头发、身体、手、背影、倒影、影子、镜中自拍、手机遮脸的人影，也不要为了“不露脸”硬塞一个被遮挡的人。';
+  }else{
+    const rg=rolePhotoGender(c);
+    p+='主体是同一个'+(rg.cn==='成年女性'?'有生活感的成年女性':'年轻帅气的成年男子')+'，必须符合上面的角色本人身份锁。';
+    if(per)p+='人物气质参考：'+per+'。';
+    if(pairWithUser)p+='这是用户亲口要求的两人互动照。优先采用用户的第一人称镜头：当前男性角色的手牵住镜头前用户的中性手部，或只拍两人的手、手臂边缘、影子与背身轮廓；不显示用户完整身体，不推断用户是女性，不增加女性。';
+    else p+='拍摄方式像角色本人拿手机随手拍给用户看；“用户/聊天对象/收照片的人”默认在镜头外，不能因此自动增加女性。近距离，轻微手持感，日常感强，构图自然，不要像第三人站远处帮角色拍。';
+    if(outfitHit)p+='这次重点是当前角色本人实际穿上或戴上用户要看的东西，完整保留用户说的颜色、款式和拍摄范围。不要只拍衣服、饰品、衣架、床、桌面或空房间；只有用户明确要求摘下、脱下或只拍物品本身时才单拍物品。用户未限定镜头时使用自然、清楚的生活照构图，不固定成某一种。';
+    p+='严格沿用同一个人的外形风格，不要每次换脸换体型换气质。';
+    p+='人物构图优先选：手机完全遮脸的自拍/对镜自拍、手或物体自然遮住整张脸、帽檐阴影遮脸、头发遮脸、完整背面或侧后方且脸彻底不可见。禁止正脸、侧脸、低头露脸以及任何能看到部分五官的构图；只有在无法自然遮脸时才裁掉头部。';
+  }
+  p+='背景和地点严格服从描述，不乱换场景；光线自然，允许一点真实手机噪点和轻微虚焦，但整体清晰，无文字水印。【最终检查】画面中零张脸、零个可见五官；如果构图可能露出脸，就用手机、手、阴影或背身角度重新完全遮住，只有无法遮住时才裁掉头部。';
+  return p.slice(0,2200);
+}
 const WX_ACTION_WORDS='低头|抬头|垂眸|抬眼|看着|望着|盯着|皱眉|挑眉|眯眼|闭眼|抿唇|咬唇|勾唇|笑了|轻笑|苦笑|冷笑|叹气|叹了口气|吸气|呼气|沉默|停顿|顿了顿|愣住|靠近|俯身|转身|伸手|握住|攥住|抱住|亲了|吻了|摸了|坐下|站起|走到|靠在|屏幕|手机|指尖|眼神|视线|心里|脑海';
 const WX_ACTION_PAT='(?:'+WX_ACTION_WORDS+')';
 const WX_ACTION_RE=new RegExp(WX_ACTION_PAT);

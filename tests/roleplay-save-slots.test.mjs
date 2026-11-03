@@ -42,6 +42,35 @@ test('roleplay keeps several unfinished games per role and resumes any of them o
   // 删除存档
   const delId=await page.evaluate(()=>rpData(slotId).saves[0].saveId);await page.evaluate(id=>{window.uiConfirm=async()=>true;return rpDeleteSave(slotId,id);},delId);
   assert.deepEqual(await page.evaluate(()=>rpData(slotId).saves.length),0);assert.equal(await page.evaluate(()=>rpData(slotId).memory.length),2,label+': deleting a save leaves memories alone');
+  // 顶上按钮：「总结」「存档」都在，不多出别的换局按钮
+  const bar=await page.evaluate(()=>[...document.querySelectorAll('button')].map(b=>b.textContent.trim()));
+  assert(bar.includes('总结')&&bar.includes('存档')&&!bar.includes('换局'),label+': top bar keeps summary and archive buttons only');
+  // 结束：只把上次存进记忆之后的新内容存成记忆，整局聊天留在「存档」页的已结束里
+  await page.evaluate(()=>{rpData(slotId).msgs.push({id:'end-new',who:'me',source:'me',text:'结束前新说的话',time:Date.now()});});
+  await page.evaluate(()=>{uiConfirm=async()=>true;return rpEnd(slotId);});
+  const ended=await page.evaluate(()=>{const d=rpData(slotId),rec=d.memory.find(m=>/_end$/.test(m.id)),s=(d.saves||[]).find(x=>x.ended);return {active:d.active,endTexts:rec&&rec.msgs.map(m=>m.text),saved:s&&s.msgs.map(m=>m.text),title:s&&s.title,paused:d.saves.filter(x=>!x.ended).length};});
+  assert.equal(ended.active,false);assert.deepEqual(ended.endTexts,['结束前新说的话'],label+': ending stores only the part not yet in memory');
+  assert(ended.title==='古风那局'&&ended.saved.includes('古风里我说的话')&&ended.saved.includes('结束前新说的话'),label+': the whole ended chat stays in the save page');
+  await page.evaluate(()=>rpMemory(slotId,'saves'));const savesTab=await page.locator('#modal').innerText();
+  assert(savesTab.includes('已结束的')&&savesTab.includes('古风那局')&&savesTab.includes('查看聊天')&&savesTab.includes('新开一局'),label+': save page lists ended games');
+  await page.evaluate(()=>{const s=rpData(slotId).saves.find(x=>x.ended);rpSaveView(slotId,s.saveId);});assert((await page.locator('#modal').innerText()).includes('结束前新说的话'),label+': ended chat can be read');
+  // 「总结」页：记忆单独一页，长的可以收起展开
+  await page.evaluate(()=>{rpData(slotId).memory[0].summary='很长的总结'.repeat(40);rpMemory(slotId,'sum');});const sumTab=await page.locator('#modal').innerText();
+  assert(sumTab.includes('记忆总结模型')&&!sumTab.includes('新开一局'),label+': summary page is separate from saves');
+  const fold=await page.evaluate(()=>{const b=document.querySelector('#modal .rp-sum-toggle'),p=b&&b.previousElementSibling,closed=p&&p.scrollHeight>p.clientHeight+4;b.click();return {closed,label:b.textContent,open:p.getAttribute('data-open')};});
+  assert.deepEqual(fold,{closed:true,label:'收起',open:'1'},label+': long summaries fold and unfold');
+  // 没有进行中、也没有暂停的局时，开局是空白表单
+  await page.evaluate(()=>{closeModal();rpOpen(slotId);});assert.equal(await page.evaluate(()=>!!cur().fresh),true);assert.equal(await page.inputValue('#rp_title'),'');
+  // 角色主动邀请：重新设计一局，没玩完的那局自动存进存档
+  await page.fill('#rp_title','雨夜那局');fixtureText='阿澈：雨好大。';await page.evaluate(()=>rpSaveSetup(slotId,'direct'));await idle();
+  fixtureText=JSON.stringify({title:'海边灯塔守夜',plot:'灯塔里只剩两个人。',scene:'风从窗缝灌进来。',myRole:'旅人',hisRole:'守塔人',myPersona:'迷路了',hisPersona:'话少',daypart:'晚上',opening:['阿澈：进来吧。']});
+  await page.evaluate(()=>{stack=[{p:'home'}];render();});const card=await page.evaluate(()=>rpCreateInviteFromAI(slotId,'海边'));
+  const invited=await page.evaluate(()=>{const d=rpData(slotId);return {title:d.title,active:d.active,paused:d.saves.filter(x=>!x.ended).map(s=>s.title),hasOld:d.msgs.some(m=>/雨好大/.test(m.text))};});
+  assert(card,label+': role invite returns a card');assert.equal(invited.title,'海边灯塔守夜',label+': role designs a new round instead of resending the old one');
+  assert.deepEqual(invited.paused,['雨夜那局'],label+': the unfinished round is saved');assert.equal(invited.hasOld,false);
+  // 她正在那局页面里时，不打断她，照旧发当前这局
+  await page.evaluate(()=>{_rp={id:slotId,busy:false};stack=[{p:'home'},{p:'rp',id:slotId}];render();});await page.evaluate(()=>rpCreateInviteFromAI(slotId,'别的'));
+  assert.equal(await page.evaluate(()=>rpData(slotId).title),'海边灯塔守夜',label+': no switch while she is inside the round');
   assert.equal(await page.evaluate(()=>saveNowAsync()),true,label+': saves to storage');
   assert.deepEqual(errors,[],label+' page errors');
   await page.close();
