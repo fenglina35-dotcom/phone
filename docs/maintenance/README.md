@@ -3410,3 +3410,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-03 私人v1892 / iOS538：从提交 ff358366 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.538/538）并覆盖安装到用户 iPhone；包内 APP_VER v1892 · 文件回信密码彩蛋四项修复，app.js、commerce-ui.js、mail-outbox.js/.css 与提交逐字节一致；devicectl 一次安装成功并读回 1.0.538 (538)。发布前全量 5011 项通过（升版后 2 项按设计跳过），核心聊天普通与查岗预览均通过。云端迁移 202611030001_north_market_pin_reset.sql 尚未部署（只读核对：线上只有 north_market_identity / north_market_pin），部署前「忘记密码」会报错。网页 v1888 未推送。
 
 2026-11-03 用户同意后部署云端迁移 202611030001_north_market_pin_reset.sql 到真人店铺项目（lkhlyfpssmrjkkzhuzag），supabase db query --linked -f 执行成功。只读核对：north_market_pin_reset(p_phone_id,p_secret,p_new) 存在，security definer，anon 可执行、public 不可（与 north_market_pin 相同）；用假身份调用返回 HTTP 400 被拒，没有改任何钱包。手机 1.0.538 的「忘记密码」从此可用，真机实测待她回报。
+
+2026-11-03 网页v1888上线核验：用户要求推送。先并入此前未推送的 Codex 记录 5d95997e（README 末尾冲突，按日期保留两边），git push origin HEAD:main 首次成功（844c46f8→493b299a）。约 2 分钟后线上小手机.html 引用 app.js?v=1888，线上 app.js、commerce-ui.js、mail-outbox.js、mail-outbox.css 与提交逐字节一致。本次一起上线：角色扮演多存档与存档/总结分页（网页首次）、刚发文件看 2 万字、支付密码忘记后重设、原文模式认心声彩蛋、回信引号容错与 3 次上限。手机已是 1.0.538，无需重装。
