@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1892 · 省用量设置和按功能汇总';
+const APP_VER='v1893 · 后台小功能精简人设';
 //@@ private
-const APP_VER='v1896 · 省用量设置和按功能汇总';
+const APP_VER='v1897 · 后台小功能精简人设';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

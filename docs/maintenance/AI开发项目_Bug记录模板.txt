@@ -2588,3 +2588,8 @@ PROACTIVE_CALL_BUDGET_V1 普通定时主动联系每次最多 2 次模型调用�
 MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着写、失败、输入/输出 token，留 7 天；全部调用记录顶上显示，可切日期。
 部署：私人云 qvuahlqimcfgeoetosnl 的 phone-role-push 线上 v48 与仓库只差未上线的 PRECISE_ROLE_TIME_TEST_V1，按规矩不整份部署：下载线上源，只插入这两处新增行（逐行对上下文），esbuild 解析通过后部署。公开云未改。
 测试：tests/usage-saving-controls.test.mjs，FIX_TEST_OLD=1 失败。截图核对设置与汇总表。真机用量待她观察。
+
+2026-11-04 后台小功能精简人设（ROLE_LITE_SYSTEM_V1，她同意，节日祝福她说不改）
+现象：日程提醒、闹钟、心情记录、关系变化（约会后、加推荐好友）、突然查岗只写一两句，却每次带 buildSystem 完整人设（测试角色 1.7 万字，真实角色更多）。
+修复：新增 roleLiteSystem(c,{query,recent,wechat})：人设原文+说话风格+优先规则、称呼、关系事实、现在时间和作息、selectRelevantMemory 最多 5 条、最近 3 轮聊天；日程提醒加微信一行一条的格式规矩。闹钟和约会后关系判断已自带上下文，不再带最近聊天。phone-shortcuts.js 用 typeof 保护调用。聊天、写信、朋友圈、节日祝福仍用 buildSystem。
+测试：tests/role-lite-system.test.mjs，FIX_TEST_OLD=1 失败。测试角色实测完整 17358 字 → 精简 766 字。真实效果待她观察这几处语气。

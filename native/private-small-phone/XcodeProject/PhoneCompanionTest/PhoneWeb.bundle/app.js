@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1896'){
+if(window.__NORTH_SHELL_BUILD__!=='1897'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1896 · 省用量设置和按功能汇总';
+const APP_VER='v1897 · 后台小功能精简人设';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2674,6 +2674,18 @@ function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;con
   out=out.replace(/如果ta隔了很久才回来，可以自然提到等了多久；如果刚上线，就别说成一直在线。/,'这些只是状态事实，不能自动推导为冷落、撒谎或欠回复，也不规定你必须提起。');
   out=out.replace(/\n- 重要：只有([^\n]+?)可以手动拉黑你；你不能拉黑\1，也绝对不要输出\[拉黑\]。[^\n]*/,'\n- 只有$1可以手动拉黑你；你不能拉黑$1，也绝对不要输出[拉黑]。');
   return out;}
+/* ROLE_LITE_SYSTEM_V1（2026-11-04，她同意）：只写一两句的后台小功能（日程提醒、闹钟、心情记录、关系变化、突然查岗）不再带完整人设（一两万字），
+   只带：人设原文和说话风格、称呼和关系、现在时间和作息、和这件事有关的最多 5 条记忆、最近 3 轮聊天。聊天、写信、朋友圈等照旧用 buildSystem。 */
+function roleLiteSystem(c,opt){opt=opt||{};if(!c)return'';const me=S.me.name,him=c.remark||c.name||'角色',main=isMain();
+ let s='【这是一段沉浸式的虚构角色扮演】你就是下面这个角色本人，用ta的身份、性格、口吻说话，不要以 AI、助手或程序的身份说话，不要说教或跳戏。\n\n# 角色基础人设（优先级第一）\n'+(c.persona||'按已经建立的身份、性格与说话方式自然相处')+traitSpeechDesc(c)+rolePriorityPrompt();
+ s+='\n\n# 你和谁\n对方是「'+me+'」，你是「'+him+'」。称呼按人设和你们聊天里已经建立的习惯。';
+ if(main)s+='\n\n# 当前关系事实\n'+affTone(c);else s+='\n\n# 当前关系边界\n你与「'+me+'」是独立关系，只能依据ta的身份设定和当前账号聊天记录判断熟悉程度。';
+ if(S.settings.timeAware!==false)s+='\n\n# 现在\n'+fmtDT(Date.now())+'。'+(typeof roleSchedulePrompt==='function'?roleSchedulePrompt(c):'');
+ try{const mem=selectRelevantMemory(c,String(opt.query||''),5);if(mem&&mem.items&&mem.items.length)s+=memoryRetrievalPrompt(c,mem);}catch(_){}
+ if(opt.wechat)s+='\n\n# 格式\n这是发到微信里的消息：像真人聊天那样一行一条、每条简短；不要旁白、不要用括号写动作、不要输出方括号标签。';
+ if(opt.recent!==false){try{const rows=lastRounds(msgs(c.id)||[],3).filter(m=>m&&m.type!=='sys').map(m=>(m.role==='user'?me:him)+'：'+String(msgToText(m)||'').replace(/\s+/g,' ').slice(0,200)).filter(x=>!/：$/.test(x));if(rows.length)s+='\n\n# 最近聊天（只为知道刚才在聊什么）\n'+rows.join('\n').slice(-1500);}catch(_){}}
+ return s;}
+
 function buildSystem(c,opt){
   friendDiscoveryRepairRoleName(c);
   opt=opt||{};
@@ -6135,7 +6147,7 @@ async function moodDel(mid){if(!await uiConfirm('删掉这条心情记录？'))r
 async function recordTaMood(cid){pruneDailyMood();const c=getC(cid);if(!c||c.blocked)return false;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return true;
   const mine=(S.mood||[]).find(m=>m.date===t&&m.who==='me');
   try{const moodList=MOODK.map(k=>k+'='+MOODS[k][0]).join('、');
-    const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
+    const sys=roleLiteSystem(c,{query:'今天 心情'})+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
     const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'记今天'}],{max:80,aux:true});
     let line=cleanReply(r).replace(/\n/g,' ').trim();if(!line)return false;
     let mk='calm',note=line;const mm=line.match(/^\s*([a-z]+)\s*[|｜:：]\s*(.+)$/i);
@@ -6505,7 +6517,7 @@ function holidayCare(id,name,date,opt){opt=opt||{};if(roleOnlineProactiveBlocked
       +'不要输出 [保持安静]，不要提系统或规则，不要说错日期。]';
     const queued=scheduleReply(id,note,done);if(!queued)done(false);});}
 async function remindEvent(id,e){if(!calEventAlerts(e)||roleOnlineProactiveBlocked(id))return false;const calendarState=S,calendarOwner=actId();const c=getC(id);try{let sent=0;
-  const content=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),query:e.title||''})},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期）':'')+'。这是'+S.me.name+'明确设置由你提醒的日程；请按你本人的方式提醒ta，不规定你的情绪或固定措辞。]'}]);
+  const content=await chatAPI([{role:'system',content:roleLiteSystem(c,{query:e.title||'',wechat:true})},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期）':'')+'。这是'+S.me.name+'明确设置由你提醒的日程；请按你本人的方式提醒ta，不规定你的情绪或固定措辞。]'}]);
   if(S!==calendarState||actId()!==calendarOwner||!calEventAlerts(e)||roleOnlineProactiveBlocked(id))return false;
   applyAuxTags(content,c,id);content=typeof deskPetConsume==='function'?deskPetConsume(content,c):content;content=typeof familyRoleConsume==='function'?await familyRoleConsume(content,c):content;content=cohabConsumeOnlineState(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){if(!wechatNaturalOn())c.mood=moodInnerMonologue(c,honestMoodText(c,_mo[1]));return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;lineToMsgs(l,c).forEach(mm=>{if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);sent++;});});if(!sent)return false;save();if(cur().p==='chat'&&cur().id===id)refreshChatMessages(id);else if(cur().p==='wechat')render();return true;
 }catch(e2){return false;}}
@@ -15330,12 +15342,12 @@ function relConsumeTags(text,c){if(!c||!text)return text;if(typeof relFamilyCons
 /* 一场线下/剧场结束后，角色回头看看和在场或被提到的人关系有没有变化 */
 async function relAfterScene(cid,rows,where){const c=getC(cid);if(!c)return;const views=relLinksOf(cid).filter(v=>!v.l.locked);if(!views.length)return;const text=(rows||[]).map(m=>String((m&&(m.text||m.content))||'')).join('\n').slice(-6000);
   const touched=views.filter(v=>[relName(v.other),relRealName(v.other)].some(n=>n&&text.includes(n)));if(!touched.length)return;
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)+'\n\n# 刚刚结束的'+(where||'线下见面')+'（节选）\n'+text.slice(-3500)},{role:'user',content:'[这场'+(where||'线下见面')+'刚结束。只看你和这些人：'+touched.map(v=>relPromptName(v.other)).join('、')+'。这次发生的事有没有真的让你对谁的感情变了？有就每人单独一行写 [关系|名字|+n|原因] 或 [关系|名字|-n|原因]（n 最多 '+REL_FEEL_STEP+'），没变化就只输出 无。不要写别的。]'}],{max:200,aux:true});
+  try{const raw=await chatAPI([{role:'system',content:roleLiteSystem(c,{recent:false,query:touched.map(v=>relPromptName(v.other)).join(' ')})+'\n\n# 刚刚结束的'+(where||'线下见面')+'（节选）\n'+text.slice(-3500)},{role:'user',content:'[这场'+(where||'线下见面')+'刚结束。只看你和这些人：'+touched.map(v=>relPromptName(v.other)).join('、')+'。这次发生的事有没有真的让你对谁的感情变了？有就每人单独一行写 [关系|名字|+n|原因] 或 [关系|名字|-n|原因]（n 最多 '+REL_FEEL_STEP+'），没变化就只输出 无。不要写别的。]'}],{max:200,aux:true});
     relConsumeTags(String(raw||''),c);}catch(_){}}
 /* ---- 我推荐名片给角色、角色加了：角色自己建立关系（默认开，待我确认） ---- */
 async function relAutoLink(roleId,otherId,how){const r=relInit();if(r.autoLink===false)return null;const c=getC(roleId),o=getC(otherId);if(!c||!o||relLinkOf(roleId,otherId))return null;
   const l=relNewLink(roleId,otherId,{ab:'朋友',ba:'朋友',fa:50,fb:50,how:how||(S.me.name+'推荐认识的'),origin:'role',pending:true});if(!l)return null;save();
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.name||o.remark)+'」'+(o.remark&&o.name&&o.remark!==o.name?'（'+S.me.name+'给ta的备注是「'+o.remark+'」）':'')+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":"","你心里怎么看ta":""}。来历只写客观经过，用名字写（'+relPromptName(roleId)+'、'+(o.name||o.remark)+'、'+S.me.name+'），不要用我、你、他；心里怎么看用你自己的口吻]'}],{max:160,aux:true});
+  try{const raw=await chatAPI([{role:'system',content:roleLiteSystem(c,{query:o.name||o.remark||''})},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.name||o.remark)+'」'+(o.remark&&o.name&&o.remark!==o.name?'（'+S.me.name+'给ta的备注是「'+o.remark+'」）':'')+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":"","你心里怎么看ta":""}。来历只写客观经过，用名字写（'+relPromptName(roleId)+'、'+(o.name||o.remark)+'、'+S.me.name+'），不要用我、你、他；心里怎么看用你自己的口吻]'}],{max:160,aux:true});
     const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(relTitleTaken(roleId,j['ta是你的'],l.id)||relTitleTaken(otherId,j['你是ta的'],l.id))return l;if(j['ta是你的'])l.ab=String(j['ta是你的']).slice(0,20);if(j['你是ta的'])l.ba=String(j['你是ta的']).slice(0,20);if(Number.isFinite(+j['你对ta好感']))l.fa=+j['你对ta好感'];if(Number.isFinite(+j['ta对你好感']))l.fb=+j['ta对你好感'];if(j['来历'])l.how=String(j['来历']).slice(0,80);if(j['你心里怎么看ta'])l[relView(l,roleId).side==='a'?'va':'vb']=String(j['你心里怎么看ta']).slice(0,200);relCleanLink(l);save();}}catch(_){}
   return l;}
 
@@ -19375,7 +19387,7 @@ function viewWeblink(mid){let m;for(const k in S.messages){const x=S.messages[k]
 /* =================== 闹钟 =================== */
 let _nativeAlarmAuthorized=false,_nativeAlarmSyncBusy=false,_nativeAlarmSyncAgain=false;
 function alarmCompanionFallback(c,label){const who=c&&String(c.remark||c.name||'').trim(),thing=String(label||'闹钟').trim()||'闹钟';return '到时间了。你定的“'+thing+'”，现在去做，做完回来告诉我。'+(who?'我等你。':'');}
-async function alarmPrepareCompanionText(alarm){const c=alarm&&getC(alarm.contactId);if(!c||!(S.settings&&S.settings.chat&&S.settings.chat.key))return;try{const recent=(msgs(c.id)||[]).slice(-6).map(m=>(m.role==='user'?S.me.name:(c.remark||c.name))+'：'+msgToText(m)).join('\n').slice(-800),prompt='你给'+S.me.name+'设置的闹钟现在到点，备注是“'+String(alarm.label||'闹钟').slice(0,60)+'”。请按你自己的性格发一条自然的短消息提醒ta现在去做这件事，可以关心、催促、撒娇或严厉，但不能说自己是系统或闹钟程序，也不要输出任何方括号标签。只输出要发给ta的一至两句正文。'+(recent?'\n最近聊天仅供保持语气：\n'+recent:'');let text=String(await chatAPI([{role:'system',content:buildSystem(c)+'\n\n现在只写闹钟到点时的一条短提醒，不执行任何标签。'},{role:'user',content:prompt}],{max:120,temp:.82,aux:true})||'').replace(/\[(?:心情|记住|闹钟|来电|联网)[^\]]*\]/g,'').trim();text=cleanRolePunct(text).slice(0,160);if(!text)return;const live=(S.alarms||[]).find(a=>a.id===alarm.id);if(!live)return;live.companionText=text;save();nativeAlarmSync(false);}catch(_){}}
+async function alarmPrepareCompanionText(alarm){const c=alarm&&getC(alarm.contactId);if(!c||!(S.settings&&S.settings.chat&&S.settings.chat.key))return;try{const recent=(msgs(c.id)||[]).slice(-6).map(m=>(m.role==='user'?S.me.name:(c.remark||c.name))+'：'+msgToText(m)).join('\n').slice(-800),prompt='你给'+S.me.name+'设置的闹钟现在到点，备注是“'+String(alarm.label||'闹钟').slice(0,60)+'”。请按你自己的性格发一条自然的短消息提醒ta现在去做这件事，可以关心、催促、撒娇或严厉，但不能说自己是系统或闹钟程序，也不要输出任何方括号标签。只输出要发给ta的一至两句正文。'+(recent?'\n最近聊天仅供保持语气：\n'+recent:'');let text=String(await chatAPI([{role:'system',content:roleLiteSystem(c,{recent:false,query:'闹钟'})+'\n\n现在只写闹钟到点时的一条短提醒，不执行任何标签。'},{role:'user',content:prompt}],{max:120,temp:.82,aux:true})||'').replace(/\[(?:心情|记住|闹钟|来电|联网)[^\]]*\]/g,'').trim();text=cleanRolePunct(text).slice(0,160);if(!text)return;const live=(S.alarms||[]).find(a=>a.id===alarm.id);if(!live)return;live.companionText=text;save();nativeAlarmSync(false);}catch(_){}}
 function nativeAlarmRows(){return(S.alarms||[]).map(a=>{const c=getC(a.contactId);return{id:String(a.id||''),time:String(a.time||''),label:String(a.label||'闹钟'),companionText:String(a.companionText||alarmCompanionFallback(c,a.label)),contactId:String(a.contactId||''),roleName:c?String(c.remark||c.name||'角色'):'角色',enabled:a.enabled!==false,repeat:a.repeat==='daily'?'daily':'once'};});}
 function alarmApplyFiredEvents(rows){if(!Array.isArray(rows)||!rows.length)return 0;S._alarmEventSeen=S._alarmEventSeen||{};let added=0;for(const event of rows){const alarmId=String(event&&event.alarmId||''),firedAt=Math.max(0,+String(event&&event.firedAt||0)||Date.now()),key=alarmId+'|'+new Date(firedAt).toDateString();if(!alarmId||S._alarmEventSeen[key])continue;const alarm=(S.alarms||[]).find(a=>String(a.id)===alarmId),cid=String(event.roleId||alarm&&alarm.contactId||''),c=getC(cid);if(!c)continue;const content=String(event.message||alarm&&alarm.companionText||alarmCompanionFallback(c,event.label||alarm&&alarm.label)).trim();if(!content)continue;msgs(cid).push({role:'assistant',type:'text',content,time:firedAt,id:'alarm_'+alarmId+'_'+firedAt,_alarm:true});S._alarmEventSeen[key]=firedAt;added++;}const keys=Object.keys(S._alarmEventSeen);if(keys.length>80)keys.sort((a,b)=>S._alarmEventSeen[b]-S._alarmEventSeen[a]).slice(80).forEach(k=>delete S._alarmEventSeen[k]);if(added){save();if(cur().p==='chat')refreshChatMessages(cur().id);else render();}return added;}
 async function nativeAlarmSync(showError){if(!window.__SMALL_PHONE_PRIVATE__||!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')return false;if(_nativeAlarmSyncBusy){_nativeAlarmSyncAgain=true;return false;}_nativeAlarmSyncBusy=true;try{const result=await window.SmallPhoneNative.request('alarm.sync',{alarms:nativeAlarmRows()});_nativeAlarmAuthorized=!!(result&&result.supported&&result.authorized);alarmApplyFiredEvents(result&&result.firedEvents);const fired=new Set(result&&Array.isArray(result.firedIds)?result.firedIds:[]);if(fired.size){S.alarms=(S.alarms||[]).filter(a=>!fired.has(a.id));save();if(document.querySelector('.modal'))alarmManager();}if(showError&&result&&result.supported&&!result.authorized)toast('请允许小手机使用系统闹钟');return _nativeAlarmAuthorized;}catch(e){_nativeAlarmAuthorized=false;if(showError)toast('系统闹钟同步失败，请重新添加或检查权限');return false;}finally{_nativeAlarmSyncBusy=false;if(_nativeAlarmSyncAgain){_nativeAlarmSyncAgain=false;setTimeout(()=>nativeAlarmSync(false),100);}}}

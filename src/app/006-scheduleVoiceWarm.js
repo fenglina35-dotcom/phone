@@ -25,7 +25,7 @@ function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navig
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
 //@@ web
-  const url='sw.js?v=1892&r=v1892-owner-todo-report-1';
+  const url='sw.js?v=1893&r=v1893-owner-todo-report-1';
 //@@ private
   const url='sw.js?v=1419&r=v1419-private-pf-role-1';
 //@@ end
@@ -417,6 +417,18 @@ function wechatNaturalSlimSystem(text,opt){if(!opt||!opt.natural)return text;con
   out=out.replace(/如果ta隔了很久才回来，可以自然提到等了多久；如果刚上线，就别说成一直在线。/,'这些只是状态事实，不能自动推导为冷落、撒谎或欠回复，也不规定你必须提起。');
   out=out.replace(/\n- 重要：只有([^\n]+?)可以手动拉黑你；你不能拉黑\1，也绝对不要输出\[拉黑\]。[^\n]*/,'\n- 只有$1可以手动拉黑你；你不能拉黑$1，也绝对不要输出[拉黑]。');
   return out;}
+/* ROLE_LITE_SYSTEM_V1（2026-11-04，她同意）：只写一两句的后台小功能（日程提醒、闹钟、心情记录、关系变化、突然查岗）不再带完整人设（一两万字），
+   只带：人设原文和说话风格、称呼和关系、现在时间和作息、和这件事有关的最多 5 条记忆、最近 3 轮聊天。聊天、写信、朋友圈等照旧用 buildSystem。 */
+function roleLiteSystem(c,opt){opt=opt||{};if(!c)return'';const me=S.me.name,him=c.remark||c.name||'角色',main=isMain();
+ let s='【这是一段沉浸式的虚构角色扮演】你就是下面这个角色本人，用ta的身份、性格、口吻说话，不要以 AI、助手或程序的身份说话，不要说教或跳戏。\n\n# 角色基础人设（优先级第一）\n'+(c.persona||'按已经建立的身份、性格与说话方式自然相处')+traitSpeechDesc(c)+rolePriorityPrompt();
+ s+='\n\n# 你和谁\n对方是「'+me+'」，你是「'+him+'」。称呼按人设和你们聊天里已经建立的习惯。';
+ if(main)s+='\n\n# 当前关系事实\n'+affTone(c);else s+='\n\n# 当前关系边界\n你与「'+me+'」是独立关系，只能依据ta的身份设定和当前账号聊天记录判断熟悉程度。';
+ if(S.settings.timeAware!==false)s+='\n\n# 现在\n'+fmtDT(Date.now())+'。'+(typeof roleSchedulePrompt==='function'?roleSchedulePrompt(c):'');
+ try{const mem=selectRelevantMemory(c,String(opt.query||''),5);if(mem&&mem.items&&mem.items.length)s+=memoryRetrievalPrompt(c,mem);}catch(_){}
+ if(opt.wechat)s+='\n\n# 格式\n这是发到微信里的消息：像真人聊天那样一行一条、每条简短；不要旁白、不要用括号写动作、不要输出方括号标签。';
+ if(opt.recent!==false){try{const rows=lastRounds(msgs(c.id)||[],3).filter(m=>m&&m.type!=='sys').map(m=>(m.role==='user'?me:him)+'：'+String(msgToText(m)||'').replace(/\s+/g,' ').slice(0,200)).filter(x=>!/：$/.test(x));if(rows.length)s+='\n\n# 最近聊天（只为知道刚才在聊什么）\n'+rows.join('\n').slice(-1500);}catch(_){}}
+ return s;}
+
 function buildSystem(c,opt){
   friendDiscoveryRepairRoleName(c);
   opt=opt||{};

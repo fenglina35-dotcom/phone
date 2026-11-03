@@ -146,7 +146,7 @@ async function moodDel(mid){if(!await uiConfirm('删掉这条心情记录？'))r
 async function recordTaMood(cid){pruneDailyMood();const c=getC(cid);if(!c||c.blocked)return false;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return true;
   const mine=(S.mood||[]).find(m=>m.date===t&&m.who==='me');
   try{const moodList=MOODK.map(k=>k+'='+MOODS[k][0]).join('、');
-    const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
+    const sys=roleLiteSystem(c,{query:'今天 心情'})+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
     const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'记今天'}],{max:80,aux:true});
     let line=cleanReply(r).replace(/\n/g,' ').trim();if(!line)return false;
     let mk='calm',note=line;const mm=line.match(/^\s*([a-z]+)\s*[|｜:：]\s*(.+)$/i);
