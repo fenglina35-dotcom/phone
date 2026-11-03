@@ -866,3 +866,10 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 她设每天 1 封，他一天主动写来两封（她确认不是回信、礼物、心情信）。2026-09-24 已按「写成了才记账」的原因改成先占坑（cb153dcc），仍复发，说明计数 S._mailCount 还有别的被换掉/清零的路径（云恢复、存档合并等），没再去猜具体哪条。
 - 现在 scanMail 在比较上限前，用 mailAutoTodayCount 数信箱里今天这个角色主动写来的信（同账号；不算 replyTo 回信、mood 心情信、type 礼物信），计数取两者大的。新写的主动信带 auto:true。
 - 验证：tests/mail-daily-inbox-count.test.mjs（旧代码失败）。
+
+## 通话里念出模型的英文思考（REASONING_TAGS_V2，2026-11-04）
+- 用户截图：视频通话记录里一条条是 `<thinking>`、整段英文思考、`</thinking>`，再接正常台词。她现在用的模型把思考写在 `<thinking>` 标签里。
+- 原因两处：通话（040 的 callAI → _callChat → callChatWithRetry）拿到回复后从不过滤思考块；微信的 wechatStripReasoningEnvelope 和 wechatReasoningLeak 只认 `<think>`，正则里的 `\b` 让 `<thinking>` 漏过去（微信这次没出事，多半是因为别的检查或模型在微信里没这样写）。
+- 现在 roleStripReasoningBlocks（038）统一处理 think/thinking/analysis/reasoning：成对整块删；只有开头没结尾，从开头起都丢；只有结尾没开头，只留结尾后的正文。_callChat 的结果都过它；wechatStripReasoningEnvelope 改为调用它；漏思考检测也认 `<thinking>`。普通英文句子里的 thinking 不受影响。
+- 角色扮演另有 rpVisibleReplyText（ROLEPLAY_REASONING_ISOLATE_V1），没改。
+- 验证：tests/reasoning-tags-v2.test.mjs（旧代码 4 项全失败）。

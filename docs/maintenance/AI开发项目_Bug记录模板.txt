@@ -2567,3 +2567,9 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 上次（2026-09-24 cb153dcc）按「写成了才记账、中途退出计数丢」改成先占坑，问题仍在，说明原诊断不完整。
 本次换思路：不再只信 S._mailCount，写信前直接数信箱里今天的主动信（mailAutoTodayCount），两者取大。不依赖找到计数被清零的具体路径。
 测试：tests/mail-daily-inbox-count.test.mjs，FIX_TEST_OLD=1 双端失败。真机待观察几天。
+
+2026-11-04 视频通话把模型思考当台词念出来（紧急）
+现象：视频通话记录出现 <thinking>、英文思考段落、</thinking> 三条，后面才是台词。微信聊天没有。
+原因：通话路径拿到模型回复后没有任何思考块过滤；微信的过滤正则只认 <think>，\b 使 <thinking> 不被匹配。不是近期改动破坏的，是她换的模型开始用 <thinking> 标签。
+修复：REASONING_TAGS_V2，roleStripReasoningBlocks 统一去思考块，通话 _callChat 结果、微信 wechatStripReasoningEnvelope 都用它，漏思考检测加 thinking。
+测试：tests/reasoning-tags-v2.test.mjs，FIX_TEST_OLD=1 双端失败。

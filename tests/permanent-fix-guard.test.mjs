@@ -53,6 +53,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1894 / web v1890",scope:"both",least:1,file:"app.js",name:"模型的 <thinking> 思考块在通话和微信里都不当台词（以前通话完全不过滤、微信只认 <think>）",marker:"REASONING_TAGS_V2"},
   {release:"private v1893 / web v1889",scope:"both",least:1,file:"app.js",name:"每天几封信：写之前再数信箱里今天他主动写的信，计数被清零也不会多写",marker:"MAIL_DAILY_INBOX_COUNT_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"她刚发、角色还没回的文件给他看前 2 万字（以前只有 4000 字），存进消息上限 5 万字",marker:"CHAT_FILE_FRESH_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码忘了可以不用旧密码直接设新密码，设新密码时可以让情侣角色记住",marker:"MARKET_PIN_RESET_V1"},

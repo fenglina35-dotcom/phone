@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1889 · 每天几封信不再多写';
+const APP_VER='v1890 · 通话不再念出模型思考';
 //@@ private
-const APP_VER='v1893 · 每天几封信不再多写';
+const APP_VER='v1894 · 通话不再念出模型思考';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
