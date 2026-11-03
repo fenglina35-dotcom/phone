@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1885 · 角色扮演思考内容与正文隔离';
+const APP_VER='v1886 · 角色扮演多存档';
 //@@ private
-const APP_VER='v1889 · 角色扮演思考内容与正文隔离';
+const APP_VER='v1890 · 角色扮演多存档';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

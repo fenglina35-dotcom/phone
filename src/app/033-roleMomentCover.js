@@ -104,7 +104,7 @@ function clearContactPhoneMemory(c,id){if(!c||typeof phState!=='function')return
   Object.keys(_phAliasFollowups||{}).forEach(k=>{if(k.indexOf(id+':')===0||k.indexOf('spoof:'+id+':')===0)delete _phAliasFollowups[k];});
   delete c.phoneSpoofHistory;delete c.phoneAliasCallHistory;delete c.phoneSpoofSmsHistory;delete c.phoneAliasHistory;
 }
-function clearContactRoleplayMemory(id){if(!S.roleplay)return;delete S.roleplay[id];Object.keys(S.roleplay).forEach(k=>{const d=S.roleplay[k];if(!d)return;if(Array.isArray(d.members))d.members=d.members.filter(x=>x&&x.id!==id);if(Array.isArray(d.msgs))d.msgs=d.msgs.filter(x=>!x||x.cid!==id);if(d.inviteMids)delete d.inviteMids[id];});}
+function clearContactRoleplayMemory(id){if(!S.roleplay)return;delete S.roleplay[id];Object.keys(S.roleplay).forEach(k=>{const room=S.roleplay[k];if(!room)return;[room].concat(Array.isArray(room.saves)?room.saves:[]).forEach(d=>{if(!d)return;if(Array.isArray(d.members))d.members=d.members.filter(x=>x&&x.id!==id);if(Array.isArray(d.msgs))d.msgs=d.msgs.filter(x=>!x||x.cid!==id);if(d.inviteMids)delete d.inviteMids[id];});});}
 function clearContactMemoryData(c,id){const now=Date.now();c._memoryResetAt=now;
   const aids=['main',...((S.me&&S.me.accounts)||[]).map(a=>a&&a.id).filter(Boolean)];[...new Set(aids)].forEach(aid=>{if(typeof replyTouch==='function')replyTouch(id,aid);});
   Object.keys(S.messages||{}).forEach(k=>{if(!contactMemoryThreadKey(k,id))return;(S.messages[k]||[]).forEach(clearVoiceAudio);delete S.messages[k];});
