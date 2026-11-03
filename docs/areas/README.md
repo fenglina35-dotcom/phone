@@ -840,3 +840,24 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - HOME_GLASS_KEEP_V1、HOME_GLASS_MEMORY_V1 两次都没好，按规矩不再猜，先拿证据。私人版组件没贴玻璃时底下是半透明深色（glass-theme.css 的 rgba(24,25,29,.2)），不是黑块，所以黑块应是「玻璃画出来就是黑的」，最可能是壁纸贴图是空的。
 - 现在：lgDraw 画完用 GL 画布 readPixels 读正中 1 个像素（不用 getImageData，v1716 门禁不许），纯黑（rgb 和 <6、不透明）就不贴、删掉这张贴图让下次重读，返回 false 走 HOME_GLASS_MEMORY_V1 的自动重试；组件保持半透明。每次失败记 lgLog（localStorage lgDiag，最多 30 条）：black 纯黑、no2d 拿不到 2d 画笔、lost 画布被收走、wall 壁纸读不出。一键体检加「主屏玻璃」：7 天内有失败显示黄色和最近 5 次原因。
 - 下一步：她再看到黑块或体检里有失败，截图一键体检这一项，按记录的原因修。
+
+## 发文件给角色：刚发的看 2 万字（CHAT_FILE_FRESH_V1，2026-11-03）
+- src/app 的 chatFileContextBody：文件后面还没有角色回复（chatFileFresh 在 S.messages 里找，不新建聊天）就给前 2 万字（CHAT_FILE_FRESH_CTX）；回过之后的轮次仍只带 4000 字（CHAT_FILE_CTX），省钱。存进消息的上限 CHAT_FILE_MAX 从 2 万提到 5 万。能读的格式没变：txt/md/json/csv/代码/Word .docx；PDF、旧 .doc、Excel、图片读不出。
+- 验证：tests/chat-file-fresh.test.mjs。
+
+## 真人店铺支付密码忘记后直接设新密码（MARKET_PIN_RESET_V1，2026-11-03）
+- 她忘了密码，又因为「让他知道」要先输现在的密码，情侣角色从来没记住过，问他只会说不知道。
+- 云端：supabase/migrations/202611030001_north_market_pin_reset.sql 新增 north_market_pin_reset(phone_id,secret,new)，只改调用者自己的钱包，清零失败次数；原 north_market_pin 不变。需要部署到云端才生效。
+- commerce-ui.js（两包同一份）：改密码页加「忘记密码，直接设新密码」→ northMarketPinForgot/northMarketPinReset；设新密码、改密码时有「让某某记住新密码」勾选（northMarketPinRoleKeep），她关掉过就默认不勾（S.me.marketPinRoleOff）。问法多认：外卖密码、是几、来着、告诉我、提醒我、还记得……
+- 拿到她手机的人也能直接改，但钱包只在小手机里用，用户同意。
+- 验证：tests/market-pin-role.test.mjs（含 PGlite 跑云端函数）。
+
+## 原文输出也认心声彩蛋（RAW_CARD_TAGS_V1，2026-11-03）
+- modelOutputUnfiltered() 现在一直为 true，回复都走 modelUnfilteredMessages，以前只认语音/转账/红包/位置/图片/文件/骰子，[心声彩蛋|…] 被原样发成一大段文字（用户截图）。现在整行是 [心声彩蛋|…] 或 [要求报备/定位/照片|…] 时交给 lineToMsgs；不该发（三天冷却且不是她要的、和旧卡太像；查岗卡因 traitValue 恒为 0 一直不发）就整条不发。后台推送也走同一函数。
+- 验证：tests/raw-card-tags.test.mjs。
+
+## 角色回信收不到（MAIL_REPLY_LOOSE_V1，2026-11-03）
+- 网页用户换模型后回信「成功」却收不到：mail-outbox.js 要求模型只回 JSON，模型在正文里直接写英文引号，parseObj 失败就丢掉，并且没有次数上限地每隔 90 秒～15 分钟自动重试，每次请求十几万 token。
+- 现在 mailReplyParse 先按 JSON 读，读不出就按字段名（reply/subject/body/wechat）取内容；微信那句去掉方括号标记、限 240 字；最多自动试 3 次（MAIL_REPLY_MAX_TRIES），失败后 replyState='failed'、记 replyError，寄出的信显示「回信没写成」并有「再试一次」（mailReplyRetry）。
+- 同一用户截图里的「[不执行]」：是程序私下确认锁/解锁的回答，被当成「微信纠正候选」放进上一轮拦截内容。现在确认请求用 roleInterceptAudit:null（CONTROL_CONFIRM_NO_AUDIT_V1），不进拦截列表。
+- 验证：tests/mail-reply-loose.test.mjs。网页用户要等网页上线后才生效。

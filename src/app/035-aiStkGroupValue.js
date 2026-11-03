@@ -300,8 +300,11 @@ function sendPhotoTextCard(id){
    以前发文件只记了个文件名和大小，内容当场丢掉，角色只看得到「她发了 xx.txt」。
    现在把正文读出来存进这条消息：给角色的上下文里带正文，她点卡片能看全文。 */
 const CHAT_FILE_TEXT_EXT=['txt','md','markdown','text','json','csv','tsv','log','srt','vtt','ass','xml','html','htm','rtf','yml','yaml','ini','conf','cfg','toml','js','mjs','cjs','ts','tsx','jsx','py','java','c','cpp','cc','h','hpp','cs','go','rs','rb','php','swift','kt','sql','sh','bat','lrc','tex','env'];
-const CHAT_FILE_MAX=20000;/* 存进消息的上限，够一篇长文，又不至于把存档撑爆 */
-const CHAT_FILE_CTX=4000;/* 每轮塞给模型的上限，再长就截断并说明 */
+const CHAT_FILE_MAX=50000;/* 存进消息的上限：点开文件能看到这么多（2026-11-03 从 2 万提到 5 万） */
+const CHAT_FILE_CTX=4000;/* 以前发过的文件，之后每轮只带这么多，再长就截断并说明 */
+const CHAT_FILE_FRESH_CTX=20000;/* CHAT_FILE_FRESH_V1：她刚发、角色还没回过的文件，这一轮给他看前 2 万字 */
+/* 文件消息后面还没有角色回复 = 刚发的。只在文件超过 4000 字时才查，不新建聊天记录。 */
+function chatFileFresh(m){if(!m||m.role!=='user')return false;for(const list of Object.values(S.messages||{})){const i=Array.isArray(list)?list.indexOf(m):-1;if(i<0)continue;for(let j=i+1;j<list.length;j++){const x=list[j];if(x&&x.role==='assistant')return false;}return true;}return false;}
 function chatFileExt(name){return typeof aiMemoryFileExt==='function'?aiMemoryFileExt(name):String(name||'').toLowerCase().split('.').pop();}
 function chatFileReadable(name){const e=chatFileExt(name);return e==='docx'||CHAT_FILE_TEXT_EXT.includes(e);}
 async function chatFileText(file){const ext=chatFileExt(file&&file.name);
@@ -312,7 +315,7 @@ async function chatFileText(file){const ext=chatFileExt(file&&file.name);
 /* 给模型看的那一段。读不出来就老实说读不出来，别假装读过了。 */
 function chatFileContextBody(m){const t=String(m&&m.text||'').trim();
   if(!t)return m&&m.unreadable?('，但'+String(m.unreadable)+'，你只知道有这么个文件，不要编造里面的内容'):'，这个文件只有名字、没有正文，别假装看过里面写了什么';
-  const body=t.length>CHAT_FILE_CTX?t.slice(0,CHAT_FILE_CTX)+'\n……（太长了，后面没给你）':t;
+  const cap=t.length>CHAT_FILE_CTX&&typeof chatFileFresh==='function'&&chatFileFresh(m)?CHAT_FILE_FRESH_CTX:CHAT_FILE_CTX,body=t.length>cap?t.slice(0,cap)+'\n……（太长了，后面没给你）':t;
   return '，文件正文如下：\n'+body+'\n（以上是这个文件的真实内容，你已经读过了，可以直接就里面的话回应）';}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{
   const m={role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid(),reading:true};
@@ -497,4 +500,3 @@ const BDSM_KNOWLEDGE_CARDS={
   risk:{name:'风险识别',re:/风险|危险|窒息|呼吸|酒|醉|药物|昏|受伤|流血|医疗|身体不适/i,facts:['醉酒、药物影响、失去意识或无法理解信息时不能给出有效同意。','出现安全词、异常疼痛、呼吸或意识问题时应停止并优先寻求现实帮助。','高风险身体活动需要现实中的训练、设备知识和应急能力；聊天角色不能凭文字提供操作保证。'],avoid:'不提供窒息、血液、神经压迫等高风险活动的逐步操作教程，也不声称任何做法绝对安全。'},
   glossary:{name:'圈内术语',re:/什么是|术语|意思|区别|科普|圈内|怎么理解|定义/i,facts:['Scene通常指一次有开始和结束的协商互动；Protocol指约定的规则或仪式；Limit指边界；Safeword是约定的停止或降级信号。','D/s描述权力关系，kink是更广泛的非传统偏好或实践总称；BDSM包含多种相互交叉但不必同时存在的方向。','术语在不同社群和个人之间可能有差异，回答时应给常见含义并说明具体关系仍以双方协商为准。'],avoid:'不要把社群用语说成全世界唯一标准。'}
 };
-function bdsmKnowledgeOn(){return false;}

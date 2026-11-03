@@ -53,6 +53,11 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"她刚发、角色还没回的文件给他看前 2 万字（以前只有 4000 字），存进消息上限 5 万字",marker:"CHAT_FILE_FRESH_V1"},
+  {release:"private v1892 / web v1888",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码忘了可以不用旧密码直接设新密码，设新密码时可以让情侣角色记住",marker:"MARKET_PIN_RESET_V1"},
+  {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"原文输出也认心声彩蛋和查岗请求卡，不该发时不把带括号的原文发出来",marker:"RAW_CARD_TAGS_V1"},
+  {release:"private v1892 / web v1888",scope:"both",least:1,file:"mail-outbox.js",name:"角色回信里有英文引号也能读出来；最多自动试 3 次，失败写明原因并能再试一次",marker:"MAIL_REPLY_LOOSE_V1"},
+  {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"程序私下确认锁/解锁的回答（如 [不执行]）不进上一轮拦截内容",marker:"CONTROL_CONFIRM_NO_AUDIT_V1"},
   {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"宠物状态与共同照顾仅向当前情侣开放",marker:"PET_COUPLE_ONLY_V1"},
   {release:"private v1872 / web v1868",scope:"both",least:1,file:"pet-game.js",name:"可确认删除单只宠物且保存失败保留",marker:"PET_DELETE_V1"},
   {release:"web v1847",scope:"web",least:1,file:"app.js",name:"网页版形象工作室缺失参考图不循环重画",marker:"WEB_STUDIO_MISSING_REF_NO_LOOP_V1"},

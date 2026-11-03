@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1887 · 角色扮演存档总结分页';
+const APP_VER='v1888 · 文件回信密码彩蛋四项修复';
 //@@ private
-const APP_VER='v1891 · 角色扮演存档总结分页';
+const APP_VER='v1892 · 文件回信密码彩蛋四项修复';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
