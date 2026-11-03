@@ -3416,3 +3416,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-03 私人v1893 / iOS539：从提交 0f60ff14 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED）并覆盖安装到用户 iPhone；包内 APP_VER v1893 · 每天几封信不再多写，app.js 与提交一致；devicectl 一次安装成功并读回 1.0.539 (539)。发布前全量 5015 项通过（2 项按设计跳过），核心聊天普通与查岗预览均通过。网页 v1889 未推送。
 
 2026-11-03 网页v1889上线核验：用户要求推送，git push origin HEAD:main 首次成功（6d718c22→98763927）。约 2 分钟后线上小手机.html 引用 app.js?v=1889，线上 app.js 与提交逐字节一致（MAIL_DAILY_INBOX_COUNT_V1）。手机已是 1.0.539。
+
+2026-11-04 私人v1894 / iOS540（紧急）：从提交 f7366046 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED）并覆盖安装到用户 iPhone；包内 APP_VER v1894 · 通话不再念出模型思考，app.js 与提交一致；前三次安装连接断开，稍后重试成功并读回版本。发布前全量 5021 项通过（2 项按设计跳过），核心聊天普通与查岗预览均通过。网页 v1890 未推送。
