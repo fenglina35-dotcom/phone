@@ -3432,3 +3432,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-04 网页v1892上线核验：用户要求推送，git push origin HEAD:main 首次成功（311e28b4→6cb24304）。线上 app.js 为 v1892 · 省用量设置和按功能汇总，app.js 与 request-diagnostics.js 均与提交逐字节一致。手机已是 1.0.542，私人云 phone-role-push v49。
 
 2026-11-04 后台小功能精简人设安装：提交 9d75309f（私人 v1897 / 网页 v1893 / iOS 1.0.543），Release 编译成功，安装成功并回读 1.0.543 (543)。未推送。
+
+2026-11-04 网页v1893上线核验：用户要求推送，git push origin HEAD:main 首次成功（3ef35f19→70330c53）。线上 app.js 为 v1893 · 后台小功能精简人设，app.js 与 phone-shortcuts.js 均与提交逐字节一致。手机已是 1.0.543。
