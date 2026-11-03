@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1892'){
+if(window.__NORTH_SHELL_BUILD__!=='1893'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1892 · 文件回信密码彩蛋四项修复';
+const APP_VER='v1893 · 每天几封信不再多写';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -12497,9 +12497,13 @@ function mailSettings(){const cs=S.contacts.filter(c=>!c.deleted);
    <div class="section">${cs.length?cs.map(c=>`<div class="it"><span>${esc(c.remark||c.name)}</span><span class="v"><input type="number" min="0" max="5" value="${c.mailPerDay||0}" onchange="getC('${c.id}').mailPerDay=Math.max(0,Math.min(5,+this.value||0));save()" style="width:48px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:5px;background:#2c2c2e;color:#eee"> 封/天</span></div>`).join(''):'<div class="empty">先创建一个角色</div>'}</div>
    <div class="btns"><button class="btn p" onclick="closeModal()">好啦</button></div>`);}
 let _mailBusy={};
+/* MAIL_DAILY_INBOX_COUNT_V1（2026-11-03）：设了每天一封，还是会一天收到两封他主动写的信（9 月改过「先占坑」仍复发）。
+   只靠 S._mailCount 这个小计数，计数一旦被换掉/清零（云恢复、存档合并等），就会以为今天没写。
+   现在写之前再数一遍信箱里今天他主动写来的信（不算回信 replyTo、心情信 mood、礼物信 type），取两者大的那个。 */
+function mailAutoTodayCount(cid){const now=new Date(),acct=String(actId());return (S.mail||[]).filter(l=>{if(!l||l.cid!==cid||l.type||l.replyTo||l.mood)return false;if(l.acct!=null&&String(l.acct)!==acct)return false;const t=new Date(+l.time||0);return t.getFullYear()===now.getFullYear()&&t.getMonth()===now.getMonth()&&t.getDate()===now.getDate();}).length;}
 async function scanMail(){if(!isMain())return false;const today=new Date().toDateString();S._mailCount=S._mailCount||{};
   for(const c of S.contacts){if(c.deleted||c.blocked||!c.mailPerDay)continue;
-    const pc=S._mailCount[c.id]||{date:today,n:0,last:0};if(pc.date!==today){pc.date=today;pc.n=0;}S._mailCount[c.id]=pc;
+    const pc=S._mailCount[c.id]||{date:today,n:0,last:0};if(pc.date!==today){pc.date=today;pc.n=0;}S._mailCount[c.id]=pc;{const inbox=mailAutoTodayCount(c.id);if(inbox>pc.n)pc.n=inbox;}
     if(pc.n>=c.mailPerDay||_mailBusy[c.id])continue;
     if(Date.now()-(pc.last||0)<3600000)continue;
     if(Math.random()<0.45)continue;
@@ -12549,7 +12553,7 @@ async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailSt
       const same=letterRepeatOf(id,sub,body);if(!same)break;if(_try){if(same.copy){if(typeof NorthRequestDiagnostics!=='undefined'&&typeof NorthRequestDiagnostics.noteLatest==='function')NorthRequestDiagnostics.noteLatest('letter','信写出来了，但重写后还和以前的《'+String(same.subject||'').slice(0,20)+'》几乎一字不差，这封没有发出');return false;}break;}/* 重写后只是有点像：照常发出；几乎照抄才不发 */
       ask+='\n\n[刚才这一版和你以前写过的《'+same.subject.slice(0,30)+'》太像了。请写一封全新的信：换内容、换角度、换标题和开头，日期只能写今天。]';}
     if(!body)return false;
-    if(S!==mailState)return false;const letter={id:uid(),cid:id,acct:mailAccount,subject:sub.slice(0,40),body,time:Date.now(),read:false};
+    if(S!==mailState)return false;const letter={id:uid(),cid:id,acct:mailAccount,subject:sub.slice(0,40),body,time:Date.now(),read:false,auto:true};
     S.mail.unshift(letter);save();if(String(actId())===mailAccount){notifyMail(c,letter);if(cur().p==='mail'||cur().p==='home')render();}return true;
   }catch(e){return false;}}
 function notifyMail(c,letter){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 给你写了封信',mailCleanText(letter.subject),{avatar:c.avatar,icon:'envelope',target:{type:'mail'}});appNotify((c.remark||c.name)+' 给你写了封信',letter.subject,{tag:'mail-'+c.id,data:{type:'open',target:'mail'}});if(lockVisible())return;const b=$('#msgBanner');if(!b)return;

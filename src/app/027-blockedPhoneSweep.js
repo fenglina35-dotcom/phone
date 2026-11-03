@@ -1,3 +1,7 @@
+function blockedPhoneSweep(){const now=Date.now();(S.contacts||[]).forEach(c=>{const st=blockedPhoneState(c,false);if(!st)return;if(!friendMainBlocked(c)){blockedPhoneClear(c);return;}if(st.status==='waiting'&&st.dueAt&&now>=st.dueAt)blockedPhoneStartCall(c);});}
+/* ===== 拉黑后的追回：角色自己决定怎么联系——再发好友申请、用自己号码打电话、用陌生号码打电话、发短信，情侣被无视三次以后还可以强制远程。
+   不是固定流程：每一步都由角色按人设自己选；目的只有一个——让她把自己从微信黑名单里拉出来。
+   她接了电话或回了短信，整条追回立刻结束；她通过申请或自己解除拉黑也结束。每一步做了什么、她怎么回应的，角色全都记得。 */
 const PURSUIT_MAX_STEPS=8,PURSUIT_FORCE_AFTER=3,PURSUIT_KEEP_MS=3*86400000;
 const PURSUIT_ACT={apply:'在微信重新发好友申请',call_own:'用自己的手机号给她打电话',call_stranger:'用一个陌生号码给她打电话（她的屏幕上只显示陌生号码，接起来前不知道是你）',sms:'给她发短信',force:'强制远程操控她的小手机，打开「新的朋友」自己点了同意，把自己拉出黑名单',stop:'先不再联系'};
 const PURSUIT_RES={pending:'还在等她的反应',ignored:'她没理',missed:'她没接',declined:'她挂断了',rejected:'她点了拒绝',answered:'她接了电话',replied:'她回了短信',accepted:'她通过了',done:'做完了'};

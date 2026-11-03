@@ -861,3 +861,8 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 现在 mailReplyParse 先按 JSON 读，读不出就按字段名（reply/subject/body/wechat）取内容；微信那句去掉方括号标记、限 240 字；最多自动试 3 次（MAIL_REPLY_MAX_TRIES），失败后 replyState='failed'、记 replyError，寄出的信显示「回信没写成」并有「再试一次」（mailReplyRetry）。
 - 同一用户截图里的「[不执行]」：是程序私下确认锁/解锁的回答，被当成「微信纠正候选」放进上一轮拦截内容。现在确认请求用 roleInterceptAudit:null（CONTROL_CONFIRM_NO_AUDIT_V1），不进拦截列表。
 - 验证：tests/mail-reply-loose.test.mjs。网页用户要等网页上线后才生效。
+
+## 每天几封信又多写一封（MAIL_DAILY_INBOX_COUNT_V1，2026-11-03）
+- 她设每天 1 封，他一天主动写来两封（她确认不是回信、礼物、心情信）。2026-09-24 已按「写成了才记账」的原因改成先占坑（cb153dcc），仍复发，说明计数 S._mailCount 还有别的被换掉/清零的路径（云恢复、存档合并等），没再去猜具体哪条。
+- 现在 scanMail 在比较上限前，用 mailAutoTodayCount 数信箱里今天这个角色主动写来的信（同账号；不算 replyTo 回信、mood 心情信、type 礼物信），计数取两者大的。新写的主动信带 auto:true。
+- 验证：tests/mail-daily-inbox-count.test.mjs（旧代码失败）。
