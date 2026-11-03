@@ -54,6 +54,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"private v1894 / web v1890",scope:"both",least:1,file:"app.js",name:"模型的 <thinking> 思考块在通话和微信里都不当台词（以前通话完全不过滤、微信只认 <think>）",marker:"REASONING_TAGS_V2"},
+  {release:"private v1895 / web v1891",scope:"both",least:1,file:"app.js",name:"电话里同一人连说的几句合成一段、本通内容优先、字数放到三万（以前 48 行就截断，真心话十个问题只记得两个）",marker:"CALL_CONTEXT_ROUNDS_V1"},
+  {release:"private v1895 / web v1891",scope:"both",least:1,file:"app.js",name:"微信上下文按轮：你连发几条算一轮，他隔 5 分钟以上主动发来的单算一轮",marker:"WECHAT_ROUND_COUNT_V1"},
+  {release:"private v1895 / web v1891",scope:"both",least:1,file:"app.js",name:"共同生活和单次约会上下文按轮数算（你说的＋他一次回复＝一轮）",marker:"COHAB_ROUND_COUNT_V1"},
   {release:"private v1893 / web v1889",scope:"both",least:1,file:"app.js",name:"每天几封信：写之前再数信箱里今天他主动写的信，计数被清零也不会多写",marker:"MAIL_DAILY_INBOX_COUNT_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"她刚发、角色还没回的文件给他看前 2 万字（以前只有 4000 字），存进消息上限 5 万字",marker:"CHAT_FILE_FRESH_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码忘了可以不用旧密码直接设新密码，设新密码时可以让情侣角色记住",marker:"MARKET_PIN_RESET_V1"},

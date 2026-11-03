@@ -135,7 +135,10 @@ vm.runInNewContext(
 );
 assert.deepEqual(
   Array.from(historySandbox.rounds, (x) => ({ role: x.role, content: x.content })),
+  // COHAB_ROUND_COUNT_V1: limit 2 means two rounds (your turn + his one reply), not two merged entries.
   [
+    { role: "user", content: "u2" },
+    { role: "assistant", content: "\u3010n2\u3011\na2\na2b" },
     { role: "user", content: "u3" },
     { role: "assistant", content: "\u3010n3\u3011\na3" },
   ],

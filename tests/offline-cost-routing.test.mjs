@@ -3,12 +3,12 @@ import fs from 'node:fs';
 
 const source = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 
-assert.match(source, /function offlineHistoryMessages\(o,limit,opt\)[\s\S]*?return out\.slice\(-Math\.max\(1,limit\|0\)\)/);
+assert.match(source, /function offlineHistoryMessages\(o,limit,opt\)[\s\S]*?COHAB_ROUND_COUNT_V1[\s\S]*?return out\.slice\(from\);\}/);
 assert.match(source, /text:text\.slice\(0,320\)/);
 assert.match(source, /function offlinePickRelevant\(rows,query,recent,max,textOf\)/);
 assert.match(source, /filter\(x=>x&&x\.text&&!x\.offlineId\)/);
 assert.match(source, /offlinePickRelevant\(o\.memory\|\|\[\],query,3,6,offMemText\)/);
-assert.match(source, /function offlineRepairMessages\(c,o,turn,candidate,repair\)[\s\S]*?offlineHistoryMessages\(o,10,\{deferCurrent:true\}\)/);
+assert.match(source, /function offlineRepairMessages\(c,o,turn,candidate,repair\)[\s\S]*?offlineHistoryMessages\(o,5,\{deferCurrent:true\}\)/); // five rounds ~ the old ten entries
 assert.match(source, /_offAudit=life\?null:roleInterceptDiagnosticTurn\(c,'offline',null,'单次约会'\)/);
 assert.match(source, /routeIndex=offReplyRouteIndex\(c,o\),auditOpt=\(opt,stage\)=>Object\.assign\(\{\},opt,\{routeIndex,allowSessionModel:true,roleInterceptAudit:_offAudit,roleInterceptStage:stage,cohabDiagnostic:/); // OFF_MODEL_CONFIG_V1 (2026-10-30): the route and main-reply model now come from 约会设定; defaults stay role route + main model
 assert.match(source, /function offReplyRouteIndex\(c,o\)\{const r=offReplySettings\(o\)\.replyApiRoute;if\(r==='follow'\)return roleChatRouteIndex\(c\);/);

@@ -33,9 +33,11 @@ assert.equal(bounded.at(-1).content,rows.at(-1).content,'the newest phone turn m
 assert.equal(rows[0].content,original[0],'history budgeting must not mutate stored chat messages');
 assert.ok(bounded.reduce((sum,row)=>sum+row.content.length+24,0)<=5000,'phone history stays inside its character budget');
 
-const oversized=context.callPromptHistory([{role:'user',content:'开'.repeat(5000)}],48,12000);
-assert.ok(oversized[0].content.length<1900,'a single oversized historical message is compacted');
+// CALL_CONTEXT_ROUNDS_V1: the newest part of the call stays whole; only an oversized older message is compacted.
+const oversized=context.callPromptHistory([{role:'user',content:'开'.repeat(5000)},{role:'assistant',content:'近'.repeat(8000)}],48,12000);
+assert.ok(oversized[0].content.length<1900,'a single oversized older message is compacted');
 assert.match(oversized[0].content,/较早内容已压缩/);
+assert.equal(oversized[1].content,'近'.repeat(8000),'the newest call content is kept whole');
 
 const callStart=source.indexOf('async function callAI(');
 const callEnd=source.indexOf('/* =================== 天气',callStart);

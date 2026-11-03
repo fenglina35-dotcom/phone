@@ -69,10 +69,14 @@ function lastMsg(id){const m=msgs(id);return m[m.length-1];}
 // 取最近 n 个回合。一个回合 = 我方发一条文字 + 他随后回复的所有气泡；【一整通电话/视频只算 1 个回合】。普通微信最多 100 回合；极长通话仍受动态原始消息上限保护，更早内容靠“对话概要”长期记忆。
 function lastRounds(arr,n){if(!arr||!arr.length)return arr||[];n=Math.max(1,n|0);
   const rawCap=Math.max(160,Math.min(1200,n*12));
-  const starts=[];let curCall=null;
+  const starts=[];let curCall=null,prevRole=null,prevTime=0;
   for(let i=0;i<arr.length;i++){const m=arr[i];if(!m)continue;
     if(m._call){const cs='cs'+(m._cs||'x');if(cs!==curCall){curCall=cs;starts.push(i);}}
-    else{curCall=null;if(m.role==='user')starts.push(i);}}
+    else{curCall=null;if(m.type==='sys')continue;const user=m.role==='user';
+      /* WECHAT_ROUND_COUNT_V1: 你连着发的几条（到他回之前）算一轮；他一次回好几条也在这一轮里；他隔了5分钟以上主动发来的算新一轮。 */
+      if(user?prevRole!=='user':(prevRole!=='user'&&prevRole!=null&&(+m.time||0)-prevTime>300000))starts.push(i);
+      prevRole=m.role;prevTime=+m.time||0;continue;}
+    prevRole='call';prevTime=+m.time||0;}
   if(!starts.length)return arr.length>rawCap?arr.slice(-rawCap):arr;
   const k=Math.max(0,starts.length-n);let r=arr.slice(starts[k]);
   if(r.length>rawCap)r=r.slice(r.length-rawCap);return r;}

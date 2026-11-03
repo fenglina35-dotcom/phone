@@ -2573,3 +2573,10 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 原因：通话路径拿到模型回复后没有任何思考块过滤；微信的过滤正则只认 <think>，\b 使 <thinking> 不被匹配。不是近期改动破坏的，是她换的模型开始用 <thinking> 标签。
 修复：REASONING_TAGS_V2，roleStripReasoningBlocks 统一去思考块，通话 _callChat 结果、微信 wechatStripReasoningEnvelope 都用它，漏思考检测加 thinking。
 测试：tests/reasoning-tags-v2.test.mjs，FIX_TEST_OLD=1 双端失败。
+
+2026-11-04 电话里忘了前面问过什么；上下文按条不按轮
+现象：电话里玩真心话问了十个问题，他说只问了两个，还出重复的题。
+原因：通话历史 callPromptHistory 每句话算一行，最多 48 行 / 12000 字（v1006 为防请求过大设的），他一次回四五句，十个问题就超了。微信 lastRounds 把你连发的每一条都算一轮；共同生活/单次约会 offlineHistoryMessages 按合并后的条数截。
+修复：CALL_CONTEXT_ROUNDS_V1 同人连说合成一段、从最新往前装（本通电话最先装，旧微信先裁）、默认 30000 字上限 40000、最新六成不压缩；WECHAT_ROUND_COUNT_V1 你连发几条到他回之前算一轮，他隔 5 分钟以上主动发来算新一轮；COHAB_ROUND_COUNT_V1 共同生活/单次约会按轮（你说的＋他一次回复），设置说明改「轮」，已存数值不减半。约会修复调用 offlineRepairMessages 从 10 条改 5 轮。
+测试：tests/context-rounds.test.mjs，FIX_TEST_OLD=1 双端失败；call-prompt-budget、offline-date、offline-cost-routing 期望值按新规则改。
+未做（她决定先留着）：微信与共同生活互相同步的隐藏背景仍按条（各约 30 条、每条 320 字），且共同生活现场在自身历史和统一记录里各带一遍；设想把两边合成一条按时间的记录、总量算进设置的轮数里。
