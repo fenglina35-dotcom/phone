@@ -3404,3 +3404,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-03 私人v1890 / iOS536：从提交 c97c0c12 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.536/536）并覆盖安装到用户 iPhone；安装包内 APP_VER v1890 · 角色扮演多存档，含 ROLEPLAY_SAVE_SLOTS_V1；第一次安装连接被重置，重试一次成功，devicectl 读回 1.0.536 (536)。发布前全量 4990 项通过（升版后 2 项按设计在未提交时跳过），核心聊天检查普通与查岗预览均通过。网页 v1886 已随同一提交升版但未推送、未上线。真实模型和真机多存档使用待她回报。
 
 2026-11-03 私人v1891 / iOS537：从提交 fbc31f26 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.537/537）并覆盖安装到用户 iPhone；包内 APP_VER v1891 · 角色扮演存档总结分页，app.js 与提交逐字节一致；devicectl 一次安装成功并读回 1.0.537 (537)。发布前全量 4990 项通过（升版后 2 项按设计在未提交时跳过），核心聊天检查普通与查岗预览均通过。网页 v1887 未推送、未上线。真实模型和真机使用待她回报。
+
+2026-11-03 私人v1892 / iOS538：从提交 ff358366 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.538/538）并覆盖安装到用户 iPhone；包内 APP_VER v1892 · 文件回信密码彩蛋四项修复，app.js、commerce-ui.js、mail-outbox.js/.css 与提交逐字节一致；devicectl 一次安装成功并读回 1.0.538 (538)。发布前全量 5011 项通过（升版后 2 项按设计跳过），核心聊天普通与查岗预览均通过。云端迁移 202611030001_north_market_pin_reset.sql 尚未部署（只读核对：线上只有 north_market_identity / north_market_pin），部署前「忘记密码」会报错。网页 v1888 未推送。
