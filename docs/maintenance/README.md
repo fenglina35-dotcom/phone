@@ -3414,3 +3414,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-03 网页v1888上线核验：用户要求推送。先并入此前未推送的 Codex 记录 5d95997e（README 末尾冲突，按日期保留两边），git push origin HEAD:main 首次成功（844c46f8→493b299a）。约 2 分钟后线上小手机.html 引用 app.js?v=1888，线上 app.js、commerce-ui.js、mail-outbox.js、mail-outbox.css 与提交逐字节一致。本次一起上线：角色扮演多存档与存档/总结分页（网页首次）、刚发文件看 2 万字、支付密码忘记后重设、原文模式认心声彩蛋、回信引号容错与 3 次上限。手机已是 1.0.538，无需重装。
 
 2026-11-03 私人v1893 / iOS539：从提交 0f60ff14 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED）并覆盖安装到用户 iPhone；包内 APP_VER v1893 · 每天几封信不再多写，app.js 与提交一致；devicectl 一次安装成功并读回 1.0.539 (539)。发布前全量 5015 项通过（2 项按设计跳过），核心聊天普通与查岗预览均通过。网页 v1889 未推送。
+
+2026-11-03 网页v1889上线核验：用户要求推送，git push origin HEAD:main 首次成功（6d718c22→98763927）。约 2 分钟后线上小手机.html 引用 app.js?v=1889，线上 app.js 与提交逐字节一致（MAIL_DAILY_INBOX_COUNT_V1）。手机已是 1.0.539。
