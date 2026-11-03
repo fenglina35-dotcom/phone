@@ -768,6 +768,9 @@ async function roleMessage(
   }
   try {
     let sawGeneratedCandidate = false;
+    // PROACTIVE_CALL_BUDGET_V1: an ordinary scheduled check-in spends at most two model calls
+    // (first try + one rewrite or fallback). Reply handoffs and explicit tasks keep their full retry policy.
+    let ordinaryModelCalls = 0;
     for (const provider of providers) {
       let attemptMessages = baseMessages;
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -776,6 +779,10 @@ async function roleMessage(
           providerFailures.push("decision:timeout");
           return { kind: "unavailable", body: "", reason: providerFailures.join(",") };
         }
+        if (ordinaryProactive && ordinaryModelCalls >= 2) {
+          return { kind: "silent", body: "", reason: "proactive-call-budget" };
+        }
+        if (ordinaryProactive) ordinaryModelCalls += 1;
         const controller = new AbortController();
         const requestTimer = setTimeout(() => controller.abort(), Math.min(18_000, remaining));
         try {
@@ -2297,6 +2304,21 @@ Deno.serve(async (request) => {
       const ambientInstruction = ambientFacts
         ? "最近真实聊天、用户情绪和正在发生的事情永远优先。本次伴生数据只是可选日常背景：只有其中某一项与本轮联系自然相关时，才带入最多一项；否则完全忽略。禁止逐项汇报、硬转话题、反复提醒，也不提系统、监控、读取或后台。"
         : "";
+      // PROACTIVE_DAILY_TRIES_V1: a silent or failed try costs a model call but never counted toward
+      // daily_limit. Allow at most as many unsent tries per local day as messages; then wait for tomorrow.
+      const dayStartIso = new Date(Date.now() - (clock.hour * 60 + clock.minute) * 60_000).toISOString();
+      const { count: unsentTries } = await client.from("phone_role_push_attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("target", profile.target).eq("role_id", profile.role_id)
+        .in("outcome", ["silent", "unavailable"]).gte("attempted_at", dayStartIso);
+      if (Number(unsentTries || 0) >= Math.max(2, Number(profile.daily_limit || 2))) {
+        await client.from("phone_role_push_profiles").update({
+          claimed_until: null,
+          next_due_at: nextDue(profile, 180),
+          updated_at: new Date().toISOString(),
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
       const attemptStartedAt = Date.now();
       const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts, true, true);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")

@@ -7,7 +7,7 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
 
 test('the setting exists and defaults to automatic playback', () => {
-  assert.match(app, /x\.tapAdvance=x\.tapAdvance===true;return x;\}/);
+  assert.match(app, /x\.tapAdvance=x\.tapAdvance===true;(?:\/\* COHAB_AUTO_INSPECT_LIMIT_V1 \*\/[^}]*?)?return x;\}/);
   assert.match(app, /else if\(key==='tapAdvance'\)\{x\.tapAdvance=String\(value\)==='1'\|\|value===true;/);
   assert.match(app, /<span>台词播放<small>点一下屏幕出下一句<\/small><\/span>/);
 });

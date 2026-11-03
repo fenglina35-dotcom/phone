@@ -1,3 +1,21 @@
+const _voiceWarmQueues=new Map();
+function scheduleVoiceWarm(m,o,progressive){
+  if(!m||m.type!=='voice')return;
+  const live=m.id;if(live)_voiceWarmLive.add(live);const done=()=>{if(live)_voiceWarmLive.delete(live);if(!m.audio&&!m._aurl&&!(m._ttsTask instanceof Promise)){delete m._ttsLoading;refreshVoiceBubble(m);}};
+  if(!progressive){setTimeout(()=>{Promise.resolve().then(()=>warmVoiceMsg(m,o)).catch(()=>null).finally(done);},80);return;}
+  const key=String(o&&o.id||'chat');let task;
+  task=Promise.resolve(_voiceWarmQueues.get(key)).catch(()=>null).then(()=>warmVoiceMsg(m,o)).finally(()=>{done();if(_voiceWarmQueues.get(key)===task)_voiceWarmQueues.delete(key);});
+  _voiceWarmQueues.set(key,task);
+}
+function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
+  if(voiceTtsPending(m))return;
+  if(m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl){delete m._ttsFailAt;delete m._ttsLoading;delete m._ttsTask;}
+  voiceBarWant(mid);
+  speakMsg(m,m.role==='user'?S.me:getC(owner));}
+/* ===== 顶部消息通知 ===== */
+let _bannerT;
+let _swReady=null;
+let _swEventsBound=false,_northUpdatePending='',_northUpdatePromptTimer=0;
 function northBuildNumber(v){const m=String(v==null?'':v).match(/\d+/);return m?Number(m[0]):0;}
 function northUpdateLater(){const build=_northUpdatePending;if(build)try{sessionStorage.setItem('north-update-later-'+build,'1');}catch(_){}closeModal();}
 function northUpdateReload(){const build=_northUpdatePending||'';try{sessionStorage.setItem('north-update-reload-'+build,'1');}catch(_){}const next=new URL(location.href);next.searchParams.set('north_update',build||Date.now());location.replace(next.href);}
@@ -7,7 +25,7 @@ function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navig
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
 //@@ web
-  const url='sw.js?v=1891&r=v1891-owner-todo-report-1';
+  const url='sw.js?v=1892&r=v1892-owner-todo-report-1';
 //@@ private
   const url='sw.js?v=1419&r=v1419-private-pf-role-1';
 //@@ end

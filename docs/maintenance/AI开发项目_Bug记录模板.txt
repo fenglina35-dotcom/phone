@@ -2580,3 +2580,11 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 修复：CALL_CONTEXT_ROUNDS_V1 同人连说合成一段、从最新往前装（本通电话最先装，旧微信先裁）、默认 30000 字上限 40000、最新六成不压缩；WECHAT_ROUND_COUNT_V1 你连发几条到他回之前算一轮，他隔 5 分钟以上主动发来算新一轮；COHAB_ROUND_COUNT_V1 共同生活/单次约会按轮（你说的＋他一次回复），设置说明改「轮」，已存数值不减半。约会修复调用 offlineRepairMessages 从 10 条改 5 轮。
 测试：tests/context-rounds.test.mjs，FIX_TEST_OLD=1 双端失败；call-prompt-budget、offline-date、offline-cost-routing 期望值按新规则改。
 未做（她决定先留着）：微信与共同生活互相同步的隐藏背景仍按条（各约 30 条、每条 320 字），且共同生活现场在自身历史和统一记录里各带一遍；设想把两边合成一条按时间的记录、总量算进设置的轮数里。
+
+2026-11-04 省用量：额外模型调用加限制和汇总（用户要求，不影响功能）
+现象/诉求：她想知道不聊天时每天额外调用多少、哪些能省。查到：共同生活自主查看手机在 App 开着且同处时最快每 5 分钟问一次模型；私人云主动消息选「不发」或失败也花调用且不计入每天条数，每次最多 2 条线路×2 次；调用记录只存 200 条，看不出一天总量。
+修复：COHAB_AUTO_INSPECT_LIMIT_V1 共同生活设置加「他自己查你手机」开关、查手机冷却时间（默认 30 分钟，模型给的更长就按模型）、每天最多问几次（默认 0 不限，沿用以前「自主查看不限次数」的决定）；失败重试也按间隔。睡眠/屏幕每日必查不受影响。
+PROACTIVE_CALL_BUDGET_V1 普通定时主动联系每次最多 2 次模型调用；回复接力和明确任务不受限。PROACTIVE_DAILY_TRIES_V1 当地当天没发出的尝试（silent/unavailable）达到 max(2, 每天条数) 后 180 分钟后再看（到第二天才会清零）。
+MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着写、失败、输入/输出 token，留 7 天；全部调用记录顶上显示，可切日期。
+部署：私人云 qvuahlqimcfgeoetosnl 的 phone-role-push 线上 v48 与仓库只差未上线的 PRECISE_ROLE_TIME_TEST_V1，按规矩不整份部署：下载线上源，只插入这两处新增行（逐行对上下文），esbuild 解析通过后部署。公开云未改。
+测试：tests/usage-saving-controls.test.mjs，FIX_TEST_OLD=1 失败。截图核对设置与汇总表。真机用量待她观察。

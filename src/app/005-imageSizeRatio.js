@@ -1,3 +1,24 @@
+function imageSizeRatio(size){return size==='1024x1536'?'2:3':size==='1536x1024'?'3:2':'1:1';}
+async function imagePostCompat(base,key,path,body,ms){let last=null;for(const url of imageApiUrls(base,path)){try{const res=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body)},ms||180000),ct=(res.headers.get('content-type')||'').toLowerCase();const txt=await res.text(),html=/html/.test(ct)||/^\s*<!doctype\s+html|^\s*<html[\s>]/i.test(txt);let d=null;try{d=txt&&!html?JSON.parse(txt):null;}catch(_){d={message:txt.slice(0,180)};}if(html)d={message:'接口返回网页HTML，不是API JSON；已继续尝试 /v1 路径',html:true};if(res.ok&&!html)return {res,d,url};last={res,d,url};if(!html&&![404,405,501].includes(res.status))break;}catch(e){last={err:e,url};if(/abort|timeout/i.test(String((e&&e.name)||e)))throw e;}}if(last&&last.err)throw last.err;return last;}
+async function imageGenerateExternal(base,key,model,prompt,size,quality){const p=(prompt||'一张生活照').slice(0,3200),opt=arguments[6]||{},target=size||'1024x1536',q=quality==='low'?'low':quality==='high'?'high':'medium',requestTimeout=Math.max(30000,Math.min(360000,+opt.timeoutMs||180000));
+  if(Array.isArray(opt.references)&&opt.references.length){const edited=await imageGenerateReferenceEdit(base,key,model,p,target,q,opt.references,requestTimeout,opt.requireReferences===true);if(edited)return edited;if(opt.requireReferences){const parts=[{type:'text',text:p+'\n按参考图人物绑定生成一张图片并返回图片，不能只回复文字。'}].concat(opt.references.slice(0,4).map(src=>({type:'image_url',image_url:{url:src}}))),reply=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:parts}],max_tokens:1200},requestTimeout),url=reply&&reply.res&&reply.res.ok?imageResultURL(reply.d):'';if(url)return{url,endpoint:'chat-reference-images',model};throw Error('当前绘图接口没有完成参考图生成，请使用支持参考图的模型；本次未退回随机形象');}}
+  const geminiImage=/gemini.*image/i.test(model),gptImage=/^gpt-image(?:-|$)/i.test(model),rich={model,prompt:p,n:1,size:target,quality:q,output_format:'jpeg',output_compression:q==='low'?84:88,...(gptImage?{}:{response_format:geminiImage?'b64_json':'url'}),...(geminiImage?{aspect_ratio:imageSizeRatio(target)}:{})};
+  let out=await imagePostCompat(base,key,'/images/generations',rich,requestTimeout),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
+  if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+//@@ web
+  /* 上游只认方图时，竖图会一直 400：既有的降级重试只去掉画质等参数，尺寸始终没退过，所以救不回来。
+     「测试出图」用的就是 1024x1024，它能过说明模型本身可用，只是这个竖尺寸没开通。 */
+//@@ private
+  /* 上游只认方图时，竖图会一直 400；审核拦截同样是 400，但换尺寸照样被拦，不再白花一次生图调用。 */
+//@@ end
+  if(res&&!res.ok&&res.status===400&&target!=='1024x1024'&&!imageModerationBlocked(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:'1024x1024'},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  let url=res&&res.ok?imageResultURL(d):'';
+  if(url)return {url,endpoint:'images-generations',model};
+  if(opt.allowChatFallback!==false&&(!res||!res.ok&&imageShouldRetryChat(res.status,err))){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
+  if(res&&!res.ok)throw new Error(apiErrorCN(res.status,err||'生图失败'));
+  throw new Error('没拿到图片：'+(imageRespErr(d)||'接口返回成功但没有图片字段，可能这个模型在该站未开通生图渠道'));
+}
 function imageReferenceBlob(src){const m=String(src||'').match(/^data:(image\/[a-z0-9.+-]+);base64,([a-z0-9+/=\s]+)$/i);if(!m)return null;try{const raw=atob(m[2].replace(/\s+/g,'')),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new Blob([bytes],{type:m[1]});}catch(_){return null;}}
 async function imageGenerateReferenceEdit(base,key,model,prompt,size,quality,references,requestTimeout){const strict=arguments[8]===true;if(!/^gpt-image(?:-|$)/i.test(model)||typeof FormData==='undefined')return null;const blobs=(references||[]).map(imageReferenceBlob).filter(Boolean).slice(0,4);if(!blobs.length)return null;for(const url of imageApiUrls(base,'/images/edits')){try{const form=new FormData();form.append('model',model);form.append('prompt',String(prompt||'').slice(0,3200));form.append('size',size||'1024x1536');form.append('quality',quality||'medium');form.append('input_fidelity','high');blobs.forEach((blob,i)=>form.append('image[]',blob,'reference-'+(i+1)+'.jpg'));const res=await fetchT(url,{method:'POST',headers:{Authorization:'Bearer '+key},body:form},requestTimeout),txt=await res.text();let data=null;try{data=JSON.parse(txt);}catch(_){data=null;}const out=res.ok?imageResultURL(data):'';if(out)return{url:out,endpoint:'images-edits',model};if(strict&&![404,405,415,422,501].includes(res.status)){const error=Error(res.ok?'参考图接口返回成功但没有图片，本次已停止继续请求':apiErrorCN(res.status,imageRespErr(data)||'参考图生成失败'));error.code='image-reference-failed';throw error;}if(![404,405,415,422,501].includes(res.status))break;}catch(error){if(strict)throw error;}}
   return null;
@@ -480,21 +501,3 @@ function warmVoiceMsg(m,o){
     if(ab){try{const dec=await decodeBuf(ab);if(!dec){await ttsRefundAudio(ab,'tts-decode-failed');m._ttsFailAt=Date.now();return null;}if(dec.duration>VOICE_MAX_SECONDS+.25){await ttsRefundAudio(ab,'tts-over-60-seconds');m.type='text';m.showText=true;m.dur=0;m._ttsFailAt=Date.now();save();if(cur().p==='chat')render();toast('这条语音超过60秒，已改用文字显示');return null;}m.dur=Math.max(1,Math.min(VOICE_MAX_SECONDS,Math.ceil(dec.duration)));/* 3D 贴耳：开关打开时把语音条渲染成双耳立体声；失败就用原来的音频 */if(_vxOn){const bin=await NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content);if(bin){ab=bin;_mime='audio/wav';m.voice3d=true;}}const du=audioBufToDataUrl(ab,_mime);if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;m.audioTs=Date.now();}catch(_){m.audio=du;m.audioTs=Date.now();}}m._aurl=URL.createObjectURL(new Blob([ab],{type:_mime}));delete m._ttsFailAt;return m.audio||m._aurl;}catch(e){}}
     m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){voiceBarWant(m.id);playUrl(u);}refreshVoiceBubble(m);}return x;});
   return m._ttsTask;}
-const _voiceWarmQueues=new Map();
-function scheduleVoiceWarm(m,o,progressive){
-  if(!m||m.type!=='voice')return;
-  const live=m.id;if(live)_voiceWarmLive.add(live);const done=()=>{if(live)_voiceWarmLive.delete(live);if(!m.audio&&!m._aurl&&!(m._ttsTask instanceof Promise)){delete m._ttsLoading;refreshVoiceBubble(m);}};
-  if(!progressive){setTimeout(()=>{Promise.resolve().then(()=>warmVoiceMsg(m,o)).catch(()=>null).finally(done);},80);return;}
-  const key=String(o&&o.id||'chat');let task;
-  task=Promise.resolve(_voiceWarmQueues.get(key)).catch(()=>null).then(()=>warmVoiceMsg(m,o)).finally(()=>{done();if(_voiceWarmQueues.get(key)===task)_voiceWarmQueues.delete(key);});
-  _voiceWarmQueues.set(key,task);
-}
-function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
-  if(voiceTtsPending(m))return;
-  if(m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl){delete m._ttsFailAt;delete m._ttsLoading;delete m._ttsTask;}
-  voiceBarWant(mid);
-  speakMsg(m,m.role==='user'?S.me:getC(owner));}
-/* ===== 顶部消息通知 ===== */
-let _bannerT;
-let _swReady=null;
-let _swEventsBound=false,_northUpdatePending='',_northUpdatePromptTimer=0;
