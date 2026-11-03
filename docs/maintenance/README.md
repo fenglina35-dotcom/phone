@@ -3428,3 +3428,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-04 省用量设置安装：提交 285d06a8（私人 v1896 / 网页 v1892 / iOS 1.0.542），Release 编译成功，安装成功并回读 1.0.542 (542)。私人云 phone-role-push 补丁已备好（线上 v48 下载后仅插入 PROACTIVE_CALL_BUDGET_V1 / PROACTIVE_DAILY_TRIES_V1 两处、esbuild 解析通过、部署前复核线上未变），部署被自动审批拦下，等用户确认（已于下一条记录部署）。未推送。
 
 2026-11-04 用户确认后部署私人云 phone-role-push：v48→v49 ACTIVE，verify_jwt=false 保持；部署后重新下载与补丁版逐行一致，含 PROACTIVE_CALL_BUDGET_V1 / PROACTIVE_DAILY_TRIES_V1。只在线上 v48 源上插入两处新增行，未整份部署仓库源；公开云未改。
+
+2026-11-04 网页v1892上线核验：用户要求推送，git push origin HEAD:main 首次成功（311e28b4→6cb24304）。线上 app.js 为 v1892 · 省用量设置和按功能汇总，app.js 与 request-diagnostics.js 均与提交逐字节一致。手机已是 1.0.542，私人云 phone-role-push v49。
