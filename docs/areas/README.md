@@ -35,6 +35,8 @@
 
 踩坑：仅修改 renderChat 的点击动作会被 refreshChatMood 在新回复后覆盖；两者必须一致。气泡内部按钮阻止冒泡，正文点击仍可收起，避免嵌套按钮误触。仅修改 settings.chat 的测试会漏掉已初始化的角色路线，实际测试必须配置 chatRoutes。不要以元素存在代替可见弹窗检查。不要把 API 返回签名存入心声。自动自适应思考在该线路短测未返回摘要，明确 enabled + budget 才返回；不伪造完整链，不以 prompt 索要隐藏推理替代协议。
 
+补充（2026-11-04，REASONING_ALL_FEATURES_V1）：模型把思考写在正文里（<thinking>…）时，所有功能在 chatResultText 共用出口只去掉思考块，正文一字不动；原样输出 modelOutputUnfiltered() 恒为开、没有开关，也照样去。开着思考摘要时，roleThinkingCapture 在接口没给 reasoning_content 时把正文里的思考原样放进心声。只剩思考时报「思维链暴露未展示」，不写「回复失败」（她的要求）。私人云 phone-role-push 也用 stripReasoningBlocks。
+
 验证：tests/wechat-translation-reasoning-queue.test.mjs 覆盖双端开关、预算、路线、历史图片、正文隔离与过期/账号隔离；scripts/check_chat_authorized_phone.cjs 设置 NORTH_THINKING_PREVIEW=1，执行双端真实HTML回复与原地切换，模型HTTP为明确标注的界面测试摘要。私人iPhone和不同中转平台仍需实际验证。核对到：2026-10-14。
 
 视觉补充（2026-10-14）：气泡内部右上角放小尺寸摘要展开/收起和“关闭”按钮；关闭只收起整颗心声气泡，不关闭设置开关。正文与思考摘要之间使用细分界线，避免中间大按钮打断阅读。

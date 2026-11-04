@@ -527,6 +527,22 @@ function roleThoughtFormatPrompt(){return '\n\n# 心情标签格式检查\n如�
 
 function privateBackgroundModelRefusal(value: unknown){const text=String(value||'').replace(/[\u2018\u2019]/g,"'").trim();if(!text)return false;const speaker=/(?:^|\n)\s*(?:(?:sorry|抱歉|对不起)[,，:： ]*)?(?:I (?:cannot|can't|am|was)|I'm|As an? (?:AI|artificial intelligence|language model)|My safety (?:guidelines|polic)|作为(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型)|我是(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型))/i.test(text);const identity=/\b(?:AI assistant|artificial intelligence|language model|programmed to be|safety guidelines|safety polic(?:y|ies))\b|(?:AI|人工智能|语言模型|大语言模型)(?:助手)?/i.test(text);const refusal=/\b(?:cannot|can't|unable to|prohibit|not allowed|cannot adopt|cannot fulfill)\b|(?:无法|不能|不允许|禁止|安全准则|安全政策)/i.test(text);return speaker&&identity&&refusal;}
 
+// REASONING_ALL_FEATURES_V1: drop only a <think>/<thinking>/<analysis>/<reasoning> block (closed, unclosed or
+// starting before the reply); the rest of the reply is kept word for word. Raw output mode still applies to the reply.
+function stripReasoningBlocks(value: string) {
+  let text = String(value || "").trim();
+  const T = "(?:think(?:ing)?|analysis|reasoning)";
+  text = text.replace(new RegExp(`<(${T})\\b[^>]*>[\\s\\S]*?<\\/\\1\\s*>`, "gi"), "");
+  const close = new RegExp(`<\\/${T}\\s*>`, "gi");
+  let last = -1, m: RegExpExecArray | null;
+  while ((m = close.exec(text))) last = m.index + m[0].length;
+  const open = text.search(new RegExp(`<${T}\\b[^>]*>`, "i"));
+  if (last >= 0 && (open < 0 || open > last)) text = text.slice(last);
+  const open2 = text.search(new RegExp(`<${T}\\b[^>]*>`, "i"));
+  if (open2 >= 0) text = text.slice(0, open2);
+  return text.replace(close, "").trim();
+}
+
 function roleModelOutputLeak(value: string) {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -820,13 +836,13 @@ async function roleMessage(
           )) return { kind: "unavailable", body: "", reason: "private-model-refusal" };
           const languageDecision = appDecision ? parseRoleAppDecision(rawText) : null;
           if (roleReplyEnglishOnly(rawText) || languageDecision && (roleReplyEnglishOnly(languageDecision.body) || roleReplyEnglishOnly(languageDecision.failureBody))) return { kind: "unavailable", body: "", reason: "english-only-output" };
-          let text = unfilteredOutput ? rawText : rawText
-            .replace(/<think>[\s\S]*?<\/think>/gi, "")
+          const reasoningFree = stripReasoningBlocks(rawText);
+          let text = unfilteredOutput ? reasoningFree : reasoningFree
             .trim().replace(/^[“\"']|[”\"']$/g, "");
           if (!unfilteredOutput) text = roleOldThoughtRecencyText(text, profile);
           if (!text) return manualUnlockEvent
             ? roleManualUnlockFailureResult(eventContext, repeatCandidates)
-            : { kind: "unavailable", body: "", reason: "empty-model-output" };
+            : { kind: "unavailable", body: "", reason: reasoningFree !== rawText.trim() ? "reasoning-only" : "empty-model-output" };
           /* Never send model deliberation, copied prompt text, or a cohabitation
              scene narration as a private WeChat proactive message. Do not ask
              the model to rewrite it: scheduled contact stays silent, while an

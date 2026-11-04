@@ -2593,3 +2593,9 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 现象：日程提醒、闹钟、心情记录、关系变化（约会后、加推荐好友）、突然查岗只写一两句，却每次带 buildSystem 完整人设（测试角色 1.7 万字，真实角色更多）。
 修复：新增 roleLiteSystem(c,{query,recent,wechat})：人设原文+说话风格+优先规则、称呼、关系事实、现在时间和作息、selectRelevantMemory 最多 5 条、最近 3 轮聊天；日程提醒加微信一行一条的格式规矩。闹钟和约会后关系判断已自带上下文，不再带最近聊天。phone-shortcuts.js 用 typeof 保护调用。聊天、写信、朋友圈、节日祝福仍用 buildSystem。
 测试：tests/role-lite-system.test.mjs，FIX_TEST_OLD=1 失败。测试角色实测完整 17358 字 → 精简 766 字。真实效果待她观察这几处语气。
+
+2026-11-04 朋友圈评论回复漏出 <thinking> 英文思考（REASONING_ALL_FEATURES_V1）
+现象：C 回复她的朋友圈评论显示「<thinking> North said "我看" ... She's sa」，只有半截英文。
+原因：她换的模型把思考写进正文。REASONING_TAGS_V2 只在通话和微信去掉；其他功能（朋友圈、写信、提醒、查他手机等）走 chatAPI→chatResultText 直接用原文。原样输出 modelOutputUnfiltered() 恒为开（没有开关，是以前定的），所以也没有别的过滤。评论回复字数少，思考写到一半就被截断，没有正文。私人云 phone-role-push 原样模式下 rawText 一点不滤、非原样只认 <think>，主动消息也可能把思考推到锁屏。
+修复：chatResultText 在共用出口用 roleStripReasoningBlocks 只去掉思考块（含未闭合、截断），原样模式同样处理，正文一字不动；去掉后没正文时 chatAPI 抛「思维链暴露未展示」（code reasoning-only），微信提示不再加「模型未回复：」，朋友圈重试按钮显示「思维链暴露未展示 · 点此重试」。她要求不写「回复失败」。开着「在心声中查看思考摘要」时，roleThinkingCapture 在接口没单独给思考时，把正文里的思考原样放进心声（只在微信私聊这个固定位置）。云端加 stripReasoningBlocks，原样/非原样都只去思考块，只剩思考记 reasoning-only、不推送。
+测试：tests/reasoning-all-features.test.mjs，FIX_TEST_OLD=1 失败。
