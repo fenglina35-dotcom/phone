@@ -1,3 +1,11 @@
+function phFxOpenText(){const ta=$('#smsin');if(!ta)return;
+  phFxSync();const text=String(ta.value||'');
+  if(!text.length){toast('先打几个字，再挑要变的那几个');return;}
+  /* 她说「选文字效果默认不全选蓝色，让我自己去点，要不然文字多的话还得一个个取消」——
+     所以除非她在输入框里真的划了一段，否则打开就是一个都不选，想全选点上面那个按钮。 */
+  const{s:a,e:b}=_phFxSel,pick=[];
+  if(b>a&&b<=text.length)for(let i=a;i<b;i++)pick.push(i);
+  phFxPickSet(pick);phFxTextModal();}
 /* 指针那条线已经把这一下处理掉了，后面补发的 click 就别再翻一次 */
 let _phFxPickDone=0;
 function phFxPickTap(i){if(_phFxPickDone){_phFxPickDone=0;return;}
@@ -493,28 +501,3 @@ function phSmsRetryVision(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id==
   phSmsTypingSet(num,sk,true);
   phSmsVision(m,null).then(ok=>{phSmsTypingSet(num,sk,false);
     toast(ok?'这张图看清了':'还是没看清：'+String(m.visionError||'').slice(0,50));render();});}
-/* 发一张图：和发字走同一条线，只是正文写成 [图片]、另外带上 img。
-   opt.hold 表示先别让角色回——要等识图跑完，不然它回的时候还没看见图。 */
-function phSendSmsImage(num,sk,src,opt){num=phDigits(num);const p=phState(),x=phFind(num),
-  thread=p.aliasThreads&&p.aliasThreads[num],
-  useAlias=phSmsIsAliasKey(sk)||(p.line==='alias'&&x&&x.kind==='role'),
-  spoofThread=!useAlias&&thread&&thread.spoof&&thread.cid;
-  let alias=null;
-  if(useAlias){const c=getC(x&&x.id);alias=c&&phEnsureAliasThread(c,num,'sms');sk=sk||phSmsKey(num,'alias',alias.aliasNum);}
-  else sk=sk||num;
-  if(p.blocked[phNorm(num)]){toast('已屏蔽，不能发送');return null;}
-  const arr=phSmsArr(num,sk),m={id:uid(),from:'me',text:'[图片]',img:src,imgDesc:'',
-    visionState:(typeof visionConfigured==='function'&&visionConfigured())?'pending':'off',
-    time:Date.now(),read:true,line:useAlias?'alias':'main',
-    aliasTo:useAlias&&alias&&alias.cid,aliasNum:useAlias&&alias&&alias.aliasNum,spoofTo:spoofThread&&thread.cid};
-  arr.push(m);
-  if(arr.length>300)arr.splice(0,arr.length-300);
-  save();render();
-  const fire=()=>{const line=phSmsImgLine(m);
-    if(!useAlias&&!spoofThread)phMirrorSMS(num,'me','（发了一张照片）'+(m.imgDesc?'：'+m.imgDesc:''));
-    if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,line,alias.aliasNum,sk),500+Math.random()*500);
-    else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,line),450+Math.random()*450);
-    else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,line,sk),650+Math.random()*650);
-    else setTimeout(()=>phAutoSmsReply(num,line),700+Math.random()*900);};
-  if(!(opt&&opt.hold))fire();
-  return {m,sk,fire};}

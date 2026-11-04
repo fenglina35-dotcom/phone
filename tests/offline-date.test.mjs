@@ -81,7 +81,7 @@ assert.match(source, /S\.settings&&S\.settings\.offHist/);
 assert.match(source, /function offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /function offlineHistoryMessages\(o,limit,opt\)/);
 assert.match(source, /function offlineSharedContext\(c,limit\)/);
-assert.match(source, /function offlineOnlineTimelineRows\(c,limit\).*msgs\(c\.id\)\.map/s);
+assert.match(source, /function offlineOnlineTimelineRows\(c,limit(?:,keep)?\).*msgs\(c\.id\)\.map/s);
 assert.match(source, /callToCN\(raw\)\|\|raw/);
 assert.match(source, /\.filter\(Boolean\)\.slice\(-Math\.max\(1,\+limit\|\|1\)\)/);
 assert.match(source, /offlineUnifiedTimelinePrompt\(c,o,offlineContextLimit\(\)\)/);

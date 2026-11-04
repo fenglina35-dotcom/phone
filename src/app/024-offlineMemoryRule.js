@@ -1,3 +1,4 @@
+function offlineMemoryRule(c){return '\n\n# 重要记忆（与微信使用同一套长期记忆）\n- 当'+S.me.name+'明确让你记住、记到/写进微信记忆，必须在回复末尾单独输出 [记住|精简后的关键事实]；遇到真正值得长期保留的喜好或忌口、纪念日、家人宠物、烦心事或心愿、承诺约定和关系进展，也应主动输出一条。已经记过的不要重复。\n- 标签里的内容必须是有本轮直接依据、能脱离聊天单独读懂的完整事实，写清人物/关系和事实；不得复制'+S.me.name+'或你刚说的原句，不得保存疑问、反问、辱骂、情绪碎片、截断的半句话或无依据推测。必须站在你自己的第一人称视角写：“我”只指你自己，用户用你平常对用户的称呼；不能把你的名字写成第三人称，也不能把用户写成“我”。\n- [记住] 是不会显示给'+S.me.name+'的隐藏标签，正常的面对面旁白和台词仍要完整生成。\n- 登录/退出微信、查看手机、屏幕共享、远程控制、同步、读取、上传和报错都只是功能操作，不是重要记忆，绝对不能把这些操作本身写进 [记住]；若操作中发现了真正重要的人和事，只记录那条人的事实，不记录操作过程。';}
 function offlineExplicitMemoryText(text){let t=String(text||'').replace(/\s+/g,' ').trim(),m;if(!t)return'';m=t.match(/把\s*([^。！？!?\n]{2,160}?)\s*(?:记|写|存)(?:到|进)(?:了)?(?:你(?:的)?|那个)?(?:微信(?:里|的)?)?(?:长期)?(?:重要)?记忆(?:里|中|里面)?/);if(!m)m=t.match(/(?:^|[。！？!?；;]\s*)(?:你)?(?:一定要|要|请|麻烦|帮我)?\s*记住(?:一下)?\s*[：:，,]?\s*([^。！？!?\n]{2,160})/);if(!m)m=t.match(/([^。！？!?\n]{2,120})[，,]\s*(?:你)?(?:一定要|要|给我)?\s*记住(?:了|啊|哦)?\s*$/);let v=String(m&&m[1]||'').replace(/^[“”「」『』\s]+|[“”「」『』\s]+$/g,'').replace(/(?:可以吗|行吗|好吗|好不好|记得吗|别忘了)[。！？!?]*$/,'').trim();if(v.length<2||/^(?:这件事|这个|那个|刚才的|上面的|我说的)$/.test(v)||memoryOperationalEventOnly(v))return'';return v.slice(0,220);}
 function offlineRememberExplicitRequest(c,text){const v=offlineExplicitMemoryText(text);if(!v)return'none';const r=rememberFromConversation(c,v,text,'');if(r!=='none'&&r!=='quota'){save();if(r==='added'||r==='replaced')toast(r==='replaced'?'已更新微信重要记忆':'已记进微信重要记忆');else if(r==='conflict')toast('这条和已有记忆不同，角色会先向你确认');}return r;}
 //@@ web
@@ -497,4 +498,3 @@ function rpPushInviteMsg(id,role){const c=getC(id),d=rpData(id);if(!c)return nul
   if(cur().p==='chat'&&cur().id===id)refreshChatMessages(id);else{notifyIncoming(c,card);if(cur().p==='wechat')render();}
   return card;}
 /* ROLEPLAY_SAVE_SLOTS_V1：角色主动邀请时重新设计一局；没玩完的那局自动存档进「存档」页。只有她正在那局页面里或这局正在回复时，才照旧发当前这局的卡。 */
-function rpInviteKeepsCurrent(id){const p=cur();return !!(p&&p.p==='rp'&&p.id===id||_rp&&_rp.id===id&&_rp.busy);}

@@ -622,6 +622,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
     </div>
     <div class="section" id="set_media">
       ${roleThinkingSettingsHTML()}
+      <div class="it" data-settings-search="同步 线上 线下 共同生活 约会 微信 轮数"><span>线上线下互相同步<br><small style="color:#888">微信、电话和共同生活、约会之间，各自带对方最近多少轮给他看（你说的几条＋他一次回复算一轮）。越多越记得住，也越费额度。默认20，范围2-60</small></span><span style="display:flex;align-items:center;gap:6px;flex:none"><input type="number" min="2" max="60" step="1" value="${typeof syncRoundsLimit==='function'?syncRoundsLimit():20}" onchange="S.settings.syncRounds=Math.max(2,Math.min(60,Math.round(+this.value||20)));this.value=S.settings.syncRounds;save();toast('线上线下互相同步：'+S.settings.syncRounds+'轮')" style="width:64px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee" aria-label="线上线下互相同步轮数"><small style="color:#888">轮</small></span></div><!-- SYNC_ROUNDS_V1 -->
       ${roleServerPushSettingsTestHTML()}
       <div class="it" onclick="aiStkManager()"><span>${svgIc('smile',15,'#bbb')} 角色的表情包</span><span class="v">${(S.aiStickers||[]).length}个 ›</span></div>
       <div class="it"><span>角色发表情频率</span><span class="v"><select id="s_stkfreq" onchange="S.settings.stkFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'适中'],[3,'经常']].map(o=>`<option value="${o[0]}" ${(S.settings.stkFreq==null?2:S.settings.stkFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>

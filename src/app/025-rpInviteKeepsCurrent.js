@@ -1,3 +1,4 @@
+function rpInviteKeepsCurrent(id){const p=cur();return !!(p&&p.p==='rp'&&p.id===id||_rp&&_rp.id===id&&_rp.busy);}
 async function rpCreateInviteFromAI(id,theme){const c=getC(id);if(!c)return null;const d=rpData(id),owner=S,account=actId(),oldStart=d.startedAt,wasActive=!!d.active;theme=rpClip(theme||'你自由发挥',80);
   if(wasActive&&rpInviteKeepsCurrent(id))return rpPushInviteMsg(id,'assistant');
   const recent=msgs(id).slice(-12).map(m=>{const t=msgToText(m);return t?((m.role==='user'?S.me.name:(c.remark||c.name))+'：'+t.replace(/\n/g,' ').slice(0,70)):'';}).filter(Boolean).join('\n');

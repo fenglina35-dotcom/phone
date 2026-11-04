@@ -2613,3 +2613,10 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 现象：她说页面太长、下面看不到、没法滑。实测 700px 屏幕上设置展开 790px，所在舞台 overflow:hidden，手指滑不动；本轮加的三项设置又让它更长。另外原本页面一刷新（如他回话）设置就自动收起、回顶部。
 修复：三个壳子加 .cohab-settings-wrap:has(>.cohab-settings[open]) 可收缩、自身滚动、overscroll-behavior:contain；cohabSettingsPanel 包装记住展开状态和滚动位置，重画时保持展开并在同一微任务里恢复位置，收起时清零。
 验证：568/700/844 三种高度真实页面：展开能滑到底并点到诊断；整页和舞台都不动；render 与新增他的台词后仍展开、位置不变；收起再展开回到顶部；页面错误 0。tests/cohab-settings-scroll.test.mjs，FIX_TEST_OLD=1 失败。
+
+2026-11-04 线上线下互相同步改按轮（SYNC_ROUNDS_V1，她要求，默认 20 轮）
+原状：微信侧 cohabRecentContext 带现场最近 contextLimit 条（默认 30）；共同生活/约会侧 offlineUnifiedTimelinePrompt 带微信电话 30 条＋现场 30 条，按时间合并，最多 2N 行 / 9600~18000 字，约 6 轮；现场在自身历史和统一记录里各带一遍。
+修改：syncRoundsLimit（S.settings.syncRounds，默认 20，2~60，设置→聊天与媒体）。微信电话侧 offlineOnlineRoundRows 用 lastRounds 取 N 轮（连发算一轮、电话一通一轮），每通电话从后往前最多约 1500 字；现场侧 syncSceneRowCount 取 N 轮行数。offlineTimelinePromptRows 上限 600 行 / 30000 字。统一记录里当前现场条目（active）在同步轮数不超过本场上下文轮数、且不是「刚从微信回来、历史被省略」时缩成前 40 字并加说明，锚点（她/他最近一句、当前待回应）保留原文。cohab-theater.js 覆盖版 cohabRecentContext 同步改；offlineWechatLivePrompt 约会进行中给微信的现场行也按轮。
+踩坑：第一次实测微信侧只带了 15 条——多人剧场 cohab-theater.js 覆盖了 cohabRecentContext。改共用函数前要搜同名覆盖（xxx=function）。
+验证：真实页面造 30 轮微信（每轮两问三答）＋80 句通话＋25 轮现场：现场侧带微信 12~30 轮和通话最后一段（第 0 句不在），现场 6~25 轮；微信侧现场 6~25 轮；设 5 轮时对应变少；共同生活回复的对话记录只含现场、不混微信内容，回复入库干净；微信回复请求含现场同步、入库干净；设置可改即时生效。老测试按新规则改：shared-scene-memory 预算 9600/18000→30000，offline-date 函数签名允许 keep 参数。
+测试：tests/sync-rounds.test.mjs，FIX_TEST_OLD=1 失败。

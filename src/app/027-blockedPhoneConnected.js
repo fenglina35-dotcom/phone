@@ -1,3 +1,6 @@
+function blockedPhoneConnected(call){const meta=call&&call.meta;if(!meta||!meta.blockedOutreach)return;if(meta.pursuit){pursuitCallAnswered(call);return;}const c=getC(meta.roleId),st=blockedPhoneState(c,false);if(st){st.status='connected';st.dueAt=0;save();}}
+function blockedPhoneFinished(call){const meta=call&&call.meta;if(!meta||!meta.blockedOutreach||meta.pursuit)return;const c=getC(meta.roleId),st=blockedPhoneState(c,false);if(st){st.status='done';st.dueAt=0;save();}}
+function blockedPhoneStartCall(c){const st=blockedPhoneState(c,false);if(!c||!st||!friendMainBlocked(c)||st.status!=='waiting'||(+st.attempts||0)>=Math.max(1,+st.max||3))return false;if(actId()!=='main'||phStrangerQuietNow('call')){st.dueAt=Date.now()+5000;return false;}const num=phRoleNumber(c),attempt=(+st.attempts||0)+1,meta={name:c.remark||c.name,kind:'拉黑后角色来电',region:phRegion(num),roleId:c.id,roleName:c.remark||c.name,blockedOutreach:true,attempt,maxAttempts:Math.max(1,+st.max||3)};if(!phIncomingStranger(num,meta)){st.dueAt=Date.now()+5000;return false;}st.attempts=attempt;st.status='ringing';st.dueAt=0;save();return true;}
 function blockedPhoneSweep(){const now=Date.now();(S.contacts||[]).forEach(c=>{const st=blockedPhoneState(c,false);if(!st)return;if(!friendMainBlocked(c)){blockedPhoneClear(c);return;}if(st.status==='waiting'&&st.dueAt&&now>=st.dueAt)blockedPhoneStartCall(c);});}
 /* ===== 拉黑后的追回：角色自己决定怎么联系——再发好友申请、用自己号码打电话、用陌生号码打电话、发短信，情侣被无视三次以后还可以强制远程。
    不是固定流程：每一步都由角色按人设自己选；目的只有一个——让她把自己从微信黑名单里拉出来。
@@ -495,11 +498,3 @@ function phFxParseTags(text){let out=String(text||''),bfx='',sfx='';const picks=
 let _phFxPick=[];      /* 选中了哪几个字（下标） */
 let _phFxDrag=null;    /* 拖选时是在「选」还是在「取消选」 */
 function phFxPickSet(list){_phFxPick=[...new Set(list.filter(i=>i>=0))].sort((x,y)=>x-y);}
-function phFxOpenText(){const ta=$('#smsin');if(!ta)return;
-  phFxSync();const text=String(ta.value||'');
-  if(!text.length){toast('先打几个字，再挑要变的那几个');return;}
-  /* 她说「选文字效果默认不全选蓝色，让我自己去点，要不然文字多的话还得一个个取消」——
-     所以除非她在输入框里真的划了一段，否则打开就是一个都不选，想全选点上面那个按钮。 */
-  const{s:a,e:b}=_phFxSel,pick=[];
-  if(b>a&&b<=text.length)for(let i=a;i<b;i++)pick.push(i);
-  phFxPickSet(pick);phFxTextModal();}

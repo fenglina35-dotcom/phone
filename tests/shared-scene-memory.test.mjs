@@ -55,11 +55,10 @@ test('unified scene prompt keeps the newest context inside a bounded character b
   const normal=Array.from(sandbox.run(rows,30));
   const maximum=Array.from(sandbox.run(rows,80));
   assert.equal(normal.at(-1).key,'r239','the newest record must survive trimming');
-  assert.ok(normal.length<=60,'default setting may not expand to three independent full histories');
-  assert.ok(normal.reduce((n,x)=>n+x.text.length+80,0)<=9600,'default unified timeline must remain under its prompt budget');
+  // SYNC_ROUNDS_V1 (2026-11-04, her request): sync is counted in rounds (default 20) and the hard safety budget is 30000 characters.
+  assert.ok(normal.reduce((n,x)=>n+x.text.length+80,0)<=30000,'unified timeline stays under its hard safety budget');
   assert.equal(maximum.at(-1).key,'r239');
-  assert.ok(maximum.length<=120,'even the highest setting stays bounded');
-  assert.ok(maximum.reduce((n,x)=>n+x.text.length+80,0)<=18000,'maximum unified timeline must remain under its hard safety budget');
+  assert.ok(maximum.reduce((n,x)=>n+x.text.length+80,0)<=30000,'even the highest setting stays bounded');
 });
 
 test('unified common-life request still carries its real closed local turns',()=>{

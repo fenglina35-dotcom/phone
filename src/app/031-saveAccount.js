@@ -1,3 +1,23 @@
+function saveAccount(id,isNew){initAccounts();let a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+  const nameEl=$('#ac_name'),wxidEl=$('#ac_wxid'),avatarEl=$('#ac_av'),personaEl=$('#ac_per');if(!nameEl||!wxidEl||!avatarEl||!personaEl){toast('小号编辑页没有加载完整，请重新打开');return;}
+  if(isNew){const used=new Set((S.me.accounts||[]).map(x=>x.id));while(!accountIdOK(a.id)||used.has(a.id)){a.id='acc_'+Math.random().toString(36).slice(2,7);}}
+  a.name=nameEl.value.trim()||'小号';a.wxid=wxidEl.value.trim()||genWxid();a.avatar=avatarEl.value.trim()||'🙂';a.city=($('#ac_city')&&$('#ac_city').value.trim())||'';a.persona=personaEl.value.trim();
+  {const ag=$('#ac_age');a.age=Math.max(0,Math.round(+(ag&&ag.value)||18));const ad=$('#ac_adult');a.adultConsent=!ad||ad.checked;}
+  a.signature=a.signature||'';if(a.balance==null)a.balance=188;if(!Array.isArray(a.bills))a.bills=[];if(isNew)S.me.accounts.push(a);
+  if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.city=a.city||'';S.me.persona=a.persona;S.me.age=a.age;S.me.adultConsent=a.adultConsent!==false;}
+  if(saveNow()===false){if(isNew)S.me.accounts=S.me.accounts.filter(x=>x!==a);toast('小号没有写入存档，请先清理存储空间后再试');accountMgr();return false;}
+  accountMgr();toast(isNew?'小号已创建':'小号资料已保存');return true;}
+async function delAccount(id){if(id==='main')return;if(!await uiConfirm('删除这个小号？它的聊天记录也会清掉'))return;
+  if(actId()===id)switchAccount('main');
+  S.me.accounts=(S.me.accounts||[]).filter(a=>a.id!==id);
+  Object.keys(S.messages).forEach(k=>{if(k.endsWith('#'+id))delete S.messages[k];});
+  S.contacts.forEach(c=>{if(c._dailyEventLedgers)delete c._dailyEventLedgers[id];if(c._blk)delete c._blk[id];if(c._added)delete c._added[id];if(c._friendMeta)delete c._friendMeta[id];if(c._accountMemory)delete c._accountMemory[id];if(c._accountSummaries)delete c._accountSummaries[id];if(c._accountSummaryState)delete c._accountSummaryState[id];if(c._memoryMeta)delete c._memoryMeta[id];if(c._memoryConflicts)delete c._memoryConflicts[id];if(c._memoryLastPick)delete c._memoryLastPick[id];});
+  save();accountMgr();}
+function cMark(c){let m='';if(c.gender==='男')m+='男';else if(c.gender==='女')m+='女';if(c.star)m+=(m?'·':'')+'⭐重点';if(c&&c._recoveredAt)m+=(m?'·':'')+'曾删除后找回/已重新添加';return m?'（'+m+'）':'';}
+function cWeight(c){return (c.star?2:0)+(c.gender==='男'?1:0);}
+function readdDiscoveryLine(c,since){const at=friendMetaGet(c,'readdedAt'),dur=friendMetaGet(c,'blockDur');if(!c||!at)return '';if(since&&at<=since)return '';return '·好友记录：她在'+fmtDT(at)+'重新通过了你的好友申请'+(dur?'（之前把你拉黑了'+dur+'）':'')+'，这是加回记录，不是第一次认识。\n';}
+function friendRequestActivity(exceptId,since){try{friendRequestsInit();const arr=S.friendRequests.filter(r=>r.contactId!==exceptId&&friendRequestVisible(r)&&(!since||friendRequestTime(r)>since)).sort((a,b)=>friendRequestTime(b)-friendRequestTime(a)).slice(0,8);if(!arr.length)return'';return '·她微信“好友 → 新的朋友”里：'+arr.map(r=>{const c=getC(r.contactId),nm=c?(c.remark||c.name):'未知申请',st=r.status==='accepted'?'已同意':r.status==='rejected'?'已拒绝':'待处理';return '['+factStamp(friendRequestTime(r))+'] '+nm+'（'+st+'；'+(r.source||'好友申请')+'；来意：'+(r.intent||r.msg||'想认识她')+'）';}).join('；')+'\n';}catch(_){return'';}}
+function travelTicketDiscoveryLine(exceptId,markSeen){const arr=(S.travel&&S.travel.trips||[]).filter(tr=>!tr.flightV2&&!tr.railV2&&tr.meet===false&&tr.payer==='me'&&tr.status==='upcoming').slice(-5);if(!arr.length)return '';let ch=false;if(markSeen)arr.forEach(tr=>{if(!tr._seenByChar&&(!tr.cid||tr.cid===exceptId)){tr._seenByChar=true;ch=true;}});if(ch)save(500);return '·她的小鱼旅行机票：'+arr.map(tr=>tvMD(tr.date)+' '+tr.from+'→'+tr.to+'（她自己订票自己去玩，没有发代付）').join('、')+'\n';}
 function travelHotelDiscoveryLine(){const arr=(S.travel&&S.travel.hotels||[]).filter(h=>tvHotelOwned(h)&&(typeof NorthTravelOrders==='undefined'||NorthTravelOrders.visible(h,'hotel'))).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,8);if(!arr.length)return'';return '·她的小鱼旅行酒店订单：'+arr.map(h=>tvMD(h.checkIn)+'入住「'+h.hotelName+'」'+h.nights+'晚，'+tvHotelRoomText(h.roomType)+'，入住人'+tvHotelGuestText(h)+'，'+tvHotelStatusText(h.status)).join('；')+'\n';}
 function myActivity(exceptId,since){let s='';since=since||0;
   if(typeof NorthMarketBusiness!=='undefined'&&getC(exceptId))s+=NorthMarketBusiness.roleFacts(getC(exceptId));
@@ -483,18 +503,3 @@ function hisDoLogin(cid){const c=getC(cid);if(!c)return;
   if(p!==String(spyPwd(c))){toast('账号或密码错误');return;}
   hisWechatBind(cid);hisStartSession(cid);}
 // 找回密码：输手机号→发验证码(存在角色身上,他prompt里能看到)→你去微信问他要→输对就直接登进去
-function hisForgot(cid){const c=getC(cid);if(!c)return;const ph=getSpy(c).phone||'';
-  if(!ph){toast('ta还没设手机号，先去查他手机→设置里给ta设一个');return;}
-  openModal('<h3>找回密码</h3><div class="hint">输入ta的手机号，验证码会发到ta手机上——你得去微信【问ta要验证码】，ta给不给看ta心情。</div>'
-   +'<div class="field"><label>手机号</label><input id="hf_phone" type="tel" inputmode="numeric" placeholder="ta的手机号"></div>'
-   +'<div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="hisSendCode(\''+cid+'\')">发送验证码</button></div>');}
-let _hisCdT=null;
-function hisCodeStop(){if(_hisCdT){clearInterval(_hisCdT);_hisCdT=null;}}
-function hisSendCode(cid){const c=getC(cid);if(!c)return;const ph=getSpy(c).phone||'';const v=(($('#hf_phone')||{}).value||'').trim().replace(/\s/g,'');
-  if(v!==ph){toast('手机号不对');return;}
-  // 关键修复：3分钟内已有有效验证码就【复用同一个】，不再每次重发新码——否则你去问他拿到码、再回来重进流程时码变了就对不上
-  const fresh=!(c._loginCode&&c._loginCode.exp>Date.now());
-  if(fresh){const code=String(100000+Math.floor(Math.random()*900000));c._loginCode={code,exp:Date.now()+3*60000};save();
-    // 角色手机瞬间收到验证码 → 第一时间主动给她发微信反应；要不要给码看他心情，但决定给就必须报这个真实码
-    if(!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+'刚在"登录你的微信→找回密码"里点了发送验证码，你手机【瞬间收到一条短信】：你的微信验证码是 '+code+'（3分钟内有效）。你立刻反应过来——ta想登录你的微信。请你【第一时间】主动给ta发条微信，按你的人设和心情反应（追问ta要干嘛/吃醋/警惕/调侃/宠溺都行）。要不要把验证码告诉ta由你决定；【但只要你决定告诉ta，就必须一字不差报出这个真实验证码「'+code+'」，绝对不能编一个假的、也不能记错——报错ta就登不进去】。别把这条系统提示原样念出来。]');}
-  hisCodeModal(cid);}
