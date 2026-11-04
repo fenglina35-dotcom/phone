@@ -136,7 +136,7 @@ test('remote role subtitles survive a natural-text model response without fake f
 });
 
 test('remote model timeouts abort the real request and the first detail retries only with real model output',()=>{
-  assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)\{const ms=Math\.max\(10000,\+timeoutMs\|\|30000\),callOpt=Object\.assign\(\{\},opt\|\|\{\},\{timeout:ms\}\);return chatAPI\(messages,callOpt\);\}/);
+  assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)\{const ms=Math\.max\(30000,\+timeoutMs\|\|30000\),callOpt=Object\.assign\(\{\},opt\|\|\{\},\{timeout:ms\}\);return chatAPI\(messages,callOpt\);\}/);
   assert.doesNotMatch(app,/remote-control-model-timeout/);
   assert.match(app,/if\(\(mustSpeak\|\|ownPost\)&&\(!response\|\|!response\.lines\.length\)\)/);
   assert.match(app,/requestError\?'角色回复中断，正在重新连接':'角色正在重新组织真实反应'/);

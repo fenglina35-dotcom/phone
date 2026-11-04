@@ -2599,3 +2599,17 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 原因：她换的模型把思考写进正文。REASONING_TAGS_V2 只在通话和微信去掉；其他功能（朋友圈、写信、提醒、查他手机等）走 chatAPI→chatResultText 直接用原文。原样输出 modelOutputUnfiltered() 恒为开（没有开关，是以前定的），所以也没有别的过滤。评论回复字数少，思考写到一半就被截断，没有正文。私人云 phone-role-push 原样模式下 rawText 一点不滤、非原样只认 <think>，主动消息也可能把思考推到锁屏。
 修复：chatResultText 在共用出口用 roleStripReasoningBlocks 只去掉思考块（含未闭合、截断），原样模式同样处理，正文一字不动；去掉后没正文时 chatAPI 抛「思维链暴露未展示」（code reasoning-only），微信提示不再加「模型未回复：」，朋友圈重试按钮显示「思维链暴露未展示 · 点此重试」。她要求不写「回复失败」。开着「在心声中查看思考摘要」时，roleThinkingCapture 在接口没单独给思考时，把正文里的思考原样放进心声（只在微信私聊这个固定位置）。云端加 stripReasoningBlocks，原样/非原样都只去思考块，只剩思考记 reasoning-only、不推送。
 测试：tests/reasoning-all-features.test.mjs，FIX_TEST_OLD=1 失败。
+
+2026-11-04 远程操控：台词像心理描写；慢模型时一个聊天都不点开
+现象：远程操控时屏幕底下他说的话像内心独白/自言自语，她看着火大。她还要求顺便查有没有操控受阻的 bug。
+原因 1：remoteControlRoleReaction / remoteControlEnsureRoleCaption 的提示只说「以自己的口吻说1到2句短话」，从没告诉他这些话会实时显示在她屏幕、是当面说；entry.roleLines 有存，但远程记忆 remoteControlHistoryPrompt 只给 memory/detail，事后和同一次远控后面都看不到自己说过什么。
+修复 1：REMOTE_FACE_TO_FACE_V1 remoteControlAudienceNote（每句实时显示在她屏幕最下方、当面对她说、用“你”、不写心里话/自言自语/旁白/第三人称）加进两处；remoteControlSaidLines 给他本次已说过的话；历史提示加「当时你当面对她说了：「…」」。
+原因 2（实际跑出来的）：用假模型在页面里跑完整远控（正常、5.5秒、12秒、报错、开局有弹窗、App 被锁、从设置页开始、中途点「立即结束」）。12 秒时「选择要打开的微信聊天」和最后的删/锁决定只等 4.2~6 秒（chatAPI 抬到 10 秒）就超时，只看了列表一个聊天都没点开就结束。其余情况都能走完、回到原页面、无页面错误；「立即结束」半秒内停下且之后不再操作。
+修复 2：REMOTE_DECISION_WAIT_V1 remoteControlModelCall 至少等 30 秒。12 秒假模型复测从 1 处变 3 处。
+踩坑：往 remoteControlRoleReaction 前插新函数时锚点「function remoteControlRoleReaction(」落在「async function」中间，新函数抢走 async，原函数 await 成语法错误，页面整个起不来；新测试检查它仍是 async。
+测试：tests/remote-face-to-face.test.mjs，FIX_TEST_OLD=1 失败。
+
+2026-11-04 共同生活设置太长，最下面「模型与路线诊断」点不到（COHAB_SETTINGS_SCROLL_V1）
+现象：她说页面太长、下面看不到、没法滑。实测 700px 屏幕上设置展开 790px，所在舞台 overflow:hidden，手指滑不动；本轮加的三项设置又让它更长。另外原本页面一刷新（如他回话）设置就自动收起、回顶部。
+修复：三个壳子加 .cohab-settings-wrap:has(>.cohab-settings[open]) 可收缩、自身滚动、overscroll-behavior:contain；cohabSettingsPanel 包装记住展开状态和滚动位置，重画时保持展开并在同一微任务里恢复位置，收起时清零。
+验证：568/700/844 三种高度真实页面：展开能滑到底并点到诊断；整页和舞台都不动；render 与新增他的台词后仍展开、位置不变；收起再展开回到顶部；页面错误 0。tests/cohab-settings-scroll.test.mjs，FIX_TEST_OLD=1 失败。
