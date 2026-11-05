@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1900'){
+if(window.__NORTH_SHELL_BUILD__!=='1901'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1900 · 桌宠身体与零食盒';
+const APP_VER='v1901 · 身体现状与长按菜单';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2313,7 +2313,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1900&r=v1900-owner-todo-report-1';
+  const url='sw.js?v=1901&r=v1901-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -16414,7 +16414,7 @@ function bubbleRow(c,m){if(m&&m.type==='shopquery')return '';
   if(!m.id)m.id=uid();
   let inner=buildPart(c,m,me);
   const selecting=_sel&&_sel.id===c.id;
-  const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`,avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
+  /* MSG_MENU_LONGPRESS_V1（2026-11-05 她要求）：轻点消息不再弹「删除/撤回」菜单，只有长按（lp，0.48 秒后 msgMenu('${c.id}','${m.id}')）才弹 */const h=selecting?`onclick="toggleSel('${m.id}')"`:'',avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||(m.time?`<div class="msgt">${hm(m.time)}</div>`:'');
   /* 聊天页的时间行（.msgt）在新版微信样式里是隐藏的，所以已读单独占一小行 */
@@ -16471,7 +16471,7 @@ function buildPart(c,m,me){
     if(m.textCard)return `<div class="photo-text-card" role="img" aria-label="照片：${esc(m.desc||'未填写描述')}"><div class="photo-text-title">照片</div><div class="photo-text-desc">${esc(m.desc||'未填写描述')}</div></div>`;
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
-    return `${m._albumShare?'<div class="photo-album-chat-image">':''}<div class="imgmsg" onclick="event.stopPropagation();msgMenu('${c.id}','${m.id}')"><img src="${m.src}">${typeof photoAlbumSourceHTML==='function'?photoAlbumSourceHTML(m):''}</div>${m._albumShare?'</div>':''}`;
+    return `${m._albumShare?'<div class="photo-album-chat-image">':''}<div class="imgmsg" onclick="event.stopPropagation();wxImgTap('${c.id}','${m.id}')"><img src="${m.src}">${typeof photoAlbumSourceHTML==='function'?photoAlbumSourceHTML(m):''}</div>${m._albumShare?'</div>':''}`;
   }
   if(m.type==='transfer')return payCard('t',m,me,c.id);
   if(m.type==='redpacket')return payCard('r',m,me);
@@ -18754,6 +18754,8 @@ async function convertTextToVoice(cid,mid){const c=getC(cid),m=msgs(cid).find(x=
   if(!ttsApiOn(c)){speakMsg(m,c);_textToVoiceBusy.delete(mid);toast('已转为系统语音');return;}
   m._ttsLoading=true;m._playWhenReady=true;refreshVoiceBubble(m);const url=await warmVoiceMsg(m,c);_textToVoiceBusy.delete(mid);if(url){save();toast(useRelay?'已转为语音，本次扣除 '+info.points+' 点；重复播放不再扣点':'已用外置语音接口转换；未扣内置AI点数');return;}
   delete m._playWhenReady;delete m._ttsLoading;delete m._ttsFailAt;m.type='text';delete m.showText;delete m.voiceCue;save();if(cur().p==='chat'&&cur().id===cid)render();toast('转换失败，原文字已保留');}
+/* MSG_MENU_LONGPRESS_V1：轻点图片直接看大图，长按才弹菜单（长按刚弹过菜单就不再开大图） */
+function wxImgTap(cid,mid){if(_lpFired){_lpFired=false;return;}if(_sel&&_sel.id===cid){toggleSel(mid);return;}viewWechatMsgImage(cid,mid);}
 function viewWechatMsgImage(cid,mid){const m=msgs(cid).find(x=>x.id===mid&&x.type==='image');if(!m||!m.src)return;closeModal();viewImg(m.src);}
 function deleteOwnMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='user'&&(x.type==='text'||x.type==='image'));if(i<0)return;const m=list[i],isImage=m.type==='image';m._deleted=true;list.splice(i,1);if(isImage)_visionTasks.delete(mid);saveNow();persistWechatMessagesNow().catch(()=>{});if(isImage)try{imgGC();}catch(_){}closeModal();render();toast(isImage?'图片已删除':'消息已删除');}
 function deleteRoleMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='assistant');if(i<0)return;list.splice(i,1);saveNow();persistWechatMessagesNow().catch(()=>{});closeModal();render();toast('角色消息已删除');}

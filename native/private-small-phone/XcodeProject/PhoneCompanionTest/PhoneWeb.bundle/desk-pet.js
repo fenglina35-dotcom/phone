@@ -613,7 +613,7 @@ function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c))return b;now=now||Da
     const m=minsOf(t2),night=bodyNight(m),chat=lastChatAt(c);
     if(b.asleep&&userAt>b.sleptAt+60000&&userAt<=t2){bodyWake(b,userAt,'her');bodyEvent(b,'你睡着时她发消息把你吵醒了',userAt);}
     if(!b.asleep&&night&&t2-chat>=15*60000&&t2>(b.wokeAt||0)+3600000&&!(b.coffeeUntil>t2)){const st=Math.max(atMins(t2,hm(bodyCfg().sleepAt,'23:30'))-(m<hm(bodyCfg().wakeAt,'07:30')?86400000:0),chat+15*60000,t);bodySleep(b,'self',Math.min(st,t2));if(!b.dayLate)b.sleptOnTime=true;bodyLog(b,'他睡着了',b.sleptAt);}
-    if(b.asleep&&!night&&(b.sleepBy!=='hat'||b.energy>=95)){bodyWake(b,t2,'morning');bodyLog(b,'他醒了',t2);}
+    if(b.asleep&&!night&&(b.sleepBy!=='hat'||b.energy>=95&&t2-(b.sleptAt||0)>=3600000)){/* 睡帽：白天戴上至少睡满 1 小时，摘帽或她发消息才提前醒 */bodyWake(b,t2,'morning');bodyLog(b,'他醒了',t2);}
     if(b.asleep){b.energy=clamp01(b.energy+14*h);b.full=clamp01(b.full-2.5*h,130);}else{b.energy=clamp01(b.energy-(b.sick?(b.sick.sev==='high'?9:7.8):6)*h);b.full=clamp01(b.full-5*h,130);}
     if(b.eating){if(userAt>b.eating.lastUser&&userAt<=t2){b.eating.lastUser=userAt;if(b.eating.extra<30){b.eating.extra+=3;b.eating.until+=3*60000;}}if(t2>=b.eating.until){const nm=b.eating.name;b.mealWin[nm]=1;b.eating=null;bodyMeal(b,t2,'self',nm);}}
     bodyMealWindows(c,t2).forEach(([name,a,z])=>{const start=atMins(t2,a),end=atMins(t2,z);if(b.mealWin[name])return;if(b.lastMealAt>=start-30*60000){b.mealWin[name]=1;if(b.due&&b.due.name===name)b.due=null;return;}
@@ -627,14 +627,16 @@ function bodyBar(v,max){return Math.round(Math.max(0,Math.min(max||100,v)));}
 function roleBodyPrompt(c){if(!bodyOn(c))return'';const now=Date.now(),b=bodyTick(c,now),cf=bodyCfg(),me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',f=[];
   if(b.asleep)f.push('你'+fmtHM(b.sleptAt)+'睡着了，现在还在睡'+(b.sleepBy==='hat'?'（是'+me+'给你戴上睡帽让你睡的）':''));
   else{const awakeH=(now-(b.wokeAt||now))/3600000,m=minsOf(now);if(b.wakeWhy==='her'&&now-b.wokeAt<10*60000)f.push('你刚才在睡觉，被'+me+'的消息吵醒了（睡了大约'+Math.max(0,b.lastSleepH).toFixed(1)+'小时）');
-    if(bodyNight(m)&&now-b.wokeAt>3600000)f.push('到你平时睡觉的点了（'+cf.sleepAt+'），你醒了大约'+Math.round(awakeH)+'小时'+(b.energy<30?'，很困了':'')+'。要睡的话先跟'+me+'道个晚安再睡，不要聊着聊着突然消失；睡的时候另起一行写 [身体|睡觉]。她再找你，你照样会被叫醒回她');else if(b.energy<25)f.push('你醒了大约'+Math.round(awakeH)+'小时，很困');
+    if(bodyNight(m)&&now-b.wokeAt>3600000)f.push('到你平时睡觉的点了（'+cf.sleepAt+'），你醒了大约'+Math.round(awakeH)+'小时'+(b.energy<30?'，很困了':'')+'。要睡的话先跟'+me+'道个晚安再睡，不要聊着聊着突然消失；睡的时候另起一行写 [身体|睡觉]。她再找你，你照样会被叫醒回她');else if(b.energy<25)f.push('你醒了大约'+Math.round(awakeH)+'小时，很困');else if(b.energy<50&&!(b.coffeeUntil>now))f.push('你有点困了');
     if(b.coffeeUntil>now)f.push('你喝了咖啡，现在很精神'+((b.coffeeN||0)>=3?'，今天喝太多了，有点心慌':'')+(bodyNight(minsOf(now))?'，一时半会儿睡不着':''));
     if(b.eating)f.push('你正在吃'+b.eating.name+'（大约还要'+Math.max(1,Math.round((b.eating.until-now)/60000))+'分钟）；'+me+'发消息你照样回，可以边吃边回，只是会吃得慢一点');
     else if(b.due&&b.due.kind==='meal')f.push('到饭点了（'+b.due.name+' '+fmtHM(b.due.at)+'），你该去吃'+b.due.name+'了：先跟'+me+'说一声（比如“我先去吃饭了”）再去，不要说着说着突然消失；去的时候另起一行写 [身体|吃饭]。她找你你照样可以回');}
-  if(b.full>100)f.push('你吃撑了，肚子胀');else if(b.full<30){const h=Math.round((now-(b.lastMealAt||now))/3600000);f.push('你上一顿是'+fmtHM(b.lastMealAt)+'左右，已经'+h+'小时没吃东西，'+(b.full<10?'饿得厉害':'有点饿'));}
-  if(b.sick)f.push('你'+bodySickText(b,now)+(b.sick.cared?'（'+b.sick.cared+'）':''));else if((+b.risk||0)>=70)f.push('你这几天没怎么好好吃饭睡觉，身体有点不对劲（嗓子发干、有点乏），再这样下去可能要生病');
+  if(b.full>100)f.push('你吃撑了，肚子胀');else if(b.full<50){const h=Math.round((now-(b.lastMealAt||now))/3600000);f.push('你上一顿是'+fmtHM(b.lastMealAt)+'左右，已经'+h+'小时没吃东西，'+(b.full<25?'饿得厉害':'有点饿'));}
+  if(b.sick)f.push('你'+bodySickText(b,now)+(b.sick.cared?'（'+b.sick.cared+'）':''));else if((+b.risk||0)>=70)f.push('你这几天没怎么好好吃饭睡觉，身体有点不对劲（嗓子发干、有点乏），再这样下去可能要生病');else if(b.health<50)f.push('你最近身子有点虚，容易累');
   (b.events||[]).filter(e=>now-e.t<30*60000).forEach(e=>f.push(e.text));
-  if(!f.length)return'';
+  /* BODY_STATUS_LINE_V1：每次都给一行现状，她问起时照实说（以前状态平常就什么都不说，他只能自己编，吃撑了还说没吃饱） */
+  const st='饱腹'+(b.full>100?'撑了':b.full>=70?'很饱':b.full>=50?'不饿':b.full>=25?'有点饿':'很饿')+'，精神'+(b.asleep?'在睡觉':b.energy>=70?'不错':b.energy>=50?'还行':b.energy>=25?'有点困':'很困')+'，身体'+(b.sick?'生病中':b.health<50?'有点虚':'没什么毛病')+'，今天'+((b.coffeeN||0)?'喝了'+b.coffeeN+'杯咖啡':'没喝咖啡');
+  f.unshift('现状：'+st+'。'+me+'问起你饿不饿、困不困、身体怎么样、喝没喝咖啡时，按这些照实说，不要说成相反的');
   let quiet=false;try{const ms=(msgs(c.id)||[]).filter(m=>m&&m.role==='assistant').slice(-2).map(m=>String(m.content||''));quiet=ms.length===2&&ms.every(x=>/困|睡|饿|吃饭|吃撑|生病|感冒|发烧|头疼|胃|药|医院|身体/.test(x));}catch(_){}
   return '\n\n# 你的身体现在（只是事实，不规定你的情绪和语气）\n'+f.map(x=>'· '+x).join('\n')+'\n怎么反应由你按人设决定。日常聊天为主，身体最多偶尔自然带一句，不要每轮都提，也不要拿来卖惨'+(quiet?'；你最近两轮已经提过身体了，这轮别再主动提，除非'+me+'问起':'')+'。你自己去吃饭、睡觉、起床或去医院看病时，可以另起一行写 [身体|吃饭]、[身体|睡觉]、[身体|起床]、[身体|看病]，这一行不会显示给'+me+'。';}
 function roleBodyConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*身体/.test(s))return text;const on=bodyOn(c);
@@ -643,15 +645,15 @@ function roleBodyConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]
       if(typeof save==='function')save();refreshMood(true);}return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();}
 /* 她照顾他：喂电池、给药、戴睡帽 / 摘睡帽 */
 function deskPetBodyUse(kind){const c=role();if(!c||!bodyOn(c)){if(typeof toast==='function')toast('先开启桌面宠物，并在「他的身体」里打开身体状态');return;}const b=bodyTick(c),t=Date.now(),n=rname(c),me=(S.me&&S.me.name)||'她';
-  if(kind==='battery'){if(b.asleep){toast(n+'睡着呢，等他醒了再喂');return;}if(b.eating){b.mealWin[b.eating.name]=1;b.eating=null;}if(b.due&&b.due.kind==='meal'){b.mealWin[b.due.name]=1;b.due=null;}bodyMeal(b,t,'me');bodyEvent(b,me+'刚喂你吃了一顿（一块电池）'+(b.full>100?'，你吃撑了':''),t);toast(b.full>100?n+'吃撑了':n+'吃饱一点了');if(root)doCmd(b.full>100?'晕乎乎':'开心',USER_CMD_MS);}
+  if(kind==='battery'){if(b.asleep){toast(n+'睡着呢，等他醒了再喂');return;}if(b.eating){b.mealWin[b.eating.name]=1;b.eating=null;}if(b.due&&b.due.kind==='meal'){b.mealWin[b.due.name]=1;b.due=null;}bodyMeal(b,t,'me');bodyEvent(b,me+'刚喂你吃了一顿饭'+(b.full>100?'，吃得太多，你撑了':'，你吃饱了'),t);toast(b.full>100?n+'吃撑了':n+'吃饱一点了');if(root)doCmd(b.full>100?'晕乎乎':'开心',USER_CMD_MS);}
   else if(kind==='pill'){if(!b.sick){toast(n+'没生病，药先收着');return;}const k=b.sick.kind;b.sick=null;bodyLog(b,'你喂他吃了药，'+k+'好了',t);bodyEvent(b,me+'喂你吃了药，你的'+k+'好了',t);toast(n+'的'+k+'好了');if(root)doCmd('开心',USER_CMD_MS);}
   else if(kind==='hat'){if(b.asleep&&b.sleepBy==='hat'){bodyWake(b,t,'hat');bodyLog(b,'你摘下了他的睡帽，他醒了',t);bodyEvent(b,me+'摘下了你的睡帽，你醒了',t);toast(n+'醒了');if(root)doCmd('伸懒腰',USER_CMD_MS);}else{if(b.asleep)bodyWake(b,t);bodySleep(b,'hat',t);bodyLog(b,'你给他戴上睡帽，他睡了',t);bodyEvent(b,me+'给你戴上了睡帽，让你去睡觉',t);toast(n+'戴上睡帽睡了');}}
   else if(kind==='coffee'){if(b.asleep){toast(n+'睡着呢，等他醒了再喝');return;}b.coffeeN=(b.coffeeN||0)+1;b.energy=clamp01(b.energy+30);b.coffeeUntil=t+5*3600000;if(b.coffeeN>=3)b.health=clamp01(b.health-3);bodyLog(b,'你给他冲了一杯咖啡'+(b.coffeeN>=3?'（今天第'+b.coffeeN+'杯，有点多）':''),t);bodyEvent(b,me+'给你冲了一杯咖啡'+(b.coffeeN>=3?'，今天第'+b.coffeeN+'杯了':''),t);toast(n+'精神了'+(b.coffeeN>=3?'，但喝太多会心慌':''));if(root)doCmd(b.coffeeN>=3?'晕乎乎':'星星眼',USER_CMD_MS);}
   else if(kind==='temp'){const v=+(bodyTemp(b,t)+(Math.random()-.5)*.2).toFixed(1),lb=bodyTempLabel(v);b.lastTemp={v,t,label:lb};const vs=v.toFixed(1);bodyLog(b,'你给他量了体温：'+vs+'℃（'+lb+'）',t);bodyEvent(b,me+'刚给你量了体温，'+vs+'℃（'+lb+'）',t,'temp');toast(vs+'℃ · '+lb);}
   else if(kind==='sick'){bodySick(b,t);toast(n+b.sick.kind+'了');}
-  if(typeof save==='function')save();refreshMood(true);rerender();}
+  if(typeof save==='function')save();refreshMood(true);rerenderAfterPick();}
 function bodyCfgSickToggle(){return bodyCfg().sick==='off'?'some':'off';}
-function deskPetBodySet(k,v){const cf=bodyCfg();if(k==='on')cf.on=!cf.on;else if(k==='sleepAt'||k==='wakeAt'){if(/^\d{1,2}:\d{2}$/.test(v))cf[k]=v;}else if(k==='sick')cf.sick=['off','rare','some'].includes(v)?v:'some';else if(/^meal_[bld]$/.test(k)){if(/^\d{1,2}:\d{2}$/.test(v))cf.meals[k.slice(5)]=v;}if(typeof save==='function')save();refreshMood(true);rerender();}
+function deskPetBodySet(k,v){const cf=bodyCfg();if(k==='on')cf.on=!cf.on;else if(k==='sleepAt'||k==='wakeAt'){if(/^\d{1,2}:\d{2}$/.test(v))cf[k]=v;}else if(k==='sick')cf.sick=['off','rare','some'].includes(v)?v:'some';else if(/^meal_[bld]$/.test(k)){if(/^\d{1,2}:\d{2}$/.test(v))cf.meals[k.slice(5)]=v;}if(typeof save==='function')save();refreshMood(true);rerenderAfterPick();}
 let _dpTab='pet';
 function deskPetTab(k){_dpTab=k==='body'?'body':'pet';rerender();}
 function bodyItemSVG(k){if(k==='battery')return R(1,3,11,7,'#2b2f3a')+R(12,5,2,3,'#2b2f3a')+R(2,4,9,5,'#3a3f4c')+R(3,5,2,3,'#7ee0a1')+R(6,5,2,3,'#7ee0a1')+R(9,5,1,3,'#7ee0a1')+R(2,4,9,1,'#525a6b');
@@ -665,7 +667,7 @@ function schedSectionHTML(c){const sc=c.sched||{},on=!!sc.on,row=(l,k,v,type,ph)
 function deskPetSchedSet(id,k,v){const c=typeof getC==='function'&&getC(id);if(!c)return;const old=c.sched||{};const sc=c.sched=Object.assign({on:false,work:'',home:'家',amS:'08:00',amE:'12:00',pmS:'14:00',pmE:'18:00',holidays:true,leaves:[]},old);
   if(k==='on')sc.on=!sc.on;else if(['amS','amE','pmS','pmE'].includes(k)){if(/^\d{1,2}:\d{2}$/.test(v))sc[k]=v;}else if(k==='work'||k==='home')sc[k]=String(v||'').trim().slice(0,30)||(k==='home'?'家':'公司');
   delete c._currentActivity;try{const d=typeof cohabData==='function'&&cohabData(id);if(d){delete d.scheduleSlotKey;if(d.stateSource==='owner-manual')d.stateSource='schedule-auto';if(typeof cohabAdvance==='function')cohabAdvance(id);}}catch(_){}
-  if(typeof save==='function')save();refreshMood(true);rerender();}
+  if(typeof save==='function')save();refreshMood(true);rerenderAfterPick();}
 function deskPetLeaves(id){if(typeof _schedModal==='function')_schedModal(id);}
 function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那页选一个要陪的角色，并打开桌面宠物。</div>';const cf=bodyCfg(),n=escH(rname(c));
   if(!cf.on)return `<div class="dp-group"><div class="dp-row"><span>身体状态<br><small style="color:#8e8e93;font-size:12px">会困、会饿、会生病，不是 24 小时永动机</small></span><span class="sw" style="flex-shrink:0" onclick="deskPetBodySet('on')"></span></div></div>`;
@@ -779,6 +781,8 @@ ${_dpTab==='body'?'':`<div class="dp-group"><div class="dp-row"><span>开启桌�
   </div>`}`;}
 function dpScroller(){let el=document.querySelector('.dp-page');while(el&&el!==document.body){if(/auto|scroll/.test(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight)return el;el=el.parentElement;}return null;}
 /* 拨开关后整页重画：记住滚到哪，画完放回去，不跳回最上面（2026-11-05） */
+/* 调时间：苹果手机转盘每停一下就算改了一次，这时重画会把转盘关掉。转盘开着只记下时间，收起来再重画（2026-11-05） */
+function rerenderAfterPick(){const a=document.activeElement;if(a&&a.tagName==='INPUT'&&a.type==='time'){if(!a._dpBlur){a._dpBlur=1;a.addEventListener('blur',()=>setTimeout(rerender,0),{once:true});}return;}rerender();}
 function rerender(){if(typeof cur==='function'&&cur()&&cur().p==='deskPet'&&typeof render==='function'){const sc=dpScroller(),top=sc?sc.scrollTop:0;render();if(top){const n=dpScroller();if(n){n.scrollTop=top;requestAnimationFrame(()=>{const m=dpScroller();if(m&&Math.abs(m.scrollTop-top)>2)m.scrollTop=top;});}}}}
 function deskPetToggle(){const p=ensureCfg();if(!p.on&&!(p.cid&&getC(p.cid))){if(typeof toast==='function')toast('先选一个要陪的角色');return;}p.on=!p.on;if(p.on){p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();if(typeof toast==='function')toast(p.on?petName()+'出来啦':petName()+'回去休息了');}
 function deskPetBind(id){const p=ensureCfg();p.cid=id||'';if(!id)p.on=false;else if(!p.on){p.on=true;p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();}

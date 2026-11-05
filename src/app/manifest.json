@@ -40,9 +40,9 @@
   "037-remoteControlFindDmThread.js",
   "038-rawPhotoLine.js",
   "039-sleep.js",
-  "040-callScreenRealtimeTick.js",
-  "041-webShareItems.js",
-  "042-momentReplySpecific.js",
-  "043-cloudSyncProgress.js"
+  "040-callScreenFrameSignature.js",
+  "041-fetchWeather.js",
+  "042-momentRetryRequiredReactions.js",
+  "043-privateMirrorPublishNow.js"
  ]
 }

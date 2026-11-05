@@ -63,6 +63,7 @@ test('own WeChat text and image messages can be deleted without changing recall 
   assert.equal(vision.has('mine-image'),false);
   assert.match(app,/删除这张图片/);
   assert.match(app,/删除这条消息/);
-  assert.match(app,/class="imgmsg" onclick="event\.stopPropagation\(\);msgMenu\('\$\{c\.id\}','\$\{m\.id\}'\)"/);
+  // MSG_MENU_LONGPRESS_V1 (2026-11-05): a tap on an image opens it; the menu (delete/recall) is long-press only.
+  assert.match(app,/class="imgmsg" onclick="event\.stopPropagation\(\);wxImgTap\('\$\{c\.id\}','\$\{m\.id\}'\)"/);
   assert.match(app,/function recallMsg\(cid,mid\)/);
 });

@@ -334,7 +334,7 @@ function bubbleRow(c,m){if(m&&m.type==='shopquery')return '';
   if(!m.id)m.id=uid();
   let inner=buildPart(c,m,me);
   const selecting=_sel&&_sel.id===c.id;
-  const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`,avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
+  /* MSG_MENU_LONGPRESS_V1（2026-11-05 她要求）：轻点消息不再弹「删除/撤回」菜单，只有长按（lp，0.48 秒后 msgMenu('${c.id}','${m.id}')）才弹 */const h=selecting?`onclick="toggleSel('${m.id}')"`:'',avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||(m.time?`<div class="msgt">${hm(m.time)}</div>`:'');
   /* 聊天页的时间行（.msgt）在新版微信样式里是隐藏的，所以已读单独占一小行 */
@@ -391,7 +391,7 @@ function buildPart(c,m,me){
     if(m.textCard)return `<div class="photo-text-card" role="img" aria-label="照片：${esc(m.desc||'未填写描述')}"><div class="photo-text-title">照片</div><div class="photo-text-desc">${esc(m.desc||'未填写描述')}</div></div>`;
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
-    return `${m._albumShare?'<div class="photo-album-chat-image">':''}<div class="imgmsg" onclick="event.stopPropagation();msgMenu('${c.id}','${m.id}')"><img src="${m.src}">${typeof photoAlbumSourceHTML==='function'?photoAlbumSourceHTML(m):''}</div>${m._albumShare?'</div>':''}`;
+    return `${m._albumShare?'<div class="photo-album-chat-image">':''}<div class="imgmsg" onclick="event.stopPropagation();wxImgTap('${c.id}','${m.id}')"><img src="${m.src}">${typeof photoAlbumSourceHTML==='function'?photoAlbumSourceHTML(m):''}</div>${m._albumShare?'</div>':''}`;
   }
   if(m.type==='transfer')return payCard('t',m,me,c.id);
   if(m.type==='redpacket')return payCard('r',m,me);
