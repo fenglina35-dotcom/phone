@@ -1,3 +1,13 @@
+function warmVoiceMsg(m,o){
+  if(voiceAudioExpired(m))clearVoiceAudio(m);
+  if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn(o))return m&&m._aurl;
+  if(m._ttsTask instanceof Promise)return m._ttsTask;delete m._ttsTask;
+  if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000&&!((+(typeof window!=='undefined'&&window.__northFishLoginAt)||0)>m._ttsFailAt)){delete m._ttsLoading;refreshVoiceBubble(m);return null;}/* FISH_LOGIN_KEEP_V1：刚重新登录 Fish 就不用等，点一下立刻重新生成 */
+  m._ttsLoading=true;refreshVoiceBubble(m);
+  m._ttsTask=(async()=>{try{const _vxOn=typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.on();if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.normalize(m))save();if(_vxOn){try{if(await NorthVoiceExpressive.direct(m,o))save();}catch(_){}}/* 语音导演：再做一次表演标注，失败就用行内提示 */if(_vxOn&&(m.voicePerf||m.voiceAsk||m.voiceDirected))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk,m.voiceDirected);/* 带小提示的念法交给下一次同一正文的合成；发声仍读 m.content，语言锁照常生效 */let ab=await ttsArr(m.content,o,{cue:m.voiceCue});let _mime='audio/mpeg';
+    if(ab){try{const dec=await decodeBuf(ab);if(!dec){await ttsRefundAudio(ab,'tts-decode-failed');m._ttsFailAt=Date.now();return null;}if(dec.duration>VOICE_MAX_SECONDS+.25){await ttsRefundAudio(ab,'tts-over-60-seconds');m.type='text';m.showText=true;m.dur=0;m._ttsFailAt=Date.now();save();if(cur().p==='chat')render();toast('这条语音超过60秒，已改用文字显示');return null;}m.dur=Math.max(1,Math.min(VOICE_MAX_SECONDS,Math.ceil(dec.duration)));/* 3D 贴耳：开关打开时把语音条渲染成双耳立体声；失败就用原来的音频 */if(_vxOn){const bin=await NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content);if(bin){ab=bin;_mime='audio/wav';m.voice3d=true;}}const du=audioBufToDataUrl(ab,_mime);if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;m.audioTs=Date.now();}catch(_){m.audio=du;m.audioTs=Date.now();}}m._aurl=URL.createObjectURL(new Blob([ab],{type:_mime}));delete m._ttsFailAt;return m.audio||m._aurl;}catch(e){}}
+    m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){voiceBarWant(m.id);playUrl(u);}refreshVoiceBubble(m);}return x;});
+  return m._ttsTask;}
 const _voiceWarmQueues=new Map();
 function scheduleVoiceWarm(m,o,progressive){
   if(!m||m.type!=='voice')return;
@@ -25,7 +35,7 @@ function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navig
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
 //@@ web
-  const url='sw.js?v=1898&r=v1898-owner-todo-report-1';
+  const url='sw.js?v=1899&r=v1899-owner-todo-report-1';
 //@@ private
   const url='sw.js?v=1419&r=v1419-private-pf-role-1';
 //@@ end
