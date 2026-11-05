@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1897 · 查他手机坏数据自动修好';
+const APP_VER='v1898 · 主屏玻璃不再变黑块';
 //@@ private
-const APP_VER='v1901 · 查他手机坏数据自动修好';
+const APP_VER='v1902 · 主屏玻璃不再变黑块';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

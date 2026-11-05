@@ -301,7 +301,7 @@ function lgGL(){if(_lg.gl&&!_lg.gl.isContextLost())return _lg.gl;if(_lg.failed)r
   const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,LG_VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,LG_FS));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
   const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   /* 上下文丢了只影响「以后重烤」，已经烤好放进组件的画布不受影响，所以不会掉材质 */
-  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();lgLog('lost','画玻璃的画布被系统收走了（切后台或内存紧张）');_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();},false);
+  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();lgLog('lost','画玻璃的画布被系统收走了（切后台或内存紧张）');_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();if(typeof document!=='undefined'&&!document.hidden&&typeof lgResumeRedraw==='function')setTimeout(lgResumeRedraw,800);},false);
   Object.assign(_lg,{gl,canvas:cv,prog,buf,tex:null,texSrc:''});return gl;}catch(e){console.warn('液态玻璃不可用',e);_lg.failed=true;return null;}}
 /* 没有图片的默认背景（目前只有查他手机那张渐变）：照着 CSS 画一张，当壁纸用 */
 function lgDefaultWall(src){const cv=document.createElement('canvas');cv.width=1024;cv.height=2048;const x=cv.getContext('2d'),W=1024,H=2048;
@@ -352,12 +352,17 @@ function lgCanvasOk(cv){if(!cv||!cv.width||!cv.height)return false;try{return !!
 function lgFreeCache(){_lg.cache.forEach(cv=>lgFree(cv));_lg.cache.clear();}
 function lgRemember(key,canvas){_lg.cache.delete(key);_lg.cache.set(key,canvas);while(_lg.cache.size>12){const k=_lg.cache.keys().next().value,old=_lg.cache.get(k);_lg.cache.delete(k);lgFree(old);}}
 /* deskEl 是壁纸铺满的那块；hosts 是要做成玻璃的元素。能用缓存的立即装上，不需要等下一帧 */
+/* HOME_GLASS_FRESH_V1（2026-11-05 第四次，换思路）：一键体检拿到的证据是「画玻璃的画布被系统收走了」。在苹果手机上，切到别的 App 或内存紧张时，
+   系统连贴在组件上、已经画好的玻璃图也会清掉，清掉的图显示成纯黑；它的宽高还在，lgCanvasOk 看不出来，程序一直沿用，于是组件变黑块。
+   以前三次（回前台重画、还画布内存、纯黑不贴）在这一步都会保留旧图。现在：①重画失败就拿掉旧图，组件露出半透明磨砂底，绝不留黑图；
+   ②回到小手机、画玻璃的工具被收走后、从别的页面回到主屏，都整张重画新图（不复用缓存），回来后约 1 秒、4 秒各补画一次，盖住系统晚一步收走的情况。 */
+function lgDropLens(host){try{const c=host&&host.querySelector(':scope>canvas.lg-canvas');if(c){c.remove();if(![..._lg.cache.values()].includes(c))lgFree(c);}if(host)host.classList.remove('lg-host','lg-ready');}catch(_){}}
 async function lgApply(deskEl,hosts,src,cfg){lgStyle();const dpr=Math.min(2,window.devicePixelRatio||1),todo=[];
   for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;g.src=src;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');host._lgGeo=g;if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit&&lgCanvasOk(hit)){lgAttachTo(host,hit,key);continue;}if(hit){_lg.cache.delete(key);lgFree(hit);}todo.push({host,g,key});}
-  if(!todo.length)return true;if(!await lgTexture(src))return false;
-  for(const {host,g,key} of todo){if(!host.isConnected)continue;let cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);lgFreeCache();cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);return false;}}lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
+  if(!todo.length)return true;if(!await lgTexture(src)){todo.forEach(t=>{if(t.host.querySelector(':scope>canvas.lg-canvas')&&!t.host.querySelector(':scope>canvas.lg-canvas').dataset.lgKey)lgDropLens(t.host);});return false;}
+  for(const {host,g,key} of todo){if(!host.isConnected)continue;let cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);lgFreeCache();cv=lgBake(g,cfg);if(!cv||!lgCanvasOk(cv)){lgFree(cv);todo.forEach(t=>{if(t.host.isConnected&&(!t.host.querySelector(':scope>canvas.lg-canvas')||t.host.querySelector(':scope>canvas.lg-canvas').dataset.lgKey!==t.key))lgDropLens(t.host);});return false;}}lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
 function lgHomeRefresh(){_lg.timer=0;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgBindSwipe();const retry=()=>{if((_lg.retry=(_lg.retry||0)+1)<=6)setTimeout(lgSoon,600*_lg.retry);};lgApply(desk,Array.from(desk.querySelectorAll(LG_HOSTS)),lgWallSrc(),lgCfg()).then(ok=>{if(ok===false)retry();else _lg.retry=0;lgSwipeFrame(true);}).catch(e=>{console.warn('液态玻璃',e);retry();});}
-function lgAfterRender(){if(typeof document==='undefined')return;lgImsgSoon();const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgHomeRefresh();}
+function lgAfterRender(){if(typeof document==='undefined')return;lgImsgSoon();const desk=document.getElementById('homeDesktop'),was=_lg.wasHome;_lg.wasHome=!!desk;if(!desk)return;if(!lgActive()){lgClear(desk);return;}if(!was){lgFreeCache();desk.querySelectorAll('canvas.lg-canvas').forEach(c=>{c.dataset.lgKey='';});_lg.retry=0;}lgHomeRefresh();}
 /* v1718：翻页滑动时，玻璃里的壁纸跟着组件此刻的位置实时变（以前停在组件原地的样子）。
    只在 #appswipe 真的在滑时，每帧重画此刻露在屏幕上的组件；位置直接用滚动距离推算，不读布局；
    滑动中用 0.6 倍分辨率省电，停下后再用原分辨率画一遍。 */
@@ -428,7 +433,7 @@ function lgImsgSettle(){clearTimeout(_lgImSettle);_lgImSettle=setTimeout(()=>lgI
 function lgImsgSoon(){if(!lgScene())return;cancelAnimationFrame(_lgImRaf);_lgImRaf=requestAnimationFrame(()=>lgImsgFrame(true));}
 function lgSoon(){if(_lg.timer)return;_lg.timer=setTimeout(lgHomeRefresh,120);}
 /* HOME_GLASS_KEEP_V1（2026-10-30 她截图：主屏组件有时变成黑色实心块）：镜片画好后会缓存复用，手机切后台时系统可能清掉这些画布，回来还拿空画布用。回到前台时清掉缓存、重新画一次（共同生活早有同样的 COHAB_GLASS_KEEP_V1）。 */
-function lgResumeRedraw(){try{if(typeof document==='undefined'||document.hidden||!lgActive())return;_lg.failed=false;if(_lg.cache&&typeof _lg.cache.clear==='function'){if(typeof lgFreeCache==='function')lgFreeCache();else _lg.cache.clear();}_lg.retry=0;document.querySelectorAll('#homeDesktop canvas.lg-canvas').forEach(c=>{c.dataset.lgKey='';});lgSoon();}catch(_){}}
+function lgResumeRedraw(follow){try{if(typeof document==='undefined'||document.hidden||!lgActive())return;_lg.failed=false;if(_lg.cache&&typeof _lg.cache.clear==='function'){if(typeof lgFreeCache==='function')lgFreeCache();else _lg.cache.clear();}_lg.retry=0;document.querySelectorAll('#homeDesktop canvas.lg-canvas').forEach(c=>{c.dataset.lgKey='';});lgSoon();}catch(_){}if(!follow&&typeof setTimeout==='function'){if(typeof clearTimeout==='function'){clearTimeout(_lg.fresh1);clearTimeout(_lg.fresh2);}_lg.fresh1=setTimeout(()=>lgResumeRedraw(true),1200);_lg.fresh2=setTimeout(()=>lgResumeRedraw(true),4000);}}
 if(typeof document!=='undefined'&&document.addEventListener){document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(lgResumeRedraw,250);});if(typeof window!=='undefined'&&window.addEventListener)window.addEventListener('pageshow',()=>setTimeout(lgResumeRedraw,250));}
 if(typeof render==='function'&&!render.__lg){const _lgRender=render;render=function(){const out=_lgRender.apply(this,arguments);try{lgAfterRender();}catch(e){console.warn('液态玻璃',e);}return out;};render.__lg=true;}
 if(typeof window!=='undefined'){window.addEventListener('resize',lgSoon);window.addEventListener('resize',lgImsgSettle);window.addEventListener('orientationchange',lgSoon);}

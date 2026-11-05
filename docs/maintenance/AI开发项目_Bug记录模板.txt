@@ -2626,3 +2626,9 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 原因：spyRefresh 用 Object.assign({},prev,ng) 直接存模型 JSON，模型偶尔把 wechat 写成对象（如 {"阿哲":[...]}）；之后每轮微信回复经 hisSeed 读 (sp.wechat||[]).forEach，对象不是列表就抛错，整轮失败。不是本轮改动引起，是存档里有一份坏数据。
 修复：spyListFix/spyContentRepair 把 wechat、album、browser、calls、contacts、friends、groups、orders、sms、wallet 理顺成列表（wechat 对象按「名字→聊天」展开，lines 文字拆行）；刷新存之前、开机就绪时、hisSeed 读时三处修，旧存档自动修好并保存。
 验证：真实页面放入对象格式的 wechat/contacts/album 后发微信，回复正常入库，三项变成列表；tests/spy-list-repair.test.mjs，FIX_TEST_OLD=1 失败。
+
+2026-11-05 主屏组件变黑第四次（换思路，HOME_GLASS_FRESH_V1）
+证据：第三次加的一键体检「主屏玻璃」记录：多条「画玻璃的画布被系统收走了（切后台或内存紧张）」（21:51、20:00×2、18:07），一条「画出来是纯黑」（07:51）。她截图从抖音切回，主屏组件整块黑。
+重新诊断：电脑浏览器里模拟 WebGL 上下文丢失，已贴在组件上的 2D 镜片画布不受影响，不会黑；玻璃完全没画上时组件是半透明磨砂（不是黑）。所以黑块是 iOS 把已贴上去的镜片画布内容清掉、显示成纯黑；宽高还在，lgCanvasOk 判断不出，旧代码一直沿用。前三次的问题：①回前台 250ms 重画，常赶上系统随后才收走上下文，重画失败就保留旧图（已黑）；②重画失败最多重试 6 次后放弃；③纯黑不贴也是保留旧图。
+修复：lgDropLens——重画失败（贴图读不出或烤失败）时拿掉旧镜片，组件露出磨砂底，绝不留黑图；lgResumeRedraw 改为立即＋1.2s＋4s 三次 lgForceRedraw（清缓存、清钥匙、整张重画新图）；webglcontextlost 时若页面可见 800ms 后再走一遍；lgAfterRender 从别的页面回到主屏时清缓存整张重画。
+验证：真实页面把 6 块镜片涂黑模拟被清，分别走回到 App、离开再回主屏、回前台后才丢上下文，三种都换成新画布且不黑；让 lgDraw 一直失败时 6 块全是磨砂底、无黑块，恢复后 4 秒内补画回来。tests/home-glass-fresh.test.mjs，FIX_TEST_OLD=1 失败。真机待她观察。
