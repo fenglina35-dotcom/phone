@@ -11,10 +11,12 @@ import { read, fnSource, BUNDLES, PRIV_DIR } from './_helpers.mjs';
 const pet = read('desk-pet.js');
 assert.equal(read(PRIV_DIR + 'desk-pet.js'), pet, 'desk pet ships identically');
 const consts = pet.match(/const BODY_MEAL=[^\n]*\n/)[0];
-const names = ['clamp01', 'hm', 'minsOf', 'dayKey', 'atMins', 'fmtHM', 'bodyCfg', 'bodyOn', 'bodyState', 'bodyLog', 'bodyEvent', 'bodyNight', 'lastChatAt', 'lastUserAt',
+const names = ['clamp01', 'hm', 'minsOf', 'mmHM', 'bodyMealTimes', 'bodyStartEat', 'dayKey', 'atMins', 'fmtHM', 'bodyCfg', 'bodyOn', 'bodyState', 'bodyLog', 'bodyEvent', 'bodyNight', 'lastChatAt', 'lastUserAt',
   'bodySleep', 'bodyWake', 'bodyMeal', 'bodyRollDay', 'bodySick', 'bodySickDay', 'bodySickText', 'bodyMealWindows', 'bodyTick', 'roleBodyPrompt', 'roleBodyConsume', 'bodyLookOf'];
 const W = [];
-const ctx = vm.createContext({ Math, Date, String, Number, Object, Array, JSON,
+let NOW = Date.now();
+class FakeDate extends Date { constructor(...a) { super(...(a.length ? a : [NOW])); } static now() { return NOW; } }
+const ctx = vm.createContext({ Math, Date: FakeDate, String, Number, Object, Array, JSON,
   S: { me: { name: '北' }, settings: {} }, msgs: () => W, save() {}, refreshMood() {}, rname: (c) => c.name });
 ctx.cfg = () => ctx.S.settings.deskPet;
 ctx.ensureCfg = () => ctx.S.settings.deskPet;
@@ -34,6 +36,26 @@ ctx.bodyTick(c, T + 95 * 60000);
 assert.equal(b.asleep, false, 'her message wakes him');
 assert.match(ctx.roleBodyPrompt(c), /只是事实，不规定你的情绪和语气/, 'prompt gives facts only');
 
+// lunch: at meal time while chatting he must announce first; her messages slow him down; quiet → he goes himself
+{ctx.S.settings.deskPet.body.meals = { b: '', l: '12:00', d: '' };
+ const L = new Date(); L.setHours(12, 0, 0, 0); const T0 = L.getTime();
+ Object.assign(b, { lastTick: T0, asleep: false, eating: null, due: null, mealWin: {}, lastMealAt: T0 - 5 * 3600000, day: ctx.dayKey(T0), wokeAt: T0 - 5 * 3600000, meals: 0 });
+ W.length = 0; W.push({ role: 'user', content: '在干嘛', time: T0 + 5 * 60000 });
+ NOW = T0 + 6 * 60000; ctx.bodyTick(c, NOW);
+ assert.equal(b.due && b.due.name, '午饭', 'meal time while chatting: he is told to go eat, not sent away');
+ assert.equal(b.eating, null, 'he does not vanish to eat on his own mid-chat');
+ assert.match(ctx.roleBodyPrompt(c), /先跟北说一声（比如“我先去吃饭了”）再去/);
+ assert.equal(ctx.roleBodyConsume('那我先去吃午饭啦\n[身体|吃饭]', c), '那我先去吃午饭啦');
+ assert.ok(b.eating && b.eating.name === '午饭', 'after saying so he goes to eat');
+ W.push({ role: 'user', content: '吃什么呀', time: NOW + 60000 }); NOW += 2 * 60000; ctx.bodyTick(c, NOW);
+ assert.equal(b.eating.extra, 3, 'her message slows his meal a little; he still replies');
+ NOW += 40 * 60000; ctx.bodyTick(c, NOW);
+ assert.equal(b.eating, null); assert.equal(b.meals, 1, 'meal finished and counted');
+ // dinner with nobody chatting: he goes by himself
+ ctx.S.settings.deskPet.body.meals.d = '18:30'; const D = new Date(); D.setHours(18, 30, 0, 0);
+ NOW = D.getTime() + 20 * 60000; ctx.bodyTick(c, NOW); assert.ok(b.eating && b.eating.name === '晚饭', 'quiet: he goes to eat by himself');
+ NOW = D.getTime(); }
+NOW = Date.now(); b.lastTick = NOW;
 // meals and fullness
 const full0 = b.full; ctx.bodyMeal(b, Date.now(), 'me');
 assert.equal(Math.round(b.full - full0), 35, 'one battery is one meal');
@@ -56,7 +78,12 @@ assert.match(pet, /hungry:\{w:13,h:10,svg:/, 'battery cloud');
 assert.match(pet, /drowsy:R\(3,4,3,1,'var\(--dp-d\)'\)/, 'dozing eyes');
 assert.match(pet, /'打瞌睡':\{eyes:'drowsy',cls:'nod slow',fx:'z'\}/);
 assert.match(pet, /Math\.floor\(Date\.now\(\)\/1000\)%14<5\?emo:_bm/, 'mood still shows for a few seconds');
-assert.match(pet, /if\(m==='sick'\|\|m==='sleep'\)\{/, 'sick and sleeping stay on the ground');
+assert.match(pet, /if\(m==='sick'\|\|m==='sleep'\|\|m==='eat'\)\{/, 'sick, sleeping and eating stay on the ground');
+assert.match(pet, /怎么反应是他自己的事。<\/div>\n  <div class="dp-label">照顾记录<\/div><div class="dp-group dp-log">\$\{log\}<\/div>`;\}/, 'care log is always the last block');
+assert.match(pet, /\.dp-page \.sw\.on\{background:#d97757!important/, 'switches are orange');
+assert.match(pet, /\.dp-page input\[type=time\]\{color:#f5f5f7;color-scheme:dark/, 'times are white');
+assert.match(pet, /schedSet=function\(id\)\{const p=cfg\(\);if\(p&&p\.on&&p\.cid===id&&bodyCfg\(\)\.on\)/, 'old schedule entries open the pet body page for its role');
+assert.match(pet, /Object\.assign\(window,\{roleBodyPrompt,roleBodyConsume,deskPetBodyUse,deskPetBodySet,deskPetTab,deskPetSchedSet,deskPetLeaves,/, 'page handlers are reachable');
 assert.match(pet, /\(MOVES\[k\]\|\|\['跳舞','蹦跶','转圈'\]\.includes\(k\)\)&&\(state\.mood==='sleep'\|\|state\.mood==='sick'\)/, 'asleep or sick: no running around even when told');
 // care log keeps the last three days
 {const old = Date.now() - 4 * 86400000; const bb = { log: [{ t: old, text: '很早以前' }] }; ctx.bodyLog(bb, '今天喂了电池'); assert.deepEqual(bb.log.map(x => x.text), ['今天喂了电池'], 'entries older than three days are dropped');}
