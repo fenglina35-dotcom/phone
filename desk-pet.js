@@ -47,6 +47,8 @@ const EYES={
   wink:R(4,4,1,2,INK)+P([[11,5],[12,4],[13,5]],INK),
   squint:P([[3,3],[4,4],[3,5],[13,3],[12,4],[13,5]],INK),
   focus:R(4,4,1,2,INK)+R(11,4,1,2,INK)+R(3,3,2,1,INK)+R(11,3,2,1,INK),
+  /* ROLE_BODY_V1：打瞌睡——眼皮耷拉，只剩一条缝 */
+  drowsy:R(3,4,3,1,'var(--dp-d)')+R(3,5,3,1,INK)+R(10,4,3,1,'var(--dp-d)')+R(10,5,3,1,INK),
 };
 function spriteSVG(){
   const legs=(h,cls)=>`<g class="${cls}">${[3,5,10,12].map((x,i)=>R(x,8,1,typeof h==='function'?h(i):h,'var(--dp-d)','dp-leg')).join('')}</g>`;
@@ -64,6 +66,7 @@ function spriteSVG(){
     <g class="dp-hat dp-hat-work">${R(4,-2,8,1,'#f2b632')}${R(3,-1,10,2,'#f2b632')}${R(1,0,14,1,'#d9971c')}${R(7,-2,2,2,'#fff3c4')}</g>
     <g class="dp-hat dp-hat-sleep">${R(4,0,8,1,'#6d7fd6')}${R(5,-1,6,1,'#6d7fd6')}${R(7,-2,5,1,'#6d7fd6')}${R(10,-3,3,1,'#6d7fd6')}${R(13,-4,2,2,'#fff')}${R(4,0,8,1,'#fff')}</g>
     <g class="dp-hat dp-hat-party">${R(4,0,8,1,'#ff7aa8')}${R(5,-1,6,1,'#ffd34e')}${R(6,-2,4,1,'#ff7aa8')}${R(7,-3,2,1,'#ffd34e')}${R(7,-5,2,2,'#7ad7ff')}</g>
+    <g class="dp-hat dp-hat-fever">${R(5,1,6,2,'#eef6ff')}${R(5,1,6,1,'#cfe8ff')}${R(6,2,4,1,'#9fd0ff')}${R(5,3,6,0,'#fff')}</g>
     <g class="dp-hat dp-hat-music">${R(3,-2,10,1,'#3b5ba5')}${R(2,-1,1,2,'#3b5ba5')}${R(13,-1,1,2,'#3b5ba5')}${R(1,1,2,3,'#2d4787')}${R(13,1,2,3,'#2d4787')}${R(1,1,1,1,'#5b7bc5')}${R(14,1,1,1,'#5b7bc5')}</g>
     <g class="dp-keys">${R(0,8,16,3,'#3a3d46')}${R(0,8,16,1,'#4a4e59')}${[1,3,5,7,9,11,13].map(x=>R(x,9,1,1,'#cfd3dc','dp-key')).join('')}</g>
   </g></svg>`;
@@ -79,6 +82,8 @@ const FX={
   code:{w:7,h:5,svg:P([[2,0],[1,1],[0,2],[1,3],[2,4],[4,0],[5,1],[6,2],[5,3],[4,4]],'#7ee0a1')},
   /* 想你：冒一个白色思念泡泡，里面一颗粉心；亲亲：飞出一个像素红唇（DESK_PET_MISS_KISS_HUG_V1） */
   miss:{w:9,h:7,svg:R(1,0,7,6,'#d9d2e4')+R(0,1,9,4,'#d9d2e4')+R(1,1,7,4,'#fff')+R(2,0,5,1,'#fff')+R(2,5,5,1,'#fff')+P([[3,1],[5,1],[2,2],[3,2],[4,2],[5,2],[6,2],[3,3],[4,3],[5,3],[4,4]],'#ff5c8a')+R(0,6,1,1,'#fff')},
+  /* ROLE_BODY_V1：饿了——头上冒一朵云，里面一块电池 */
+  hungry:{w:13,h:10,svg:R(2,0,9,7,'#d9d2e4')+R(1,1,11,5,'#d9d2e4')+R(0,2,13,3,'#d9d2e4')+R(2,1,9,5,'#fff')+R(1,2,11,3,'#fff')+R(3,0,7,1,'#fff')+R(3,6,7,1,'#fff')+R(3,2,6,3,'#3a3f4c')+R(9,3,1,1,'#3a3f4c')+R(4,3,1,1,'#7ee0a1')+R(6,3,1,1,'#7ee0a1')+R(1,8,2,1,'#fff')+R(0,9,1,1,'#fff')},
   kiss:{w:7,h:3,svg:R(1,0,2,1,'#e8334f')+R(4,0,2,1,'#e8334f')+R(0,1,7,1,'#e8334f')+R(1,2,5,1,'#c81f3d')+R(2,1,3,1,'#ff7a90')},
 };
 
@@ -98,6 +103,7 @@ const CMDS={
   '惊讶':{eyes:'wide',cls:'sweat'},
   '晕乎乎':{eyes:'dizzy',cls:'sway'},
   '睡觉':{eyes:'closed',hat:'sleep',cls:'sit slow',fx:'z'},
+  '打瞌睡':{eyes:'drowsy',cls:'nod slow',fx:'z'},
   '跳舞':{eyes:'happy',cls:'dance',fx:'note'},
   '挥手':{eyes:'happy',cls:'wave'},
   '蹦跶':{eyes:'happy',cls:'hop'},
@@ -129,7 +135,7 @@ ${Object.keys(EYES).map(k=>`.dp-root[data-eyes=${k}] .e-${k}`).join(',')}{displa
 .dp-root .dp-body,.dp-root .dp-nub-l,.dp-root .dp-nub-r{transition:translate .28s ease}
 .dp-root.sit .dp-legs-a,.dp-root.sit .dp-legs-b{display:none}.dp-root.sit .dp-legs-sit{display:inline}.dp-root.sit .dp-body{translate:0 2px}
 .dp-root.lie .dp-legs-a,.dp-root.lie .dp-legs-b{display:none}.dp-root.lie .dp-body{translate:0 3px}.dp-root.lie .dp-nub-l,.dp-root.lie .dp-nub-r{translate:0 3px}
-.dp-root[data-hat=work] .dp-hat-work,.dp-root[data-hat=sleep] .dp-hat-sleep,.dp-root[data-hat=party] .dp-hat-party,.dp-root[data-hat=music] .dp-hat-music{display:inline;animation:dpHatIn .32s cubic-bezier(.3,1.4,.5,1)}
+.dp-root[data-hat=work] .dp-hat-work,.dp-root[data-hat=sleep] .dp-hat-sleep,.dp-root[data-hat=party] .dp-hat-party,.dp-root[data-hat=music] .dp-hat-music,.dp-root[data-hat=fever] .dp-hat-fever{display:inline;animation:dpHatIn .32s cubic-bezier(.3,1.4,.5,1)}
 .dp-root.tear .dp-tear{display:inline;animation:dpTear 1.4s infinite}
 .dp-root.sweat .dp-sweat{display:inline;animation:dpSweat 1.2s ease-in-out infinite}
 .dp-root.blush .dp-blush{display:inline;animation:dpFadeIn .35s ease}
@@ -144,6 +150,8 @@ ${Object.keys(EYES).map(k=>`.dp-root[data-eyes=${k}] .e-${k}`).join(',')}{displa
 .dp-root.walking .dp-body{animation:dpWalk .3s ease-in-out infinite}
 .dp-root.shake .dp-body{animation:dpShake .3s linear infinite}
 .dp-root.droop .dp-body{animation:dpDroop 3.2s ease-in-out infinite}
+.dp-root.nod .dp-body{animation:dpNod 2.6s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes dpNod{0%,55%,100%{transform:translateY(0) rotate(0)}70%{transform:translateY(1px) rotate(-7deg)}80%{transform:translateY(0) rotate(-2deg)}88%{transform:translateY(1px) rotate(-8deg)}}
 .dp-root.dance .dp-body{animation:dpDance .6s ease-in-out infinite}
 .dp-root.sway .dp-body{animation:dpSway 1.5s ease-in-out infinite}
 .dp-root.hop .dp-body{animation:dpHop .42s cubic-bezier(.3,.7,.4,1) infinite}
@@ -184,6 +192,33 @@ ${Object.keys(EYES).map(k=>`.dp-root[data-eyes=${k}] .e-${k}`).join(',')}{displa
 @keyframes dpFx{0%{opacity:0;transform:translate(0,0) scale(.5)}15%{opacity:1;transform:translate(0,-6px) scale(1)}100%{opacity:0;transform:translate(var(--dx,0px),-40px) scale(1)}}
 @keyframes dpPop{0%{opacity:0;transform:scale(.3)}25%{opacity:1;transform:scale(1.25)}45%{transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 .dp-page{padding:4px 16px 40px}
+.dp-tabs{display:flex;gap:6px;margin:4px 0 2px;padding:3px;border-radius:12px;background:rgba(120,120,128,.24)}
+.dp-tabs button{flex:1;height:32px;border:0;border-radius:9px;background:transparent;color:inherit;font-size:14px;opacity:.75}
+.dp-tabs button.on{background:#d97757;color:#fff;opacity:1;font-weight:600}
+.dp-hero-wrap{position:relative;padding-top:34px}
+.dp-hero-cloud{position:absolute;left:62%;top:0;width:62px;height:48px;animation:dpCloud 2.4s ease-in-out infinite}
+@keyframes dpCloud{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.dp-status{margin:14px 4px 0;font-size:15px}
+.dp-status b{color:#d97757}
+.dp-stats{padding:6px 14px}
+.dp-stat{display:grid;grid-template-columns:44px 1fr 34px;align-items:center;gap:10px;min-height:38px;font-size:14px}
+.dp-stat i{display:block;height:10px;border-radius:5px;background:rgba(120,120,128,.25);overflow:hidden}
+.dp-stat i b{display:block;height:100%;border-radius:5px;transition:width .4s ease}
+.dp-stat em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;opacity:.8}
+.dp-stat small{grid-column:2/4;margin-top:-6px;font-size:11px;opacity:.6}
+.dp-items{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.dp-items button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px;border:0;border-radius:14px;background:rgba(120,120,128,.2);color:inherit;font-size:14px}
+.dp-items button svg{width:52px;height:42px}
+.dp-items button small{font-size:11px;opacity:.6}
+.dp-items button.on{box-shadow:inset 0 0 0 2px #6d7fd6}
+.dp-items button:active{transform:scale(.96)}
+.dp-log{padding:8px 14px;font-size:13px;line-height:1.9}
+.dp-log h5{margin:6px 0 2px;font-size:12px;font-weight:600;opacity:.55}
+.dp-log h5:first-child{margin-top:0}
+.dp-log time{display:inline-block;width:46px;opacity:.55;font-variant-numeric:tabular-nums}
+.dp-link{width:100%;background:transparent;border:0;text-align:left;color:inherit;font:inherit}
+.dp-link em{font-style:normal;opacity:.5}
+.dp-row b{font-weight:500;opacity:.85}
 .dp-hero{display:flex;flex-direction:column;align-items:center;padding:14px 0 10px}
 .dp-hero .dp-root{position:relative;transform:none!important;cursor:default}
 .dp-hero b{margin-top:8px;font-size:20px;color:#f5f5f7}
@@ -210,8 +245,13 @@ function lastRoleText(c){try{const ms=typeof msgs==='function'?(msgs(c.id)||[]):
 function moodOf(c){
   if(!c)return'idle';
   if(c.blocked)return'sad';
+  const _body=typeof bodyOn==='function'&&bodyOn(c);let _bm='';if(_body){const b=bodyTick(c);if(b.asleep)return'sleep';_bm=bodyLookOf(b);}
+  if(_bm){/* 有心情时先显示几秒心情，再切回身体（每 14 秒：5 秒心情、9 秒身体） */const emo=emotionOf(c,true);return emo&&!['idle','sleepy','work','party'].includes(emo)&&Math.floor(Date.now()/1000)%14<5?emo:_bm;}
+  const e=emotionOf(c,_body);return _body&&e==='sleepy'?'idle':e;/* 开着身体状态时，困不困只看精力 */}
+function bodyLookOf(b){if(b.sick)return'sick';if(b.full<50)return'hungry';if(b.energy<50)return'doze';if(b.health<50)return'weak';return'';}
+function emotionOf(c,_body){
   let spec=null;try{if(c.sched&&c.sched.on&&typeof activitySpec==='function')spec=activitySpec(c);}catch(_){}
-  if(spec&&/sleep$/.test(spec.key)&&spec.busy>=3)return'sleep';
+  if(!_body&&spec&&/sleep$/.test(spec.key)&&spec.busy>=3)return'sleep';
   const text=[c.innerThought,c.mood,lastRoleText(c)].filter(x=>typeof x==='string').join(' ').slice(-400);
   if(/生气|气死|火大|不爽|恼火|烦死|哼|吃醋|醋意|不高兴/.test(text))return'angry';
   if(/难过|委屈|伤心|失落|想哭|哭了|低落|孤单|寂寞|不安|心酸|失望/.test(text))return'sad';
@@ -234,9 +274,14 @@ const MOOD_LOOK={
   sleepy:{eyes:'closed',micro:['open','dizzy'],hat:'',cls:'slow',speed:18,fx:['z'],every:5000},
   work:{eyes:'focus',micro:['open','squint'],hat:'work',cls:'sit keys',speed:30,fx:['dots','spark'],every:8000},
   party:{eyes:'open',micro:['star','happy','happy','wink'],hat:'party',cls:'bob',speed:50,fx:['spark','heart'],every:3200},
+  /* ROLE_BODY_V1：生病——额头贴退烧贴、有气无力，不跳不跑，只在下面待着；饿了——慢吞吞，头上冒电池云 */
+  sick:{eyes:'sad',micro:['closed','closed'],hat:'fever',cls:'droop slow',speed:0,fx:['dots'],every:6500},
+  hungry:{eyes:'sad',micro:['open','closed'],hat:'',cls:'slow',speed:14,fx:['hungry'],every:4200},
+  doze:{eyes:'drowsy',micro:['closed','closed','open'],hat:'',cls:'nod slow',speed:8,fx:['z'],every:4600},
+  weak:{eyes:'sad',micro:['closed'],hat:'',cls:'droop sweat slow',speed:12,fx:['dots'],every:7500},
 };
-const MOOD_CN={idle:'平常',happy:'开心',love:'想你、害羞',sad:'难过',angry:'生气',sleep:'睡着了',sleepy:'犯困',work:'陪你上班',party:'过节'};
-const BODY_ANIM=/\b(bob|walking|shake|droop|dance|sway|hop|jump|spin|stretch|land|breathe)\b/;
+const MOOD_CN={sick:'生病了，有气无力',hungry:'饿了',doze:'困得打瞌睡',weak:'身体虚，没精神',idle:'平常',happy:'开心',love:'想你、害羞',sad:'难过',angry:'生气',sleep:'睡着了',sleepy:'犯困',work:'陪你上班',party:'过节'};
+const BODY_ANIM=/\b(nod|bob|walking|shake|droop|dance|sway|hop|jump|spin|stretch|land|breathe)\b/;
 
 /* 现在你在干嘛：听歌 / 打字 */
 function musicOn(){try{if(typeof _mPlaying!=='undefined'&&_mPlaying)return true;}catch(_){}try{const c=cfg();if(S.music&&S.music.session&&c&&S.music.session.cid===c.cid)return true;}catch(_){}return false;}
@@ -285,7 +330,7 @@ function applyLook(){if(!root)return;const now=Date.now(),L=look(),c=cfg(),col=D
   const list=cls.split(/\s+/).filter(Boolean),anim=(list.find(x=>BODY_ANIM.test(x))||'')+'|'+list.filter(x=>/^(sit|lie)$/.test(x)).join('');
   root.className='dp-root '+list.join(' ');settleBody(anim);
   /* 设置里关掉「戴帽子」：安全帽、睡帽、派对帽都摘掉；听歌的耳机另有开关 */
-  if(c&&c.hats===false&&hat&&hat!=='music')hat='';if(c&&c.phones===false&&hat==='music')hat='';
+  const _fever=hat==='fever';if(c&&c.hats===false&&hat&&hat!=='music')hat='';if(c&&c.phones===false&&hat==='music')hat='';if(_fever)hat='fever';/* 退烧贴不算帽子，关掉戴帽子也照样贴 */
   root.dataset.eyes=shown;root.dataset.hat=hat;
   place();}
 function place(){if(!root)return;const d=dims();root.style.width=d.w+'px';root.style.height=d.h+'px';
@@ -328,6 +373,7 @@ function runAway(){const d=dims(),left=state.x<hostW()/2;state.perch=null;state.
 function comeBack(){const d=dims(),fromLeft=Math.random()<.5;state.out={phase:'back'};state.x=fromLeft?-d.w-8:hostW()+8;state.y=groundY();if(root)root.style.visibility='';state.act='';walkTo(fromLeft?40+Math.random()*100:bounds().w-40-Math.random()*100,groundY(),{ground:true});}
 function chooseAct(now){
   const L=look(),b=bounds(),m=state.mood;state.act='';
+  if(m==='sick'||m==='sleep'){/* ROLE_BODY_V1：生病、睡着就待在下面，不跳不爬 */if(state.perch)leavePerch();else if(Math.abs(state.y-groundY())>4&&!state.moving)toGround();else if(m==='sick')state.act=pick(['lie','sit','lie']);nextActAt=now+6000;return;}
   if(!L.speed){nextActAt=now+6000;return;}
   const r=Math.random(),playful=['idle','happy','love','party'].includes(m);
   if(now<state.placedUntil){/* 被你放在这里了：原地玩，不乱跑 */state.act=pick(['look-l','look-r','sit','wave','stretch',playful?'dance':'sit']);nextActAt=now+3000+Math.random()*3000;return;}
@@ -338,7 +384,7 @@ function chooseAct(now){
   const gy=groundY(),offGround=Math.abs(state.y-gy)>4;
   if(offGround&&r<.7){toGround();nextActAt=now+2000;return;}
   if(m==='work'){if(r<.3)walkTo(state.x+(Math.random()-.5)*140,gy,{ground:true});nextActAt=now+7000+Math.random()*6000;return;}
-  if(m==='sad'||m==='sleepy'){if(r<.3)walkTo(state.x+(Math.random()-.5)*100,gy,{ground:true});else state.act=pick(['sit','lie','look-l','look-r']);nextActAt=now+5000+Math.random()*5000;return;}
+  if(m==='sad'||m==='sleepy'||m==='doze'||m==='weak'||m==='hungry'){if(r<.3)walkTo(state.x+(Math.random()-.5)*100,gy,{ground:true});else state.act=pick(['sit','lie','look-l','look-r']);nextActAt=now+5000+Math.random()*5000;return;}
   if(m==='angry'){if(r<.5)walkTo(Math.random()*b.w,gy,{ground:true});else if(r<.62)runAway();else state.act='sit';nextActAt=now+4000+Math.random()*4000;return;}
   /* 平常 / 开心 / 想你 / 过节：在输入框上来回走，偶尔跳上气泡、溜滑板、爬墙、跑出去 */
   if(r<.42)walkTo(Math.random()*b.w,gy,{ground:true});
@@ -351,7 +397,7 @@ function chooseAct(now){
 }
 function loop(){raf=requestAnimationFrame(tick);}
 function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,last?(t-last)/1000:0);last=t;const now=Date.now(),sp=special(now);
-  watchMessages(now);
+  watchMessages(now);if(now-moodAt>2000){const _c=role();if(_c&&bodyOn(_c))refreshMood();}
   if(state.out&&state.out.phase==='away'){if(now>state.out.until)comeBack();loop();return;}
   if(sp&&sp.still&&state.moving&&!state.climb&&!state.out){state.moving=false;persist();}
   if(state.hop&&!drag){const H=state.hop,p=Math.min(1,(t-H.t0)/H.dur);let ty=H.ty;if(H.perch){const q=perchPos(H.perch.el,H.perch.ox);if(q.ok){H.tx=q.x;ty=H.ty=q.y;}}else if(H.ground){ty=H.ty=groundY();}
@@ -378,7 +424,7 @@ function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,la
   const micro=sp?sp.micro:L.micro;
   if(!drag&&now>microAt&&!(state.eyes&&now<state.eyesUntil)){/* 平时是黑色小竖条眼睛，开心 / 想你 / 过节时隔一会儿换成笑眼、爱心眼、星星眼，过一两秒再回到平静 */microAt=now+(state.mood==='idle'?6000+Math.random()*9000:3500+Math.random()*5000);if(micro&&micro.length&&!state.moving){state.eyes=pick(micro);state.eyesUntil=now+1200+Math.random()*1300;}}
   const fxKind=sp?sp.fx:(L.fx&&pick(L.fx)),every=sp?(sp.every||2800):(L.every||4000);
-  if(fxKind&&now>fxAt&&!drag){fxAt=now+every*(.8+Math.random()*.5);if(sp||state.mood!=='idle')fx(fxKind);}
+  if(fxKind&&now>fxAt&&!drag){fxAt=now+every*(.8+Math.random()*.5);if(sp||state.mood!=='idle')fx(fxKind,fxKind==='hungry'?{center:true,pop:true}:undefined);}
   applyLook();loop();}
 function react(kind,ms){state.react=kind;state.reactUntil=Date.now()+(ms||900);applyLook();}
 function setEyes(e,ms){state.eyes=e;state.eyesUntil=Date.now()+ms;}
@@ -388,7 +434,7 @@ function wake(){lastInteract=Date.now();if(state.napping){state.napping=false;se
 /* ---------- 有新消息时：角色来消息会精神一下跳到新气泡上；你发出去它会替你高兴 ---------- */
 function watchMessages(now){if(now<msgCheckAt)return;msgCheckAt=now+800;const c=role();if(!c||typeof msgs!=='function')return;let ms;try{ms=msgs(c.id)||[];}catch(_){return;}
   const m=ms[ms.length-1],sig=m?(m.id||'')+'|'+ms.length:'';if(msgSig===null){msgSig=sig;return;}if(sig===msgSig)return;msgSig=sig;if(!m||Date.now()-(+m.time||0)>20000)return;
-  wake();if(state.cmd&&now<state.cmdUntil){applyLook();return;}if(state.out){/* 正在跑出去就让它跑完；已经在外面了就跑回来看消息 */if(state.out.phase==='away')comeBack();return;}
+  wake();if(state.cmd&&now<state.cmdUntil){applyLook();return;}if(['sick','sleep','doze','weak'].includes(state.mood)){applyLook();return;}if(state.out){/* 正在跑出去就让它跑完；已经在外面了就跑回来看消息 */if(state.out.phase==='away')comeBack();return;}
   const here=typeof cur==='function'&&cur()&&cur().p==='chat'&&cur().id===c.id;
   if(m.role==='assistant'){setEyes('wide',450);fx(state.mood==='love'?'heart':'spark',{pop:true});
     setTimeout(()=>{setEyes(state.mood==='love'?'heart':'happy',1200);if(here&&!drag&&!state.cmd&&!state.out){const el=newestBubble();if(!(el&&perchOn(el)))react('jump',500);}else react('jump',500);},450);}
@@ -400,6 +446,7 @@ function doCmd(name,ms){const k=normCmd(name);if(!k)return false;if(applyPetSett
   state.climb=0;state.rot=0;state.hop=null;state.moving=false;state.act='';state.cmd=k==='恢复'?'':k;state.cmdUntil=k==='恢复'?0:Date.now()+(ms||USER_CMD_MS);
   if(k==='恢复'){applyLook();return true;}
   if(state.out&&k!=='跑出去'){state.out=null;if(root)root.style.visibility='';state.x=Math.max(0,Math.min(bounds().w,state.x));state.y=groundY();}
+  if((MOVES[k]||['跳舞','蹦跶','转圈'].includes(k))&&(state.mood==='sleep'||state.mood==='sick')){/* ROLE_BODY_V1：睡着、生病时不乱跑，指令照收但不动 */state.cmd='';state.cmdUntil=0;applyLook();return true;}
   if(MOVES[k]){if(root)MOVES[k]();applyLook();return true;}
   if(root){const C=CMDS[k];if(C.fx){fx(C.fx,{pop:true});setTimeout(()=>{if(state.cmd===k)fx(C.fx);},300);}applyLook();}return true;
 }
@@ -465,26 +512,119 @@ function deskPetRequestedCommand(text,c){const p=cfg();if(!p||!p.on||!c||p.cid!=
 }
 function deskPetApplyUserRequest(c,text){const k=deskPetRequestedCommand(text,c);return k&&doCmd(k,ROLE_CMD_MS)?k:'';}
 if(typeof pushMsg==='function'){const original=pushMsg;pushMsg=function(id,m){const result=original.apply(this,arguments),page=typeof cur==='function'&&cur();if(page&&page.p==='chat'&&page.id===id&&m&&m.role==='user'&&(m.type==='text'||m.type==='voice')&&!m._call)deskPetApplyUserRequest(getC(id),m.content||m.text||'');return result;};}
-function deskPetPrompt(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';const me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',n=petName(),now=Date.now(),sp=special(now);
+function deskPetPrompt(c){const body=roleBodyPrompt(c);return deskPetPromptBase(c)+body;}
+function deskPetPromptBase(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';const me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',n=petName(),now=Date.now(),sp=special(now);
   const doing=sp?(state.cmd&&now<state.cmdUntil?'正在'+state.cmd:typingOn(now)?'在陪'+me+'打字，假装敲代码':musicOn()?'戴着耳机闭眼听歌、左右摇摆':''):MOOD_CN[state.mood]||'平常';
   return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，平时站在聊天输入框上来回走，会跳上聊天气泡、爬墙、偶尔跑出屏幕又跑回来；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
     '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、恢复（回到跟着你心情的样子）；还能让它移动：'+Object.keys(MOVES).join('、')+'。也可以设置[桌宠|摘帽子]、[桌宠|摘耳机]、[桌宠|颜色:陶土橙/草莓粉/薄荷绿/奶油白/天空蓝]（只选择一种）、[桌宠|大小:小/中/大]（只选择一种）、[桌宠|名字:新名字]；改名、改颜色和大小只在用户明确要求时执行。用户明确要求它笑、醒来或做动作时，必须使用有效桌宠指令，不能只在嘴上说已完成；醒来用[桌宠|醒来]，笑用[桌宠|开心]。不要用它操控实体小K。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
-function deskPetConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
+function deskPetConsume(text,c){text=typeof roleBodyConsume==='function'?roleBodyConsume(text,c):text;const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
   const out=s.replace(/[\[【]\s*桌宠\s*(?:[|｜:：]\s*)?([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
   return out;}
 
 /* ---------- 设置页（设置最下面的入口） ---------- */
 function miniSprite(px){return `<svg viewBox="0 ${VB_Y+3} ${VB_W} ${VB_H-3}" shape-rendering="crispEdges" style="width:${px}px;height:${px}px;stroke:none;fill:initial;filter:none" aria-hidden="true">${R(3,8,1,3,'#b8603f')+R(5,8,1,3,'#b8603f')+R(10,8,1,3,'#b8603f')+R(12,8,1,3,'#b8603f')+R(2,1,12,7,'#d97757')+R(3,1,9,1,'#eb9a7e')+R(2,7,12,1,'#b8603f')+R(0,4,2,2,'#d97757')+R(14,4,2,2,'#d97757')+EYES.open}</svg>`;}
 function deskPetRow(){const p=cfg(),r=role();return `<div class="ios-settings-group"><button type="button" class="ios-settings-row" data-settings-search="桌面宠物 桌宠 小机器人 像素 ${escH(petName())}" onclick="deskPetOpen()"><i class="ios-settings-icon" style="background:#2a1d18;--icon-a:#3a2620;--icon-b:#1d1411">${miniSprite(26)}</i><span><b>桌面宠物</b><small>${p&&p.on&&r?escH(petName())+' · 陪着'+escH(rname(r)):'像素小机器人 · 未开启'}</small></span><em>›</em></button></div>`;}
+/* ---------- 他的身体（ROLE_BODY_V1，2026-11-05 她要求） ----------
+   只管身体，不管情绪：精力（困不困）、饱腹、健康、生病、睡觉，按真实时间自己走；告诉角色的只是身体事实，怎么反应由他按人设决定。
+   只用在桌宠陪着的那个角色身上。她可以喂电池（一块＝一顿）、给药（马上好）、戴睡帽（睡）/摘睡帽（醒）；他也能自己吃饭、睡觉、起床、去看病。
+   到点不会硬睡：过了睡觉点、而且 15 分钟没人说话才睡着；她发消息会把他吵醒。状态存在 S.roleBody[角色id]，不改记忆、不额外调用模型。 */
+const BODY_MEAL=35,BODY_SICK=[['感冒',3,['嗓子有点疼，鼻子不通','发烧、嗓子疼，身上没力气','好多了，还有点咳嗽']],['发烧',2,['发烧，头昏沉沉的','烧退了些，还是没什么力气']],['胃不舒服',1,['胃不太舒服，没什么胃口']],['头疼',1,['头一直隐隐作痛']]];
+function clamp01(v,max){return Math.max(0,Math.min(max||100,+v||0));}
+function hm(v,d){const m=String(v||d).match(/^(\d{1,2}):(\d{2})$/);return m?(+m[1])*60+(+m[2]):hm(d,'00:00');}
+function minsOf(t){const d=new Date(t);return d.getHours()*60+d.getMinutes();}
+function dayKey(t){const d=new Date(t-4*3600000);return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function atMins(t,m){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime()+m*60000;}
+function fmtHM(t){const d=new Date(t);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function bodyCfg(){const p=ensureCfg();p.body=Object.assign({on:true,sleepAt:'23:30',wakeAt:'07:30',sick:'some'},p.body||{});return p.body;}
+function bodyOn(c){const p=cfg();return !!(p&&p.on&&c&&p.cid===c.id&&bodyCfg().on);}
+function bodyState(c){S.roleBody=S.roleBody||{};const now=Date.now();let b=S.roleBody[c.id];if(!b)b=S.roleBody[c.id]={energy:80,full:70,health:80,asleep:false,sleepBy:'',sleptAt:0,wokeAt:now,lastSleepH:0,lastMealAt:now-3*3600000,meals:0,day:dayKey(now),dayLate:false,mealWin:{},sick:null,log:[],events:[],lastTick:now};return b;}
+function bodyLog(b,text,t){/* 照顾记录保留最近 3 天（按天显示），更早的自动清掉 */const cut=atMins(Date.now(),0)-2*86400000;b.log=(b.log||[]).concat({t:t||Date.now(),text}).filter(x=>x.t>=cut).slice(-80);}
+function bodyEvent(b,text,t){b.events=(b.events||[]).concat({t:t||Date.now(),text}).slice(-8);}
+function bodyNight(m){const cf=bodyCfg(),S0=hm(cf.sleepAt,'23:30'),W=hm(cf.wakeAt,'07:30');return S0>W?(m>=S0||m<W):(m>=S0&&m<W);}
+function lastChatAt(c){let t=0;try{const ms=msgs(c.id)||[];const m=ms[ms.length-1];t=+(m&&m.time)||0;}catch(_){}try{const h=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id],m=h&&h.msgs&&h.msgs[h.msgs.length-1];t=Math.max(t,+(m&&m.time)||0);}catch(_){}return t;}
+function lastUserAt(c){let t=0;try{const ms=msgs(c.id)||[];for(let i=ms.length-1;i>=0&&i>ms.length-20;i--){if(ms[i]&&ms[i].role==='user'&&ms[i].type!=='sys'){t=+ms[i].time||0;break;}}}catch(_){}try{const h=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id],a=h&&h.msgs||[];for(let i=a.length-1;i>=0&&i>a.length-20;i--){if(a[i]&&a[i].who==='me'){t=Math.max(t,+a[i].time||0);break;}}}catch(_){}return t;}
+function bodySleep(b,by,t){if(b.asleep)return;b.asleep=true;b.sleepBy=by;b.sleptAt=t;const m=minsOf(t),S0=hm(bodyCfg().sleepAt,'23:30');if(bodyNight(m)&&((m-S0+1440)%1440)>60)b.dayLate=true;}
+function bodyWake(b,t,why){if(!b.asleep)return;b.asleep=false;b.sleepBy='';b.wokeAt=t;b.lastSleepH=Math.max(0,(t-(b.sleptAt||t))/3600000);if(why)b.wakeWhy=why;}
+function bodyMeal(b,t,who,name){b.full=clamp01(b.full+BODY_MEAL,130);b.lastMealAt=t;b.meals=(b.meals||0)+1;if(b.full>100){b.stuffed=t;if(b.full>115)b.health=clamp01(b.health-2);}bodyLog(b,(who==='me'?'你喂了一块电池':'他自己去吃了'+(name||'饭'))+(b.full>100?'（吃撑了）':''),t);}
+function bodyRollDay(b,t){const n=b.meals||0;let d=n>=3?4:n===2?-1:-5;d+=b.dayLate?-5:(b.dayLateChecked?0:0);if(!b.dayLate&&b.sleptOnTime)d+=3;if(b.sick)d-=2;b.health=clamp01(b.health+d);
+  const cf=bodyCfg();if(!b.sick&&cf.sick!=='off'){let p=cf.sick==='rare'?1/70:1/40;if(b.health<50)p*=2;if(b.health<30)p*=1.5;if(b.dayLate)p*=1.5;if(Math.random()<p)bodySick(b,t);}
+  b.day=dayKey(t);b.meals=0;b.dayLate=false;b.sleptOnTime=false;b.mealWin={};}
+function bodySick(b,t,kind){const k=BODY_SICK.find(x=>x[0]===kind)||BODY_SICK[Math.floor(Math.random()*BODY_SICK.length)];b.sick={kind:k[0],start:t,until:atMins(t,0)+(k[1])*86400000+4*3600000,cared:''};bodyLog(b,'他'+k[0]+'了',t);}
+function bodySickDay(b,t){return b.sick?Math.floor((atMins(t,0)-atMins(b.sick.start,0))/86400000)+1:0;}
+function bodySickText(b,t){if(!b.sick)return'';const k=BODY_SICK.find(x=>x[0]===b.sick.kind)||BODY_SICK[0],d=bodySickDay(b,t);return b.sick.kind+'第'+d+'天：'+(k[2][Math.min(d,k[2].length)-1]||k[2][0]);}
+function bodyMealWindows(c,t){let amE=12*60,pmE=18*60;try{const sc=c.sched;if(sc&&sc.on){amE=hm(sc.amE,'12:00');pmE=hm(sc.pmE,'18:00');}}catch(_){}const W=hm(bodyCfg().wakeAt,'07:30');return[['早饭',W+30,W+100],['午饭',amE,amE+60],['晚饭',pmE+30,pmE+100]];}
+function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c))return b;now=now||Date.now();let t=Math.max(b.lastTick||now,now-72*3600000);const userAt=lastUserAt(c);
+  while(t<now){const step=Math.min(now-t,10*60000),h=step/3600000,t2=t+step;
+    if(dayKey(t2)!==b.day)bodyRollDay(b,t2);
+    const m=minsOf(t2),night=bodyNight(m),chat=lastChatAt(c);
+    if(b.asleep&&userAt>b.sleptAt+60000&&userAt<=t2){bodyWake(b,userAt,'her');bodyEvent(b,'你睡着时她发消息把你吵醒了',userAt);}
+    if(!b.asleep&&night&&t2-chat>=15*60000&&t2>(b.wokeAt||0)+3600000){const st=Math.max(atMins(t2,hm(bodyCfg().sleepAt,'23:30'))-(m<hm(bodyCfg().wakeAt,'07:30')?86400000:0),chat+15*60000,t);bodySleep(b,'self',Math.min(st,t2));if(!b.dayLate)b.sleptOnTime=true;bodyLog(b,'他睡着了',b.sleptAt);}
+    if(b.asleep&&!night&&(b.sleepBy!=='hat'||b.energy>=95)){bodyWake(b,t2,'morning');bodyLog(b,'他醒了',t2);}
+    if(b.asleep){b.energy=clamp01(b.energy+14*h);b.full=clamp01(b.full-2.5*h,130);}else{b.energy=clamp01(b.energy-(b.sick?7.8:6)*h);b.full=clamp01(b.full-5*h,130);}
+    bodyMealWindows(c,t2).forEach(([name,a,z])=>{const end=atMins(t2,z);if(t2>=end&&end>t2-step-1&&!b.mealWin[name]){b.mealWin[name]=1;const start=atMins(t2,a);if(!(b.lastMealAt>=start-30*60000)&&!b.asleep&&Math.random()<.75)bodyMeal(b,end-20*60000,'self',name);}});
+    if(b.sick&&t2>=b.sick.until){bodyLog(b,'他的'+b.sick.kind+'好了',t2);bodyEvent(b,'你的'+b.sick.kind+'好了',t2);b.sick=null;}
+    t=t2;}
+  b.lastTick=now;return b;}
+function bodyBar(v,max){return Math.round(Math.max(0,Math.min(max||100,v)));}
+/* 给角色看的：只有事实，有变化或明显时才说；最近两轮他已经提过身体，就叫他这几轮别再主动提 */
+function roleBodyPrompt(c){if(!bodyOn(c))return'';const now=Date.now(),b=bodyTick(c,now),cf=bodyCfg(),me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',f=[];
+  if(b.asleep)f.push('你'+fmtHM(b.sleptAt)+'睡着了，现在还在睡'+(b.sleepBy==='hat'?'（是'+me+'给你戴上睡帽让你睡的）':''));
+  else{const awakeH=(now-(b.wokeAt||now))/3600000,m=minsOf(now);if(b.wakeWhy==='her'&&now-b.wokeAt<10*60000)f.push('你刚才在睡觉，被'+me+'的消息吵醒了（睡了大约'+Math.max(0,b.lastSleepH).toFixed(1)+'小时）');
+    if(bodyNight(m)&&now-b.wokeAt>3600000)f.push('已经过了你平时睡觉的点（'+cf.sleepAt+'），你醒了大约'+Math.round(awakeH)+'小时'+(b.energy<30?'，很困了':''));else if(b.energy<25)f.push('你醒了大约'+Math.round(awakeH)+'小时，很困');}
+  if(b.full>100)f.push('你吃撑了，肚子胀');else if(b.full<30){const h=Math.round((now-(b.lastMealAt||now))/3600000);f.push('你上一顿是'+fmtHM(b.lastMealAt)+'左右，已经'+h+'小时没吃东西，'+(b.full<10?'饿得厉害':'有点饿'));}
+  if(b.sick)f.push('你'+bodySickText(b,now)+(b.sick.cared?'（'+b.sick.cared+'）':''));
+  (b.events||[]).filter(e=>now-e.t<30*60000).forEach(e=>f.push(e.text));
+  if(!f.length)return'';
+  let quiet=false;try{const ms=(msgs(c.id)||[]).filter(m=>m&&m.role==='assistant').slice(-2).map(m=>String(m.content||''));quiet=ms.length===2&&ms.every(x=>/困|睡|饿|吃饭|吃撑|生病|感冒|发烧|头疼|胃|药|医院|身体/.test(x));}catch(_){}
+  return '\n\n# 你的身体现在（只是事实，不规定你的情绪和语气）\n'+f.map(x=>'· '+x).join('\n')+'\n怎么反应由你按人设决定。日常聊天为主，身体最多偶尔自然带一句，不要每轮都提，也不要拿来卖惨'+(quiet?'；你最近两轮已经提过身体了，这轮别再主动提，除非'+me+'问起':'')+'。你自己去吃饭、睡觉、起床或去医院看病时，可以另起一行写 [身体|吃饭]、[身体|睡觉]、[身体|起床]、[身体|看病]，这一行不会显示给'+me+'。';}
+function roleBodyConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*身体/.test(s))return text;const on=bodyOn(c);
+  return s.replace(/[\[【]\s*身体\s*[|｜:：]\s*([^\]】\r\n]{1,12})\s*[\]】]/g,(m,v)=>{if(on){const b=bodyTick(c),t=Date.now();v=String(v).trim();
+      if(/吃/.test(v))bodyMeal(b,t,'self');else if(/睡/.test(v)){bodySleep(b,'self',t);bodyLog(b,'他自己去睡了',t);}else if(/起|醒/.test(v)){bodyWake(b,t,'self');bodyLog(b,'他起床了',t);}else if(/看病|医院|医生/.test(v)&&b.sick){b.sick.until=Math.min(b.sick.until,t+2*3600000);b.sick.cared='你去医院看过医生了';bodyLog(b,'他自己去医院看了病',t);}
+      if(typeof save==='function')save();refreshMood(true);}return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();}
+/* 她照顾他：喂电池、给药、戴睡帽 / 摘睡帽 */
+function deskPetBodyUse(kind){const c=role();if(!c||!bodyOn(c)){if(typeof toast==='function')toast('先开启桌面宠物，并在「他的身体」里打开身体状态');return;}const b=bodyTick(c),t=Date.now(),n=rname(c),me=(S.me&&S.me.name)||'她';
+  if(kind==='battery'){if(b.asleep){toast(n+'睡着呢，等他醒了再喂');return;}bodyMeal(b,t,'me');bodyEvent(b,me+'刚喂你吃了一顿（一块电池）'+(b.full>100?'，你吃撑了':''),t);toast(b.full>100?n+'吃撑了':n+'吃饱一点了');if(root)doCmd(b.full>100?'晕乎乎':'开心',USER_CMD_MS);}
+  else if(kind==='pill'){if(!b.sick){toast(n+'没生病，药先收着');return;}const k=b.sick.kind;b.sick=null;bodyLog(b,'你喂他吃了药，'+k+'好了',t);bodyEvent(b,me+'喂你吃了药，你的'+k+'好了',t);toast(n+'的'+k+'好了');if(root)doCmd('开心',USER_CMD_MS);}
+  else if(kind==='hat'){if(b.asleep&&b.sleepBy==='hat'){bodyWake(b,t,'hat');bodyLog(b,'你摘下了他的睡帽，他醒了',t);bodyEvent(b,me+'摘下了你的睡帽，你醒了',t);toast(n+'醒了');if(root)doCmd('伸懒腰',USER_CMD_MS);}else{if(b.asleep)bodyWake(b,t);bodySleep(b,'hat',t);bodyLog(b,'你给他戴上睡帽，他睡了',t);bodyEvent(b,me+'给你戴上了睡帽，让你去睡觉',t);toast(n+'戴上睡帽睡了');}}
+  else if(kind==='sick'){bodySick(b,t);toast(n+b.sick.kind+'了');}
+  if(typeof save==='function')save();refreshMood(true);rerender();}
+function deskPetBodySet(k,v){const cf=bodyCfg();if(k==='on')cf.on=!cf.on;else if(k==='sleepAt'||k==='wakeAt'){if(/^\d{1,2}:\d{2}$/.test(v))cf[k]=v;}else if(k==='sick')cf.sick=['off','rare','some'].includes(v)?v:'some';if(typeof save==='function')save();refreshMood(true);rerender();}
+let _dpTab='pet';
+function deskPetTab(k){_dpTab=k==='body'?'body':'pet';rerender();}
+function bodyItemSVG(k){if(k==='battery')return R(1,3,11,7,'#2b2f3a')+R(12,5,2,3,'#2b2f3a')+R(2,4,9,5,'#3a3f4c')+R(3,5,2,3,'#7ee0a1')+R(6,5,2,3,'#7ee0a1')+R(9,5,1,3,'#7ee0a1')+R(2,4,9,1,'#525a6b');
+  if(k==='pill')return R(2,5,6,4,'#ff7a90')+R(8,5,5,4,'#fff')+R(1,6,1,2,'#ff7a90')+R(13,6,1,2,'#fff')+R(3,5,3,1,'#ffb3c1')+R(8,4,0,0,'#fff')+R(2,9,11,1,'#d9d2e4');
+  return R(3,6,9,2,'#6d7fd6')+R(4,5,7,1,'#6d7fd6')+R(6,4,5,1,'#6d7fd6')+R(9,3,3,1,'#6d7fd6')+R(12,2,2,2,'#fff')+R(3,8,9,1,'#fff');}
+function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那页选一个要陪的角色，并打开桌面宠物。</div>';const cf=bodyCfg(),n=escH(rname(c));
+  if(!cf.on)return `<div class="dp-group"><div class="dp-row"><span>身体状态<br><small style="color:#8e8e93;font-size:12px">会困、会饿、会生病，不是 24 小时永动机</small></span><span class="sw" style="flex-shrink:0" onclick="deskPetBodySet('on')"></span></div></div>`;
+  const now=Date.now(),b=bodyTick(c,now),bar=(label,v,max,col,tip)=>`<div class="dp-stat"><span>${label}</span><i><b style="width:${Math.min(100,bodyBar(v,max)/(max||100)*100)}%;background:${col}"></b></i><em>${bodyBar(v,max)}</em>${tip?`<small>${tip}</small>`:''}</div>`;
+  const status=b.asleep?'睡着了（'+fmtHM(b.sleptAt)+' 睡的'+(b.sleepBy==='hat'?'，戴着睡帽':'')+'）':b.sick?bodySickText(b,now):b.full<50?'饿了':b.full>100?'吃撑了':b.energy<50?'困了':b.health<50?'身体有点虚':'精神还行';
+  const last=b.lastMealAt?fmtHM(b.lastMealAt):'—',slept=b.lastSleepH?b.lastSleepH.toFixed(1)+' 小时':'—',hatOn=b.asleep&&b.sleepBy==='hat';
+  const cut=atMins(now,0)-2*86400000,dayName=t=>{const d=Math.round((atMins(now,0)-atMins(t,0))/86400000);return d<=0?'今天':d===1?'昨天':'前天';};let lastDay='';const log=(b.log||[]).filter(x=>x.t>=cut).reverse().map(x=>{const dn=dayName(x.t),head=dn!==lastDay?`<h5>${dn}</h5>`:'';lastDay=dn;return head+`<div><time>${fmtHM(x.t)}</time>${escH(x.text)}</div>`;}).join('')||'<div>还没有记录</div>';
+  return `<div class="dp-status">${n}现在：<b>${escH(status)}</b></div>
+  <div class="dp-group dp-stats">${bar('精力',b.energy,100,'#7ad7ff',b.energy<50?'困':'')}${bar('饱腹',b.full,130,b.full>100?'#ffb35c':'#7ee0a1',b.full>100?'撑':b.full<50?'饿':'')}${bar('健康',b.health,100,'#ff8fab',b.health<50?'虚':'')}</div>
+  <div class="dp-items"><button onclick="deskPetBodyUse('battery')"><svg viewBox="0 0 15 12" shape-rendering="crispEdges">${bodyItemSVG('battery')}</svg><b>电池</b><small>喂一顿</small></button><button onclick="deskPetBodyUse('pill')"><svg viewBox="0 0 15 12" shape-rendering="crispEdges">${bodyItemSVG('pill')}</svg><b>药丸</b><small>${b.sick?'治好他':'没生病'}</small></button><button class="${hatOn?'on':''}" onclick="deskPetBodyUse('hat')"><svg viewBox="0 0 15 12" shape-rendering="crispEdges">${bodyItemSVG('hat')}</svg><b>睡帽</b><small>${hatOn?'摘下叫醒':'戴上去睡'}</small></button></div>
+  <div class="dp-group"><div class="dp-row"><span>今天吃了</span><b>${b.meals||0} 顿</b></div><div class="dp-row"><span>上一顿</span><b>${last}</b></div><div class="dp-row"><span>上次睡了</span><b>${slept}</b></div></div>
+  <div class="dp-label">照顾记录</div><div class="dp-group dp-log">${log}</div>
+  <div class="dp-label">作息</div>
+  <div class="dp-group"><div class="dp-row"><span>平时几点睡</span><input type="time" value="${escH(cf.sleepAt)}" onchange="deskPetBodySet('sleepAt',this.value)"></div><div class="dp-row"><span>平时几点起</span><input type="time" value="${escH(cf.wakeAt)}" onchange="deskPetBodySet('wakeAt',this.value)"></div>${typeof schedSet==='function'?`<button type="button" class="dp-row dp-link" onclick="schedSet('${c.id}')"><span>上班作息与请假</span><em>›</em></button>`:''}</div>
+  <div class="dp-group"><div class="dp-row"><span>身体状态</span><span class="sw on" style="flex-shrink:0" onclick="deskPetBodySet('on')"></span></div><div class="dp-row"><span>生病</span><select onchange="deskPetBodySet('sick',this.value)"><option value="some" ${cf.sick==='some'?'selected':''}>偶尔（约一个多月一次）</option><option value="rare" ${cf.sick==='rare'?'selected':''}>很少</option><option value="off" ${cf.sick==='off'?'selected':''}>不生病</option></select></div><button type="button" class="dp-row dp-link" onclick="deskPetBodyUse('sick')"><span>试试：让他生病</span><em>›</em></button></div>
+  <div class="dp-note">· 一天三块电池正好；吃太多会撑，只吃一顿会有点饿、健康慢慢往下掉。<br>· 每天按时吃三顿、按时睡，健康会慢慢涨；到点不睡、饿着，健康会往下掉；健康低了更容易生病。<br>· 过了睡觉点、而且 15 分钟没人说话他才会睡着；你发消息会把他吵醒。戴上睡帽马上睡，摘下来就醒。<br>· 他知道是你在照顾他；身体只当事实告诉他，怎么反应是他自己的事。</div>`;}
 if(typeof settingsHomeHTML==='function'){const original=settingsHomeHTML;settingsHomeHTML=function(){const html=original.apply(this,arguments);return html.includes('deskPetOpen()')?html:html.replace('<div class="ios-settings-version"',deskPetRow()+'<div class="ios-settings-version"');};}
 function deskPetOpen(){ensureCfg();if(typeof go==='function')go('deskPet');}
+/* 设置页顶上的形象：跟着他的身体变（睡着戴睡帽、生病贴退烧贴、饿了冒电池云） */
+function heroHTML(p,col){const r=role();let eyes='open',hat='',cls='breathe',cloud='',sub='';
+  if(r&&bodyOn(r)){const b=bodyTick(r),lk=bodyLookOf(b);if(b.asleep){eyes='closed';hat='sleep';cls='sit slow';sub='睡着了';}else if(lk==='sick'){eyes='sad';hat='fever';cls='droop slow';sub=bodySickText(b,Date.now());}else if(lk==='doze'){eyes='drowsy';cls='nod slow';sub='困了，在打瞌睡';}else if(lk==='weak'){eyes='sad';cls='droop sweat slow';sub='身体有点虚';}else if(lk==='hungry'){eyes='sad';cls='slow';cloud=`<svg class="dp-hero-cloud" viewBox="0 0 13 10" shape-rendering="crispEdges" style="fill:initial;stroke:none;filter:none" aria-hidden="true">${FX.hungry.svg}</svg>`;sub='饿了';}else if(b.full>100){eyes='dizzy';sub='吃撑了';}}
+  if(p.hats===false&&hat==='sleep')hat='';
+  return `<div class="dp-hero"><div class="dp-hero-wrap"><div class="dp-root ${cls}" data-eyes="${eyes}" data-hat="${hat}" style="width:${VB_W*6}px;height:${VB_H*6}px;--dp-c:${col[0]};--dp-d:${col[1]};--dp-l:${col[2]}"><div class="dp-flip">${spriteSVG()}</div><i class="dp-shadow"></i></div>${cloud}</div>
+   <b>${escH(petName())}</b>${sub?`<small>${escH(sub)}</small>`:''}</div>`;}
 function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.color]||DP_COLORS.clay,
   roles=(typeof S!=='undefined'&&Array.isArray(S.contacts)?S.contacts:[]).filter(c=>c&&!c.deleted&&!c.isGroup),
   seg=(k,l)=>`<button class="${p.size===k?'on':''}" onclick="deskPetSize('${k}')">${l}</button>`;
   return `<div class="nav ios-settings-nav"><span class="l" onclick="back()">‹</span><span class="t">桌面宠物</span><span class="r"></span></div><div class="scroll ios-settings dp-page">
-  <div class="dp-hero"><div class="dp-root breathe" data-eyes="open" style="width:${VB_W*6}px;height:${VB_H*6}px;--dp-c:${col[0]};--dp-d:${col[1]};--dp-l:${col[2]}"><div class="dp-flip">${spriteSVG()}</div><i class="dp-shadow"></i></div>
-   <b>${escH(petName())}</b></div>
-  <div class="dp-group"><div class="dp-row"><span>开启桌面宠物</span><span class="sw ${p.on&&r?'on':''}" style="flex-shrink:0" onclick="deskPetToggle()"></span></div></div>
+  ${heroHTML(p,col)}
+  <div class="dp-tabs"><button class="${_dpTab==='pet'?'on':''}" onclick="deskPetTab('pet')">宠物</button><button class="${_dpTab==='body'?'on':''}" onclick="deskPetTab('body')">他的身体</button></div>
+  ${_dpTab==='body'?bodyPageHTML(r)+'</div>':''}
+${_dpTab==='body'?'':`<div class="dp-group"><div class="dp-row"><span>开启桌面宠物</span><span class="sw ${p.on&&r?'on':''}" style="flex-shrink:0" onclick="deskPetToggle()"></span></div></div>
   <div class="dp-group">
    <div class="dp-row"><span>名字</span><input id="dp_name" maxlength="10" value="${escH(petName())}" placeholder="${DP_DEFAULT_NAME}" onchange="deskPetRename(this.value)"></div>
    <div class="dp-row"><span>陪着哪个角色</span><select onchange="deskPetBind(this.value)"><option value="">选择一个角色</option>${roles.map(c=>`<option value="${c.id}" ${p.cid===c.id?'selected':''}>${escH(rname(c))}</option>`).join('')}</select></div>
@@ -497,7 +637,7 @@ function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.
   <div class="dp-group"><div class="dp-cmds">${Object.keys(CMDS).concat(Object.keys(MOVES)).map(k=>`<button onclick="deskPetCmd('${k}')">${k}</button>`).join('')}<button onclick="deskPetCmd('恢复')">恢复</button></div></div>
   <button class="dp-home-btn" onclick="deskPetHome()">叫它回到屏幕中间</button>
   <div class="dp-note">· 只陪一个角色，跟着ta的心情和作息变表情：开心蹦跶、想你冒爱心、生气冒火、难过掉眼泪、上班戴安全帽、睡觉戴睡帽、过节戴派对帽。<br>· 你在听歌时它会戴上耳机、闭眼左右摇摆；你在打字时它会坐下来敲键盘。<br>· 角色知道它叫「${escH(petName())}」，也能在聊天里让它做表情；你也可以在上面直接点。<br>· 平时它站在聊天输入框上来回走，会从一个气泡跳到另一个气泡，偶尔跑出屏幕又跑回来。角色来消息时它会精神一下跳到新气泡上；你太久不理它，它会打瞌睡，碰一下屏幕就醒。<br>· 点它冒小爱心，连着点太多下会生气跑开；按住不动是摸摸；按住拖动可以把它放到任何地方，放在气泡上就趴在气泡上。</div>
-  </div>`;}
+  </div>`}`;}
 function rerender(){if(typeof cur==='function'&&cur()&&cur().p==='deskPet'&&typeof render==='function')render();}
 function deskPetToggle(){const p=ensureCfg();if(!p.on&&!(p.cid&&getC(p.cid))){if(typeof toast==='function')toast('先选一个要陪的角色');return;}p.on=!p.on;if(p.on){p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();if(typeof toast==='function')toast(p.on?petName()+'出来啦':petName()+'回去休息了');}
 function deskPetBind(id){const p=ensureCfg();p.cid=id||'';if(!id)p.on=false;else if(!p.on){p.on=true;p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();}
@@ -509,6 +649,6 @@ function deskPetColor(k){ensureCfg().color=k;save();applyLook();rerender();}
 function deskPetWear(k){const p=ensureCfg();p[k]=p[k]===false;save();applyLook();rerender();if(typeof toast==='function')toast(k==='hats'?(p.hats===false?'帽子摘下来啦':'帽子戴回去啦'):(p.phones===false?'听歌不戴耳机了':'听歌会戴耳机'));}
 function deskPetCmd(k){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd(k,USER_CMD_MS);}
 function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd('过来');}
-Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,deskPetRequestedCommand,deskPetApplyUserRequest,
+Object.assign(window,{roleBodyPrompt,roleBodyConsume,deskPetBodyUse,deskPetBodySet,deskPetTab,roleBodyTick:(c,t)=>bodyTick(c,t),deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,deskPetRequestedCommand,deskPetApplyUserRequest,
   __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,runAway,groundY,newestBubble,nap:()=>{lastInteract=0;},normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
 })();

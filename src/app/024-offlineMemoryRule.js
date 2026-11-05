@@ -51,6 +51,9 @@ function cohabSystem(c,o,query){
   s+=thoughtFormat;if(typeof relPromptFor==='function')s+=relPromptFor(c,[query,((o&&o.msgs)||[]).slice(-6).map(m=>m&&m.text||'').join(' ')].join(' '));/* 共同生活也认得他的家人朋友 */
   s+='\n\n# 当前真实日历与时间（最高优先级）\n'+timeAwarenessPrompt(S.me.name,'cohab')+roleSchedulePrompt(c);
   s+='\n\n# 当前关系阶段\n'+affTone(c);
+  /* ROLE_BODY_V1：桌宠陪着的角色，共同生活里也知道自己困不困、饿不饿、病没病；COHAB_SCHEDULE_SOFT_V1：到点该上班但正在聊，先收尾 */
+  if(typeof roleBodyPrompt==='function')s+=roleBodyPrompt(c);
+  if(o&&o.schedDefer&&o.schedDefer.phase==='work')s+='\n\n# 到点该出门上班了\n平时这个点该去上班了，但你们正聊着。按你的方式和'+S.me.name+'收个尾（可以说再聊几句、可以催自己出门），真要走时另起一行写 [共同生活状态|上班]；不要聊着聊着突然消失。';
   const remembered=offlinePickRelevant(memoryList(c),query,8,12,memoryText);
   if(remembered.length)s+='\n\n# 你记得关于'+S.me.name+'的重要及相关长期记忆\n'+remembered.map((m,i)=>(i+1)+'. '+memoryText(m)).join('\n');
   const summaries=topSummaries(c.summaries||[],10);

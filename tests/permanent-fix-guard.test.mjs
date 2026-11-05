@@ -71,6 +71,8 @@ const PERMANENT_FIXES = [
   {release:"private v1901 / web v1897",scope:"both",least:1,file:"app.js",name:"查他手机存坏的列表（如 wechat 写成对象）自动修好，不再卡住微信回复",marker:"SPY_LIST_REPAIR_V1"},
   {release:"private v1902 / web v1898",scope:"both",least:1,file:"app.js",name:"主屏组件玻璃被苹果清成黑图后整张重画，画不出来就显示磨砂底、不留黑块",marker:"HOME_GLASS_FRESH_V1"},
   {release:"private v1903 / web v1899",scope:"both",least:1,file:"app.js",name:"找记忆加相近说法表（芫荽=香菜、主子=猫等），换个说法也能想起来；体检测支不支持按意思找",marker:"MEMORY_SENSE_V1"},
+  {release:"pending",scope:"both",least:1,file:"desk-pet.js",name:"桌宠陪着的角色有身体：会困会饿会生病，电池/药丸/睡帽，只告诉他身体事实",marker:"ROLE_BODY_V1"},
+  {release:"pending",scope:"both",least:1,file:"app.js",name:"共同生活到点上班不在聊天中途突然走，先收尾",marker:"COHAB_SCHEDULE_SOFT_V1"},
   {release:"private v1893 / web v1889",scope:"both",least:1,file:"app.js",name:"每天几封信：写之前再数信箱里今天他主动写的信，计数被清零也不会多写",marker:"MAIL_DAILY_INBOX_COUNT_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"她刚发、角色还没回的文件给他看前 2 万字（以前只有 4000 字），存进消息上限 5 万字",marker:"CHAT_FILE_FRESH_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码忘了可以不用旧密码直接设新密码，设新密码时可以让情侣角色记住",marker:"MARKET_PIN_RESET_V1"},
