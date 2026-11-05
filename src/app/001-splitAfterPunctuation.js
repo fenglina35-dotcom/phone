@@ -1,7 +1,7 @@
 //@@ web
-if(window.__NORTH_SHELL_BUILD__!=='1899'){
+if(window.__NORTH_SHELL_BUILD__!=='1900'){
 //@@ private
-if(window.__NORTH_SHELL_BUILD__!=='1903'){
+if(window.__NORTH_SHELL_BUILD__!=='1904'){
 //@@ end
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');

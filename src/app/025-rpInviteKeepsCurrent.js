@@ -1,3 +1,4 @@
+/* ROLEPLAY_SAVE_SLOTS_V1：角色主动邀请时重新设计一局；没玩完的那局自动存档进「存档」页。只有她正在那局页面里或这局正在回复时，才照旧发当前这局的卡。 */
 function rpInviteKeepsCurrent(id){const p=cur();return !!(p&&p.p==='rp'&&p.id===id||_rp&&_rp.id===id&&_rp.busy);}
 async function rpCreateInviteFromAI(id,theme){const c=getC(id);if(!c)return null;const d=rpData(id),owner=S,account=actId(),oldStart=d.startedAt,wasActive=!!d.active;theme=rpClip(theme||'你自由发挥',80);
   if(wasActive&&rpInviteKeepsCurrent(id))return rpPushInviteMsg(id,'assistant');

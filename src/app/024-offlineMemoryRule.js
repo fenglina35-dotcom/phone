@@ -500,4 +500,3 @@ function rpClip(v,n){return (''+(v||'')).trim().slice(0,n);}
 function rpPushInviteMsg(id,role){const c=getC(id),d=rpData(id);if(!c)return null;const card={role:role||'assistant',type:'roleplayinvite',title:d.title||'本次剧情',meRole:d.myRole||S.me.name,hisRole:d.hisRole||c.name,when:rpWhenText(d),active:true,finished:false,roomId:id,id:uid(),byRole:role!=='user'};d.inviteMid=card.id;d.inviteMids=d.inviteMids||{};d.inviteMids[id]=card.id;msgs(id).push(card);save();
   if(cur().p==='chat'&&cur().id===id)refreshChatMessages(id);else{notifyIncoming(c,card);if(cur().p==='wechat')render();}
   return card;}
-/* ROLEPLAY_SAVE_SLOTS_V1：角色主动邀请时重新设计一局；没玩完的那局自动存档进「存档」页。只有她正在那局页面里或这局正在回复时，才照旧发当前这局的卡。 */

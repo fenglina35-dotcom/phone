@@ -104,6 +104,13 @@ const CMDS={
   '晕乎乎':{eyes:'dizzy',cls:'sway'},
   '睡觉':{eyes:'closed',hat:'sleep',cls:'sit slow',fx:'z'},
   '打瞌睡':{eyes:'drowsy',cls:'nod slow',fx:'z'},
+  '好吃':{eyes:'heart',cls:'bob blush',fx:'heart'},
+  '辣到':{eyes:'squint',cls:'shake sweat',fx:'anger'},
+  '酸到':{eyes:'squint',cls:'sway'},
+  '烫到':{eyes:'wide',cls:'shake sweat',fx:'dots'},
+  '冻到':{eyes:'wide',cls:'shake'},
+  '醉了':{eyes:'dizzy',cls:'sway blush',fx:'spark'},
+  '恶心':{eyes:'dizzy',cls:'shake droop',fx:'dots'},
   '跳舞':{eyes:'happy',cls:'dance',fx:'note'},
   '挥手':{eyes:'happy',cls:'wave'},
   '蹦跶':{eyes:'happy',cls:'hop'},
@@ -192,6 +199,32 @@ ${Object.keys(EYES).map(k=>`.dp-root[data-eyes=${k}] .e-${k}`).join(',')}{displa
 @keyframes dpFx{0%{opacity:0;transform:translate(0,0) scale(.5)}15%{opacity:1;transform:translate(0,-6px) scale(1)}100%{opacity:0;transform:translate(var(--dx,0px),-40px) scale(1)}}
 @keyframes dpPop{0%{opacity:0;transform:scale(.3)}25%{opacity:1;transform:scale(1.25)}45%{transform:scale(1)}100%{opacity:0;transform:scale(1)}}
 .dp-page{padding:4px 16px 40px}
+.dp-snack{position:absolute;left:8px;right:8px;bottom:8px;z-index:200;max-height:46%;display:flex;flex-direction:column;border-radius:22px;background:rgba(28,28,30,.96);color:#f5f5f7;box-shadow:0 -6px 30px rgba(0,0,0,.35);transform:translateY(110%);transition:transform .26s cubic-bezier(.2,.9,.3,1.1),max-height .26s ease;touch-action:pan-y}
+.dp-snack.show{transform:none}
+.dp-snack.tall{max-height:78%}
+.dp-snack-handle{height:18px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+.dp-snack-handle i{width:38px;height:5px;border-radius:3px;background:rgba(255,255,255,.28)}
+.dp-snack-head{display:flex;align-items:baseline;gap:8px;padding:0 14px}
+.dp-snack-head b{font-size:16px}
+.dp-snack-head small{flex:1;font-size:11px;opacity:.55}
+.dp-snack-x{border:0;background:transparent;color:inherit;font-size:24px;line-height:1;padding:0 4px;opacity:.6}
+.dp-snack-q{margin:8px 14px 4px;height:32px;border:0;border-radius:10px;padding:0 12px;background:rgba(120,120,128,.24);color:inherit;font-size:14px;outline:0}
+.dp-snack-tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 14px;scrollbar-width:none}
+.dp-snack-tabs::-webkit-scrollbar{display:none}
+.dp-snack-tabs button{flex:0 0 auto;height:28px;padding:0 12px;border:0;border-radius:14px;background:rgba(120,120,128,.24);color:inherit;font-size:13px}
+.dp-snack-tabs button.on{background:#d97757;color:#fff}
+.dp-snack-grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;padding:6px 12px 14px;-webkit-overflow-scrolling:touch}
+.dp-snack-item{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0 4px;border:0;border-radius:12px;background:transparent;color:inherit;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.dp-snack-item span{font-size:30px;line-height:1.1;transition:transform .15s ease}
+.dp-snack-item small{font-size:10px;opacity:.6;max-width:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dp-snack-item:active span{transform:scale(1.15)}
+.dp-snack-item.picked{opacity:.35}
+.dp-snack-empty{grid-column:1/-1;text-align:center;opacity:.5;padding:18px 0;font-size:13px}
+.dp-snack-ghost{position:fixed;z-index:9999;font-size:44px;line-height:1;transform:translate(-50%,-60%) scale(1.1);pointer-events:none;filter:drop-shadow(0 4px 8px rgba(0,0,0,.35));transition:transform .12s ease}
+.dp-snack-ghost.near{transform:translate(-50%,-60%) scale(1.35) rotate(-8deg)}
+.dp-snack-ghost.eaten{transition:all .3s ease-in;transform:translate(-50%,-50%) scale(.1);opacity:0}
+.dp-snack-ghost.back{transition:all .25s ease;opacity:0;transform:translate(-50%,-30%) scale(.6)}
+.dp-fx-emoji{font-size:22px;line-height:1;width:auto!important;height:auto!important}
 .dp-tabs{display:flex;gap:6px;margin:4px 0 2px;padding:3px;border-radius:12px;background:rgba(120,120,128,.24)}
 .dp-tabs button{flex:1;height:32px;border:0;border-radius:9px;background:transparent;color:inherit;font-size:14px;opacity:.75}
 .dp-tabs button.on{background:#d97757;color:#fff;opacity:1;font-weight:600}
@@ -355,7 +388,7 @@ function groundY(){const hr=hostRect(),d=dims(),el=groundEl();if(el){const r=el.
 function hostW(){return host().clientWidth||window.innerWidth;}
 
 /* ---------- 聊天气泡：可以跳上去趴着，从一个气泡跳到另一个 ---------- */
-function bubbleOk(el){const hr=hostRect(),d=dims();if(!el||!el.isConnected||el.closest('.modal'))return false;const r=el.getBoundingClientRect();
+function bubbleOk(el){if(el&&typeof snackEl!=='undefined'&&el===snackEl)return el.isConnected;const hr=hostRect(),d=dims();if(!el||!el.isConnected||el.closest('.modal'))return false;const r=el.getBoundingClientRect();
   if(r.width<d.w*.7||r.height<12)return false;const top=r.top-hr.top,g=groundEl();if(top-d.h*FOOT<60)return false;if(g&&r.bottom>g.getBoundingClientRect().top-4)return false;return r.bottom-hr.top<hr.height-40;}
 function perchSpots(){return [...document.querySelectorAll('.msg .bubble')].filter(bubbleOk);}
 function perchPos(el,ox){const hr=hostRect(),r=el.getBoundingClientRect(),d=dims();return{x:r.left-hr.left+ox,y:r.top-hr.top-d.h*FOOT+1,ok:bubbleOk(el)};}
@@ -379,6 +412,7 @@ function runAway(){const d=dims(),left=state.x<hostW()/2;state.perch=null;state.
 function comeBack(){const d=dims(),fromLeft=Math.random()<.5;state.out={phase:'back'};state.x=fromLeft?-d.w-8:hostW()+8;state.y=groundY();if(root)root.style.visibility='';state.act='';walkTo(fromLeft?40+Math.random()*100:bounds().w-40-Math.random()*100,groundY(),{ground:true});}
 function chooseAct(now){
   const L=look(),b=bounds(),m=state.mood;state.act='';
+  if(state.perch&&typeof snackEl!=='undefined'&&snackEl&&state.perch.el===snackEl){/* 零食盒开着：站在盒子上等吃，不走开 */state.act=pick(['sit','look-l','look-r','hop','wave']);state.perchUntil=now+60000;nextActAt=now+2400;return;}
   if(m==='sick'||m==='sleep'||m==='eat'){/* ROLE_BODY_V1：生病、睡着就待在下面，不跳不爬 */if(state.perch)leavePerch();else if(Math.abs(state.y-groundY())>4&&!state.moving)toGround();else if(m==='sick')state.act=pick(['lie','sit','lie']);nextActAt=now+6000;return;}
   if(!L.speed){nextActAt=now+6000;return;}
   const r=Math.random(),playful=['idle','happy','love','party'].includes(m);
@@ -477,7 +511,7 @@ function dropAt(){const d=dims(),hr=hostRect(),fx0=state.x+d.w/2+hr.left,fy=stat
   state.placedUntil=Date.now()+PLACE_MS;}
 function onUp(e){if(!drag||e.pointerId!==drag.id)return;clearTimeout(pressTimer);const d=drag;drag=null;
   if(d.moved){dropAt();react('land',360);setEyes('dizzy',1300);persist();nextActAt=Date.now()+2500;return;}
-  if(d.pet)return;tap();}
+  if(d.pet)return;{const now=Date.now(),p=cfg();if(p&&p.snack!==false&&now-lastPetTapAt<330){lastPetTapAt=0;snackOpen();return;}lastPetTapAt=now;}tap();}
 /* 点一下冒爱心；连着点太多下会不耐烦，再点就生气跑开 */
 function tap(){const now=Date.now();taps=taps.filter(t=>now-t<5000);taps.push(now);const n=taps.length;
   if(now<state.annoyedUntil){state.face=-state.face;fx('anger',{pop:true});state.annoyedUntil=now+5000;
@@ -642,6 +676,7 @@ function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那
   return `<div class="dp-status">${n}现在：<b>${escH(status)}</b></div>
   <div class="dp-group dp-stats">${bar('精力',b.energy,100,'#7ad7ff',b.energy<50?'困':'')}${bar('饱腹',b.full,130,b.full>100?'#ffb35c':'#7ee0a1',b.full>100?'撑':b.full<50?'饿':'')}${bar('健康',b.health,100,'#ff8fab',b.health<50?'虚':'')}</div>
   <div class="dp-items">${[['battery','电池','喂一顿'],['coffee','咖啡',b.coffeeUntil>now?'劲儿还没过':'提提神'],['pill','药丸',b.sick?'治好他':'没生病'],['temp','体温计',b.lastTemp&&now-b.lastTemp.t<6*3600000?(+b.lastTemp.v).toFixed(1)+'℃':'量一量'],['hat','睡帽',hatOn?'摘下叫醒':'戴上去睡']].map(([k,l,sub])=>`<button class="${k==='hat'&&hatOn?'on':''}" onclick="deskPetBodyUse('${k}')"><svg viewBox="0 0 15 12" shape-rendering="crispEdges">${bodyItemSVG(k)}</svg><b>${l}</b><small>${escH(sub)}</small></button>`).join('')}</div>
+  <div class="dp-group"><div class="dp-row"><span>零食盒<br><small style="color:#8e8e93;font-size:12px">开着时，连点两下桌宠弹出来</small></span><span class="sw ${snackCfg().snack?'on':''}" style="flex-shrink:0" onclick="deskPetSnackSet('snack')"></span></div><div class="dp-row"><span>喂零食时他会回应<br><small style="color:#8e8e93;font-size:12px">喂一样，他在微信里回一次（会用一次模型）</small></span><span class="sw ${snackCfg().snackReply?'on':''}" style="flex-shrink:0" onclick="deskPetSnackSet('reply')"></span></div>${snackCfg().snack?'<button type="button" class="dp-row dp-link" onclick="deskPetSnackOpen()"><span>打开零食盒</span><em>›</em></button>':''}</div>
   <div class="dp-group"><div class="dp-row"><span>生病苗头</span><b style="color:${(+b.risk||0)>=70?'#ff6b6b':(+b.risk||0)>=40?'#d97757':'inherit'}">${(+b.risk||0)>=70?'很危险，快照顾他':(+b.risk||0)>=40?'有一点':'没有'}</b></div><div class="dp-row"><span>今天吃了</span><b>${b.meals||0} 顿</b></div><div class="dp-row"><span>上一顿</span><b>${last}</b></div><div class="dp-row"><span>上次睡了</span><b>${slept}</b></div>${b.lastTemp&&now-b.lastTemp.t<12*3600000?`<div class="dp-row"><span>体温</span><b>${(+b.lastTemp.v).toFixed(1)}℃ · ${escH(b.lastTemp.label)}（${fmtHM(b.lastTemp.t)} 量的）</b></div>`:''}</div>
   <div class="dp-label">睡觉</div>
   <div class="dp-group"><div class="dp-row"><span>平时几点睡</span><input type="time" value="${escH(cf.sleepAt)}" onchange="deskPetBodySet('sleepAt',this.value)"></div><div class="dp-row"><span>平时几点起</span><input type="time" value="${escH(cf.wakeAt)}" onchange="deskPetBodySet('wakeAt',this.value)"></div></div>
@@ -657,6 +692,64 @@ let _schedModal=null;
 if(typeof schedSet==='function'){_schedModal=schedSet;schedSet=function(id){const p=cfg();if(p&&p.on&&p.cid===id&&bodyCfg().on){_dpTab='body';if(typeof closeModal==='function')closeModal();if(typeof cur==='function'&&cur()&&cur().p==='deskPet')rerender();else if(typeof go==='function')go('deskPet');return;}return _schedModal.apply(this,arguments);};}
 if(typeof settingsHomeHTML==='function'){const original=settingsHomeHTML;settingsHomeHTML=function(){const html=original.apply(this,arguments);return html.includes('deskPetOpen()')?html:html.replace('<div class="ios-settings-version"',deskPetRow()+'<div class="ios-settings-version"');};}
 function deskPetOpen(){ensureCfg();if(typeof go==='function')go('deskPet');}
+/* ---------- 零食盒（DESK_PET_SNACK_V1，2026-11-05 她要求） ----------
+   开着「零食盒」时，连点两下桌宠弹出零食盒；长按一样零食拖到桌宠嘴边松手就喂进去。用手机自带的表情，不画图。
+   零食不算饭，不改饱腹、健康、精力；只让桌宠做反应、记一笔照顾记录，并让他在微信里马上回应（喂一样调用一次模型，可关）。 */
+const SNACK_GROUPS=[
+ ['水果','🍇葡萄 🍈哈密瓜 🍉西瓜 🍊橘子 🍋柠檬:sour 🍋‍🟩青柠:sour 🍌香蕉 🍍菠萝 🥭芒果 🍎红苹果 🍏青苹果 🍐梨 🍑桃子 🍒樱桃 🍓草莓:sweet 🫐蓝莓 🥝猕猴桃 🍅番茄 🫒橄榄 🥥椰子'],
+ ['蔬菜','🥑牛油果 🍆茄子 🥔土豆 🥕胡萝卜 🌽玉米 🌶️辣椒:spicy 🫑青椒 🥒黄瓜 🥬青菜 🥦西兰花 🧄大蒜:stink 🧅洋葱:stink 🫚生姜:spicy 🥜花生 🫘豆子 🌰栗子 🫛豌豆 🍄‍🟫蘑菇'],
+ ['主食','🍞面包 🥐可颂 🥖法棍 🫓烤饼 🥨椒盐卷饼 🥯贝果 🥞松饼:sweet 🧇华夫饼:sweet 🧀奶酪 🍖带骨肉 🍗鸡腿 🥩牛排 🥓培根 🍔汉堡 🍟薯条 🍕披萨 🌭热狗 🥪三明治 🌮塔可 🌯卷饼 🫔玉米粽 🥙口袋饼 🧆炸丸子 🥚鸡蛋 🍳煎蛋 🥘海鲜饭 🍲火锅:hot 🫕奶酪火锅:hot 🥣粥:hot 🥗沙拉 🍿爆米花 🧈黄油 🧂一撮盐:salty 🥫罐头'],
+ ['中餐日料','🍱便当 🍘米饼 🍙饭团 🍚米饭 🍛咖喱饭:spicy 🍜拉面:hot 🍝意大利面 🍠烤红薯:hot 🍢关东煮:hot 🍣寿司 🍤炸虾 🍥鱼板 🥮月饼:sweet 🍡团子:sweet 🥟饺子 🥠幸运饼干 🥡外卖盒 🦀螃蟹 🦞龙虾 🦐虾 🦑鱿鱼 🦪生蚝'],
+ ['甜点','🍦冰淇淋:cold 🍧刨冰:cold 🍨冰淇淋球:cold 🍩甜甜圈:sweet 🍪饼干:sweet 🎂生日蛋糕:sweet 🍰蛋糕:sweet 🧁纸杯蛋糕:sweet 🥧派:sweet 🍫巧克力:sweet 🍬糖果:sweet 🍭棒棒糖:sweet 🍮布丁:sweet 🍯蜂蜜:sweet'],
+ ['饮料','🍼奶瓶 🥛牛奶 ☕咖啡:bitter 🫖一壶茶 🍵热茶:hot 🧋奶茶:sweet 🥤可乐 🧃果汁盒 🍹果汁 🧉马黛茶:bitter 🧊冰块:cold 🍶清酒:alc 🍾香槟:alc 🍷红酒:alc 🍸鸡尾酒:alc 🍺啤酒:alc 🍻两杯啤酒:alc 🥂香槟碰杯:alc 🥃威士忌:alc 🫗倒出来的饮料'],
+ ['整蛊','💩粑粑:gross 🪳蟑螂:gross 🪱蚯蚓:gross 🐛毛毛虫:gross 🦗蛐蛐:gross 🪲甲虫:gross 🐜蚂蚁:gross 🕷️蜘蛛:gross 🦠细菌:gross 🐸青蛙:gross 🐟生鱼:gross 🦴一根骨头:weird 🧦臭袜子:gross 🧼肥皂:weird 🧽洗碗海绵:weird 🧻卫生纸:weird 🪨石头:weird 🌵仙人掌:spicy 🕯️蜡烛:weird 🧪不明液体:weird 🥾一只鞋:weird 🍄毒蘑菇:weird 🌿一把草:weird 🍂落叶:weird 🪵木头:weird 🔥一团火:hot 🧨鞭炮:weird']
+];
+const SNACKS=[];SNACK_GROUPS.forEach(([g,list])=>list.split(' ').forEach(tok=>{const m=tok.match(/^(\S+?)([一-龥][^:]*)(?::(\w+))?$/u);if(m)SNACKS.push({e:m[1],n:m[2],g,k:m[3]||'ok'});}));
+const SNACK_REACT={sweet:'好吃',ok:'开心',spicy:'辣到',sour:'酸到',bitter:'酸到',stink:'晕乎乎',salty:'酸到',hot:'烫到',cold:'冻到',alc:'醉了',gross:'恶心',weird:'惊讶'};
+const SNACK_HINT={spicy:'（很辣）',sour:'（很酸）',bitter:'（很苦）',stink:'（味道很冲）',salty:'（很咸）',hot:'（很烫）',cold:'（冰的）',alc:'（含酒精）',gross:'（这根本不是吃的，是在整蛊你）',weird:'（这不是正常食物，是在逗你）'};
+function snackCfg(){const p=ensureCfg();if(p.snack===undefined)p.snack=true;if(p.snackReply===undefined)p.snackReply=true;if(!Array.isArray(p.snackRecent))p.snackRecent=[];return p;}
+let snackEl=null,snackTab='最近',snackQ='',snackGhost=null,snackPress=null,lastPetTapAt=0;
+function snackList(){const p=snackCfg();if(snackQ){const q=snackQ.trim();return SNACKS.filter(x=>x.n.includes(q)||x.e===q||x.g.includes(q));}if(snackTab==='最近'){const r=p.snackRecent.map(e=>SNACKS.find(x=>x.e===e)).filter(Boolean);return r.length?r:SNACKS.slice(0,24);}return SNACKS.filter(x=>x.g===snackTab);}
+function snackGridHTML(){return snackList().map(x=>`<button class="dp-snack-item" data-e="${escH(x.e)}" title="${escH(x.n)}"><span>${x.e}</span><small>${escH(x.n)}</small></button>`).join('')||'<div class="dp-snack-empty">没找到</div>';}
+function snackRender(){if(!snackEl)return;snackEl.querySelector('.dp-snack-tabs').innerHTML=['最近'].concat(SNACK_GROUPS.map(g=>g[0])).map(t=>`<button class="${!snackQ&&snackTab===t?'on':''}" data-t="${t}">${t}</button>`).join('');snackEl.querySelector('.dp-snack-grid').innerHTML=snackGridHTML();}
+function snackOpen(){const p=snackCfg();if(!p.snack){if(typeof toast==='function')toast('先在「他的身体」里打开零食盒');return;}if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}css();if(snackEl){snackClose();return;}
+  snackEl=document.createElement('div');snackEl.className='dp-snack';snackEl.innerHTML=`<div class="dp-snack-handle"><i></i></div><div class="dp-snack-head"><b>零食盒</b><small>长按一样，拖到${escH(petName())}嘴边松手</small><button class="dp-snack-x" aria-label="关闭">×</button></div><input class="dp-snack-q" placeholder="搜：辣、甜、酒、整蛊…"><div class="dp-snack-tabs"></div><div class="dp-snack-grid"></div>`;
+  host().appendChild(snackEl);snackRender();requestAnimationFrame(()=>snackEl&&snackEl.classList.add('show'));
+  snackEl.querySelector('.dp-snack-x').onclick=snackClose;
+  snackEl.querySelector('.dp-snack-q').oninput=e=>{snackQ=e.target.value;snackRender();};
+  snackEl.querySelector('.dp-snack-tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;snackTab=b.dataset.t;snackQ='';snackEl.querySelector('.dp-snack-q').value='';snackRender();};
+  const hd=snackEl.querySelector('.dp-snack-handle');let hy=null;hd.onpointerdown=e=>{hy=e.clientY;try{hd.setPointerCapture(e.pointerId);}catch(_){}};hd.onpointerup=e=>{if(hy===null)return;const dy=e.clientY-hy;hy=null;if(dy>60){if(snackEl.classList.contains('tall'))snackEl.classList.remove('tall');else snackClose();}else if(dy<-30)snackEl.classList.add('tall');else snackEl.classList.toggle('tall');setTimeout(()=>{if(snackEl&&!(state.perch&&state.perch.el===snackEl))snackPerch();},300);};
+  const grid=snackEl.querySelector('.dp-snack-grid');grid.addEventListener('pointerdown',snackDown);
+  setEyes('wide',900);setTimeout(snackPerch,300);}
+/* 盒子弹出来会挡住它：让它跳到盒子顶上站着等吃（睡着就不跳） */
+function snackPerch(){if(!snackEl||!root||state.mood==='sleep'||state.out)return;const d=dims(),r=snackEl.getBoundingClientRect(),hr=hostRect(),ox=Math.max(8,Math.min(r.width-d.w-8,state.x-(r.left-hr.left)));state.placedUntil=0;state.cmd='';hopTo(r.left-hr.left+ox,r.top-hr.top-d.h*FOOT+1,{perch:{el:snackEl,ox}});state.perchUntil=Date.now()+60000;}
+function snackClose(){if(!snackEl)return;const el=snackEl;snackEl=null;if(state.perch&&state.perch.el===el)leavePerch();el.classList.remove('show');setTimeout(()=>el.remove(),260);snackDropGhost();}
+/* 长按一样零食：0.22 秒不动就拿起来，手指拖到哪它跟到哪；没按住就滑动是在翻零食，不拿起来 */
+function snackDown(e){const it=e.target.closest('.dp-snack-item');if(!it)return;const food=SNACKS.find(x=>x.e===it.dataset.e);if(!food)return;
+  snackPress={x:e.clientX,y:e.clientY,food,el:it,id:e.pointerId,timer:setTimeout(()=>snackPick(e.clientX,e.clientY),220)};
+  document.addEventListener('pointermove',snackMove,{passive:false});document.addEventListener('touchmove',snackTouchHold,{passive:false});document.addEventListener('pointerup',snackUp);document.addEventListener('pointercancel',snackUp);}
+function snackPick(x,y){if(!snackPress)return;const P=snackPress;P.picked=true;P.el.classList.add('picked');const g=snackGhost=document.createElement('div');g.className='dp-snack-ghost';g.textContent=P.food.e;document.body.appendChild(g);snackMoveGhost(P.lx||x,P.ly||y);if(navigator.vibrate)try{navigator.vibrate(10);}catch(_){}}
+function snackMoveGhost(x,y){if(!snackGhost)return;snackGhost.style.left=x+'px';snackGhost.style.top=y+'px';const near=snackNearMouth(x,y);snackGhost.classList.toggle('near',near);if(near&&root&&!state.cmd){setEyes('wide',400);}}
+function snackTouchHold(e){/* 拿起来以后手指再动，是在拖零食，不让盒子跟着滚 */if(snackPress&&snackPress.picked&&e.cancelable)e.preventDefault();}
+function snackMove(e){if(!snackPress||e.pointerId!==snackPress.id)return;snackPress.lx=e.clientX;snackPress.ly=e.clientY;if(!snackPress.picked){if(Math.hypot(e.clientX-snackPress.x,e.clientY-snackPress.y)>8){clearTimeout(snackPress.timer);snackCleanup();}return;}e.preventDefault();snackMoveGhost(e.clientX,e.clientY);}
+function snackMouth(){if(!root)return null;const r=root.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height*.42,r:Math.max(56,r.width*.75)};}
+function snackNearMouth(x,y){const m=snackMouth();return !!m&&Math.hypot(x-m.x,y-m.y)<m.r;}
+function snackUp(e){if(!snackPress||e.pointerId!==snackPress.id)return;const P=snackPress;clearTimeout(P.timer);const x=P.lx||P.x,y=P.ly||P.y;
+  if(P.picked&&snackNearMouth(x,y))snackFeed(P.food);else snackDropGhost();snackCleanup();}
+function snackCleanup(){if(snackPress&&snackPress.el)snackPress.el.classList.remove('picked');snackPress=null;document.removeEventListener('pointermove',snackMove);document.removeEventListener('touchmove',snackTouchHold);document.removeEventListener('pointerup',snackUp);document.removeEventListener('pointercancel',snackUp);}
+function snackDropGhost(){const g=snackGhost;snackGhost=null;if(!g)return;g.classList.add('back');setTimeout(()=>g.remove(),260);}
+/* 喂进去：零食被吞进嘴里，桌宠嚼一嚼再按口味反应；他在微信里马上回应 */
+function snackFeed(food){const c=role(),p=snackCfg(),me=(S.me&&S.me.name)||'她';const g=snackGhost;snackGhost=null;
+  if(c&&typeof bodyOn==='function'&&bodyOn(c)&&bodyTick(c).asleep){if(g){g.classList.add('back');setTimeout(()=>g.remove(),260);}if(typeof toast==='function')toast(rname(c)+'睡着呢，先别喂');return;}
+  if(g){const m=snackMouth();g.classList.add('eaten');if(m){g.style.left=m.x+'px';g.style.top=m.y+'px';}setTimeout(()=>g.remove(),320);}
+  {const q=snackCfg();q.snackRecent=[food.e].concat(q.snackRecent.filter(e=>e!==food.e)).slice(0,16);}
+  react('pet',700);setEyes('closed',650);
+  setTimeout(()=>{const k=SNACK_REACT[food.k]||'开心';doCmd(k,4200);snackFx(food.e);if(food.k==='gross')setTimeout(()=>{if(root)react('shake',600);},1500);},650);
+  if(c&&typeof bodyOn==='function'&&bodyOn(c)){const b=bodyTick(c);bodyLog(b,'你喂了他 '+food.e+food.n);}
+  if(c&&p.snackReply&&typeof scheduleReply==='function'){const hint=SNACK_HINT[food.k]||'';scheduleReply(c.id,'[系统：'+me+'刚刚在小手机里亲手喂你吃了一个'+food.e+'（'+food.n+'）'+hint+'。像真的刚吃到嘴里一样，按你本人的口味和人设马上发消息回应：可以说好吃、被辣到、酸到、嫌弃、吐出来、反过来逗回去……要自然生动，不要提系统、桌宠或程序。]');}
+  if(typeof save==='function')save();snackRender();}
+function snackFx(e){if(!root)return;const h=host(),hr=hostRect(),d=dims(),el=document.createElement('span');el.className='dp-fx dp-fx-emoji pop';el.textContent=e;el.style.left=(state.x+d.w*.55)+'px';el.style.top=(state.y-d.h*.25)+'px';h.appendChild(el);setTimeout(()=>el.remove(),1600);}
+function deskPetSnackSet(k){const p=snackCfg();if(k==='snack'){p.snack=!p.snack;if(!p.snack)snackClose();}else if(k==='reply')p.snackReply=!p.snackReply;if(typeof save==='function')save();rerender();}
 /* 设置页顶上的形象：跟着他的身体变（睡着戴睡帽、生病贴退烧贴、饿了冒电池云） */
 function heroHTML(p,col){const r=role();let eyes='open',hat='',cls='breathe',cloud='',sub='';
   if(r&&bodyOn(r)){const b=bodyTick(r),lk=bodyLookOf(b);if(b.asleep){eyes='closed';hat='sleep';cls='sit slow';sub='睡着了';}else if(b.eating){eyes='happy';cls='sit bob';sub='在吃'+b.eating.name;}else if(lk==='sick'){eyes='sad';hat='fever';cls='droop slow';sub=bodySickText(b,Date.now());}else if(lk==='doze'){eyes='drowsy';cls='nod slow';sub='困了，在打瞌睡';}else if(lk==='weak'){eyes='sad';cls='droop sweat slow';sub='身体有点虚';}else if(lk==='hungry'){eyes='sad';cls='slow';cloud=`<svg class="dp-hero-cloud" viewBox="0 0 13 10" shape-rendering="crispEdges" style="fill:initial;stroke:none;filter:none" aria-hidden="true">${FX.hungry.svg}</svg>`;sub='饿了';}else if(b.full>100){eyes='dizzy';sub='吃撑了';}}
@@ -684,7 +777,9 @@ ${_dpTab==='body'?'':`<div class="dp-group"><div class="dp-row"><span>开启桌�
   <button class="dp-home-btn" onclick="deskPetHome()">叫它回到屏幕中间</button>
   <div class="dp-note">· 只陪一个角色，跟着ta的心情和作息变表情：开心蹦跶、想你冒爱心、生气冒火、难过掉眼泪、上班戴安全帽、睡觉戴睡帽、过节戴派对帽。<br>· 你在听歌时它会戴上耳机、闭眼左右摇摆；你在打字时它会坐下来敲键盘。<br>· 角色知道它叫「${escH(petName())}」，也能在聊天里让它做表情；你也可以在上面直接点。<br>· 平时它站在聊天输入框上来回走，会从一个气泡跳到另一个气泡，偶尔跑出屏幕又跑回来。角色来消息时它会精神一下跳到新气泡上；你太久不理它，它会打瞌睡，碰一下屏幕就醒。<br>· 点它冒小爱心，连着点太多下会生气跑开；按住不动是摸摸；按住拖动可以把它放到任何地方，放在气泡上就趴在气泡上。</div>
   </div>`}`;}
-function rerender(){if(typeof cur==='function'&&cur()&&cur().p==='deskPet'&&typeof render==='function')render();}
+function dpScroller(){let el=document.querySelector('.dp-page');while(el&&el!==document.body){if(/auto|scroll/.test(getComputedStyle(el).overflowY)&&el.scrollHeight>el.clientHeight)return el;el=el.parentElement;}return null;}
+/* 拨开关后整页重画：记住滚到哪，画完放回去，不跳回最上面（2026-11-05） */
+function rerender(){if(typeof cur==='function'&&cur()&&cur().p==='deskPet'&&typeof render==='function'){const sc=dpScroller(),top=sc?sc.scrollTop:0;render();if(top){const n=dpScroller();if(n){n.scrollTop=top;requestAnimationFrame(()=>{const m=dpScroller();if(m&&Math.abs(m.scrollTop-top)>2)m.scrollTop=top;});}}}}
 function deskPetToggle(){const p=ensureCfg();if(!p.on&&!(p.cid&&getC(p.cid))){if(typeof toast==='function')toast('先选一个要陪的角色');return;}p.on=!p.on;if(p.on){p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();if(typeof toast==='function')toast(p.on?petName()+'出来啦':petName()+'回去休息了');}
 function deskPetBind(id){const p=ensureCfg();p.cid=id||'';if(!id)p.on=false;else if(!p.on){p.on=true;p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();}
 function deskPetRename(v){const p=ensureCfg();p.name=String(v||'').trim().slice(0,10)||DP_DEFAULT_NAME;save();
@@ -695,6 +790,7 @@ function deskPetColor(k){ensureCfg().color=k;save();applyLook();rerender();}
 function deskPetWear(k){const p=ensureCfg();p[k]=p[k]===false;save();applyLook();rerender();if(typeof toast==='function')toast(k==='hats'?(p.hats===false?'帽子摘下来啦':'帽子戴回去啦'):(p.phones===false?'听歌不戴耳机了':'听歌会戴耳机'));}
 function deskPetCmd(k){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd(k,USER_CMD_MS);}
 function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd('过来');}
+Object.assign(window,{deskPetSnackSet,deskPetSnackOpen:()=>snackOpen()});
 Object.assign(window,{roleBodyPrompt,roleBodyConsume,deskPetBodyUse,deskPetBodySet,bodyCfgSickToggle,deskPetTab,deskPetSchedSet,deskPetLeaves,roleBodyTick:(c,t)=>bodyTick(c,t),deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,deskPetRequestedCommand,deskPetApplyUserRequest,
   __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,runAway,groundY,newestBubble,nap:()=>{lastInteract=0;},normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
 })();
