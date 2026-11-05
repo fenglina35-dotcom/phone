@@ -448,7 +448,7 @@ function hisAv(name,sz){sz=sz||40;const nm=(''+(name||'')).replace(/[（(][^)）
 /* 和「查他手机」互通：他微信里的好友/聊天同步到 spy 数据 */
 function hisSpyW(cid){S.spy=S.spy||{};S.spy[cid]=S.spy[cid]||{};S.spy[cid].wechat=S.spy[cid].wechat||[];return S.spy[cid].wechat;}
 function hisSpyFriend(cid,name){const w=hisSpyW(cid);let e=w.find(x=>x.who===name);if(!e){e={who:name,lines:[]};w.push(e);}e.lines=e.lines||[];return e;}
-function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;const family=typeof relFamilyState==='function'?relFamilyState(cid):{},legacyFamily=!family.migrated;
+function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};if(typeof spyContentRepair==='function'&&spyContentRepair(sp))save();const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;const family=typeof relFamilyState==='function'?relFamilyState(cid):{},legacyFamily=!family.migrated;
   // 第一次、且查手机也没数据 → 给几个默认好友
   if(!d.seeded&&!(sp.wechat&&sp.wechat.length)&&!(c._gotFromMe&&c._gotFromMe.length)&&!d.friends.length){
     ['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:['哥们','同事','同事','发小','家人'][i],avatar:'',persona:'',msgs:[],familyPlaceholder:true}));ch=true;}

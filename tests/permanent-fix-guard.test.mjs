@@ -68,6 +68,7 @@ const PERMANENT_FIXES = [
   {release:"private v1900 / web v1896",scope:"both",least:1,file:"app.js",name:"共同生活设置展开后能上下滑到「模型与路线诊断」，刷新不收起、不弹回顶部",marker:"COHAB_SETTINGS_SCROLL_V1"},
   {release:"private v1900 / web v1896",scope:"both",least:1,file:"app.js",name:"线上线下互相同步按轮算（默认20轮，聊天与媒体可改），电话只带最后一段，现场不重复带全文",marker:"SYNC_ROUNDS_V1"},
   {release:"private v1900 / web v1896",scope:"both",least:1,file:"cohab-theater.js",name:"多人剧场版的共同生活现场同步也按轮",marker:"SYNC_ROUNDS_V1"},
+  {release:"private v1901 / web v1897",scope:"both",least:1,file:"app.js",name:"查他手机存坏的列表（如 wechat 写成对象）自动修好，不再卡住微信回复",marker:"SPY_LIST_REPAIR_V1"},
   {release:"private v1893 / web v1889",scope:"both",least:1,file:"app.js",name:"每天几封信：写之前再数信箱里今天他主动写的信，计数被清零也不会多写",marker:"MAIL_DAILY_INBOX_COUNT_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"app.js",name:"她刚发、角色还没回的文件给他看前 2 万字（以前只有 4000 字），存进消息上限 5 万字",marker:"CHAT_FILE_FRESH_V1"},
   {release:"private v1892 / web v1888",scope:"both",least:1,file:"commerce-ui.js",name:"真人店铺支付密码忘了可以不用旧密码直接设新密码，设新密码时可以让情侣角色记住",marker:"MARKET_PIN_RESET_V1"},

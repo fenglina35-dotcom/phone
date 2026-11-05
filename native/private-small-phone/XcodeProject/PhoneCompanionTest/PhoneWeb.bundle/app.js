@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1900'){
+if(window.__NORTH_SHELL_BUILD__!=='1901'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1900 · 线上线下同步按轮';
+const APP_VER='v1901 · 查他手机坏数据自动修好';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -5721,6 +5721,11 @@ async function spyContinueJson(msgs,content,aux){for(let k=0;k<2;k++){const t=sp
 function spyFailWhy(content){const raw=String(content||'').trim();if(!raw)return '模型返回了空内容';const t=spyJsonText(raw);if(!t){const vis=raw.replace(/<think(?:ing)?>[\s\S]*?<\/think(?:ing)?>/gi,'').trim();return vis?'模型没有写 JSON，直接说了别的话（开头是：'+vis.replace(/\s+/g,' ').slice(0,24)+'…）':'模型只写了思考，没写正文（可能思考把长度用完了）';}if(spyJsonOpen(t))return '模型写到一半就断了，接着写了两次也没写完';return '模型写的 JSON 格式不对，读不出来';}
 function spyRawKeep(id,content,why){_spyLastRaw={id,at:Date.now(),why:String(why||''),text:String(content||'').slice(0,6000)};}
 function spyRawShow(){const r=_spyLastRaw;if(!r){toast('没有失败记录');return;}openModal(`<h3>模型原话</h3><div style="font-size:12px;color:#888;margin-bottom:6px">${esc(r.why)}（共 ${String(r.text||'').length} 字，最多显示 6000 字）</div><pre style="white-space:pre-wrap;word-break:break-all;max-height:55vh;overflow:auto;font-size:12px;background:rgba(0,0,0,.04);padding:8px;border-radius:8px">${esc(r.text||'（空）')}</pre><div class="btns"><button class="btn p" onclick="closeModal()">关闭</button></div>`);}
+/* SPY_LIST_REPAIR_V1（2026-11-04）：「查他手机」刷新时模型偶尔把 wechat 等列表写成对象（如 {"阿哲":[...]}），程序没检查就存下，
+   之后每次微信回复读「他的微信好友」(sp.wechat||[]).forEach 报错，整轮回复被卡住（她截图「模型未回复：(sp.wechat||[]).forEach is not a function」）。
+   存之前理顺成列表；读的时候遇到旧存档里已经存坏的，也就地修好。 */
+function spyListFix(v,kind){if(Array.isArray(v))return v;if(v==null||v==='')return[];if(typeof v==='string')return v.trim()?[v]:[];if(typeof v!=='object')return[];if(kind==='wechat'){if('who' in v||'lines' in v)return[v];return Object.entries(v).map(([k,x])=>Array.isArray(x)?{who:k,lines:x}:(x&&typeof x==='object'?Object.assign({who:k},x):{who:k,lines:[String(x)]}));}if('item' in v||'name' in v||'text' in v||'who' in v)return[v];return Object.values(v);}
+function spyContentRepair(sp){if(!sp||typeof sp!=='object')return false;let ch=false;['wechat','album','browser','calls','contacts','friends','groups','orders','sms','wallet'].forEach(k=>{if(sp[k]!=null&&!Array.isArray(sp[k])){sp[k]=spyListFix(sp[k],k);ch=true;}});if(Array.isArray(sp.wechat)&&sp.wechat.some(w=>!w||typeof w!=='object'||w.lines!=null&&!Array.isArray(w.lines))){sp.wechat=sp.wechat.filter(w=>w&&typeof w==='object').map(w=>w.lines==null||Array.isArray(w.lines)?w:Object.assign({},w,{lines:typeof w.lines==='string'?w.lines.split('\n'):Object.values(w.lines).map(String)}));ch=true;}return ch;}
 async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');return;}const c=getC(id);if(!c)return;hisSeed(id);_spyBusy=true;if(cur().p==='spy')render();
   try{/* 转账回执不能以 system 身份夹在对话中间：部分接口会直接拒绝整次请求。 */const hist=msgs(id).slice(-16).map(m=>({role:m.role==='assistant'&&!m._transferReceipt?'assistant':'user',content:msgToText(m)})).filter(x=>x.content!=null);
     const wn=whereNow(c);const tnote='现在是'+hm()+'。'+(wn?'按你的作息，你此刻应该：'+wn+'。location 必须符合这个时间点，别老是在公司/开会——上班才在单位，午休在吃饭，下班后到处跑、晚上回家。':'');
@@ -5748,7 +5753,7 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
         try{ng=parseObj(content);}catch(_p){try{ng=JSON.parse(stripJSON(content));}catch(_p2){ng=null;}}if(!ng||typeof ng!=='object')ng=spyParseLoose(content);if(!ng||typeof ng!=='object'){ng=null;_spyWhy=spyFailWhy(content);spyRawKeep(id,content,_spyWhy);}}catch(_e){ng=null;_spyWhy=String(_e&&_e.message||_e||'请求失败').slice(0,120);}}
     if(!ng){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败：'+(_spyWhy||'原因未知')+(_spyLastRaw&&_spyLastRaw.id===id?'。到查手机的设置里点「看模型原话」能看到它写了什么':'，再点一次刷新试试'),6500);return;}if(_spyLastRaw&&_spyLastRaw.id===id)_spyLastRaw=null;
     // 合并：刷新【不清掉】已有的——余额/通讯录/日记历史/今日日程/他看到的我的动态都保留
-    const data=Object.assign({},prev||{},ng);data.time=Date.now();data.messageToYou=String((typeof ng.messageToYou==='string'?ng.messageToYou:'')||(prev&&prev.messageToYou)||'').replace(/\s+/g,' ').trim().slice(0,60);
+    const data=Object.assign({},prev||{},ng);spyContentRepair(data);data.time=Date.now();data.messageToYou=String((typeof ng.messageToYou==='string'?ng.messageToYou:'')||(prev&&prev.messageToYou)||'').replace(/\s+/g,' ').trim().slice(0,60);
     if(Array.isArray(ng.calls))data.calls=ng.calls.map(x=>Object.assign({},x,{_snapshotAt:data.time}));
     if(Array.isArray(ng.sms))data.sms=ng.sms.map(x=>Object.assign({},x,{_snapshotAt:data.time}));
     data.balance=(ng.balance!=null)?+ng.balance:((prev&&prev.balance!=null)?prev.balance:(2000+Math.floor(Math.random()*9000)));
@@ -14989,7 +14994,7 @@ function hisAv(name,sz){sz=sz||40;const nm=(''+(name||'')).replace(/[（(][^)）
 /* 和「查他手机」互通：他微信里的好友/聊天同步到 spy 数据 */
 function hisSpyW(cid){S.spy=S.spy||{};S.spy[cid]=S.spy[cid]||{};S.spy[cid].wechat=S.spy[cid].wechat||[];return S.spy[cid].wechat;}
 function hisSpyFriend(cid,name){const w=hisSpyW(cid);let e=w.find(x=>x.who===name);if(!e){e={who:name,lines:[]};w.push(e);}e.lines=e.lines||[];return e;}
-function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;const family=typeof relFamilyState==='function'?relFamilyState(cid):{},legacyFamily=!family.migrated;
+function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};if(typeof spyContentRepair==='function'&&spyContentRepair(sp))save();const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;const family=typeof relFamilyState==='function'?relFamilyState(cid):{},legacyFamily=!family.migrated;
   // 第一次、且查手机也没数据 → 给几个默认好友
   if(!d.seeded&&!(sp.wechat&&sp.wechat.length)&&!(c._gotFromMe&&c._gotFromMe.length)&&!d.friends.length){
     ['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:['哥们','同事','同事','发小','家人'][i],avatar:'',persona:'',msgs:[],familyPlaceholder:true}));ch=true;}
@@ -20484,7 +20489,7 @@ async function northPageArtWarm(){if(typeof Image!=='function')return 0;const fi
 function northPageArtSchedule(){if(!window.__NORTH_PAGE_ART_EARLY__)return;const warm=()=>northPageArtWarm().catch(()=>{});if(typeof requestIdleCallback==='function')requestIdleCallback(warm,{timeout:800});else setTimeout(warm,200);try{if(location.protocol!=='file:'&&'serviceWorker'in navigator)navigator.serviceWorker.ready.then(reg=>{if(reg.active)reg.active.postMessage({type:'north-page-art-warm'});}).catch(()=>{});}catch(_){} }
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=NORTH_PREVIEW?NORTH_PREVIEW_PARAMS.includes('lock'):true;northNativePerformanceWatchStart();sleepAutoEndOnOpen();initLockGestures();if(repairInterruptedMomentReplies())save(0);render();roleBusyResumeAll();window.__northBootReady=true;northPageArtSchedule();if(NORTH_VIEWPORT_DIAG)setTimeout(northViewportDiagnosticStart,0);if(NORTH_PREVIEW){previewRoute();return;}restoreActiveCall();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();privateResumeSyncSoon();if(S._summaryRepairPendingV848){delete S._summaryRepairPendingV848;save(0);}}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
 if(!_coreBootRef&&!_androidOrphanCoreProbe)finishAppBoot();else if(!NORTH_ANDROID&&_coreBootRef){try{S.me=S.me||{};S.me.locked=true;render();}catch(_){const host=document.getElementById('app');if(host)host.innerHTML='';}}else if(typeof window.__northBootProgress==='function')window.__northBootProgress(_androidOrphanCoreProbe?'正在检查安卓浏览器中的原核心存档…':'正在读取安卓大容量核心存档，完成前不会显示空数据…');
-_bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;defaultBeautyApplyOnFirstRun().catch(()=>{});if(!privateNativeAppOn())setTimeout(()=>{try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}},30000);}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
+_bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;defaultBeautyApplyOnFirstRun().catch(()=>{});try{if(typeof spyContentRepair==='function'&&S.spy){let _sf=false;Object.values(S.spy).forEach(x=>{if(spyContentRepair(x))_sf=true;});if(_sf)save();}}catch(_){}/* SPY_LIST_REPAIR_V1 */if(!privateNativeAppOn())setTimeout(()=>{try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}},30000);}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
 if(!NORTH_PREVIEW){setTimeout(()=>{if(_appBootFinished)northNativeBackgroundTask('companion-snapshot',()=>companionPollSnapshot(false));},3200);
 setTimeout(()=>{if(_appBootFinished)northNativeBackgroundTask('role-push-wake',roleServerPushWakePull);},3600);
 setInterval(()=>{if(_appBootFinished)northNativeBackgroundTask('companion-snapshot',()=>companionPollSnapshot(false));},8000);

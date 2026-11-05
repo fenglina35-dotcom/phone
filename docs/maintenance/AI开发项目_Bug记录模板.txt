@@ -2620,3 +2620,9 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 踩坑：第一次实测微信侧只带了 15 条——多人剧场 cohab-theater.js 覆盖了 cohabRecentContext。改共用函数前要搜同名覆盖（xxx=function）。
 验证：真实页面造 30 轮微信（每轮两问三答）＋80 句通话＋25 轮现场：现场侧带微信 12~30 轮和通话最后一段（第 0 句不在），现场 6~25 轮；微信侧现场 6~25 轮；设 5 轮时对应变少；共同生活回复的对话记录只含现场、不混微信内容，回复入库干净；微信回复请求含现场同步、入库干净；设置可改即时生效。老测试按新规则改：shared-scene-memory 预算 9600/18000→30000，offline-date 函数签名允许 keep 参数。
 测试：tests/sync-rounds.test.mjs，FIX_TEST_OLD=1 失败。
+
+2026-11-05 微信回复报「模型未回复：(sp.wechat||[]).forEach is not a function」（SPY_LIST_REPAIR_V1）
+现象：网页版（Chrome）她发表情后弹这句英文，那一轮回复被隐藏进「上一轮拦截内容」（模型其实已回了「今天下午这么忙？…」）。
+原因：spyRefresh 用 Object.assign({},prev,ng) 直接存模型 JSON，模型偶尔把 wechat 写成对象（如 {"阿哲":[...]}）；之后每轮微信回复经 hisSeed 读 (sp.wechat||[]).forEach，对象不是列表就抛错，整轮失败。不是本轮改动引起，是存档里有一份坏数据。
+修复：spyListFix/spyContentRepair 把 wechat、album、browser、calls、contacts、friends、groups、orders、sms、wallet 理顺成列表（wechat 对象按「名字→聊天」展开，lines 文字拆行）；刷新存之前、开机就绪时、hisSeed 读时三处修，旧存档自动修好并保存。
+验证：真实页面放入对象格式的 wechat/contacts/album 后发微信，回复正常入库，三项变成列表；tests/spy-list-repair.test.mjs，FIX_TEST_OLD=1 失败。
