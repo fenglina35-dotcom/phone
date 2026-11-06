@@ -29,7 +29,7 @@ for (const name of ['deskPetBodySet', 'deskPetSchedSet']) assert.match(fnSource(
 }
 
 // 2. sleep hat
-assert.match(pet, /if\(b\.asleep&&!night&&\(b\.sleepBy!=='hat'\|\|b\.energy>=95&&t2-\(b\.sleptAt\|\|0\)>=3600000\)\)/);
+assert.match(pet, /b\.sleepBy==='hat'&&b\.energy>=95&&t-\(b\.sleptAt\|\|0\)>=3600000/, '睡帽午睡仍至少一小时');
 
 // 3. chat menu only on long press, both bundles
 for (const [label, file] of BUNDLES) {

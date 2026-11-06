@@ -567,7 +567,7 @@ function deskPetRow(){const p=cfg(),r=role();return `<div class="ios-settings-gr
 /* ---------- 他的身体（ROLE_BODY_V1，2026-11-05 她要求） ----------
    只管身体，不管情绪：精力（困不困）、饱腹、健康、生病、睡觉，按真实时间自己走；告诉角色的只是身体事实，怎么反应由他按人设决定。
    只用在桌宠陪着的那个角色身上。她可以喂电池（一块＝一顿）、给药（马上好）、戴睡帽（睡）/摘睡帽（醒）；他也能自己吃饭、睡觉、起床、去看病。
-   到点不会硬睡：过了睡觉点、而且 15 分钟没人说话才睡着；她发消息会把他吵醒。状态存在 S.roleBody[角色id]，不改记忆、不额外调用模型。 */
+   到点不会硬睡：在设定睡眠时段内，用户连续 5 分钟没有互动就睡着；她发消息会把他吵醒。状态存在 S.roleBody[角色id]，不改记忆、不额外调用模型。 */
 const BODY_MEAL=35,BODY_SICK=[['感冒',3,['嗓子有点疼，鼻子不通','发烧、嗓子疼，身上没力气','好多了，还有点咳嗽']],['发烧',2,['发烧，头昏沉沉的','烧退了些，还是没什么力气']],['胃不舒服',1,['胃不太舒服，没什么胃口']],['头疼',1,['头一直隐隐作痛']]];
 function clamp01(v,max){return Math.max(0,Math.min(max||100,+v||0));}
 function hm(v,d){const m=String(v||d).match(/^(\d{1,2}):(\d{2})$/);return m?(+m[1])*60+(+m[2]):hm(d,'00:00');}
@@ -583,8 +583,13 @@ function bodyEvent(b,text,t,kind){b.events=(b.events||[]).filter(e=>!kind||e.kin
 function bodyNight(m){const cf=bodyCfg(),S0=hm(cf.sleepAt,'23:30'),W=hm(cf.wakeAt,'07:30');return S0>W?(m>=S0||m<W):(m>=S0&&m<W);}
 function lastChatAt(c){let t=0;try{const ms=msgs(c.id)||[];const m=ms[ms.length-1];t=+(m&&m.time)||0;}catch(_){}try{const h=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id],m=h&&h.msgs&&h.msgs[h.msgs.length-1];t=Math.max(t,+(m&&m.time)||0);}catch(_){}return t;}
 function lastUserAt(c){let t=0;try{const ms=msgs(c.id)||[];for(let i=ms.length-1;i>=0&&i>ms.length-20;i--){if(ms[i]&&ms[i].role==='user'&&ms[i].type!=='sys'){t=+ms[i].time||0;break;}}}catch(_){}try{const h=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id],a=h&&h.msgs||[];for(let i=a.length-1;i>=0&&i>a.length-20;i--){if(a[i]&&a[i].who==='me'){t=Math.max(t,+a[i].time||0);break;}}}catch(_){}return t;}
-function bodySleep(b,by,t){if(b.asleep)return;b.asleep=true;b.sleepBy=by;b.sleptAt=t;const m=minsOf(t),S0=hm(bodyCfg().sleepAt,'23:30');if(bodyNight(m)&&((m-S0+1440)%1440)>60)b.dayLate=true;}
-function bodyWake(b,t,why){if(!b.asleep)return;b.asleep=false;b.sleepBy='';b.wokeAt=t;b.lastSleepH=Math.max(0,(t-(b.sleptAt||t))/3600000);if(why)b.wakeWhy=why;}
+function bodySleep(b,by,t){if(b.asleep)return;b.asleep=true;b.sleepBy=by;b.sleptAt=t;const m=minsOf(t),S0=hm(bodyCfg().sleepAt,'23:30');if(bodyNight(m)&&!(b.sleepNight&&b.sleepNight.ms>0)&&((m-S0+1440)%1440)>60)b.dayLate=true;}
+/* BODY_SLEEP_WINDOW_V1：每晚独立累计实际睡眠；凌晨四点健康结算不清空这一晚。 */
+function bodySleepWindow(t){const cf=bodyCfg(),s=hm(cf.sleepAt,'23:30'),w=hm(cf.wakeAt,'07:30'),d=new Date(t);d.setHours(Math.floor(s/60),s%60,0,0);if(d.getTime()>t)d.setDate(d.getDate()-1);const start=d.getTime();if(w<=s)d.setDate(d.getDate()+1);d.setHours(Math.floor(w/60),w%60,0,0);return{start,end:s===w?start:d.getTime()};}
+function bodySleepInAllowed(c,t){const sc=c&&c.sched;if(!sc||!sc.on)return true;if(typeof roleDayOff==='function')return !!roleDayOff(c,new Date(t));return false;}
+function bodyUserTimes(c){const times=[];try{for(const m of msgs(c.id)||[])if(m&&m.role==='user'&&m.type!=='sys'&&+m.time>0)times.push(+m.time);}catch(_){}try{const h=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id];for(const m of h&&h.msgs||[])if(m&&m.who==='me'&&+m.time>0)times.push(+m.time);}catch(_){}return Array.from(new Set(times)).sort((a,b)=>a-b);}
+function bodySleepAccrue(b,from,to){const w=bodySleepWindow(from);if(!b.sleepNight||b.sleepNight.start!==w.start||b.sleepNight.end!==w.end){const seed=!b.sleepNight&&b.asleep&&b.sleptAt?Math.max(0,Math.min(from,w.end)-Math.max(b.sleptAt,w.start)):0;b.sleepNight={start:w.start,end:w.end,ms:seed};}if(b.asleep)b.sleepNight.ms+=Math.max(0,Math.min(to,b.sleepBy==='catchup'?Infinity:w.end)-Math.max(from,w.start));b.lastSleepH=b.sleepNight.ms/3600000;}
+function bodyWake(b,t,why){if(!b.asleep)return;b.asleep=false;b.sleepBy='';b.wokeAt=t;if(why==='her')delete b.sleepPlan;b.lastSleepSegmentH=Math.max(0,(t-(b.sleptAt||t))/3600000);if(why)b.wakeWhy=why;}
 function bodyMeal(b,t,who,name){b.full=clamp01(b.full+BODY_MEAL,130);b.lastMealAt=t;b.meals=(b.meals||0)+1;if(b.full>100){b.stuffed=t;if(b.full>115)b.health=clamp01(b.health-2);}bodyLog(b,(who==='me'?'你喂了一块电池':'他自己去吃了'+(name||'饭'))+(b.full>100?'（吃撑了）':''),t);}
 function bodyRollDay(b,t){/* 健康慢慢变（她说：不会掉得那么快）：一天最多掉 6 左右，好好过一天涨 4 左右 */const n=b.meals||0;let d=n>=3?2:n===2?-1:-3;d+=b.dayLate?-3:b.sleptOnTime?2:0;if(b.sick)d-=1;b.health=clamp01(b.health+d);
   /* BODY_RISK_V1（她说：生病不该按次数抽，要看他有没有好好吃饭、好好睡觉，还有天气；照顾得细心就不会生病）：
@@ -607,27 +612,47 @@ function mmHM(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart
 /* 三个饭点：到点先「该吃饭了」，他跟她说一声再去吃（或者没人说话时自己去）；饭点过了 90 分钟还没吃就算没顾上 */
 function bodyMealWindows(c,t){const T=bodyMealTimes(c);return[['早饭',T.b,T.b+90],['午饭',T.l,T.l+90],['晚饭',T.d,T.d+90]];}
 function bodyStartEat(b,name,t,why){if(b.eating||b.asleep)return false;b.eating={name:name||'饭',since:t,until:t+30*60000,extra:0,lastUser:t};b.due=null;bodyLog(b,why==='her-wait'?'他先去吃'+(name||'饭')+'了':'他去吃'+(name||'饭')+'了',t);return true;}
-function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c))return b;now=now||Date.now();let t=Math.max(b.lastTick||now,now-72*3600000);const userAt=lastUserAt(c);
-  while(t<now){const step=Math.min(now-t,10*60000),h=step/3600000,t2=t+step;
-    if(dayKey(t2)!==b.day)bodyRollDay(b,t2);
-    const m=minsOf(t2),night=bodyNight(m),chat=lastChatAt(c);
-    if(b.asleep&&userAt>b.sleptAt+60000&&userAt<=t2){bodyWake(b,userAt,'her');bodyEvent(b,'你睡着时她发消息把你吵醒了',userAt);}
-    if(!b.asleep&&night&&t2-chat>=15*60000&&t2>(b.wokeAt||0)+3600000&&!(b.coffeeUntil>t2)){const st=Math.max(atMins(t2,hm(bodyCfg().sleepAt,'23:30'))-(m<hm(bodyCfg().wakeAt,'07:30')?86400000:0),chat+15*60000,t);bodySleep(b,'self',Math.min(st,t2));if(!b.dayLate)b.sleptOnTime=true;bodyLog(b,'他睡着了',b.sleptAt);}
-    if(b.asleep&&!night&&(b.sleepBy!=='hat'||b.energy>=95&&t2-(b.sleptAt||0)>=3600000)){/* 睡帽：白天戴上至少睡满 1 小时，摘帽或她发消息才提前醒 */bodyWake(b,t2,'morning');bodyLog(b,'他醒了',t2);}
+function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c))return b;now=now||Date.now();let t=Math.max(b.lastTick||now,now-72*3600000);if(t>now)return b;const userAt=lastUserAt(c),times=bodyUserTimes(c);let ui=0,quietAt=0;
+  while(ui<times.length&&times[ui]<=t)quietAt=times[ui++];
+  for(;;){
+    const m=minsOf(t),night=bodyNight(m),win=bodySleepWindow(t);
+    bodySleepAccrue(b,t,t);
+    if(b.asleep&&quietAt>b.sleptAt&&quietAt<=t){bodyWake(b,quietAt,'her');bodyEvent(b,'你睡着时她发消息把你吵醒了',quietAt);}
+    const target=Math.min(8*3600000,win.end-win.start),plan=b.sleepPlan&&b.sleepPlan.start===win.start?b.sleepPlan:null;
+    const extraLeft=plan?(plan.wait?Infinity:Math.max(0,plan.until-t)):Math.max(0,target-b.sleepNight.ms);
+    const catchup=!night&&t>=win.end&&extraLeft>0&&(plan||b.sleepNight.ms>0&&(t<=win.end+30*60000||b.catchupStart===win.start))&&bodySleepInAllowed(c,t)&&t>=quietAt+5*60000&&t>=(b.wokeAt||0)+5*60000&&!(b.coffeeUntil>t);
+    if(b.asleep&&!night&&b.sleepBy!=='hat'&&catchup){b.sleepBy='catchup';b.catchupStart=win.start;}
+    if(b.asleep&&!night&&((b.sleepBy!=='hat'&&!catchup)||b.sleepBy==='hat'&&b.energy>=95&&t-(b.sleptAt||0)>=3600000)){/* 睡帽：白天戴上至少睡满 1 小时，摘帽或她发消息才提前醒 */bodyWake(b,t,'morning');bodyLog(b,'他醒了',t);}
+    const idleAt=Math.max(win.start,quietAt+5*60000,(b.wokeAt||0)+5*60000,b.coffeeUntil||0);
+    if(!b.asleep&&night&&t>=idleAt&&!(b.coffeeUntil>t)){bodySleep(b,'self',t);if(!b.dayLate)b.sleptOnTime=true;bodyLog(b,'他睡着了',t);}
+    if(!b.asleep&&catchup){b.catchupStart=win.start;bodySleep(b,'catchup',t);bodyLog(b,'今天不用上班，他继续补觉了',t);}
+    if(t>=now)break;
+    // 在互动、入睡、起床边界切段；离线恢复时也逐段回放，不把整晚算成最后一次睡眠。
+    const nextDay=new Date(win.start);nextDay.setDate(nextDay.getDate()+1);
+    let t2=Math.min(now,t+10*60000,night?win.end:nextDay.getTime());
+    if(b.asleep&&b.sleepBy==='catchup'&&Number.isFinite(extraLeft))t2=Math.min(t2,t+extraLeft);
+    if(ui<times.length&&times[ui]>t)t2=Math.min(t2,times[ui]);
+    if(!b.asleep&&!night&&extraLeft>0&&bodySleepInAllowed(c,t)){const resume=Math.max(quietAt+5*60000,(b.wokeAt||0)+5*60000,b.coffeeUntil||0);if(resume>t)t2=Math.min(t2,resume);}
+    if(!b.asleep&&night&&idleAt>t)t2=Math.min(t2,idleAt);
+    if(b.asleep&&!night&&b.sleepBy==='hat'&&b.energy>=95&&b.sleptAt+3600000>t)t2=Math.min(t2,b.sleptAt+3600000);
+    const step=t2-t,h=step/3600000,chat=lastChatAt(c);
+    bodySleepAccrue(b,t,t2);
     if(b.asleep){b.energy=clamp01(b.energy+14*h);b.full=clamp01(b.full-2.5*h,130);}else{b.energy=clamp01(b.energy-(b.sick?(b.sick.sev==='high'?9:7.8):6)*h);b.full=clamp01(b.full-5*h,130);}
+    if(dayKey(t2)!==b.day)bodyRollDay(b,t2);
     if(b.eating){if(userAt>b.eating.lastUser&&userAt<=t2){b.eating.lastUser=userAt;if(b.eating.extra<30){b.eating.extra+=3;b.eating.until+=3*60000;}}if(t2>=b.eating.until){const nm=b.eating.name;b.mealWin[nm]=1;b.eating=null;bodyMeal(b,t2,'self',nm);}}
     bodyMealWindows(c,t2).forEach(([name,a,z])=>{const start=atMins(t2,a),end=atMins(t2,z);if(b.mealWin[name])return;if(b.lastMealAt>=start-30*60000){b.mealWin[name]=1;if(b.due&&b.due.name===name)b.due=null;return;}
       if(t2>=start&&t2<end&&!b.asleep&&!b.eating){if(!b.due||b.due.name!==name)b.due={kind:'meal',name,at:start};if(t2-chat>=15*60000)bodyStartEat(b,name,Math.max(start,chat+15*60000,t),'self');}
       else if(t2>=end&&end>t2-step-1&&!b.eating){b.mealWin[name]=1;if(b.due&&b.due.name===name)b.due=null;bodyLog(b,'他没顾上吃'+name,end);}});
     if(b.sick&&t2>=b.sick.until){bodyLog(b,'他的'+b.sick.kind+'好了',t2);bodyEvent(b,'你的'+b.sick.kind+'好了',t2);b.sick=null;}
-    t=t2;}
+    t=t2;while(ui<times.length&&times[ui]<=t)quietAt=times[ui++];}
   b.lastTick=now;return b;}
 function bodyBar(v,max){return Math.round(Math.max(0,Math.min(max||100,v)));}
 /* 给角色看的：只有事实，有变化或明显时才说；最近两轮他已经提过身体，就叫他这几轮别再主动提 */
 function roleBodyPrompt(c){if(!bodyOn(c))return'';const now=Date.now(),b=bodyTick(c,now),cf=bodyCfg(),me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',f=[];
+  if(bodySleepInAllowed(c,now))f.push('今天不用上班。如果这晚没睡够，起床点后没人找你时可以继续补觉，默认补足这一作息时段的时长（最多8小时）；你也可以按自己意愿写 [身体|睡到09:30] 指定醒来时间，或 [身体|睡到她叫醒] 等她叫醒。她发消息一定会叫醒你，补觉同样累计，不要声称后台会准点发送消息');
   if(b.asleep)f.push('你'+fmtHM(b.sleptAt)+'睡着了，现在还在睡'+(b.sleepBy==='hat'?'（是'+me+'给你戴上睡帽让你睡的）':''));
-  else{const awakeH=(now-(b.wokeAt||now))/3600000,m=minsOf(now);if(b.wakeWhy==='her'&&now-b.wokeAt<10*60000)f.push('你刚才在睡觉，被'+me+'的消息吵醒了（睡了大约'+Math.max(0,b.lastSleepH).toFixed(1)+'小时）');
-    if(bodyNight(m)&&now-b.wokeAt>3600000)f.push('到你平时睡觉的点了（'+cf.sleepAt+'），你醒了大约'+Math.round(awakeH)+'小时'+(b.energy<30?'，很困了':'')+'。要睡的话先跟'+me+'道个晚安再睡，不要聊着聊着突然消失；睡的时候另起一行写 [身体|睡觉]。她再找你，你照样会被叫醒回她');else if(b.energy<25)f.push('你醒了大约'+Math.round(awakeH)+'小时，很困');else if(b.energy<50&&!(b.coffeeUntil>now))f.push('你有点困了');
+  else{const awakeH=(now-(b.wokeAt||now))/3600000,m=minsOf(now);if(b.wakeWhy==='her'&&now-b.wokeAt<10*60000)f.push('你刚才在睡觉，被'+me+'的消息吵醒了（睡了大约'+Math.max(0,b.lastSleepSegmentH||0).toFixed(1)+'小时）');
+    if(bodyNight(m))f.push('到你平时睡觉的点了（'+cf.sleepAt+'），你醒了大约'+Math.round(awakeH)+'小时'+(b.energy<30?'，很困了':'')+'。要睡的话先跟'+me+'道个晚安再睡，不要聊着聊着突然消失；睡的时候另起一行写 [身体|睡觉]。她再找你，你照样会被叫醒回她');else if(b.energy<25)f.push('你醒了大约'+Math.round(awakeH)+'小时，很困');else if(b.energy<50&&!(b.coffeeUntil>now))f.push('你有点困了');
     if(b.coffeeUntil>now)f.push('你喝了咖啡，现在很精神'+((b.coffeeN||0)>=3?'，今天喝太多了，有点心慌':'')+(bodyNight(minsOf(now))?'，一时半会儿睡不着':''));
     if(b.eating)f.push('你正在吃'+b.eating.name+'（大约还要'+Math.max(1,Math.round((b.eating.until-now)/60000))+'分钟）；'+me+'发消息你照样回，可以边吃边回，只是会吃得慢一点');
     else if(b.due&&b.due.kind==='meal')f.push('到饭点了（'+b.due.name+' '+fmtHM(b.due.at)+'），你该去吃'+b.due.name+'了：先跟'+me+'说一声（比如“我先去吃饭了”）再去，不要说着说着突然消失；去的时候另起一行写 [身体|吃饭]。她找你你照样可以回');}
@@ -636,12 +661,13 @@ function roleBodyPrompt(c){if(!bodyOn(c))return'';const now=Date.now(),b=bodyTic
   (b.events||[]).filter(e=>now-e.t<30*60000).forEach(e=>f.push(e.text));
   /* BODY_STATUS_LINE_V1：每次都给一行现状，她问起时照实说（以前状态平常就什么都不说，他只能自己编，吃撑了还说没吃饱） */
   const st='饱腹'+(b.full>100?'撑了':b.full>=70?'很饱':b.full>=50?'不饿':b.full>=25?'有点饿':'很饿')+'，精神'+(b.asleep?'在睡觉':b.energy>=70?'不错':b.energy>=50?'还行':b.energy>=25?'有点困':'很困')+'，身体'+(b.sick?'生病中':b.health<50?'有点虚':'没什么毛病')+'，今天'+((b.coffeeN||0)?'喝了'+b.coffeeN+'杯咖啡':'没喝咖啡');
+  f.push('本次作息（'+cf.sleepAt+'—'+cf.wakeAt+'）及休息日补觉累计实际睡了'+Math.max(0,b.lastSleepH||0).toFixed(1)+'小时；中途醒着的时间不算，重新睡后继续累加');
   f.unshift('现状：'+st+'。'+me+'问起你饿不饿、困不困、身体怎么样、喝没喝咖啡时，按这些照实说，不要说成相反的');
   let quiet=false;try{const ms=(msgs(c.id)||[]).filter(m=>m&&m.role==='assistant').slice(-2).map(m=>String(m.content||''));quiet=ms.length===2&&ms.every(x=>/困|睡|饿|吃饭|吃撑|生病|感冒|发烧|头疼|胃|药|医院|身体/.test(x));}catch(_){}
   return '\n\n# 你的身体现在（只是事实，不规定你的情绪和语气）\n'+f.map(x=>'· '+x).join('\n')+'\n怎么反应由你按人设决定。日常聊天为主，身体最多偶尔自然带一句，不要每轮都提，也不要拿来卖惨'+(quiet?'；你最近两轮已经提过身体了，这轮别再主动提，除非'+me+'问起':'')+'。你自己去吃饭、睡觉、起床或去医院看病时，可以另起一行写 [身体|吃饭]、[身体|睡觉]、[身体|起床]、[身体|看病]，这一行不会显示给'+me+'。';}
 function roleBodyConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*身体/.test(s))return text;const on=bodyOn(c);
   return s.replace(/[\[【]\s*身体\s*[|｜:：]\s*([^\]】\r\n]{1,12})\s*[\]】]/g,(m,v)=>{if(on){const b=bodyTick(c),t=Date.now();v=String(v).trim();
-      if(/吃/.test(v)){if(!b.eating)bodyStartEat(b,b.due&&b.due.name||'饭',t,'her-wait');}else if(/睡/.test(v)){bodySleep(b,'self',t);bodyLog(b,'他自己去睡了',t);}else if(/起|醒/.test(v)){bodyWake(b,t,'self');bodyLog(b,'他起床了',t);}else if(/看病|医院|医生/.test(v)&&b.sick){b.sick.until=Math.min(b.sick.until,t+2*3600000);b.sick.cared='你去医院看过医生了';bodyLog(b,'他自己去医院看了病',t);}
+      if(/吃/.test(v)){if(!b.eating)bodyStartEat(b,b.due&&b.due.name||'饭',t,'her-wait');}else if(/睡/.test(v)){const choice=v.match(/睡(?:觉)?(?:到|至)((?:[01]?\d|2[0-3]):[0-5]\d)/),wait=/睡.*(?:叫醒|喊醒)/.test(v);if(choice||wait){const w=bodySleepWindow(t),until=choice?atMins(t,hm(choice[1],'09:00')):0;let wake=until;if(choice&&wake<=t&&bodyNight(minsOf(t))){const d=new Date(wake);d.setDate(d.getDate()+1);wake=d.getTime();}b.sleepPlan={start:w.start,wait,until:wake};}else delete b.sleepPlan;bodySleep(b,'self',t);bodyLog(b,'他自己去睡了',t);}else if(/起|醒/.test(v)){delete b.sleepPlan;bodyWake(b,t,'self');bodyLog(b,'他起床了',t);}else if(/看病|医院|医生/.test(v)&&b.sick){b.sick.until=Math.min(b.sick.until,t+2*3600000);b.sick.cared='你去医院看过医生了';bodyLog(b,'他自己去医院看了病',t);}
       if(typeof save==='function')save();refreshMood(true);}return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();}
 /* 她照顾他：喂电池、给药、戴睡帽 / 摘睡帽 */
 function deskPetBodyUse(kind){const c=role();if(!c||!bodyOn(c)){if(typeof toast==='function')toast('先开启桌面宠物，并在「他的身体」里打开身体状态');return;}const b=bodyTick(c),t=Date.now(),n=rname(c),me=(S.me&&S.me.name)||'她';
@@ -679,7 +705,7 @@ function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那
   <div class="dp-group dp-stats">${bar('精力',b.energy,100,'#7ad7ff',b.energy<50?'困':'')}${bar('饱腹',b.full,130,b.full>100?'#ffb35c':'#7ee0a1',b.full>100?'撑':b.full<50?'饿':'')}${bar('健康',b.health,100,'#ff8fab',b.health<50?'虚':'')}</div>
   <div class="dp-items">${[['battery','电池','喂一顿'],['coffee','咖啡',b.coffeeUntil>now?'劲儿还没过':'提提神'],['pill','药丸',b.sick?'治好他':'没生病'],['temp','体温计',b.lastTemp&&now-b.lastTemp.t<6*3600000?(+b.lastTemp.v).toFixed(1)+'℃':'量一量'],['hat','睡帽',hatOn?'摘下叫醒':'戴上去睡']].map(([k,l,sub])=>`<button class="${k==='hat'&&hatOn?'on':''}" onclick="deskPetBodyUse('${k}')"><svg viewBox="0 0 15 12" shape-rendering="crispEdges">${bodyItemSVG(k)}</svg><b>${l}</b><small>${escH(sub)}</small></button>`).join('')}</div>
   <div class="dp-group"><div class="dp-row"><span>零食盒<br><small style="color:#8e8e93;font-size:12px">开着时，连点两下桌宠弹出来</small></span><span class="sw ${snackCfg().snack?'on':''}" style="flex-shrink:0" onclick="deskPetSnackSet('snack')"></span></div><div class="dp-row"><span>喂零食时他会回应<br><small style="color:#8e8e93;font-size:12px">喂一样，他在微信里回一次（会用一次模型）</small></span><span class="sw ${snackCfg().snackReply?'on':''}" style="flex-shrink:0" onclick="deskPetSnackSet('reply')"></span></div>${snackCfg().snack?'<button type="button" class="dp-row dp-link" onclick="deskPetSnackOpen()"><span>打开零食盒</span><em>›</em></button>':''}</div>
-  <div class="dp-group"><div class="dp-row"><span>生病苗头</span><b style="color:${(+b.risk||0)>=70?'#ff6b6b':(+b.risk||0)>=40?'#d97757':'inherit'}">${(+b.risk||0)>=70?'很危险，快照顾他':(+b.risk||0)>=40?'有一点':'没有'}</b></div><div class="dp-row"><span>今天吃了</span><b>${b.meals||0} 顿</b></div><div class="dp-row"><span>上一顿</span><b>${last}</b></div><div class="dp-row"><span>上次睡了</span><b>${slept}</b></div>${b.lastTemp&&now-b.lastTemp.t<12*3600000?`<div class="dp-row"><span>体温</span><b>${(+b.lastTemp.v).toFixed(1)}℃ · ${escH(b.lastTemp.label)}（${fmtHM(b.lastTemp.t)} 量的）</b></div>`:''}</div>
+  <div class="dp-group"><div class="dp-row"><span>生病苗头</span><b style="color:${(+b.risk||0)>=70?'#ff6b6b':(+b.risk||0)>=40?'#d97757':'inherit'}">${(+b.risk||0)>=70?'很危险，快照顾他':(+b.risk||0)>=40?'有一点':'没有'}</b></div><div class="dp-row"><span>今天吃了</span><b>${b.meals||0} 顿</b></div><div class="dp-row"><span>上一顿</span><b>${last}</b></div><div class="dp-row"><span>本轮累计睡眠</span><b>${slept}</b></div>${b.lastTemp&&now-b.lastTemp.t<12*3600000?`<div class="dp-row"><span>体温</span><b>${(+b.lastTemp.v).toFixed(1)}℃ · ${escH(b.lastTemp.label)}（${fmtHM(b.lastTemp.t)} 量的）</b></div>`:''}</div>
   <div class="dp-label">睡觉</div>
   <div class="dp-group"><div class="dp-row"><span>平时几点睡</span><input type="time" value="${escH(cf.sleepAt)}" onchange="deskPetBodySet('sleepAt',this.value)"></div><div class="dp-row"><span>平时几点起</span><input type="time" value="${escH(cf.wakeAt)}" onchange="deskPetBodySet('wakeAt',this.value)"></div></div>
   <div class="dp-label">三餐</div>
@@ -687,7 +713,7 @@ function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那
   <div class="dp-label">上班</div>
   ${schedSectionHTML(c)}
   <div class="dp-group"><div class="dp-row"><span>身体状态</span><span class="sw on" style="flex-shrink:0" onclick="deskPetBodySet('on')"></span></div><div class="dp-row"><span>会生病<br><small style="color:#8e8e93;font-size:12px">看他吃饭、睡觉和天气，照顾得好就不会病</small></span><span class="sw ${cf.sick!=='off'?'on':''}" style="flex-shrink:0" onclick="deskPetBodySet('sick',bodyCfgSickToggle())"></span></div><button type="button" class="dp-row dp-link" onclick="deskPetBodyUse('sick')"><span>试试：让他生病</span><em>›</em></button></div>
-  <div class="dp-note">· 一天三块电池正好；吃太多会撑，只吃一顿会有点饿、健康慢慢往下掉。<br>· 每天按时吃三顿、按时睡，健康会慢慢涨；到点不睡、饿着，健康会往下掉。<br>· 生病不靠运气：没吃够、熬夜、天气不好、健康低、咖啡喝太多，「生病苗头」就会慢慢涨，要长期这样（比如连着一个星期左右）才会病，越严重病得越重；偶尔一天没照顾好没关系，你照顾得好他就不会生病。苗头大了他自己会觉得不对劲。<br>· 生病分低烧、中度发烧、高烧，越重好得越慢；体温计随时量，看他烧到多少度。咖啡提神，但劲儿没过（约 5 小时）睡不着，一天别超过两杯。<br>· 到饭点、睡觉点，他会先跟你说一声（比如“我先去吃饭了”“晚安”）再去，不会聊着聊着突然消失；你找他他照样回，只是吃得慢一点、或者被你叫醒。上班照常回你。<br>· 你们没在聊的时候，到点他就自己去吃、自己去睡。戴上睡帽马上睡，摘下来就醒。<br>· 照顾记录保留最近 3 天。<br>· 他知道是你在照顾他；身体只当事实告诉他，怎么反应是他自己的事。</div>
+  <div class="dp-note">· 一天三块电池正好；吃太多会撑，只吃一顿会有点饿、健康慢慢往下掉。<br>· 每天按时吃三顿、按时睡，健康会慢慢涨；到点不睡、饿着，健康会往下掉。<br>· 生病不靠运气：没吃够、熬夜、天气不好、健康低、咖啡喝太多，「生病苗头」就会慢慢涨，要长期这样（比如连着一个星期左右）才会病，越严重病得越重；偶尔一天没照顾好没关系，你照顾得好他就不会生病。苗头大了他自己会觉得不对劲。<br>· 生病分低烧、中度发烧、高烧，越重好得越慢；体温计随时量，看他烧到多少度。咖啡提神，但劲儿没过（约 5 小时）睡不着，一天别超过两杯。<br>· 到饭点、睡觉点，他会先跟你说一声（比如“我先去吃饭了”“晚安”）再去，不会聊着聊着突然消失；你找他他照样回，只是吃得慢一点、或者被你叫醒。上班照常回你。<br>· 到饭点没人聊天时，他会自己去吃。设定的睡觉到起床时段内，你连续 5 分钟没找他，他会自己睡；你发消息就醒，再离开 5 分钟会继续睡，到起床点醒来。各段实际睡眠累计，清醒不算。不上班的日子没睡够可以继续补觉，默认补足作息时长（最多 8 小时），也可由他选醒来时间或等你叫醒；补觉继续累计，单独戴睡帽的午睡不算。戴上睡帽马上睡，摘下来就醒。<br>· 照顾记录保留最近 3 天。<br>· 他知道是你在照顾他；身体只当事实告诉他，怎么反应是他自己的事。</div>
   <div class="dp-label">照顾记录</div><div class="dp-group dp-log">${log}</div>`;}
 /* 桌宠陪着的角色：角色资料页、共同生活设置里的「作息时间表」直接跳到这一页；别的角色仍用原来的作息窗口 */
 let _schedModal=null;

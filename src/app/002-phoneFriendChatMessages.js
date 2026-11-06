@@ -234,7 +234,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1901 · 身体现状与长按菜单';
+const APP_VER='v1902 · 桌宠自动回睡与整晚累计补觉';
 //@@ private
 const APP_VER='v1905 · 身体现状与长按菜单';
 //@@ end

@@ -1,5 +1,5 @@
 //@@ web
-if(window.__NORTH_SHELL_BUILD__!=='1901'){
+if(window.__NORTH_SHELL_BUILD__!=='1902'){
 //@@ private
 if(window.__NORTH_SHELL_BUILD__!=='1905'){
 //@@ end

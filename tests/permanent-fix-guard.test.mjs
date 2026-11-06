@@ -73,6 +73,7 @@ const PERMANENT_FIXES = [
   {release:"private v1903 / web v1899",scope:"both",least:1,file:"app.js",name:"找记忆加相近说法表（芫荽=香菜、主子=猫等），换个说法也能想起来；体检测支不支持按意思找",marker:"MEMORY_SENSE_V1"},
   {release:"private v1904 / web v1900",scope:"both",least:1,file:"desk-pet.js",name:"桌宠陪着的角色有身体：会困会饿会生病，电池/药丸/睡帽，只告诉他身体事实",marker:"ROLE_BODY_V1"},
   {release:"private v1904 / web v1900",scope:"both",least:1,file:"desk-pet.js",name:"零食盒：连点两下桌宠弹出，长按拖到嘴边喂，喂一样他回一次，不改身体",marker:"DESK_PET_SNACK_V1"},
+  {release:"web v1902",scope:"both",least:1,file:"desk-pet.js",name:"夜间闲置五分钟回睡，按作息累计多段睡眠，不上班可补觉",marker:"BODY_SLEEP_WINDOW_V1"},
   {release:"private v1905 / web v1901",scope:"both",least:1,file:"desk-pet.js",name:"身体现状每次一行、问起照实说，饿困虚按 50 对齐，电池对他说成一顿饭",marker:"BODY_STATUS_LINE_V1"},
   {release:"private v1905 / web v1901",scope:"both",least:1,file:"desk-pet.js",name:"调时间转盘开着不重画页面",marker:"function rerenderAfterPick()"},
   {release:"private v1905 / web v1901",scope:"both",least:1,name:"聊天消息轻点不弹删除撤回菜单，只长按弹；轻点图片看大图",marker:"MSG_MENU_LONGPRESS_V1"},
