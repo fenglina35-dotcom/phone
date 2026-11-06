@@ -15,6 +15,8 @@ test('a full bump dry-run finds the last release, passes its own checks and writ
   assert.equal(r.status, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /照着这次提交改：/);
   assert.match(r.stdout, /project\.pbxproj/);
+  assert.match(r.stdout, /\sapp\.js\n/, '完整升版包含网页当前版本');
+  assert.match(r.stdout, /PhoneWeb\.bundle\/app\.js/, '网页独立发布后仍能找到私人版升版模板');
   assert.match(r.stdout, /只看不改：没有写任何文件。/);
   assert.equal(status(), before);
 });

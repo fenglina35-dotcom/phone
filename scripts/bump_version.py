@@ -54,10 +54,10 @@ def ios_build():
     return int(builds.pop())
 
 
-def template_commit(web):
-    sha = git('log', '-1', '--format=%H', '-S', "const APP_VER='v%d " % web, '--', 'app.js').strip()
+def template_commit(version, path='app.js'):
+    sha = git('log', '-1', '--format=%H', '-S', "const APP_VER='v%d " % version, '--', path).strip()
     if not sha:
-        sys.exit('找不到把网页版本升到 v%d 的那次提交：如果刚升过版本号还没提交，请先提交再用（不要连升两次）' % web)
+        sys.exit('找不到 %s 升到 v%d 的那次提交：如果刚升过版本号还没提交，请先提交再用（不要连升两次）' % (path, version))
     return sha
 
 
@@ -89,6 +89,13 @@ def main():
     ios = ios_build()
     nw, np_, ni = web + 1, (priv if a.web_only else priv + 1), (ios if a.web_only else ios + 1)
     sha = template_commit(web)
+    template_lines = added_lines(sha)
+    # 网页可以单独发布；下次完整升版还须继承私人版与 iOS 最近一次升版的行。
+    if not a.web_only:
+        private_sha = template_commit(priv, PRIV)
+        if private_sha != sha:
+            for path, lines in added_lines(private_sha).items():
+                template_lines.setdefault(path, set()).update(lines)
     print('当前：网页 v%d / 私人 v%d / iOS %d　→　网页 v%d / 私人 v%d / iOS %d' % (web, priv, ios, nw, np_, ni))
     print('照着这次提交改：' + git('log', '-1', '--format=%h %s', sha).strip())
 
@@ -105,7 +112,7 @@ def main():
         return line
 
     changed, total = {}, 0
-    for path, plus in added_lines(sha).items():
+    for path, plus in template_lines.items():
         if path.startswith(SKIP_PREFIX) or path in SKIP_FILES:
             continue
         if a.web_only and path.startswith('native/'):
