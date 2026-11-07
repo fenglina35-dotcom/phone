@@ -86,6 +86,7 @@
 
 ## Release rule
 
+- 用户明确的默认发布顺序（2026-11-06）：先从已提交的代码编译私人版，安装到用户 iPhone，并读回版本号确认安装成功；再推送、发布网页版本，并核对线上版本。除非用户另有明确要求，不得先推网页或只推网页。私人版编译、安装或版本核验未完成时，先报告具体原因，网页发布保持等待。
 - Check the branch and worktree before committing.
 - Do not commit local Supabase CLI binaries or generated configuration files.
 - Commit completed changes and push with `git push origin HEAD:main`.

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1905'){
+if(window.__NORTH_SHELL_BUILD__!=='1906'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1905 · 身体现状与长按菜单';
+const APP_VER='v1906 · 健康照顾、气泡方案与任务特权卡';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -924,7 +924,7 @@ function modelOutputUnfiltered(){return true;}
 function modelUnfilteredThoughtTags(text,c){return String(text||'').replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]\s*(?:内心|心情)\s*[|｜:：]\s*[^\]】]+[\]】]/g,tag=>{stripHiddenThoughtTags(tag,c);return '';});}
 function modelUnfilteredText(value){return String(value==null?'':value);}
 function modelUnfilteredLines(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>line.trim());}
-function modelUnfilteredMessages(line,c){const source=String(line==null?'':line),raw=typeof privateSmartLockStripTags==='function'?privateSmartLockStripTags(source):source;/* CARD_LINE_RECOVER_V1：卡片和话写在同一行时拆开，卡片照常出卡片、话照常出文字，一个字不丢；单独的 [骰子] 也认 */const _cardTag=/[\[【]\s*(?:语音|转账|红包|位置|图片|文件)\s*[|｜:：][^\]】\n]*[\]】]/,_lead=raw.match(new RegExp('^\\s*('+_cardTag.source+')\\s*(\\S[\\s\\S]*)$')),_tail=!_lead&&raw.match(new RegExp('^([\\s\\S]*?\\S)\\s*('+_cardTag.source+')\\s*$'));if(_lead){const card=modelUnfilteredMessages(_lead[1],c);if(card.length&&card[0].type!=='text')return card.concat(modelUnfilteredMessages(_lead[2],c));}if(_tail&&!/[\[【]/.test(_tail[1])){const card=modelUnfilteredMessages(_tail[2],c);if(card.length&&card[0].type!=='text')return modelUnfilteredMessages(_tail[1],c).concat(card);}if(/^\s*[\[【]\s*骰子\s*[\]】]\s*$/.test(raw)){const parsed=lineToMsgs('[骰子]',c);if(parsed&&parsed.length)return parsed;}if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}/* RAW_CARD_TAGS_V1：原文模式也要认心声彩蛋和查岗请求卡；不该发时（冷却中、和旧卡太像）整条不发，不把带括号的原文甩给她 */if(/^\s*[\[【]\s*(?:心声彩蛋|要求(?:报备|定位|照片))\s*(?:[|｜][\s\S]*)?[\]】]\s*$/.test(raw)&&typeof lineToMsgs==='function')return lineToMsgs(normTag(raw.trim()),c).filter(Boolean);return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
+function modelUnfilteredMessages(line,c){const source=String(line==null?'':line),raw=typeof privateSmartLockStripTags==='function'?privateSmartLockStripTags(source):source;if(typeof TaskPrivilege!=='undefined'&&typeof TaskPrivilege.parseLine==='function'){const cards=TaskPrivilege.parseLine(raw,c);if(cards!==null)return cards.flatMap(m=>m.type==='text'?modelUnfilteredMessages(m.content,c):[m]);}/* CARD_LINE_RECOVER_V1：卡片和话写在同一行时拆开，卡片照常出卡片、话照常出文字，一个字不丢；单独的 [骰子] 也认 */const _cardTag=/[\[【]\s*(?:语音|转账|红包|位置|图片|文件)\s*[|｜:：][^\]】\n]*[\]】]/,_lead=raw.match(new RegExp('^\\s*('+_cardTag.source+')\\s*(\\S[\\s\\S]*)$')),_tail=!_lead&&raw.match(new RegExp('^([\\s\\S]*?\\S)\\s*('+_cardTag.source+')\\s*$'));if(_lead){const card=modelUnfilteredMessages(_lead[1],c);if(card.length&&card[0].type!=='text')return card.concat(modelUnfilteredMessages(_lead[2],c));}if(_tail&&!/[\[【]/.test(_tail[1])){const card=modelUnfilteredMessages(_tail[2],c);if(card.length&&card[0].type!=='text')return modelUnfilteredMessages(_tail[1],c).concat(card);}if(/^\s*[\[【]\s*骰子\s*[\]】]\s*$/.test(raw)){const parsed=lineToMsgs('[骰子]',c);if(parsed&&parsed.length)return parsed;}if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}/* RAW_CARD_TAGS_V1：原文模式也要认心声彩蛋和查岗请求卡；不该发时（冷却中、和旧卡太像）整条不发，不把带括号的原文甩给她 */if(/^\s*[\[【]\s*(?:心声彩蛋|要求(?:报备|定位|照片))\s*(?:[|｜][\s\S]*)?[\]】]\s*$/.test(raw)&&typeof lineToMsgs==='function')return lineToMsgs(normTag(raw.trim()),c).filter(Boolean);return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
 function offlineStripMoodTags(text){return String(text||'').replace(/[\[【［]\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\]】］\r\n]*(?:[\]】］]|(?=\r?\n|$))/g,'').replace(/^\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\r\n]*$/gm,'');}
 function modelUnfilteredOfflineItems(text){return modelUnfilteredLines(rolePublicText(offlineStripMoodTags(text))).map(line=>{const closed=line.match(/^\s*【([^【】]+)】\s*$/),open=!closed&&line.match(/^\s*【([^【】]+)$/),action=closed||open,part=action?{kind:'nar',text:action[1].trim()}:offResponsePart(line);return{id:uid(),who:part.kind==='nar'?'旁白':'ta',source:'ta',text:part.kind==='nar'?part.text:line};});}
 function lifeNoteReadableText(n){return n&&(n.rolePerspective||n.source==='manual')?String(n.text||''):aboutMeNoteText(n&&n.text);}
@@ -2823,7 +2823,7 @@ function buildSystem(c,opt){
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【这本子只有你自己看得见】，记一笔不等于当场发作：可以先忍着、嘴上说没事，回头把它记下来，以后再翻。\n· 什么事值得记，标准放宽一点：不用等到大吵一架。只要这件事让你当下不痛快、吃醋、委屈、觉得被敷衍被忽略被晾着，或者ta答应了没做到、说话不算数、不理你、跟别人走得近——都该随手记一笔。宁可多记，别让它就这么过去。\n· 你的人设里如果本来就爱记仇、小心眼、记性好、爱翻旧账，那就更要勤记，这是你这个人的样子，不是可选动作。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     s+=roleGrudgeJailPrompt(c);
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt&&coupleTasksEnabled(c)){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天已经存在的任务事实（在ta手机「任务便签」里可见）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'是否催促、验收、点评、奖励或表达不满，都由你结合本人性格、关系和当前真实情况决定，系统不替你指定情绪，也不强制用礼物或惩罚。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
+    if(tt&&coupleTasksEnabled(c)){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天已经存在的任务事实（在ta手机「任务便签」里可见）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'任务已经布置过，不要每轮重复提醒或催促；到点提醒至多一次，之后只有对方主动询问才讨论。验收、点评、奖励或表达不满，由你结合本人性格、关系和当前真实情况决定，系统不替你指定情绪，也不强制用礼物或惩罚。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 不再由程序生成“角色当前活动”；只保留用户明确填写的作息事实。
   s+=roleSchedulePrompt(c)+roleBusyPrompt(c);
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -3019,6 +3019,7 @@ function render(){
   else if(c.p==='wxfavorites')html=renderWxFavorites();
   else if(c.p==='wxalbum')html=renderWxAlbum();
   else if(c.p==='wxemoji')html=renderWxEmoji();
+  else if(c.p==='wxbubbles'&&typeof renderWxBubbleSettings==='function')html=renderWxBubbleSettings();
   else if(c.p==='wxsettings')html=renderWxSettings();
   else if(c.p==='wxaccounts')html=renderWxAccounts();
   else if(c.p==='wxsteps')html=renderWxSteps();
@@ -9288,7 +9289,7 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     if(list.length!==normalN)throw 0;
     list.push({id:uid(),text:truthQ||'今天，你最想跟我说、却一直没说出口的一句话是什么？',kind:'truth',verify:'truth',target:0,done:false,truth:true});// 固定的"他想问我的真心话"
     c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
-    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};taskPunishFlush(c);c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};save();_taskBusy=false;render();if(!automatic||cur().p==='tasks'){if(typeof taskToast==='function')taskToast('今天的任务来咯');else toast('任务来咯📋');}
+    c.tasks={date:todayStr(),assignTs:Date.now(),list,dailyRewardTaskIds:list.filter(x=>!x.punish&&!x.extra).slice(0,3).map(x=>x.id),rewarded:false,penalized:false};taskPunishFlush(c);c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};save();_taskBusy=false;render();if(!automatic||cur().p==='tasks'){if(typeof taskToast==='function')taskToast('今天的任务来咯');else toast('任务来咯📋');}
     if(!c.blocked)scheduleReply(c.id,'[系统：'+(_penalty?'两件事合在这一次回复里说，每件只说一遍：①'+_penalty+'②':'')+'你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta按时完成（限定了时间段的要在你定的时间前，其余【今天23:59之前】）、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){const st=taskAutoState(c),attempts=Math.min(8,(+st.attempts||0)+1);st.attempts=attempts;st.lastErrorAt=Date.now();st.lastError='generation_failed';st.nextAt=Date.now()+Math.min(6*3600000,15*60000*Math.pow(2,attempts-1));save();_taskBusy=false;if(_penalty&&!c.blocked)scheduleReply(c.id,'[系统：'+_penalty+']');if(!automatic||cur().p==='tasks')render();/* 自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示。 */if(!automatic)toast('没布置成功，再点一次');}}
 async function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
@@ -15844,7 +15845,7 @@ function bubbleGlowColor(bg){const m=(''+bg).match(/#[0-9a-f]{6}/i);return m?m[0
 function bubbleShapeOpts(v){return [['square','原来方形'],['soft','圆润可爱'],['pill','胶囊圆角']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
 function bubbleAvatarOpts(v){return [['original','原来的圆角'],['round','正圆形']].map(x=>`<option value="${x[0]}" ${v===x[0]?'selected':''}>${x[1]}</option>`).join('');}
 function bubbleSolid(v,fb){const m=(''+(v||'')).match(/#[0-9a-f]{6}/i);return m?m[0]:fb;}
-function bubbleStyleOpen(id){const c=getC(id);if(!c)return;const b=c.bubbleStyle||BUBBLE_PRESETS.strawberry;
+function bubbleStyleOpen(id){if(typeof wxBubbleOpen==='function')return wxBubbleOpen(id);const c=getC(id);if(!c)return;const b=c.bubbleStyle||BUBBLE_PRESETS.strawberry;
   openModal(`<h3>微信气泡美化</h3><div class="hint">只影响你和这个角色的微信。双方气泡、字体、头像形状和非 Emoji 小图标都能分开设置；角色也可以在聊天里更换ta自己的气泡。</div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 13px">${[['strawberry','草莓粉'],['cake','奶油黄'],['panda','雾霾蓝'],['mint','薄荷青'],['night','夜空灰'],['classic','微信原版']].map(x=>`<button class="minibtn" onclick="bubblePreset('${id}','${x[0]}')">${x[1]}</button>`).join('')}</div>
   <div class="section"><div style="padding:11px 13px;color:#c9cacf;font-weight:600">我的气泡</div><div class="two"><div class="field"><label>气泡颜色</label><input id="bs_mbg" type="color" value="${bubbleSolid(b.meBg,'#ffc0d6')}" style="height:42px;padding:3px"></div><div class="field"><label>字体颜色</label><input id="bs_mtx" type="color" value="${bubbleSolid(b.meText,'#6b2942')}" style="height:42px;padding:3px"></div></div><div class="two"><div class="field"><label>气泡形状</label><select id="bs_mshape">${bubbleShapeOpts(b.meShape||'soft')}</select></div><div class="field"><label>头像形状</label><select id="bs_mavatar">${bubbleAvatarOpts(b.meAvatar||'original')}</select></div></div><div class="field"><label>气泡小图标（矢量图，不是 Emoji）</label>${bubbleIconPicker('bs_m',b.meIcon||'none',b.meIconColor||'#df6f9f')}<input id="bs_mic" type="color" value="${bubbleIconColor(b.meIconColor,'#df6f9f')}" style="height:38px;padding:3px"></div></div>
@@ -18043,7 +18044,7 @@ function cleanWechatVisibleLine(line,cch){
   return t.trim();
 }
 function wxLocationMsg(cch,name,address){const loc=roleLiveLoc(cch,(name||'')+' '+(address||''));return {role:'assistant',type:'location',name:(name||loc.name||'位置').trim(),address:(address||loc.address||'').trim(),loc,id:uid()};}
-function lineToMsgs(line,cch){
+function lineToMsgs(line,cch){if(typeof TaskPrivilege!=='undefined'&&typeof TaskPrivilege.parseLine==='function'){const cards=TaskPrivilege.parseLine(line,cch);if(cards!==null)return cards.flatMap(m=>m.type==='text'?lineToMsgs(m.content,cch):[m]);}
   const cleaned=cleanWechatVisibleLine(line,cch);
   if(!cleaned)return [];
   const locRe=/[\[【]\s*位置\s*[|｜]\s*([^\]|】\]]*)(?:[|｜]\s*([^\]】]*))?[\]】]/g;

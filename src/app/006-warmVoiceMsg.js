@@ -35,7 +35,7 @@ function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navig
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
 //@@ web
-  const url='sw.js?v=1902&r=v1902-owner-todo-report-1';
+  const url='sw.js?v=1903&r=v1903-owner-todo-report-1';
 //@@ private
   const url='sw.js?v=1419&r=v1419-private-pf-role-1';
 //@@ end
@@ -563,7 +563,7 @@ function buildSystem(c,opt){
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【这本子只有你自己看得见】，记一笔不等于当场发作：可以先忍着、嘴上说没事，回头把它记下来，以后再翻。\n· 什么事值得记，标准放宽一点：不用等到大吵一架。只要这件事让你当下不痛快、吃醋、委屈、觉得被敷衍被忽略被晾着，或者ta答应了没做到、说话不算数、不理你、跟别人走得近——都该随手记一笔。宁可多记，别让它就这么过去。\n· 你的人设里如果本来就爱记仇、小心眼、记性好、爱翻旧账，那就更要勤记，这是你这个人的样子，不是可选动作。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     s+=roleGrudgeJailPrompt(c);
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt&&coupleTasksEnabled(c)){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天已经存在的任务事实（在ta手机「任务便签」里可见）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'是否催促、验收、点评、奖励或表达不满，都由你结合本人性格、关系和当前真实情况决定，系统不替你指定情绪，也不强制用礼物或惩罚。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
+    if(tt&&coupleTasksEnabled(c)){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天已经存在的任务事实（在ta手机「任务便签」里可见）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'任务已经布置过，不要每轮重复提醒或催促；到点提醒至多一次，之后只有对方主动询问才讨论。验收、点评、奖励或表达不满，由你结合本人性格、关系和当前真实情况决定，系统不替你指定情绪，也不强制用礼物或惩罚。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 不再由程序生成“角色当前活动”；只保留用户明确填写的作息事实。
   s+=roleSchedulePrompt(c)+roleBusyPrompt(c);
   // 亲属卡 / 推荐过的好友（仅主身份）

@@ -3,9 +3,36 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const app = readFileSync(join(root, 'app.js'), 'utf8');
+
+test('气泡方案库独立保存，全局与选中角色各自应用，原设置不丢', () => {
+  const source=readFileSync(join(root,'wechat-me.js'),'utf8');
+  const block=source.slice(source.indexOf('/* BUBBLE_LIBRARY_V1'),source.indexOf('function wxGlobalBubbleSet('));
+  const people={a:{id:'a',bubbleStyle:{meBg:'#123456',meIcon:'heart'}},b:{id:'b',bubbleStyle:{meBg:'#abcdef'}}};
+  const f={globalBubble:{meBg:'#777777',themBg:'#333333'}},name={value:'我的灰粉'};
+  let page='',n=0;
+  const x=vm.createContext({F:()=>f,JSON,Array,Object,String,S:{contacts:Object.values(people)},
+    getC:id=>people[id],uid:()=>String(++n),BUBBLE_PRESETS:{classic:{meBg:'#95ec69'}},
+    window:{},document:{getElementById:id=>id==='wx_bubble_name'?name:null},save(){},render(){},toast(){},
+    closeModal(){},go:p=>{page=p;},confirm:()=>true});
+  vm.runInContext(block,x);
+  x.wxBubbleOpen();assert.equal(page,'wxbubbles');
+  x.wxBubbleField('meBg','#ffbbaa');x.wxBubbleSavePreset();
+  assert.equal(f.bubbleLibrary.length,1);
+  x.wxBubbleField('meBg','#999999');
+  assert.equal(f.bubbleLibrary[0].style.meBg,'#ffbbaa','方案是独立副本');
+  x.wxBubbleLoad('1');x.wxBubbleApply(false);
+  assert.equal(f.globalBubble.meBg,'#ffbbaa');
+  assert.equal(people.a.bubbleStyle.meBg,'#123456','应用全局不覆盖已有角色');
+  x.wxBubbleOpen('a');x.wxBubbleField('meBg','#112233');x.wxBubbleApply(false);
+  assert.equal(people.a.bubbleStyle.meBg,'#112233');
+  assert.equal(people.a.bubbleStyle.meIcon,'heart','原图标等未修改字段保留');
+  assert.equal(people.b.bubbleStyle.meBg,'#abcdef','未选择的角色保持原样');
+  x.wxBubbleApply(true);assert.equal(people.a.bubbleStyle,undefined,'可恢复跟随全局');
+});
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);

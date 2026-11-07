@@ -12,7 +12,7 @@ const pet = read('desk-pet.js');
 assert.equal(read(PRIV_DIR + 'desk-pet.js'), pet, 'desk pet ships identically');
 const consts = pet.match(/const BODY_MEAL=[^\n]*\n/)[0] + pet.match(/const BODY_FEVER=[^\n]*\n/)[0];
 const names = ['bodyTemp', 'bodyTempLabel', 'clamp01', 'hm', 'minsOf', 'mmHM', 'bodyMealTimes', 'bodyStartEat', 'dayKey', 'atMins', 'fmtHM', 'bodyCfg', 'bodyOn', 'bodyState', 'bodyLog', 'bodyEvent', 'bodyNight', 'lastChatAt', 'lastUserAt',
-  'bodySleep', 'bodySleepWindow', 'bodySleepInAllowed', 'bodyUserTimes', 'bodySleepAccrue', 'bodyWake', 'bodyMeal', 'bodyRollDay', 'bodySick', 'bodySickDay', 'bodySickText', 'bodyMealWindows', 'bodyTick', 'roleBodyPrompt', 'roleBodyConsume', 'bodyLookOf'];
+  'bodyCheckHealth', 'bodyCareQuota', 'bodyTakeCare', 'bodySleep', 'bodySleepWindow', 'bodySleepInAllowed', 'bodyUserTimes', 'bodySleepAccrue', 'bodyWake', 'bodyMeal', 'bodyRollDay', 'bodySick', 'bodySickDay', 'bodySickText', 'bodyMealWindows', 'bodyTick', 'roleBodyPrompt', 'roleBodyConsume', 'bodyLookOf'];
 const W = [];
 let NOW = Date.now();
 class FakeDate extends Date { constructor(...a) { super(...(a.length ? a : [NOW])); } static now() { return NOW; } }
@@ -232,3 +232,20 @@ console.log('role body tests passed');
  hat.tick(date(6, 13)); assert.equal(hat.b.asleep, false);
  console.log('夜间自动回睡与累计时长回归通过');
 }
+
+// BODY_CARE_LIMITS_V1：健康归零必须生病，不再等另一个独立风险条。
+{ const now=NOW; const before=JSON.parse(JSON.stringify(ctx.S.roleBody));
+ Object.assign(b,{health:0,risk:0,sick:null,lastTick:now-60000});ctx.bodyTick(c,now);
+ assert.ok(b.sick,'开启会生病时，健康归零必须触发生病');ctx.S.roleBody=before; }
+
+{ const t=new Date(2026,10,7,8).getTime(),b={asleep:false,health:80,energy:10};
+ assert.equal(ctx.bodyTakeCare(b,'vitamin',t).ok,true);assert.equal(b.health,85);
+ assert.equal(ctx.bodyTakeCare(b,'vitamin',t+1000).ok,false);assert.equal(b.health,85);
+ assert.equal(ctx.bodyTakeCare(b,'coffee',t).ok,true);assert.equal(b.energy,30);
+ assert.equal(ctx.bodyTakeCare(b,'coffee',t+60000).ok,false);
+ assert.equal(ctx.bodyTakeCare(b,'coffee',t+4*3600000).ok,true);assert.equal(b.energy,40);
+ assert.equal(ctx.bodyTakeCare(b,'coffee',t+8*3600000).ok,false);
+ const restored=JSON.parse(JSON.stringify(b));assert.equal(ctx.bodyTakeCare(restored,'vitamin',t+2000).ok,false);
+ assert.equal(ctx.bodyTakeCare(b,'vitamin',t+86400000).ok,true);
+ b.health=0;b.sick=null;b.recoverUntil=t+86400000;ctx.bodyCheckHealth(b,t);assert.equal(b.sick,null);
+ console.log('健康底线与道具限额通过'); }

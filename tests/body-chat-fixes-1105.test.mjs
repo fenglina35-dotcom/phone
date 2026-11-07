@@ -60,3 +60,17 @@ assert.match(pet, /bodyEvent\(b,me\+'刚喂你吃了一顿饭'/);
 assert.doesNotMatch(pet, /bodyEvent\([^;]*一块电池/, 'he is never told he ate a battery');
 assert.doesNotMatch(pet, /North/, 'shared file never names her');
 console.log('body chat fixes 1105 tests passed');
+
+// 健康归零的真实模块回归：旧代码的风险条未到100时仍不生病。
+{
+  const t=new Date(2026,10,7,12).getTime();
+  class Clock extends Date { constructor(...a){super(...(a.length?a:[t]));} static now(){return t;} }
+  const state={settings:{deskPet:{on:true,cid:'health-zero',body:{on:true,sick:'some'}}}};
+  const x=vm.createContext({Date:Clock,Math,String,Number,Object,Array,JSON,Set,S:state,msgs:()=>[]});
+  x.cfg=x.ensureCfg=()=>state.settings.deskPet;
+  vm.runInContext(pet.slice(pet.indexOf('const BODY_MEAL='),pet.indexOf('function bodyBar(')),x);
+  const role={id:'health-zero'},b=x.bodyState(role);
+  Object.assign(b,{health:0,risk:0,lastTick:t-60000});
+  x.bodyTick(role,t);
+  assert.ok(b.sick,'健康为零时必须生病，不能只显示身体虚');
+}

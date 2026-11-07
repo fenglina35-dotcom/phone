@@ -100,6 +100,7 @@ function render(){
   else if(c.p==='wxfavorites')html=renderWxFavorites();
   else if(c.p==='wxalbum')html=renderWxAlbum();
   else if(c.p==='wxemoji')html=renderWxEmoji();
+  else if(c.p==='wxbubbles'&&typeof renderWxBubbleSettings==='function')html=renderWxBubbleSettings();
   else if(c.p==='wxsettings')html=renderWxSettings();
   else if(c.p==='wxaccounts')html=renderWxAccounts();
   else if(c.p==='wxsteps')html=renderWxSteps();

@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1902 · 桌宠自动回睡与整晚累计补觉';
+const APP_VER='v1903 · 健康照顾、气泡方案与任务特权卡';
 //@@ private
-const APP_VER='v1905 · 身体现状与长按菜单';
+const APP_VER='v1906 · 健康照顾、气泡方案与任务特权卡';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

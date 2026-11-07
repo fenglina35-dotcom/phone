@@ -136,7 +136,7 @@ function cleanWechatVisibleLine(line,cch){
   return t.trim();
 }
 function wxLocationMsg(cch,name,address){const loc=roleLiveLoc(cch,(name||'')+' '+(address||''));return {role:'assistant',type:'location',name:(name||loc.name||'位置').trim(),address:(address||loc.address||'').trim(),loc,id:uid()};}
-function lineToMsgs(line,cch){
+function lineToMsgs(line,cch){if(typeof TaskPrivilege!=='undefined'&&typeof TaskPrivilege.parseLine==='function'){const cards=TaskPrivilege.parseLine(line,cch);if(cards!==null)return cards.flatMap(m=>m.type==='text'?lineToMsgs(m.content,cch):[m]);}
   const cleaned=cleanWechatVisibleLine(line,cch);
   if(!cleaned)return [];
   const locRe=/[\[【]\s*位置\s*[|｜]\s*([^\]|】\]]*)(?:[|｜]\s*([^\]】]*))?[\]】]/g;

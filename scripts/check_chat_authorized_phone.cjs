@@ -41,6 +41,55 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
+  if(process.env.NORTH_DAILY_FEATURES_PREVIEW==='1'){
+   await page.evaluate(()=>{S.couple.tasksEnabled=true;window.previewSchedule=scheduleReply;scheduleReply=()=>true;wxBubbleOpen();wxBubbleField('meBg','#f2c7d6');wxBubbleField('themBg','#c8dbe9');wxBubbleField('meText','#553645');wxBubbleField('themText','#304454');render();});
+   assert(await page.locator('.wx-bubble-settings').isVisible());
+   assert.equal(await page.locator('.wx-directory-head b').innerText(),'气泡设置');
+   assert.equal(await page.locator('.wx-directory-head b').evaluate(el=>getComputedStyle(el).color),'rgb(245, 245, 247)');
+   assert.equal(await page.locator('.modal.show').count(),0);
+   assert.equal(await page.locator('.wb-apply .btn.p').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(7, 193, 96)');
+   assert(await page.locator('.wb-grid input[type=color]').first().evaluate(el=>{const s=getComputedStyle(el);return s.width===s.height&&s.borderRadius==='50%';}));
+   await page.locator('#wx_bubble_name').fill('奶油粉与雾蓝');
+   await page.getByRole('button',{name:'＋ 保存为新方案',exact:true}).click();
+   await page.getByRole('button',{name:'保存并应用到全局',exact:true}).click();
+   await page.getByRole('button',{name:'角色气泡 · 展开全部角色',exact:true}).click();
+   await page.locator('.wb-roles button').first().click();
+   await page.getByRole('button',{name:'保存并应用到所选角色',exact:true}).click();
+   assert(await page.evaluate(()=>S.me.wxFeatures.bubbleLibrary.length===1&&!!getC(S.contacts[0].id).bubbleStyle));
+   const previewOut='/Users/zoushijie/Documents/Codex/2026-11-06/wj-git/outputs';
+   if(privateApp){await page.waitForTimeout(3200);await page.setViewportSize({width:430,height:1500});await page.screenshot({path:path.join(previewOut,'bubble-settings-preview.png')});await page.setViewportSize({width:430,height:900});}
+   await page.evaluate(()=>{const c=getC(testId);c.tasks={date:todayStr(),assignTs:Date.now(),list:['a','b','c'].map(id=>({id,text:'今天的小事 '+id,done:true,verify:'real'})).concat({id:'extra',text:'后来追加，不计入奖励',punish:true,done:false}),dailyRewardTaskIds:['a','b','c']};S.taskNotes={items:[]};go('tasks');TaskNotes.tab('today');TaskNotes.tab('reward');window.previewRandom=Math.random;Math.random=()=>0;});
+   await page.locator('.tn-claim').click();
+   assert(await page.locator('.pc-reveal').isVisible());
+   await page.waitForFunction(()=>document.querySelector('.pc-reveal img')?.naturalWidth>0);
+   await page.getByRole('button',{name:'收好卡片',exact:true}).click();
+   await page.evaluate(()=>{Math.random=previewRandom;TaskNotes.me('cards');});
+   assert(await page.getByRole('heading',{name:'卡片仓库',exact:true}).isVisible());
+   await page.waitForFunction(()=>[...document.querySelectorAll('.pc-grid img')].every(x=>x.complete&&x.naturalWidth>0));
+   assert.equal(await page.evaluate(()=>S.taskNotes.privileges.accounts[actId()].owners.me.reconcile),1);
+   if(privateApp){await page.waitForTimeout(3200);await page.setViewportSize({width:430,height:1500});await page.screenshot({path:path.join(previewOut,'privilege-cards-preview.png')});await page.setViewportSize({width:430,height:900});}
+   await page.evaluate(()=>TaskPrivilege.openAction('reconcile','gift'));
+   await page.locator('#pc_target').selectOption(await page.evaluate(()=>testId));
+   await page.getByRole('button',{name:'确认',exact:true}).click();
+   assert(await page.evaluate(()=>{const a=S.taskNotes.privileges.accounts[actId()];return a.owners.me.reconcile===0&&a.owners['role:'+testId].reconcile===1;}));
+   assert(await page.evaluate(()=>{const c=getC(testId),parts=modelUnfilteredMessages('[使用特权卡|和好卡|我们聊聊][转账|¥5|测试]',c);return parts.some(m=>m.privilege)&&parts.some(m=>m.type==='transfer'&&m.amount===5)&&S.taskNotes.privileges.accounts[actId()].owners['role:'+testId].reconcile===1;}),'特权卡与转账同行都应识别且解析不扣库存');
+   await page.evaluate(async()=>{fixtureRaw='[使用特权卡|和好卡|我们把矛盾说开，好好相处。]';openChat(testId);await aiReply(testId);});
+   await page.waitForFunction(()=>msgs(testId).some(m=>m.role==='assistant'&&m.privilege&&m.privilege.state==='success'),{timeout:15000});
+   assert(await page.evaluate(()=>S.taskNotes.privileges.accounts[actId()].owners['role:'+testId].reconcile===0));
+   assert((await page.locator('.pc-chat').count())>=2);
+   assert.equal(await page.locator('.pc-detail').count(),0);
+   assert(await page.locator('.pc-chat').first().evaluate(el=>el.getBoundingClientRect().width<=140));
+   assert.equal(await page.locator('.pc-chat .pc-name').first().evaluate(el=>getComputedStyle(el).color),'rgb(255, 255, 255)');
+   const before=await page.evaluate(()=>JSON.stringify(S.taskNotes.privileges));await page.evaluate(()=>render());
+   assert.equal(await page.evaluate(()=>JSON.stringify(S.taskNotes.privileges)),before,'重复显示不扣卡');
+   if(privateApp){await page.waitForTimeout(3200);await page.screenshot({path:path.join(previewOut,'privilege-chat-preview.png')});}
+   assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,dailyFeatures:{bubblePage:true,presetSaved:true,originalThree:true,draw:true,giftOwnership:true,roleCardReply:true,noReplay:true,pageErrors:0}}));
+   await page.evaluate(()=>{S.settings.deskPet={on:true,cid:testId,body:{on:true,sick:'some'}};const b=roleBodyTick(getC(testId));b.health=0;b.sick=null;b.recoverUntil=0;b.lastTick=Date.now()-60000;roleBodyTick(getC(testId));deskPetOpen();deskPetTab('body');});
+   assert(await page.getByText('维生素片',{exact:true}).isVisible());
+   assert.equal(await page.locator('.dp-items button').count(),6);
+   assert(await page.evaluate(()=>!!S.roleBody[testId].sick));
+   await page.close();continue;
+  }
   if(process.env.NORTH_OWNER_TODO==='1'){
    await page.evaluate(()=>{const c=getC(testId);c.proactive={enabled:true,serverPush:true,times:2};S.settings.preciseRoleTimeEpoch='owner-todo-queue';const st=companionState();st.linked=true;st.backgroundConsent=st.backgroundConsent||{};st.backgroundConsent[testId]=true;S.spy=S.spy||{};S.spy[testId]={todo:{date:todayStr(),items:[]}};_spyUnlock[testId]=true;_spyApp='todo';stack=[{p:'spy',id:testId}];window.todoProfiles=[];window.todoOutbox=[];window.todoAcks=[];window.todoRpcOriginal=companionRpc;companionRpc=async(name,args)=>{if(name==='phone_role_push_upsert_profile'){todoProfiles.push(JSON.parse(JSON.stringify(args.p_profile)));return true;}if(name==='phone_role_push_pull')return todoOutbox;if(name==='phone_role_push_ack'){todoAcks.push(...args.p_ids);return true;}return null;};render();});
    await page.getByRole('button',{name:'添加行程',exact:false}).click();await page.locator('#soText').fill('喝水');await page.locator('#soTime').fill('11点');await page.getByRole('button',{name:'保存行程',exact:true}).click();
@@ -307,8 +356,8 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    try{S.couple={cid:c.id,tasksEnabled:true};c.tasks={date:todayStr(),assignTs:Date.now(),list:[{id:'role-done',text:'写三句想你的话',kind:'app',verify:'essay',done:true}],rewarded:false,penalized:false};
     S.taskNotes={items:[{id:'t-late',text:'喝一杯水',time:sameDay?hm:'',cat:'water',date:today},{id:'t-old',text:'很久以前',date:k(4)},{id:'t-recent',text:'前天的',date:k(2)},{id:'t-olddone',text:'旧的完成',date:k(40),done:true}]};
     TaskNotes.prune();const pruned=!S.taskNotes.items.some(x=>x.id==='t-old'||x.id==='t-olddone')&&S.taskNotes.items.some(x=>x.id==='t-recent');
-    go('tasks');TaskNotes.tab('today');await sleep(120);const late=!sameDay||!!document.querySelector('.tn-chip.late');const roleStar=S.taskNotes.stars===6;render();await sleep(80);const roleStarOnce=S.taskNotes.stars===6;
-    Math.random=()=>0;scheduleFeatureReply=()=>{praised++;};TaskNotes.toggle('t-late');const gained=S.taskNotes.stars===7;TaskNotes.toggle('t-late');const refunded=S.taskNotes.stars===6;Math.random=rnd;scheduleFeatureReply=sfr;
+    go('tasks');TaskNotes.tab('today');await sleep(120);const late=!sameDay||!!document.querySelector('.tn-chip.late');const roleStar=S.taskNotes.stars===3;render();await sleep(80);const roleStarOnce=S.taskNotes.stars===3;
+    Math.random=()=>0;scheduleFeatureReply=()=>{praised++;};TaskNotes.toggle('t-late');const gained=S.taskNotes.stars===4;TaskNotes.toggle('t-late');const refunded=S.taskNotes.stars===3;Math.random=rnd;scheduleFeatureReply=sfr;
     const sys=buildSystem(c),roleKnows=sys.includes('今天自己记的小事')&&sys.includes('喝一杯水');
     let reminder=true;if(privateApp){SmallPhoneNative.request=async(action,args)=>{if(action==='tasknotes.reminders'){sent=args;return{scheduled:(args.items||[]).length};}return baseReq(action,args);};const later=new Date(Date.now()+2*3600e3);S.taskNotes.items.push({id:'t-later',text:'早点睡',time:String(later.getHours()).padStart(2,'0')+':'+String(later.getMinutes()).padStart(2,'0'),cat:'sleep',date:roleDiaryDateKey(later.getTime())});TaskNotes.syncReminders();await sleep(30);reminder=!!sent&&sent.items.some(x=>x.id==='t-later'&&x.at>Date.now()&&/早点睡/.test(x.body));}
     S.taskNotes.items=[{id:'p',text:'昨天没做',date:k(1)},{id:'q',text:'今天的',date:today},{id:'r',text:'明天的',date:roleDiaryDateKey(Date.now()+86400e3)},{id:'s',text:'做完的',date:today,done:true}];TaskNotes.tab('all');const count=f=>{TaskNotes.filter(f);return [...document.querySelectorAll('.tn-card')].map(el=>el.getAttribute('data-id')).filter(id=>id!=='role-done').join(',');};
@@ -323,8 +372,8 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      const realNow=Date.now;Date.now=()=>realNow()+3*3600e3;try{TaskNotes.deliverDue();}finally{Date.now=realNow;}const inChat=msgs(c.id).some(m=>m._taskReminder&&m.content==='到点啦，去喝水，乖。'),skipDone=!msgs(c.id).some(m=>m.content==='不该发出来');
      lineQA={retried,hidden,noticeUsesLine,inChat,skipDone};}finally{fetchT=baseFetch;S.messages[accountMessageKey(testId,actId())]=(msgs(testId)||[]).filter(m=>!m._taskReminder);}
     // Reward house: own stars capped at 2 a day, daily box needs 3 finished tasks, themes unlock once, sticker packs wait for the art.
-    S.taskNotes.stars=0;const kk=today;S.taskNotes.items=[{id:'o1',text:'一',date:kk},{id:'o2',text:'二',date:kk},{id:'o3',text:'三',date:kk}];S.taskNotes.stats.days[kk].ownStars=0;['o1','o2','o3'].forEach(id=>TaskNotes.toggle(id));const ownCap=S.taskNotes.stars===2;
-    TaskNotes.tab('reward');await sleep(30);const boxBtn=!!document.querySelector('.tn-claim');const r1=Math.random;Math.random=()=>0;TaskNotes.openDailyBox();Math.random=r1;const boxed=S.taskNotes.stars===4&&!!S.taskNotes.dailyBox[kk];TaskNotes.openDailyBox();const boxOnce=S.taskNotes.stars===4;
+    c.tasks={date:todayStr(),assignTs:Date.now(),dailyRewardTaskIds:['base-1','base-2','base-3'],list:[1,2,3].map(i=>({id:'base-'+i,text:'原定任务'+i,done:true})).concat({id:'added',text:'额外任务不影响奖励',punish:true,done:false})};TaskNotes.tab('today');const originalBonus=S.taskNotes.roleBonus[today]===3;S.taskNotes.stars=0;const kk=today;S.taskNotes.items=[{id:'o1',text:'一',date:kk},{id:'o2',text:'二',date:kk},{id:'o3',text:'三',date:kk}];S.taskNotes.stats.days[kk].ownStars=0;['o1','o2','o3'].forEach(id=>TaskNotes.toggle(id));const ownCap=S.taskNotes.stars===2;
+    TaskNotes.tab('reward');await sleep(30);const boxBtn=!!document.querySelector('.tn-claim');const r1=Math.random;Math.random=()=>0;TaskNotes.openDailyBox();Math.random=r1;const boxed=S.taskNotes.stars===4&&!!S.taskNotes.dailyBox[kk];TaskNotes.openDailyBox();const boxOnce=S.taskNotes.stars===4;document.getElementById('pc_reveal')?.remove();
     const rndShop=Math.random;Math.random=()=>0.99;S.taskNotes.stars=59;TaskNotes.redeem('sakura');const sakuraLack=!(S.taskNotes.owned&&S.taskNotes.owned.sakura)&&S.taskNotes.stars===59;S.taskNotes.stars=60;TaskNotes.redeem('sakura');const sakuraOwned=!!S.taskNotes.owned.sakura&&S.taskNotes.stars===0;const keepAi={stk:S.aiStickers,grp:S.aiStickerGroups,cg:c.stickerGroups};S.aiStickers=[];c.stickerGroups=['sg-test'];S.taskNotes.stickers={};S.taskNotes.packDay='';S.taskNotes.packOffer=null;S.taskNotes.stars=40;TaskNotes.redeem('pack');const packWaits=S.taskNotes.stars===30&&document.querySelectorAll('.tn-pack-ov .tn-card3').length===3;document.querySelector('.tn-pack-ov .tn-card3').click();const pickOne=Object.keys(S.taskNotes.stickers).length===1&&!S.taskNotes.packOffer;document.querySelectorAll('.tn-pack-ov').forEach(n=>n.remove());TaskNotes.redeem('pack');const dailyOnce=S.taskNotes.stars===30&&!document.querySelector('.tn-pack-ov');Math.random=rndShop;const SK=TaskNoteStickers;S.taskNotes.stickers={};S.taskNotes.packsSinceRare=0;let newEvery=true,rareByFive=true;for(let k=0;k<12;k++){const before=Object.keys(S.taskNotes.stickers).length,o=SK.offer();if(o.length!==3||new Set(o.map(x=>x.id)).size!==3||o.some(x=>S.taskNotes.stickers[x.id]))newEvery=false;SK.take(0);if(Object.keys(S.taskNotes.stickers).length!==before+1)newEvery=false;}
     S.taskNotes.stickers={};S.taskNotes.packsSinceRare=4;rareByFive=SK.offer().some(x=>x.rare);S.taskNotes.packOffer=null;const bx=SK.box(),boxRare=!!bx.x&&bx.x.rare&&!!S.taskNotes.stickers[bx.x.id];
     S.aiStickers=[];S.taskNotes.chatPack={};S.taskNotes.chatPackRole={};c.stickerGroups=['sg-test'];SK.sync();const ownN=Object.keys(S.taskNotes.stickers).length,chatPack=S.aiStickers.filter(x=>x.groupId==='tn-cats').length===ownN&&c.stickerGroups.includes('tn-cats')&&emojiPanel(testId).includes('tn-epacks')&&isImg('assets/task-notes/stickers/sticker-01.png')&&!isImg('assets/other/x.png')&&getComputedStyle(Object.assign(document.body.appendChild(document.createElement('div')),{className:'stickermsg',innerHTML:'<img src="assets/task-notes/stickers/sticker-01.png"><div class="stkm">t</div>'}).querySelector('.stkm')).display==='none';document.querySelectorAll('body>.stickermsg').forEach(n=>n.remove());const keptN=S.aiStickers.length;S.aiStickers.pop();SK.sync();const removalSticks=S.aiStickers.length===keptN-1;S.aiStickers=keepAi.stk;S.aiStickerGroups=keepAi.grp;c.stickerGroups=keepAi.cg;
@@ -390,7 +439,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      cvMemory=(c.summaries||[]).some(x=>/共同生活语音/.test(JSON.stringify(x)));cvNotice=!(dd.notices||[]).some(n=>/语音/.test(n.text))&&(dd.voiceLog||[]).length>0&&dd.voiceLog.at(-1).lines.every(l=>!!l.hid);
     }finally{if(typeof _call!=='undefined'&&_call&&_call.cohab){try{CohabVoice.end();}catch(_){}}chatAPI=capi;scheduleReply=srKeep3;scheduleFeatureReply=sfrKeep3;S.cohabitation=JSON.parse(cohabKeep)||undefined;c.summaries=JSON.parse(sumKeep);delete S._activeCall;closeModal();go('home');}
     TaskNotes.tab('today');
-    const shop={ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass,cvPrompt,cvHistory,cvNoCamera,cvStored,cvMoved,cvNoWechatLog,cvMemory,cvNotice,cvRestore,cvPaused,cvInspection,cvLiveLog,cvNarr,cvNoReplay,cvTray,cvModalGlass,cvReplyPos,cvNoPaint,solidApps,cvTapMenu,cvMic};
+    const shop={originalBonus,ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass,cvPrompt,cvHistory,cvNoCamera,cvStored,cvMoved,cvNoWechatLog,cvMemory,cvNotice,cvRestore,cvPaused,cvInspection,cvLiveLog,cvNarr,cvNoReplay,cvTray,cvModalGlass,cvReplyPos,cvNoPaint,solidApps,cvTapMenu,cvMic};
     return Object.assign(shop,{pruned,late,roleStar,roleStarOnce,gained,refunded,praised:praised===1,roleKnows,reminder,filters,pickedDay},lineQA);
    }finally{Math.random=rnd;scheduleFeatureReply=sfr;if(baseReq)SmallPhoneNative.request=baseReq;S.couple=keep.couple;c.tasks=keep.tasks;S.taskNotes=keep.notes||{items:[]};openChat(testId);}},privateApp);
   for(const [name,ok] of Object.entries(taskQA))assert.equal(ok,true,name+' '+JSON.stringify({privateApp,taskQA,globeDiagnostic:await page.evaluate(()=>window.globeQADiagnostic),inspectionDiagnostic:await page.evaluate(()=>window.cvInspectionDiagnostic)}));console.log(JSON.stringify({privateApp,taskNotes:taskQA}));
