@@ -53,6 +53,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1907 / web v1904",scope:"both",least:1,file:"task-notes.js",name:"卡片仓库不显示概率编辑，奖励页移除重复仓库入口",marker:"TASK_PRIVILEGE_CLEAN_UI_V1"},
   {release:"private v1906 / web v1903",scope:"both",least:1,file:"desk-pet.js",name:"健康归零触发生病，维生素每日一次，咖啡限量限时不无限叠加",marker:"BODY_CARE_LIMITS_V1"},
   {release:"private v1906 / web v1903",scope:"both",least:1,file:"wechat-me.js",name:"气泡设置完整页面与独立方案库，角色单独设置优先",marker:"BUBBLE_LIBRARY_V1"},
   {release:"private v1906 / web v1903",scope:"both",least:1,file:"task-notes.js",name:"原定三项任务抽卡与额外星星，所有权转移、幂等扣卡与八次保底",marker:"TASK_PRIVILEGE_V1"},

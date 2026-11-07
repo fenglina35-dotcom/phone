@@ -60,11 +60,14 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(privateApp){await page.waitForTimeout(3200);await page.setViewportSize({width:430,height:1500});await page.screenshot({path:path.join(previewOut,'bubble-settings-preview.png')});await page.setViewportSize({width:430,height:900});}
    await page.evaluate(()=>{const c=getC(testId);c.tasks={date:todayStr(),assignTs:Date.now(),list:['a','b','c'].map(id=>({id,text:'今天的小事 '+id,done:true,verify:'real'})).concat({id:'extra',text:'后来追加，不计入奖励',punish:true,done:false}),dailyRewardTaskIds:['a','b','c']};S.taskNotes={items:[]};go('tasks');TaskNotes.tab('today');TaskNotes.tab('reward');window.previewRandom=Math.random;Math.random=()=>0;});
    await page.locator('.tn-claim').click();
+   assert.equal(await page.getByRole('button',{name:'查看卡片仓库',exact:true}).count(),0);
    assert(await page.locator('.pc-reveal').isVisible());
    await page.waitForFunction(()=>document.querySelector('.pc-reveal img')?.naturalWidth>0);
    await page.getByRole('button',{name:'收好卡片',exact:true}).click();
    await page.evaluate(()=>{Math.random=previewRandom;TaskNotes.me('cards');});
    assert(await page.getByRole('heading',{name:'卡片仓库',exact:true}).isVisible());
+   assert.equal(await page.locator('.pc-rates').count(),0);
+   assert.equal(await page.getByRole('button',{name:'保存概率',exact:true}).count(),0);
    await page.waitForFunction(()=>[...document.querySelectorAll('.pc-grid img')].every(x=>x.complete&&x.naturalWidth>0));
    assert.equal(await page.evaluate(()=>S.taskNotes.privileges.accounts[actId()].owners.me.reconcile),1);
    if(privateApp){await page.waitForTimeout(3200);await page.setViewportSize({width:430,height:1500});await page.screenshot({path:path.join(previewOut,'privilege-cards-preview.png')});await page.setViewportSize({width:430,height:900});}
