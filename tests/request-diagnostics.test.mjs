@@ -1,3 +1,4 @@
+import {fnSource} from './_helpers.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,12 +7,12 @@ import cp from 'node:child_process';
 const moduleCode=fs.readFileSync('request-diagnostics.js','utf8');
 const entries=['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'];
 function load(file,store=new Map()){
- const source=process.env.DIAGNOSTICS_BASELINE==='1'?cp.execFileSync('git',['show','9defbd8b:'+file],{encoding:'utf8',maxBuffer:20*1024*1024}):fs.readFileSync(file,'utf8');
+ const source=process.env.FIX_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:32*1024*1024}):process.env.DIAGNOSTICS_BASELINE==='1'?cp.execFileSync('git',['show','9defbd8b:'+file],{encoding:'utf8',maxBuffer:20*1024*1024}):fs.readFileSync(file,'utf8');
  const start=source.indexOf('async function chatAPI('),end=source.indexOf('\nfunction uniq(',start),names=['roleMoodScopeText','roleMoodScopeMessages','chatRequestDiagnostic','chatReadDiagnosticResponse','chatResultText'];
  const lines=source.split('\n').filter(l=>names.some(n=>l.startsWith('function '+n+'(')||l.startsWith('async function '+n+'('))).join('\n');
  let requests=[];let calls=0,body=JSON.stringify({choices:[{message:{content:'正常中文'}}]}),status=200,type='application/json',fail=false;
  const ctx={Response,Date,Map,Set,console,TextDecoder,setTimeout,clearTimeout,S:{settings:{chat:{base:'https://fixture.invalid/v1',key:'DO_NOT_SHARE_SECRET',model:'test-main'},aux:{model:'test-aux'}}},actId:()=>ctx.account||'main',gameModelSessionPage:()=>false,chatRouteSessionPage:()=>false,chatRequestRoute:()=>null,chatModelAssertText(){},aiCoreOn:()=>false,annotateChatRequestError:e=>e,apiCaughtCN:e=>e.message,apiErrorCN:()=> '上游失败',roleInterceptDiagnosticTurnCandidate(){},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},fetchT:async(url,opt)=>{requests.push(JSON.parse(opt.body));calls++;if(fail)throw new Error('network DO_NOT_SHARE_SECRET');return new Response(body,{status,headers:{'content-type':type,'x-request-id':'fixture-123'}});}};
- vm.createContext(ctx);vm.runInContext(moduleCode+'\n'+lines+'\n'+source.slice(start,end),ctx);
+ vm.createContext(ctx);if(source.includes('function chatCompletionBody('))vm.runInContext(fnSource(source,'chatCompletionBody'),ctx);vm.runInContext(moduleCode+'\n'+lines+'\n'+source.slice(start,end),ctx);
  return{ctx,store,calls:()=>calls,requests,set:(value,code=200,contentType='application/json',network=false)=>{body=value;status=code;type=contentType;fail=network;}};
 }
 for(const file of entries){
@@ -70,3 +71,17 @@ for(const file of entries)test(file+' fragmented UTF8 streaming returns complete
 });
 
 test('stream reader preserves only completed reasoning separately and rejects partial action text',async()=>{const w=load(entries[0]),diag=w.ctx.NorthRequestDiagnostics,row=diag.begin([],{});const response=new Response('data: {"choices":[{"delta":{"reasoning_content":"摘要第一段","content":"正常"}}]}\n\ndata: {"choices":[{"delta":{"reasoning":"第二段","content":"正文"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',{headers:{'content-type':'text/event-stream'}});const d=await diag.read(response,row,{stream:true,timeout:10000});assert.equal(d.choices[0].message.content,'正常正文');assert.equal(d.choices[0].message.reasoning_content,'摘要第一段第二段');const partial=new Response('data: {"choices":[{"delta":{"reasoning_content":"未完成摘要","content":"[转账|"}}]}\n\n',{headers:{'content-type':'text/event-stream'}});await assert.rejects(diag.read(partial,diag.begin([],{}),{stream:true,timeout:10000}));assert(!JSON.stringify(diag.list('')).includes('摘要第一段'));});
+
+for(const file of entries){
+ test(file+' official DeepSeek sends the thinking switch and respects the group route budget',async()=>{
+  const w=load(file);w.ctx.URL=URL;w.ctx.S.settings.chat={base:'https://api.deepseek.com',key:'fixture',model:'deepseek-v4-pro',maxTokens:4096};
+  await w.ctx.chatAPI([],{groupOutput:true,max:700});assert.equal(w.requests[0].max_tokens,4096);assert.equal(w.requests[0].thinking.type,'disabled');
+  Object.assign(w.ctx.S.settings.chat,{reasoningEnabled:true,reasoningEffort:'high'});
+  await w.ctx.chatAPI([],{max:700});assert.equal(w.requests[1].max_tokens,12288);assert.equal(w.requests[1].thinking.type,'enabled');
+ });
+ test(file+' thinking output exhausted before body is a visible request failure',async()=>{
+  const w=load(file);w.set(JSON.stringify({choices:[{message:{content:'',reasoning_content:'thinking'},finish_reason:'length'}],usage:{completion_tokens:700}}));
+  await assert.rejects(()=>w.ctx.chatAPI([],{max:700,complete:true}),e=>e.code==='reasoning-budget');
+  assert.equal(w.calls(),1);assert.equal(w.ctx.NorthRequestDiagnostics.listAll()[0].state,'failed');
+ });
+}

@@ -60,3 +60,9 @@ test('group reply turns are serialized per group without disabling selected resp
   assert.match(run,/const allowed=\(g\.responders&&g\.responders\.length\)\?g\.responders:g\.members/);
   assert.match(run,/await groupRoleReplyItems\(g,c,recent,pcap,\{temper,cares,first:/);
 });
+
+test('exhausted thinking budget is reported without paying for an identical retry',async()=>{
+ let calls=0;const why=[],ctx=vm.createContext({S:{me:{name:'用户'}},buildSystem:()=>'',gContext:()=>'',save(){},roleVisibleEnvelopeText:x=>String(x||''),chatAPI:async()=>{calls++;const e=new Error('输出额度已用完但没有正文');e.code='reasoning-budget';throw e;},gParseReply:()=>[],String});
+ vm.runInContext(`${silentRe}${functionSource('groupRoleTurnText')}${functionSource('groupRoleReplyNickname')}${functionSource('groupRoleReplyItems')}`,ctx);
+ assert.equal((await ctx.groupRoleReplyItems({nicks:{}},{id:'c1'},[],2,{why})).length,0);assert.equal(calls,1);assert.equal(why.length,1);
+});

@@ -41,6 +41,47 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
+
+  if(process.env.NORTH_CODE_MODEL_PREVIEW==='1'){
+   await page.evaluate(()=>{window.originalRoleRoute=JSON.stringify(S.settings.chat);openSettings('');});
+   assert.equal(await page.getByRole('button',{name:'代码模型 专用于角色委托编写与修改代码 ›',exact:true}).count(),1);
+   await page.getByRole('button',{name:'代码模型 专用于角色委托编写与修改代码 ›',exact:true}).click();
+   assert(await page.locator('#code_base').isVisible());assert.equal(await page.locator('#modal.show').count(),0);
+   await page.locator('#code_base').fill('https://fake.invalid/code');
+   await page.locator('#code_key').fill('fixture-code-only');
+   await page.locator('#code_model').fill('code-fixture');
+   await page.getByRole('button',{name:'保存设置',exact:true}).click();
+   assert(await page.evaluate(()=>JSON.stringify(S.settings.chat)===originalRoleRoute));
+   await page.getByRole('button',{name:'测试连接',exact:true}).click();
+   await page.waitForFunction(()=>document.getElementById('code_test_result').textContent.includes('连接成功'));
+   assert.equal(await page.evaluate(()=>testCalls.at(-1).model),'code-fixture');
+   assert(await page.evaluate(()=>saveNowAsync()));await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/\u5c0f\u624b\u673a.html'));await page.waitForFunction(()=>window.__northBootReady);
+   await page.evaluate(()=>{S.me.locked=false;document.getElementById('gate')?.remove();renderLockScreen();openSettings('code');});
+   assert.equal(await page.locator('#code_model').inputValue(),'code-fixture');
+   assert.equal(await page.evaluate(()=>S.settings.codeModel.key),'fixture-code-only');
+   await page.locator('#code_key').fill('');await page.locator('#code_base').fill('https://api.deepseek.com');await page.locator('#code_model').fill('deepseek-v4-pro');
+   await page.setViewportSize({width:430,height:1000});
+   await page.waitForTimeout(1800);if(privateApp)await page.screenshot({path:process.env.NORTH_CODE_MODEL_IMAGE,fullPage:true});
+   const apiProof=await page.evaluate(async()=>{
+    window.apiBodies=[];fetchT=async(url,opt)=>{apiBodies.push(JSON.parse(opt.body));return{ok:true,status:200,json:async()=>({model:'deepseek-v4-pro',choices:[{message:{content:'测试正文'},finish_reason:'stop'}]})};};
+    const route=chatRoutesInit()[0];Object.assign(route,{base:'https://api.deepseek.com',key:'fixture-only',model:'deepseek-v4-pro',maxTokens:4096,reasoningEnabled:false});
+    await chatAPI([{role:'user',content:'测试'}],{routeIndex:0,independentRoleModel:true,groupOutput:true,max:700});
+    Object.assign(chatRoutesInit()[0],{reasoningEnabled:true,reasoningEffort:'high'});
+    await chatAPI([{role:'user',content:'测试'}],{routeIndex:0,independentRoleModel:true,groupOutput:true,max:700});
+    return apiBodies.map(b=>({max:b.max_tokens,thinking:b.thinking?.type}));
+   });
+   assert.deepEqual(apiProof,[{max:4096,thinking:'disabled'},{max:12288,thinking:'enabled'}]);
+   await page.evaluate(()=>{aiCoreOn=()=>false;window.roomCalls=0;fetchT=async(url,opt)=>{if((JSON.parse(opt.body).messages||[]).some(m=>String(m.content||'').includes('\u5c0f\u5c4b\u5c11\u5973')))roomCalls++;const slot=PixelHomePolicy.wardrobeSlot({},Date.now()),night=slot.period==='evening';return{ok:true,status:200,json:async()=>({choices:[{message:{content:JSON.stringify({setId:null,dress:night?'outfit3-dress':'outfit1-dress',shoes:night?'outfit3-shoes':'outfit1-shoes',accessory:night?'outfit3-accessory':null,hair:'hair6',reason:'测试角色今天选的穿搭'})},finish_reason:'stop'}]})};};const i=pixelHomeIdentity();pixelHomeEntry(i).state={version:3,wardrobe:structuredClone(PixelHomeWardrobeInfo.approved)};pixelHomeDailyTick();});
+   assert.equal(await page.evaluate(()=>roomCalls),0);
+   await page.evaluate(()=>openPixelHome());
+   await page.waitForFunction(()=>pixelHomeEntry(pixelHomeIdentity()).dailyOutfit?.source==='role-model',{timeout:30000});
+   assert.equal(await page.evaluate(()=>roomCalls),1);
+   await page.waitForTimeout(1500);assert.equal(await page.evaluate(()=>roomCalls),1);
+   await page.evaluate(()=>{go('home');pixelHomeDailyTick();});await page.waitForTimeout(1200);assert.equal(await page.evaluate(()=>roomCalls),1);
+   assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,codeSettings:{saved:true,reloaded:true,isolated:true,tested:true},apiProof,room:{closedCalls:0,openCalls:1,afterExitExtraCalls:0},pageErrors:0}));
+   await page.close();continue;
+  }
+
   if(process.env.NORTH_MEMORY_FIXES_PREVIEW==='1'){
    await page.evaluate(()=>{_spyUnlock[testId]=true;_spyApp='lifelog';stack=[{p:'spy',id:testId}];lifeNotes().unshift({id:'memory-search-fixture',text:'搜索专用中文内容',tags:['life'],source:'manual',roleId:testId,accountId:memoryScopeKey(),ts:Date.now()});render();window.memoryConfirm=uiConfirm;uiConfirm=async()=>true;});
    assert(await page.locator('#slSearch').isVisible());

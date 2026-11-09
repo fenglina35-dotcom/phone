@@ -1,3 +1,4 @@
+import {read as currentRead,fnSource,BUNDLES} from './_helpers.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -77,3 +78,22 @@ assert.equal(brokenNodes.setpage3.style.display,'block','an authorization read e
 assert.match(brokenNodes.setpage3.innerHTML,/授权与数据暂时读取失败/);
 
 console.log('settings pagination tests passed');
+
+for(const [label,file]of BUNDLES){
+ const src=currentRead(file),nodes={
+ code_base:{value:'https://code.invalid/v1/'},code_key:{value:'fixture-code-key'},code_model:{value:'coder'},
+ code_max:{value:'16384'},code_thinking:{checked:false},code_effort:{value:'low'}
+ },role={base:'https://role.invalid',key:'fixture-role-key',model:'role'},state={settings:{chat:role,chatRoutes:[{...role}]}};
+ let saved=0,lastRequest;
+ const ctx=vm.createContext({S:state,URL,Math,Number,String,Object,Array,JSON,Error,$:id=>nodes[id.slice(1)],save:()=>saved++,toast(){},chatRequestDiagnostic(){},roleMoodScopeText:t=>t,
+ fetchT:async(url,options)=>{lastRequest={url,options};return {ok:true,status:200};},
+ chatReadDiagnosticResponse:async()=>({choices:[{message:{content:'完整文件正文'},finish_reason:'stop'}]})});
+ for(const name of ['codeModelConfig','codeModelFormValues','codeModelSave','chatCompletionBody','chatResultText','codeModelRequest'])vm.runInContext(fnSource(src,name),ctx);
+ assert.equal(ctx.codeModelSave(),true,label);assert.equal(saved,1);assert.equal(state.settings.chat,role);assert.equal(state.settings.chatRoutes[0].key,'fixture-role-key');
+ assert.equal(state.settings.codeModel.base,'https://code.invalid/v1');
+ assert.equal(await ctx.codeModelRequest([{role:'user',content:'做一个小游戏'}]),'完整文件正文');
+ assert.equal(lastRequest.url,'https://code.invalid/v1/chat/completions');assert.equal(lastRequest.options.headers.Authorization,'Bearer fixture-code-key');
+ nodes.code_max.value='1';assert.equal(ctx.codeModelSave(),false);assert.equal(saved,1);assert.equal(state.settings.codeModel.maxTokens,16384);
+ ctx.chatReadDiagnosticResponse=async()=>({choices:[{message:{content:'不完整'},finish_reason:'length'}]});
+ await assert.rejects(()=>ctx.codeModelRequest([]),/尚未完整/);
+}

@@ -906,3 +906,9 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 - 微信总结保存最近64条已总结消息ID作备用锚点；主锚点丢失先找最新幸存消息，仍无法核实时cursorUncertain暂停自动调用，手动重新整理须明确确认，旧记忆保留。自动/手动按角色+账号互斥；请求源消息及终点快照固定，新消息留给下次。共同生活summarySeq及约会summaryCursor不改，不保证反复聊同一件事永无语义相似条目。
 - 解锁时间截图没有原始时间指令，用户找不到原对话；16小时时差原因未定。已核对JS毫秒/原生秒换算和本地Calendar代码，本轮不改锁定、原生或伴生，保留待证据。
 - 新行为回归在旧HEAD复现失败，双端实际页面专项已通过：组合输入与节点保持、列表位置、准确星级、折叠通话删除。测试曾因高度相似文本被原有去重合并，已改用独立事实。完整回归结果记维护文档。
+
+
+## 代码模型独立设置
+主屏设置有独立绿色代码图标和“代码模型”一行，进入完整页面。src/app/010 的 codeModelConfig/FormValues/Save/SettingsHTML/Test/Request 使用 S.settings.codeModel，接口、密钥、模型、输出上限、思考开关/强度独立保存，不继承或覆盖聊天路线。保存不调用模型；只有点击测试才发一次请求，连点合并，结果写原状态节点，离页不重建页面。codeModelRequest 使用专属请求与诊断，截断或无正文不作为完整代码返回。当前已提供配置与连接测试；角色委托协议、文件分段生成/修改和隔离运行尚未接入，不得声称已可自动生成游戏。
+DeepSeek 官方接口由 src/app/004 chatCompletionBody 显式发送 thinking.enabled/disabled；开启时在正文额度外预留 low4096/high8192/max16384，总上限131072。只对 api.deepseek.com 的 DeepSeek 模型应用这项参数，其他厂商保持原请求。群聊 groupOutput 尊重对应路线的 maxTokens；无正文且 length 报 reasoning-budget，单人/合并不再以同额度自动重试，群里部分成功也显示此失败原因。心声摘要开关与接口思考开关仍分开。
+测试：settings-pagination、reasoning-all-features、ai-group-reply-reliability、request-diagnostics、offline-timeout-lifecycle；实际双端页面预览复用 NORTH_CODE_MODEL_PREVIEW。帮助条目必须沿 WX_HELP 的 title/aliases/category/path/scope/answer 格式。

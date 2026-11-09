@@ -41,3 +41,17 @@ const push = read('supabase/functions/phone-role-push/index.ts');
 assert.match(push, /REASONING_ALL_FEATURES_V1[\s\S]*?function stripReasoningBlocks/);
 assert.match(push, /const reasoningFree = stripReasoningBlocks\(rawText\);\s*let text = unfilteredOutput \? reasoningFree/);
 console.log('reasoning all features tests passed');
+
+for(const [label,file] of BUNDLES){
+ const src=read(file),ctx=vm.createContext({URL,Math,Number,String,Object,Array,RegExp,Error,roleMoodScopeText:t=>t});
+ vm.runInContext(fnSource(src,'chatCompletionBody'),ctx);vm.runInContext(fnSource(src,'chatResultText'),ctx);
+ const a={base:'https://api.deepseek.com',model:'deepseek-v4-pro',maxTokens:4096,temp:0.8};
+ let body=ctx.chatCompletionBody([],{max:700,groupOutput:true},a,false);
+ assert.equal(body.max_tokens,4096,label);assert.equal(body.thinking.type,'disabled',label);
+ body=ctx.chatCompletionBody([],{max:700},{...a,reasoningEnabled:true,reasoningEffort:'high'},true);
+ assert.equal(body.max_tokens,12288,label);assert.equal(body.stream,true);assert.equal(body.thinking.type,'enabled');
+ body=ctx.chatCompletionBody([],{max:600},{...a,base:'https://another.invalid/v1',model:'claude'},false);
+ assert.equal(body.max_tokens,600);assert.equal(body.thinking,undefined);
+ await assert.rejects(()=>ctx.chatResultText([],{complete:true},{choices:[{message:{content:'',reasoning_content:'still thinking'},finish_reason:'length'}]}),e=>e.code==='reasoning-budget');
+ assert.equal(await ctx.chatResultText([],{complete:false},{choices:[{message:{content:'正常正文'},finish_reason:'stop'}]}),'正常正文');
+}

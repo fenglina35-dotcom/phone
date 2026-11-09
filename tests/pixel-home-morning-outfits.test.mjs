@@ -1,4 +1,5 @@
 import test from 'node:test';
+import {read} from './_helpers.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -32,7 +33,7 @@ test('night requires pajamas, accepts all 8 hairs, rejects fabricated items',()=
 function fixture(model){
  const c={id:'one',name:'伴侣',persona:'偏爱温柔田园风',model:'aux'},other={id:'two',name:'其他'};
  const ctx={S:{couple:{cid:'one'},me:{name:'玩家'}},actId:()=>1,getC:id=>id==='one'?c:other,cur:()=>({p:'pixelhome'}),PixelHomePolicy:P,PixelHomeWardrobeInfo:info,Date,console,window:{addEventListener(){}},document:{getElementById:()=>null},setInterval(){},setTimeout,clearTimeout,saveNowAsync:()=>Promise.resolve(true),location:{protocol:'file:',origin:'null'},chatAPI:model,roleChatRouteIndex:()=>3};
- vm.createContext(ctx);vm.runInContext(fs.readFileSync('pixel-home.js','utf8'),ctx);ctx.looks=looks();ctx.now=at(7,8);vm.runInContext('var i=pixelHomeIdentity();pixelHomeEntry(i).state={version:3,wardrobe:looks};',ctx);return ctx;
+ vm.createContext(ctx);vm.runInContext(read('pixel-home.js'),ctx);ctx.looks=looks();ctx.now=at(7,8);vm.runInContext('var i=pixelHomeIdentity();pixelHomeEntry(i).state={version:3,wardrobe:looks};',ctx);return ctx;
 }
 test('persona model sees all items; concurrent calls deduplicate; facts only after execution',async()=>{
  let resolve,calls=0,request,opts;const ctx=fixture((m,o)=>{calls++;request=m;opts=o;return new Promise(r=>resolve=r);});
@@ -50,4 +51,16 @@ test('late responses cannot overwrite manual adjustments, editor, or other role'
 });
 test('role context is read-only, never triggers a nested model request',()=>{
  let calls=0;const ctx=fixture(()=>{calls++;throw Error('unexpected');});ctx.cur=()=>({p:'chat'});assert(vm.runInContext('pixelHomeRoleContext(getC("one"))',ctx).includes('月牙白裙'));assert.equal(calls,0);
+});
+
+test('closed or hidden room never calls outfits, opening selects only current slot',async()=>{
+ let calls=0;const ctx=fixture(async()=>{calls++;return choice();});
+ ctx.cur=()=>({p:'chat'});vm.runInContext('pixelHomeDailyTick()',ctx);await vm.runInContext('pixelHomeApplyDaily(i,now)',ctx);assert.equal(calls,0);
+ ctx.cur=()=>({p:'pixelhome'});ctx.document.hidden=true;await vm.runInContext('pixelHomeApplyDaily(i,now)',ctx);assert.equal(calls,0);
+ ctx.document.hidden=false;await vm.runInContext('pixelHomeApplyDaily(i,now)',ctx);assert.equal(calls,1);await vm.runInContext('pixelHomeApplyDaily(i,now)',ctx);assert.equal(calls,1);
+ ctx.cur=()=>({p:'home'});await vm.runInContext('pixelHomeApplyDaily(i,now+86400000)',ctx);assert.equal(calls,1);
+});
+test('leaving room while selecting discards late clothes and preserves user state',async()=>{
+ let resolve;const ctx=fixture(()=>new Promise(r=>resolve=r));const pending=vm.runInContext('pixelHomeApplyDaily(i,now)',ctx);
+ ctx.cur=()=>({p:'chat'});resolve(choice());assert.equal(await pending,null);assert.equal(vm.runInContext('pixelHomeEntry(i).dailyOutfit',ctx),undefined);
 });

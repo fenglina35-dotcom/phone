@@ -1,3 +1,4 @@
+import {fnSource} from './_helpers.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -27,6 +28,7 @@ function harness(file,{aux=true,relay=false}={}){
   context.aiRelay=async()=>({data:data(await nextRequest('relay'))});
   const names=['roleMoodScopeText','roleMoodScopeMessages','offlineRequestError','offlineRequestTimeoutError','offlineForegroundRequest','offlineRequestVisibility','offlineReplyTransportRetryable','offlineReplyChatRequest','offlineReplyFailureReason','offlineKeepValidReplyOnRepairFailure','cohabRoleChat','joinAIContinuation','roleReplyDropEnglishNarration','chatResultText','chatReadDiagnosticResponse'];
   vm.runInContext('const _offlineRequests=new Set(),_cohabActualModelRoute=new Map();'+names.map(name=>source.split('\n').find(l=>l.startsWith('function '+name+'(')||l.startsWith('async function '+name+'('))||'').join('\n'),context);
+  vm.runInContext(fnSource(source,'chatCompletionBody'),context);
   const start=source.indexOf('async function chatAPI('),end=source.indexOf('\nfunction uniq(',start);
   vm.runInContext(source.slice(start,end),context);
   async function flush(){for(let i=0;i<80;i++)await Promise.resolve();}
