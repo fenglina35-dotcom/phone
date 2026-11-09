@@ -3522,3 +3522,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-09 私人版安装完成：功能提交72644546，私人v1910 / iOS1.0.556 (556)，网页源码v1907未推送，桥42保持。升版工具--import重新切分后按原43个源码边界复位，预先证明双端生成结果逐字节不变；仅清理本次生成的重复分块，原分块与独有功能保留。升版提交后全量5137项中5136通过、1项私人外卖clear-query失败；未改业务代码/超时，单独原用例复跑通过（3.53秒），不臆断失败根因。普通与NORTH_CHECKIN_PREVIEW两轮双端核心聊天完整通过、pageErrors0。Release BUILD SUCCEEDED，签名核验通过，全部1915个私人Web资源与提交Git blob一致，安装包身份com.qianyi.PhoneCompanionTest/1.0.556/556。devicectl覆盖安装成功，随后从连接的iPhone 15读回同一Bundle ID版本1.0.556、Bundle Version556。此次仅安装手机，未推送/发布网页。代码模型配置与连接测试已接入，角色自动委托生成、修改和运行完整文件尚未接入；真实付费模型和新功能真机交互待用户体验。两张本轮核心检查临时图及空目录清理，保留原.claude/launch.json和用户要求的固定设置预览；复用DerivedData，无新工作树/源码副本/交付包。
 
 2026-11-09 角色代码助手发布：提交d6e9566f，网页v1908/私人v1911/iOS1.0.557(557)。升版前后全量5147/5147均通过，普通与查岗双端核心门禁通过。Release编译成功、签名通过、1915个PhoneWeb资源与提交逐字节Git对象核验一致。devicectl已安装并读回com.qianyi.PhoneCompanionTest/1.0.557/557。私人游戏窗口真实交互与付费模型尚待用户测试，安装验证不替代功能验收。
+
+2026-11-09 网页发布已核验：a144c733推送main成功，GitHub Pages任务42658490739 completed/success。线上app.js、小手机.html、index.html、sw.js与提交逐字节一致，网页v1908。私人iOS557已先安装并读回。仅清理本轮两张测试产物与空.codex_tmp，保留.claude/launch.json及用户模拟预览。
