@@ -2,6 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {read, fnSource, BUNDLES} from './_helpers.mjs';
+
+for(const [label,file] of BUNDLES){
+ test(label+': memory scroll follows the inner list and exact-star cleanup keeps every other star',()=>{
+  const code=read(file),list={scrollTop:420,scrollHeight:1800,clientHeight:300,isConnected:true},outer={scrollTop:0,scrollHeight:700,clientHeight:650};
+  const x=vm.createContext({$:sel=>sel==='[data-cohab-memory-list]'?list:outer,requestAnimationFrame:f=>f(),Math,Array});
+  for(const name of ['cohabMemoryScrollTop','cohabMemoryRestoreScroll','memoryPruneLowStars'])vm.runInContext(fnSource(code,name),x);
+  assert.equal(x.cohabMemoryScrollTop(),420,'must capture the list, not the outer sheet');
+  list.scrollTop=0;x.cohabMemoryRestoreScroll(420);assert.equal(list.scrollTop,420);
+  const rows=[1,2,3,4,5].map(imp=>({imp}));assert.equal(x.memoryPruneLowStars(rows,2,true),1);assert.deepEqual(rows.map(m=>m.imp),[1,3,4,5]);
+ });
+ test(label+': life search keeps the composing input and does not rebuild the page',()=>{
+  const view={},el={selectionStart:1,focus(){},setSelectionRange(){}};let renders=0,results=0;
+  const x=vm.createContext({spyLifeNoteView:()=>view,document:{getElementById:()=>el},render:()=>renders++,spyLifeNoteRenderResults:()=>results++,String});
+  vm.runInContext(fnSource(read(file),'spyLifeNoteSearch'),x);
+  x.spyLifeNoteSearch('role','家',{isComposing:true});assert.equal(renders,0);assert.equal(results,0);
+  x.spyLifeNoteSearch('role','家庭');assert.equal(renders,0);assert.equal(results,1);assert.equal(view.query,'家庭');
+ });
+ test(label+': switching accounts while confirming exact-star cleanup cannot delete another account memory',async()=>{
+  let account='main',removed=0;const original={memory:[{id:'original',imp:4}]},other={memory:[{id:'other',imp:4}]};
+  const x=vm.createContext({S:{},Math,offData:()=>account==='main'?original:other,memoryScopeKey:()=>account,offMemoryScrollTop:()=>0,uiConfirm:async()=>{account='other';return true;},offMemoryRemoveAt:()=>removed++,save(){},offMemory(){},toast(){}});
+  vm.runInContext(fnSource(read(file),'offMemoryPruneExactStar'),x);await x.offMemoryPruneExactStar('role',4);
+  assert.equal(removed,0);assert.equal(original.memory.length,1);assert.equal(other.memory.length,1);
+ });
+}
 
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const bundledApp = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');

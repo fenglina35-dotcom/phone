@@ -53,6 +53,11 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1909 / web v1906",scope:"both",least:1,file:"app.js",name:"总结备用锚点、范围快照与手动自动互斥",marker:"SUMMARY_CURSOR_ANCHORS_V1"},
+  {release:"private v1909 / web v1906",scope:"both",least:1,file:"app.js",name:"小事簿组合输入保留原节点",marker:"LIFE_SEARCH_INPUT_KEEP_V1"},
+  {release:"private v1909 / web v1906",scope:"both",least:1,file:"app.js",name:"共同生活记忆恢复内层滚动位置",marker:"COHAB_MEMORY_LIST_SCROLL_V1"},
+  {release:"private v1909 / web v1906",scope:"both",least:1,file:"app.js",name:"指定星级清理及约会对应副本同步删除",marker:"MEMORY_EXACT_STAR_V1"},
+  {release:"private v1909 / web v1906",scope:"both",least:1,file:"cohab-theater.js",name:"折叠通话记录标题可直接删除",marker:"COHAB_VOICE_DELETE_HEADER_V1"},
   {release:"private v1908 / web v1905",scope:"both",least:1,file:"app.js",name:"角色扮演上下文按微信轮次取历史，上限100轮",marker:"ROLEPLAY_CONTEXT_ROUNDS_V1"},
   {release:"private v1907 / web v1904",scope:"both",least:1,file:"task-notes.js",name:"卡片仓库不显示概率编辑，奖励页移除重复仓库入口",marker:"TASK_PRIVILEGE_CLEAN_UI_V1"},
   {release:"private v1906 / web v1903",scope:"both",least:1,file:"desk-pet.js",name:"健康归零触发生病，维生素每日一次，咖啡限量限时不无限叠加",marker:"BODY_CARE_LIMITS_V1"},
@@ -791,7 +796,8 @@ const PERMANENT_FIXES = [
     release: 'v1259',
     name: '主动清理低星，5 星永远保留',
     scope: 'both',
-    marker: 'function memoryPruneLowStars(rows,maxStar)',
+    // 可选 exact 参数支持只清指定星级；原两参数低星清理及5星保护仍由行为测试覆盖。
+    marker: 'function memoryPruneLowStars(rows,maxStar,exact)',
     least: 1,
   },
   {

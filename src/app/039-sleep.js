@@ -37,15 +37,16 @@ function perspRule(c,aid){const u=summaryUserLabel(c,aid);return '\n【视角铁
 function sumStamp(){return northLocaleDate(Date.now(),{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 function summaryList(c,aid){if(!c)return[];aid=memoryScopeKey(aid);if(aid==='main'){if(c.summary&&!Array.isArray(c.summaries)){c.summaries=[{time:'(早期)',text:c.summary,accountId:'main'}];delete c.summary;}c.summaries=Array.isArray(c.summaries)?c.summaries:[];return c.summaries;}c._accountSummaries=c._accountSummaries||{};c._accountSummaries[aid]=Array.isArray(c._accountSummaries[aid])?c._accountSummaries[aid]:[];return c._accountSummaries[aid];}
 function summaryState(c,aid){aid=memoryScopeKey(aid);c._accountSummaryState=c._accountSummaryState||{};if(!c._accountSummaryState[aid])c._accountSummaryState[aid]=aid==='main'?{count:Math.max(0,+c._sumCount||0),cursorV2:!!c._summaryCursorV2}:{count:0,cursorV2:false};return c._accountSummaryState[aid];}
-function summaryStateSave(c,aid,upto,rows){aid=memoryScopeKey(aid);const st=summaryState(c,aid),all=Array.isArray(rows)?rows:(typeof msgsForAccount==='function'?msgsForAccount(c.id,aid):[]);st.count=Math.max(0,+upto||0);st.cursorV2=true;const anchor=st.count>0&&all[st.count-1];st.lastMessageId=anchor&&anchor.id?String(anchor.id):'';if(aid==='main'){c._sumCount=st.count;c._summaryCursorV2=true;}return st;}
-function summaryStateDone(c,aid,all){all=Array.isArray(all)?all:[];const st=summaryState(c,aid);if(st.lastMessageId){const index=all.findIndex(m=>m&&String(m.id||'')===String(st.lastMessageId));if(index>=0){st.count=index+1;return st.count;}st.count=0;st.lastMessageId='';if(typeof save==='function')save();return 0;}if((+st.count||0)>all.length){summaryStateSave(c,aid,0,all);if(typeof save==='function')save();return 0;}return Math.max(0,Math.min(all.length,+st.count||0));}
+/* SUMMARY_CURSOR_ANCHORS_V1：主锚点丢失先用已总结消息恢复；无法核实则暂停自动总结。 */
+function summaryStateSave(c,aid,upto,rows){aid=memoryScopeKey(aid);const st=summaryState(c,aid),all=Array.isArray(rows)?rows:(typeof msgsForAccount==='function'?msgsForAccount(c.id,aid):[]);st.count=Math.max(0,+upto||0);st.cursorV2=true;const anchor=st.count>0&&all[st.count-1];st.lastMessageId=anchor&&anchor.id?String(anchor.id):'';st.recentMessageIds=all.slice(Math.max(0,st.count-64),st.count).map(m=>String(m&&m.id||'')).filter(Boolean);delete st.cursorUncertain;if(aid==='main'){c._sumCount=st.count;c._summaryCursorV2=true;}return st;}
+function summaryStateDone(c,aid,all){all=Array.isArray(all)?all:[];const st=summaryState(c,aid);if(st.lastMessageId){const index=all.findIndex(m=>m&&String(m.id||'')===String(st.lastMessageId));if(index>=0){st.count=index+1;delete st.cursorUncertain;return st.count;}const covered=new Set(st.recentMessageIds||[]);for(let i=all.length-1;i>=0;i--){if(all[i]&&all[i].id&&covered.has(String(all[i].id))){summaryStateSave(c,aid,i+1,all);if(typeof save==='function')save();return i+1;}}st.count=0;st.lastMessageId='';st.cursorUncertain=true;if(typeof save==='function')save();return 0;}if((+st.count||0)>all.length){summaryStateSave(c,aid,0,all);st.cursorUncertain=true;if(typeof save==='function')save();return 0;}return Math.max(0,Math.min(all.length,+st.count||0));}
 function summaryCursorRebaseAfterMessagePrune(c,aid,before,after){if(!c)return 0;before=Array.isArray(before)?before:[];after=Array.isArray(after)?after:[];aid=memoryScopeKey(aid);const st=summaryState(c,aid),done=summaryStateDone(c,aid,before),kept=new Set(after),next=before.slice(0,done).reduce((n,m)=>n+(kept.has(m)?1:0),0);summaryStateSave(c,aid,next,after);delete c._autoSummaryError;delete c._autoSummaryErrorAt;return next;}
 /* 「清理低星」是一次主动动作，和「满了才删」是两回事。用户点它的时候就是想立刻清掉不重要的，
    不该要求先超过上限。5 星永远保留，这一条在任何清理路径下都不变。 */
-function memoryPruneLowStars(rows,maxStar){if(!Array.isArray(rows))return 0;const keep=Math.max(1,Math.min(4,+maxStar||2));let n=0;for(let i=rows.length-1;i>=0;i--){const imp=Math.max(1,Math.min(5,+(rows[i]&&rows[i].imp)||3));if(imp>=5||imp>keep)continue;rows.splice(i,1);n++;}return n;}
+function memoryPruneLowStars(rows,maxStar,exact){if(!Array.isArray(rows))return 0;const keep=Math.max(1,Math.min(4,+maxStar||2));let n=0;for(let i=rows.length-1;i>=0;i--){const imp=Math.max(1,Math.min(5,+(rows[i]&&rows[i].imp)||3));if(imp>=5||(exact?imp!==keep:imp>keep))continue;rows.splice(i,1);n++;}return n;}
 /* 两个面板共用：主动清理低星。5 星永不触及。 */
-function wechatMemoryPruneLowStars(id,maxStar){const c=getC(id);if(!c)return;const arr=summaryList(c,memoryScopeKey());const n=memoryPruneLowStars(arr,maxStar);save();editSummary(id);toast(n?('已清掉 '+n+' 条 '+maxStar+' 星及以下的记忆'):'没有可清理的低星记忆（5 星永远保留）');}
-async function cohabMemoryPruneLowStars(id,maxStar){const d=cohabData(id);if(!d)return;const top=typeof cohabMemoryScrollTop==='function'?cohabMemoryScrollTop():0;const rows=d.summaries||[];const n=memoryPruneLowStars(rows,maxStar);save();if(typeof cohabMemoryOpen==='function')cohabMemoryOpen(id,{top});toast(n?('已清掉 '+n+' 条 '+maxStar+' 星及以下的记忆'):'没有可清理的低星记忆（5 星永远保留）');}
+function wechatMemoryPruneLowStars(id,maxStar,exact){const c=getC(id);if(!c)return;const arr=summaryList(c,memoryScopeKey());const n=memoryPruneLowStars(arr,maxStar,exact);save();editSummary(id);toast(n?('已清掉 '+n+' 条 '+maxStar+(exact?' 星记忆':' 星及以下的记忆')):'没有可清理的低星记忆（5 星永远保留）');}
+async function cohabMemoryPruneLowStars(id,maxStar,exact){const d=cohabData(id);if(!d)return;const top=typeof cohabMemoryScrollTop==='function'?cohabMemoryScrollTop():0;const rows=d.summaries||[];const n=memoryPruneLowStars(rows,maxStar,exact);save();if(typeof cohabMemoryOpen==='function')cohabMemoryOpen(id,{scrollTop:top});toast(n?('已清掉 '+n+' 条 '+maxStar+(exact?' 星记忆':' 星及以下的记忆')):'没有可清理的低星记忆（5 星永远保留）');}
 /* 去重与文本修复任何时候都做；只有「超上限就删」这一步才受自动清理开关控制。
    以前这里是无条件 return，导致关掉自动清理后手动按钮完全空转。opt.force 供面板按钮主动调用。 */
 function pruneSummaries(c,aid,opt){aid=memoryScopeKey(aid);let arr=summaryList(c,aid);arr.forEach(x=>{if(x&&x.text)x.text=summaryRepairStoredText(c,x,aid);});for(let i=arr.length-1;i>=0;i--){for(let j=0;j<i;j++){if(summarySimilarity(arr[i]&&arr[i].text,arr[j]&&arr[j].text,aid)>=.72){arr[j].imp=Math.max(arr[j].imp||3,arr[i].imp||3);arr.splice(i,1);break;}}}if(S.settings.memAutoClean===false&&!(opt&&opt.force))return;const cap=(+S.settings.memCap)||100;
@@ -66,10 +67,10 @@ function wechatSummarySystem(c,aid,prior){const ul=summaryUserLabel(c,aid);retur
 async function maybeSummarize(id,aid){
   const c=getC(id);aid=memoryScopeKey(aid);
   const rounds=Math.max(0,Math.min(100,+S.settings.summaryRounds||0)),key=id+'#'+aid,busy=maybeSummarize._busy||(maybeSummarize._busy=new Set());
-  if(!c||!rounds||busy.has(key)||c._autoSummaryErrorAt&&Date.now()-c._autoSummaryErrorAt<5*60000)return false;
-  const all=msgsForAccount(id,aid),arr=summaryList(c,aid),st=summaryState(c,aid);
+  if(!c||!rounds||busy.has(key)||(typeof _manualWechatSummaryBusy!=='undefined'&&_manualWechatSummaryBusy.has(key))||c._autoSummaryErrorAt&&Date.now()-c._autoSummaryErrorAt<5*60000)return false;
+  const all=msgsForAccount(id,aid).slice(),arr=summaryList(c,aid),st=summaryState(c,aid);
   if(aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length){summaryStateSave(c,aid,all.length);pruneSummaries(c,aid);save();return false;}
-  const done=summaryStateDone(c,aid,all),pending=all.slice(done);
+  const done=summaryStateDone(c,aid,all),pending=all.slice(done);if(st.cursorUncertain)return false;
   if(summaryCompletedRounds(pending)<rounds)return false;
 //@@ web
   const chunk=pending.map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);return t?(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t:'';}).filter(Boolean).join('\n');
@@ -87,24 +88,25 @@ async function maybeSummarize(id,aid){
     }
     if(!candidate||!summaryPerspectiveValid(c,candidate,aid))throw new Error('自动总结视角不合格');
     if(summaryStoreResult(c,candidate,rt.imp,'',aid)==='rejected')throw new Error('自动总结没有可保存的人际事实');
-    summaryStateSave(c,aid,all.length);delete c._autoSummaryError;delete c._autoSummaryErrorAt;save();return true;
+    summaryStateSave(c,aid,all.length,all);delete c._autoSummaryError;delete c._autoSummaryErrorAt;save();return true;
   }catch(e){c._autoSummaryError=String(e&&e.message||e||'自动总结失败').slice(0,120);c._autoSummaryErrorAt=Date.now();save();return false;}
   finally{busy.delete(key);}
 }
 const _manualWechatSummaryBusy=new Set();
 //@@ web
-function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
+function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid).slice(),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
 //@@ private
-function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const raw=msgToText(m),t=typeof NorthSkyRoleSync!=='undefined'?NorthSkyRoleSync.historyContent(m,raw):raw;if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
+function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid).slice(),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const raw=msgToText(m),t=typeof NorthSkyRoleSync!=='undefined'?NorthSkyRoleSync.historyContent(m,raw):raw;if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
 //@@ end
 function manualWechatSummaryCanRepairClearedCursor(src){return!!(src&&src.st&&src.st.cursorV2&&!src.st.lastMessageId&&src.st.count>0&&src.done>=src.upto&&src.all.some(m=>m&&!m._call&&m.type!=='sys'&&msgToText(m)));}
 async function manualWechatSummary(id){
   const aid=memoryScopeKey(),key=id+'#'+aid;
-  if(_manualWechatSummaryBusy.has(key)){toast('这次微信总结还在生成');return false;}
+  if(_manualWechatSummaryBusy.has(key)||(typeof maybeSummarize==='function'&&maybeSummarize._busy&&maybeSummarize._busy.has(key))){toast('这次微信总结还在生成');return false;}
   _manualWechatSummaryBusy.add(key);
   try{
     let src=manualWechatSummarySource(id,aid);if(!src)return false;
-    if(src.legacy){summaryStateSave(src.c,aid,src.upto);pruneSummaries(src.c,aid);save();editSummary(id);toast('旧总结进度已对齐；之后的新微信可随时手动总结');return false;}
+    if(src.st.cursorUncertain){if(!await uiConfirm('总结进度无法与现有聊天对应，自动总结已暂停。是否重新整理当前保留的聊天？可能与旧记忆重复，取消则保留原状。'))return false;summaryStateSave(src.c,aid,0,src.all);save();src=manualWechatSummarySource(id,aid);}
+    if(src.legacy){summaryStateSave(src.c,aid,src.upto,src.all);pruneSummaries(src.c,aid);save();editSummary(id);toast('旧总结进度已对齐；之后的新微信可随时手动总结');return false;}
     if(!src.chunk&&manualWechatSummaryCanRepairClearedCursor(src)){
       if(!await uiConfirm('检测到旧版总结进度没有消息锚点。\n\n如果你清空过这个角色的聊天，旧进度可能把新聊天误判成已经总结。是否只把总结起点重置到当前聊天开头？已有长期记忆不会删除，重复内容保存时仍会去重。'))return false;
       summaryStateSave(src.c,aid,0,src.all);delete src.c._autoSummaryError;delete src.c._autoSummaryErrorAt;save();src=manualWechatSummarySource(id,aid);
@@ -120,7 +122,7 @@ async function manualWechatSummary(id){
     }
     if(!candidate||!summaryPerspectiveValid(src.c,candidate,aid)){const why=(!candidate&&'模型没有返回总结内容')||(typeof summaryPerspectiveIssue==='function'&&summaryPerspectiveIssue(src.c,candidate,aid))||'总结视角不合格';toast('这次没总结成：'+why+'。原微信进度未改变，可以换个总结模型或再点一次',5200);return false;}
     if(summaryStoreResult(src.c,candidate,rt.imp,'',aid)==='rejected'){toast('这次没有可保存的重要内容，原微信进度未改变');return false;}
-    summaryStateSave(src.c,aid,src.upto);save();editSummary(id);toast('新的微信总结已保存');return true;
+    summaryStateSave(src.c,aid,src.upto,src.all);save();editSummary(id);toast('新的微信总结已保存');return true;
   }catch(e){toast('手动总结失败：'+String(e&&e.message||'请求没有成功').slice(0,60)+'。原微信进度未改变',5200);return false;}
   finally{_manualWechatSummaryBusy.delete(key);}
 }
@@ -408,11 +410,12 @@ function editCircle(id){S.x.circle=S.x.circle||{};const co=circleObj(id);openMod
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.circle['${id}']={name:$('#cir_n').value.trim(),desc:$('#cir_t').value.trim()};save();closeModal();render();toast('已保存');})()">保存</button></div>`);}
 function editSummary(id){const c=getC(id),o=S.offline&&S.offline[id]||{},arr=summaryList(c);pruneSummaries(c);save();
   const cap=(+S.settings.memCap)||100,model=S.settings.summaryModel==='aux'?'aux':'main',manualBusy=_manualWechatSummaryBusy.has(id+'#'+memoryScopeKey());const autoOn=S.settings.memAutoClean!==false;const stars=n=>{n=n||3;return '★'.repeat(n)+'☆'.repeat(5-n);};
-  openModal(`<h3>对话总结（长期记忆）</h3><div class="hint">每段聊天会自动概括成一条，ta会按重要度打 1-5 星（★越多越珍贵）。<b>自动清理只在条数超过上限时才动手</b>，从最低星开始删，<b>5星永远保留</b>；想立刻清掉不重要的，用下面的「清理低星」。点★可改星级。</div>
+  openModal(`<h3>对话总结（长期记忆）</h3>${summaryState(c,memoryScopeKey()).cursorUncertain?'<div class="hint" style="color:#f0b65b">总结进度待确认，自动总结已暂停。点击“立即总结”核对后再继续；已有记忆保留。</div>':''}<div class="hint">每段聊天会自动概括成一条，ta会按重要度打 1-5 星（★越多越珍贵）。<b>自动清理只在条数超过上限时才动手</b>，从最低星开始删，<b>5星永远保留</b>；想立刻清掉不重要的，用下面的「清理低星」。点★可改星级。</div>
   <div class="section" style="margin:0 0 10px"><div class="it"><span>微信自动总结模型</span><select onchange="S.settings.summaryModel=this.value;save();editSummary('${id}')" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px"><option value="main" ${model==='main'?'selected':''}>主模型</option><option value="aux" ${model==='aux'?'selected':''}>副模型</option></select></div><div class="it"><span>手动总结<br><small style="color:#888">只整理尚未总结的新微信</small></span><button class="minibtn" ${manualBusy?'disabled':''} onclick="manualWechatSummary('${id}')">${manualBusy?'总结中…':'立即总结'}</button></div></div>
   <div class="section" style="margin:0 0 10px"><div class="it"><span>自动清理</span><span class="v"><label style="cursor:pointer"><input type="checkbox" ${autoOn?'checked':''} onclick="S.settings.memAutoClean=this.checked;save();editSummary('${id}')"> 开</label></span></div>
     <div class="it"><span>记忆上限（条）</span><span class="v"><input id="mcap" type="number" min="20" max="1000" value="${cap}" style="width:60px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){var v=Math.max(20,Math.min(1000,+$('#mcap').value||100));S.settings.memCap=v;save();var cc=getC('${id}');pruneSummaries(cc);save();editSummary('${id}');})()">存</button></span></div>
     <div class="it"><span>清理低星<br><small style="color:#888">立刻清掉不重要的，不用等到满；5星永远保留</small></span><span class="v"><button class="minibtn" onclick="wechatMemoryPruneLowStars('${id}',1)">清1星</button> <button class="minibtn" onclick="wechatMemoryPruneLowStars('${id}',2)">清2星及以下</button> <button class="minibtn" onclick="wechatMemoryPruneLowStars('${id}',3)">清3星及以下</button></span></div>
+    <div class="it"><span>只清指定星级<br><small style="color:#888">其他星级保留</small></span><span class="v" style="display:flex;gap:6px;flex-wrap:wrap">${[2,3,4].map(n=>`<button class="minibtn" onclick="wechatMemoryPruneLowStars('${id}',${n},true)">只清${n}星</button>`).join('')}</span></div>
     <div class="it"><span>当前账号 ${arr.length} 条</span><span class="v"><button class="minibtn" onclick="(function(){var cc=getC('${id}');pruneSummaries(cc,null,{force:true});save();editSummary('${id}');toast('已清理当前账号低星记忆');})()">立即清理低星</button></span></div></div>
   <div class="field"><textarea id="sm_new" rows="2" placeholder="手动写一条概要…"></textarea></div>
   <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#sm_new').value.trim();if(v){addSummary(getC('${id}'),v,3);editSummary('${id}');}})()">添加</button>

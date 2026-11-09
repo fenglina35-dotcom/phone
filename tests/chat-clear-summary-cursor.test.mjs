@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
+import {read, fnSource, BUNDLES} from './_helpers.mjs';
+
+for(const [label,file] of BUNDLES){
+ test(label+': a removed summary anchor recovers the covered range without repeating older messages',()=>{
+  const all=Array.from({length:7},(_,i)=>({id:'m'+i})),role={id:'role'},x=vm.createContext({memoryScopeKey:v=>v||'main',save(){},Set,Array,Math,String});
+  for(const n of ['summaryState','summaryStateSave','summaryStateDone'])vm.runInContext(fnSource(read(file),n),x);
+  x.summaryStateSave(role,'main',5,all);x.summaryStateSave(role,'alt',2,all);
+  const reopened=JSON.parse(JSON.stringify(role)),kept=all.filter(m=>m.id!=='m4'),done=x.summaryStateDone(reopened,'main',kept);
+  assert.equal(done,4);assert.deepEqual(kept.slice(done).map(m=>m.id),['m5','m6']);assert.equal(reopened._accountSummaryState.alt.count,2);
+ });
+ test(label+': an untraceable summary boundary is flagged instead of silently restarting automatic summaries',()=>{
+  const role={id:'role',_accountSummaryState:{main:{count:3,cursorV2:true,lastMessageId:'missing'}}},x=vm.createContext({memoryScopeKey:v=>v||'main',save(){},Set,Array,Math,String});
+  for(const n of ['summaryState','summaryStateSave','summaryStateDone'])vm.runInContext(fnSource(read(file),n),x);
+  assert.equal(x.summaryStateDone(role,'main',[{id:'remaining'}]),0);assert.equal(role._accountSummaryState.main.cursorUncertain,true);
+  x.summaryStateSave(role,'main',0,[]);assert.equal(role._accountSummaryState.main.cursorUncertain,undefined);
+ });
+}
 
 const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 

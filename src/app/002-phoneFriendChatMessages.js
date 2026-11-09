@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1905 · 角色扮演上下文按轮计算';
+const APP_VER='v1906 · 记忆搜索与总结进度修复';
 //@@ private
-const APP_VER='v1908 · 角色扮演上下文按轮计算';
+const APP_VER='v1909 · 记忆搜索与总结进度修复';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

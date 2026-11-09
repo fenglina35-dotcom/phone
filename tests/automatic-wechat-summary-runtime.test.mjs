@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import vm from 'node:vm';
+import {read, fnSource, BUNDLES} from './_helpers.mjs';
 
-const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+for(const [label,file] of BUNDLES)test(label+': automatic summary makes no model request when the covered message range cannot be recovered',async()=>{
+ const role={id:'r',name:'角色',summaries:[],_accountSummaryState:{main:{count:3,cursorV2:true,lastMessageId:'gone'}}},rows=[{id:'a',role:'user',type:'text',content:'原来已经总结过'},{id:'b',role:'assistant',type:'text',content:'旧回复'}];let api=0;
+ const x=vm.createContext({Set,Array,String,Number,Date,Math,S:{settings:{summaryRounds:1}},memoryScopeKey:v=>v||'main',getC:()=>role,msgsForAccount:()=>rows,summaryList:()=>role.summaries,save(){},summaryCompletedRounds:()=>1,msgToText:m=>m.content,summaryUserLabel:()=> '我',wechatSummarySystem:()=>'',IMP_INSTR:'',perspRule:()=>'',chatAPI:async()=>{api++;return '';}});
+ for(const n of ['summaryState','summaryStateSave','summaryStateDone','maybeSummarize'])vm.runInContext(fnSource(read(file),n),x);
+ assert.equal(await x.maybeSummarize('r','main'),false);assert.equal(api,0);assert.equal(role._accountSummaryState.main.cursorUncertain,true);
+});
+
+const source=read('app.js');
 
 function functionSource(name){
   const fnStart=source.indexOf('function '+name+'(');
@@ -47,14 +54,23 @@ test('automatic summary fires at the configured number of user rounds, saves its
   const first=sandbox.maybeSummarize('c1','main');
   const duplicate=await sandbox.maybeSummarize('c1','main');
   assert.equal(duplicate,false);
+  rows.push({role:'user',type:'text',content:'请求期间新发的话'},{role:'assistant',type:'text',content:'这轮还没有整理'});
   assert.equal(await first,true);
   assert.equal(apiCalls,1);
   assert.equal(contact._accountSummaryState.main.count,4);
   assert.equal(contact.summaries.length,1);
   assert.ok(saves>0);
-  rows.push({role:'user',type:'text',content:'今天有点累'},{role:'assistant',type:'text',content:'早点休息'});
   assert.equal(await sandbox.maybeSummarize('c1','main'),false,'one new user round is below the configured two-round threshold');
   assert.equal(apiCalls,1);
+  rows.push({role:'user',type:'text',content:'今天有点累'},{role:'assistant',type:'text',content:'早点休息'});
+  assert.equal(await sandbox.maybeSummarize('c1','main'),true);assert.equal(apiCalls,2);assert.equal(contact._accountSummaryState.main.count,8);
+});
+
+for(const [label,file] of BUNDLES)test(label+': manual and automatic summaries share the occupied role/account range',async()=>{
+ const code=read(file),key='r#main';let reads=0;
+ const x=vm.createContext({Set,Math,Number,String,Array,Date,S:{settings:{summaryRounds:1}},memoryScopeKey:v=>v||'main',getC:()=>({id:'r'}),_manualWechatSummaryBusy:new Set([key]),msgsForAccount:()=>{reads++;return[];},manualWechatSummarySource:()=>{reads++;return null;},toast(){}});
+ vm.runInContext(fnSource(code,'maybeSummarize'),x);assert.equal(await x.maybeSummarize('r','main'),false);assert.equal(reads,0,'automatic must not reread a range occupied by manual summary');
+ x._manualWechatSummaryBusy.clear();x.maybeSummarize._busy=new Set([key]);vm.runInContext(fnSource(code,'manualWechatSummary'),x);assert.equal(await x.manualWechatSummary('r'),false);assert.equal(reads,0,'manual must not reread a range occupied by automatic summary');
 });
 
 test('summary interval counts completed exchanges rather than each consecutive user bubble',()=>{
