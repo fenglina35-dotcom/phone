@@ -146,7 +146,7 @@ function wxFamilyToggle(id,el){const x=wxFamilyRows().find(a=>a.id===id);if(!x)r
 function renderWxBills(){const rows=(S.me.bills||[]).slice().reverse();return `${WNav('账单')}<div class="scroll wxme-scroll"><section class="wxbills">${rows.length?rows.map(b=>`<div><span><b>${esc(b.note||'零钱变动')}</b><small>${esc(b.time||fmtDT(b.ts||Date.now()))}</small></span><em class="${b.type==='in'?'in':''}">${b.type==='in'?'+':'-'}${wxMoney(b.amount)}</em></div>`).join(''):'<div class="empty">还没有账单</div>'}</section></div>`;}
 
 const WX_HELP=[
-{"answer": "入口：主屏 → 设置 → 代码模型。独立填写接口地址、密钥、模型名、输出上限和思考强度，保存后可测试连接，不更改角色原来的聊天线路。当前提供独立配置和连接测试，角色自动委托生成及运行文件尚未接入。", "path": "主屏 → 设置 → 代码模型", "title": "代码模型独立配置", "aliases": ["代码模型", "代码助手", "写代码配置"], "category": "设置与数据", "scope": "网页与私人 App"},
+{"answer": "入口：主屏 → 设置 → 代码模型。独立填写接口地址、密钥、模型名、输出上限和思考强度，保存后可测试连接，不更改角色原来的聊天线路。配置后可在微信私聊请角色制作或修改代码，角色向代码助手描述需求，结果作为完整文件发来；点文件可复制、保存或请角色修改，旧版保留。生成中断可点卡片继续。HTML文件支持点击运行；私人版需安装支持独立游戏窗口的版本，关闭游戏返回聊天。", "path": "主屏 → 设置 → 代码模型", "title": "代码模型独立配置", "aliases": ["代码模型", "代码助手", "写代码配置"], "category": "设置与数据", "scope": "网页与私人 App"},
  {
   "title": "聊天模型与 API 密钥",
   "aliases": [

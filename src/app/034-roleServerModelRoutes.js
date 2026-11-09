@@ -396,7 +396,7 @@ function buildPart(c,m,me){
   if(m.type==='transfer')return payCard('t',m,me,c.id);
   if(m.type==='redpacket')return payCard('r',m,me);
   if(m.type==='location')return liveLocCardHTML(c,m,me);
-  if(m.type==='file'){const readable=!!String(m.text||'').trim(),tip=m.reading?'正在读…':(readable?'点开看内容':String(m.unreadable||''));
+  if(m.type==='file'){const readable=!!String(m.text||'').trim()||!!m.codeTask,tip=m.codeTask?codeTaskState(m):m.reading?'正在读…':(readable?'点开看内容':String(m.unreadable||''));
     return `<div class="card cfile${readable?' cfile-open':''}"${readable?` onclick="event.stopPropagation();chatFileOpen('${c.id}','${m.id}')"`:''}><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc([m.size||'',tip].filter(Boolean).join(' · '))}</div></div></div>`;}
   if(m.type==='spycard')return `<div class="card spy-access-card"><div class="spy-access-main"><div class="spy-access-top"><span class="spy-access-brand">PHONE ACCESS</span><span class="spy-access-state">${svgIc('check',12,'currentColor')} 已授权</span></div><div class="spy-access-icon">${svgIc('spyphone',26,'currentColor',1.4)}</div><h3 class="spy-access-title">小手机查看权限</h3><div class="spy-access-sub">已授权给 ${esc(c.remark||c.name)}</div><div class="spy-access-scope"><span>聊天</span><span>钱包</span><span>朋友圈</span><span>动态</span></div></div><div class="spy-access-foot">${svgIc('shield',12,'currentColor',1.5)}<span>专属权限 · 仅限当前聊天</span></div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));

@@ -17,3 +17,41 @@ for(const [label,file] of BUNDLES)test(label+': the file she just sent is read m
  assert(old.includes('太长了，后面没给你'));
  const short={role:'user',type:'file',name:'b.txt',text:'短文件'};assert(ctx.chatFileContextBody(short).includes('短文件'));
 });
+
+
+for(const [label,file] of BUNDLES){
+ test(label+': code files keep full body out of ordinary context',()=>{
+  const src=read(file),ctx=vm.createContext({CHAT_FILE_CTX:4000});
+  for(const name of ['codeTaskHistory','chatFileContextBody','roleFileHistoryText'])if(src.includes('function '+name+'('))vm.runInContext(fnSource(src,name),ctx);
+  const m={id:'code-one',name:'game.html',role:'assistant',type:'file',text:'SECRET_CODE'.repeat(9000),codeTask:{status:'complete',summary:'打地鼠游戏'}};
+  for(const t of [ctx.chatFileContextBody(m),ctx.roleFileHistoryText(m)]){assert(!t.includes('SECRET_CODE'));assert(t.includes('code-one'));assert(t.includes('打地鼠'));}
+ });
+ test(label+': code workflow generates complete long files, preserves old version and stops on foreign account',async()=>{
+  const src=read(file),list=[],owner={settings:{}},contact={id:'role'},requests=[];let id=0,account='main',saved=0;
+  const ctx=vm.createContext({S:owner,Map,TextEncoder,CHAT_FILE_TEXT_EXT:['html','js'],actId:()=>account,getC:()=>contact,msgs:()=>list,save(){},refreshChatMessages(){},toast(){},uid:()=>String(++id),fmtSize:n=>String(n),persistWechatMessagesNow:async()=>{saved++;return true;},codeModelConfig:()=>({base:'https://code.invalid',key:'fixture',model:'coder',maxTokens:16384})});
+  vm.runInContext('const _codeJobs=new Map();',ctx);
+  for(const n of ['chatFileExt','chatFileFind','chatFileSize','codeFileName','codeFileHash','codeFileEditable','codeTaskPart','codeFileComplete','codeTaskValid','codeTaskPersist','codeTaskStart','codeTaskRun'])vm.runInContext(fnSource(src,n),ctx);
+  const whole='<!DOCTYPE html><html><head></head><body>'+('a'.repeat(62000))+'</body></html>';
+  ctx.codeModelRequest=async messages=>{const q=JSON.parse(messages[1].content);requests.push(q);const chunk=whole.slice(q.offset,q.offset+11000);return JSON.stringify({part:q.part,offset:q.offset,chunk,done:q.offset+chunk.length===whole.length,summary:'游戏'});};
+  const m=await ctx.codeTaskStart('role',{name:'game.html',request:'做游戏',baseId:'新建'},'user1');
+  for(let n=0;n<100&&m.codeTask.status==='running';n++)await new Promise(r=>setImmediate(r));
+  assert.equal(m.text,whole);assert.equal(m.codeTask.status,'complete');assert.equal(m.codeTask.draft,'');assert(saved>=7);assert.equal(requests[1].existingCode,whole.slice(0,11000));assert.equal(list.length,1);
+  await ctx.codeTaskStart('role',{name:'game.html',request:'做游戏',baseId:'新建'},'user1');assert.equal(list.length,1,'same reply cannot duplicate paid work');
+  requests.length=0;const next=await ctx.codeTaskStart('role',{name:'game.html',request:'修改颜色',baseId:m.id},'user2');
+  for(let n=0;n<100&&next.codeTask.status==='running';n++)await new Promise(r=>setImmediate(r));
+  assert.equal(requests[0].original,whole);assert.equal(m.text,whole);assert.equal(list.length,2);
+  let unblock;ctx.codeModelRequest=()=>new Promise(r=>{unblock=r;});const interrupted=await ctx.codeTaskStart('role',{name:'next.html',request:'另一个游戏',baseId:'新建'},'user3');
+  await new Promise(r=>setImmediate(r));account='other';unblock(JSON.stringify({part:1,offset:0,chunk:'<html></html>',done:true}));await new Promise(r=>setImmediate(r));assert.equal(interrupted.text,'');assert.equal(interrupted.codeTask.status,'error');
+ });
+ test(label+': interrupted chunk can resume and invalid chunks never become finished files',async()=>{
+  const src=read(file),list=[],ctx=vm.createContext({S:{},Map,TextEncoder,CHAT_FILE_TEXT_EXT:['html'],actId:()=> 'main',getC:()=>({}),msgs:()=>list,save(){},refreshChatMessages(){},toast(){},fmtSize:n=>String(n),persistWechatMessagesNow:async()=>true,codeModelConfig:()=>({key:'fixture',maxTokens:16384})});
+  vm.runInContext('const _codeJobs=new Map();',ctx);for(const n of ['chatFileExt','chatFileFind','chatFileSize','codeFileHash','codeFileEditable','codeTaskPart','codeFileComplete','codeTaskValid','codeTaskPersist','codeTaskRun'])vm.runInContext(fnSource(src,n),ctx);
+  const m={id:'j',name:'x.html',type:'file',text:'',codeTask:{status:'pending',parts:0,draft:'',request:'做网页'}};list.push(m);
+  let count=0;ctx.codeModelRequest=async()=>{if(count++===0)return JSON.stringify({part:1,offset:0,chunk:'<html><body>',done:false});throw Error('网络中断');};
+  await ctx.codeTaskRun('role','j');assert.equal(m.text,'');assert.equal(m.codeTask.draft,'<html><body>');assert.equal(m.codeTask.parts,1);
+  ctx.codeModelRequest=async messages=>{const q=JSON.parse(messages[1].content);assert.equal(q.offset,12);return JSON.stringify({part:2,offset:q.offset,chunk:'完成</body></html>',done:true});};
+  await ctx.codeTaskRun('role','j');assert.equal(m.text,'<html><body>完成</body></html>');
+  assert.throws(()=>ctx.codeTaskPart('{"part":1}',1,0),/不完整/);assert.throws(()=>ctx.codeTaskPart(JSON.stringify({part:2,offset:0,chunk:'x',done:true}),1,0),/序号/);
+  assert.throws(()=>ctx.codeFileComplete('x.html','<html><body>半截'),/缺少/);
+ });
+}

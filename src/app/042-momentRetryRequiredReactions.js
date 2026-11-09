@@ -96,7 +96,7 @@ function appSolidMark(m,p){if(!m)return;m.classList.toggle('cs-modal',p==='coupl
   if(light!==null)m.classList.toggle('dy-solid-light',!!light);dySolidStyle();}
 if(typeof document!=='undefined')dySolidStyle();
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
-function closeModal(){const m=$('#modal');if(!m)return false;m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
+function closeModal(){const m=$('#modal');if(!m)return false;const runtime=m.querySelector('#code_runtime');if(runtime)runtime.remove();m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
 let _uiConfirmDone=null;
 function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');

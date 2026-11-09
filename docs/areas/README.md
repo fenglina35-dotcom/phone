@@ -909,6 +909,8 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 
 
 ## 代码模型独立设置
-主屏设置有独立绿色代码图标和“代码模型”一行，进入完整页面。src/app/010 的 codeModelConfig/FormValues/Save/SettingsHTML/Test/Request 使用 S.settings.codeModel，接口、密钥、模型、输出上限、思考开关/强度独立保存，不继承或覆盖聊天路线。保存不调用模型；只有点击测试才发一次请求，连点合并，结果写原状态节点，离页不重建页面。codeModelRequest 使用专属请求与诊断，截断或无正文不作为完整代码返回。当前已提供配置与连接测试；角色委托协议、文件分段生成/修改和隔离运行尚未接入，不得声称已可自动生成游戏。
+主屏设置有独立绿色代码图标和“代码模型”一行，进入完整页面。src/app/010 的 codeModelConfig/FormValues/Save/SettingsHTML/Test/Request 使用 S.settings.codeModel，接口、密钥、模型、输出上限、思考开关/强度独立保存，不继承或覆盖聊天路线。保存不调用模型；只有点击测试才发一次请求，连点合并，结果写原状态节点，离页不重建页面。codeModelRequest 使用专属请求与诊断，截断或无正文不作为完整代码返回。微信前台私聊通过 src/app/035 codeTaskPrompt/Extract/Start/Run 接入[写代码|文件名|新建或原文件ID]多行协议，角色用自己的口吻描述需求，代码助手仅接收制作需求和必要原文件；没有部署私人云生成。生成按JSON part/offset/chunk/done分段校验，每段强制沿persistWechatMessagesNow持久化，正文完全独立于普通聊天上下文，仅文件ID/状态/摘要交给角色。单批最多12次调用，30万字符/120段硬上限，不自动重试错误；继续生成从已保存段开始，不在重开时自动付费调用。完成后才设置text，修改另存消息不覆盖旧版，按账号、角色、状态对象及源文件指纹核对迟到返回；同一源消息不重复下单。HTML可在网页文件查看器手动运行；sandbox仅allow-scripts且CSP禁联网/子框架/原生等，关闭弹窗移除iframe。用户看图确认后，私人版通过新增code.game.open入口打开PrivateCodeGameController：独立WKWebView、nonPersistent存储、空WKUserContentController，不注册原生桥。只检查新入口的main frame，原伴生接口权限不改；导航仅about主页面，媒体权限拒绝，关闭释放游戏视图。真实iPhone体验仍需安装后确认。
 DeepSeek 官方接口由 src/app/004 chatCompletionBody 显式发送 thinking.enabled/disabled；开启时在正文额度外预留 low4096/high8192/max16384，总上限131072。只对 api.deepseek.com 的 DeepSeek 模型应用这项参数，其他厂商保持原请求。群聊 groupOutput 尊重对应路线的 maxTokens；无正文且 length 报 reasoning-budget，单人/合并不再以同额度自动重试，群里部分成功也显示此失败原因。心声摘要开关与接口思考开关仍分开。
 测试：settings-pagination、reasoning-all-features、ai-group-reply-reliability、request-diagnostics、offline-timeout-lifecycle；实际双端页面预览复用 NORTH_CODE_MODEL_PREVIEW。帮助条目必须沿 WX_HELP 的 title/aliases/category/path/scope/answer 格式。
+
+CODE_FILE_WORKFLOW_V1 测试复用 chat-file-fresh 与 NORTH_CODE_FILE_PREVIEW：双端真实aiReply→专用请求→三段文件→修改保留旧版→2.6万字符持久化重开；仅HTTP模型受控。生成代码只给专用模型，普通用户文件原有读取规则保留。浏览器预览没有验证真实付费模型质量或iOS运行隔离。

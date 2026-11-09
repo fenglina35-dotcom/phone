@@ -53,6 +53,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1911 / web v1908",scope:"both",least:1,file:"app.js",name:"私人独立游戏窗口入口",marker:"code.game.open"},
+  {release:"private v1911 / web v1908",scope:"both",least:1,file:"app.js",name:"专用代码模型完整文件与分段恢复及账号隔离",marker:"CODE_FILE_WORKFLOW_V1"},
   {release:"private v1910 / web v1907",scope:"both",least:1,file:"pixel-home.js",name:"像素小屋仅打开且可见时调用选衣，关闭不后台消耗",marker:"PIXEL_HOME_OPEN_ONLY_V1"},
   {release:"private v1910 / web v1907",scope:"both",least:1,file:"app.js",name:"DeepSeek官方思考显式开关与思考正文预算分配",marker:"DEEPSEEK_OUTPUT_BUDGET_V1"},
   {release:"private v1910 / web v1907",scope:"both",least:1,file:"app.js",name:"代码模型独立设置与角色路线隔离",marker:"CODE_MODEL_SETTINGS_V1"},

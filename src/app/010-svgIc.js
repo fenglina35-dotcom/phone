@@ -325,7 +325,8 @@ async function codeModelRequest(messages,config=codeModelConfig()){
   const res=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+config.key},body:JSON.stringify(body)},190000);
   const data=await chatReadDiagnosticResponse(res,row,false,190000);if(!res.ok)throw new Error('代码模型接口返回 HTTP '+res.status);
   const finish=String(data&&data.choices&&data.choices[0]&&data.choices[0].finish_reason||'');if(/length|max_tokens/i.test(finish))throw new Error('代码模型输出达到上限，内容尚未完整，请提高输出上限后重试');
-  const text=await chatResultText(messages,{complete:false},data);if(!text.trim())throw new Error('代码模型没有返回正文');
+  /* 代码是原始文件数据，不让聊天的心声/标点清洗改写JSON内的字符串。 */
+  const text=String(data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'');if(!text.trim())throw new Error('代码模型没有返回正文');
   chatRequestDiagnostic('result',row,text);return text;
  }catch(e){chatRequestDiagnostic('error',row,e);throw e;}
 }

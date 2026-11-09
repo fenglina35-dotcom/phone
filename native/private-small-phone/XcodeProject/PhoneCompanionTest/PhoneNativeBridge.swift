@@ -18,7 +18,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.556 (556)"
+    private static let build = "1.0.557 (557)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -284,6 +284,26 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     "isBundledApp": true
                 ]
             )
+        // CODE_GAME_WINDOW_V1: additive entry; existing bridge permissions stay unchanged.
+        case "code.game.open":
+            guard message.frameInfo.isMainFrame,
+                  let arguments = payload["payload"] as? [String: Any],
+                  let html = arguments["html"] as? String,
+                  !html.isEmpty, html.utf8.count <= 2_000_000 else {
+                reply(requestID: requestID, error: "invalid_game_document")
+                return
+            }
+            var presenter = webView?.window?.rootViewController
+            while let next = presenter?.presentedViewController { presenter = next }
+            guard let presenter else {
+                reply(requestID: requestID, error: "no_presenter")
+                return
+            }
+            let game = PrivateCodeGameController(html: html, title: arguments["name"] as? String ?? "小游戏")
+            let navigation = UINavigationController(rootViewController: game)
+            navigation.modalPresentationStyle = .fullScreen
+            presenter.present(navigation, animated: true)
+            reply(requestID: requestID, result: ["opened": true])
         case "native.management.open":
             openDeviceManagement?()
             reply(requestID: requestID, result: ["opened": true])
@@ -3475,5 +3495,53 @@ final class PickedImagesDelegate: NSObject, PHPickerViewControllerDelegate {
     func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         picker.dismiss(animated: true)
         onFinish(results)
+    }
+}
+
+// User-approved isolated game viewer. No bridge, bootstrap scripts, account store or file access.
+@MainActor
+private final class PrivateCodeGameController: UIViewController, WKNavigationDelegate, WKUIDelegate {
+    private let html: String
+    private var gameView: WKWebView?
+    init(html: String, title: String) {
+        self.html = html
+        super.init(nibName: nil, bundle: nil)
+        self.title = title
+    }
+    required init?(coder: NSCoder) { nil }
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .systemBackground
+        navigationItem.rightBarButtonItem = UIBarButtonItem(title: "关闭", style: .done, target: self, action: #selector(closeGame))
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        config.userContentController = WKUserContentController()
+        let browser = WKWebView(frame: .zero, configuration: config)
+        browser.navigationDelegate = self
+        browser.uiDelegate = self
+        browser.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(browser)
+        NSLayoutConstraint.activate([
+            browser.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            browser.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            browser.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            browser.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+        gameView = browser
+        browser.loadHTMLString(html, baseURL: nil)
+    }
+    @objc private func closeGame() {
+        gameView?.stopLoading()
+        gameView?.loadHTMLString("", baseURL: nil)
+        gameView?.removeFromSuperview()
+        gameView = nil
+        dismiss(animated: true)
+    }
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        let url = navigationAction.request.url
+        decisionHandler(url?.scheme == "about" && navigationAction.targetFrame?.isMainFrame == true ? .allow : .cancel)
+    }
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        decisionHandler(.deny)
     }
 }
