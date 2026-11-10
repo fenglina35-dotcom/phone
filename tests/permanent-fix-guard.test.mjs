@@ -53,6 +53,13 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"双模式测试需确认且不改配置",marker:"MODEL_PROBE_MODES_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"单次确认双模式测试与模型流式隔离",marker:"MODEL_STREAM_ISOLATION_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"模型测试验证实际正文与结束状态防止误报",marker:"MODEL_PROBE_VALIDATION_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"电话保存原声并复用回放导出",marker:"VOICE_CALL_REPLAY_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"完整文件收藏独立保存与复用隔离运行",marker:"FAVORITE_FILE_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,name:"朋友圈按账号与作者批量清除",marker:"MOMENT_BATCH_CLEAR_V1"},
+  {release:"private v1913 / web v1910",scope:"both",least:1,file:"task-notes.js",name:"角色小事独立调度与完成卡",marker:"ROLE_ASSIGNED_TASK_V1"},
   {release:"private v1912 / web v1909",scope:"both",least:1,name:"玻璃恢复状态不被历史失败永久覆盖",marker:"HOME_GLASS_HEALTH_RECOVERY_V1"},
   {release:"private v1912 / web v1909",scope:"private",least:1,name:"前台伴生低频补读并保持性能保护",marker:"COMPANION_FOREGROUND_FRESH_V1"},
   {release:"private v1912 / web v1909",scope:"both",least:1,file:"browser-diagnostics.js",name:"聊天输入遮挡与Safari错误来源诊断",marker:"CHAT_INPUT_DIAGNOSTIC_V1"},
@@ -2047,7 +2054,7 @@ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompan
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])test(file+': X typing and failures remain visible with session ownership',()=>{const s=read(file);assert.ok(s.includes('const _xDMReplies=new WeakMap();'));assert.ok(s.includes('class="xmsg xdm-typing"'));assert.ok(s.includes('推特私信回复失败：'));assert.ok(s.includes('finally{_xDMReplies.delete(d);paint();}'));assert.ok(s.includes('actId()===account&&S.x===owner'));});
 
 for(const file of ['app.js',PRIVATE])test(file+': optional route reasoning and raw offline narration keep their contracts',()=>{
- const s=read(file);for(const marker of ['reasoningEnabled:x.reasoningEnabled===true','id="s_reasoning_on"','reasoning_effort:',"who:part.kind==='nar'?'旁白':'ta'","m.who==='ta'&&offResponsePart(m.text).kind==='nar'"])assert(s.includes(marker),marker);
+ const s=read(file);for(const marker of ['reasoningEnabled:x.reasoningEnabled===true','id="s_reasoning_on"','body.reasoning_effort=',"who:part.kind==='nar'?'旁白':'ta'","m.who==='ta'&&offResponsePart(m.text).kind==='nar'"])assert(s.includes(marker),marker);
 });
 test('APNs quiet control is stripped at final notification projection',()=>{
  const s=read('supabase/functions/phone-role-push/index.ts');const projection=s.slice(s.indexOf('function roleNotificationBody('),s.indexOf('function roleNotificationPreview('));assert(projection.includes('保持安静|不说话|沉默|不回'));

@@ -339,7 +339,7 @@ function bubbleRow(c,m){if(m&&m.type==='shopquery')return '';
   const ts=(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||(m.time?`<div class="msgt">${hm(m.time)}</div>`:'');
   /* 聊天页的时间行（.msgt）在新版微信样式里是隐藏的，所以已读单独占一小行 */
   const readLine=me?roleReadLabelHTML(c,m):roleSeenLabelHTML(c,m);
-  const longPressable=!selecting&&(m.type==='text'||m.type==='voice'||m.type==='image');
+  const longPressable=!selecting&&(m.type==='text'||m.type==='voice'||m.type==='image'||m.type==='file');
   const lp=longPressable?` oncontextmenu="event.preventDefault()" onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
   return `<div data-message-id="${esc(m.id)}" data-wx-motion-id="${esc(wechatMotionMessageId(m))}" class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${avatarTap}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}${readLine}</div></div>`;}
 function msgEnterClass(m){return m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&Date.now()-(+m.time||0)<20000?' msg-enter':'';}

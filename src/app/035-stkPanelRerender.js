@@ -339,8 +339,9 @@ function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{
     .catch(e=>{m.text='';m.unreadable=(e&&e.message)||'这个文件读不出来';})
     .then(()=>{m.reading=false;save();refreshChatMessages(id);scheduleReply(id);});});}
 function chatFileSize(text){const n=(new TextEncoder().encode(String(text||''))).length;return fmtSize(n);}
-function chatFileFind(cid,mid){return (msgs(cid)||[]).find(x=>x&&x.id===mid)||null;}
-function chatFileOpen(cid,mid){const m=chatFileFind(cid,mid);if(!m||m.type!=='file')return;
+/* FAVORITE_FILE_V1: saved files remain independent of chat history. */
+function chatFileFind(cid,mid){if(cid==='__favorite__'){const f=typeof wxFavoriteFind==='function'?wxFavoriteFind(mid):null;return f&&f.type==='file'?f.file:null;}return (msgs(cid)||[]).find(x=>x&&x.id===mid)||null;}
+function chatFileOpen(cid,mid){if(_lpFired){_lpFired=false;return;}const m=chatFileFind(cid,mid);if(!m||m.type!=='file')return;
   if(m.codeTask&&m.codeTask.status!=='complete')return codeTaskOpen(cid,mid);
   if(m.reading)return toast('还在读这个文件…');
   const body=String(m.text||'').trim();
@@ -349,6 +350,7 @@ function chatFileOpen(cid,mid){const m=chatFileFind(cid,mid);if(!m||m.type!=='fi
     <div class="hint">${esc((m.format||'')+(m.format?' · ':'')+(m.size||chatFileSize(body)))}${m.truncated?' · 太长了，只存了前面一段':''}</div>
     <div class="cfile-read">${esc(body)}</div>
     ${codeFileActions(cid,m)}
+    ${cid!=='__favorite__'&&typeof wxFavoriteAdd==='function'?`<button class="btn g" onclick="favoriteMsg('${cid}','${mid}')">收藏文件</button>`:''}
     <div class="btns"><button class="btn g" onclick="chatFileCopy('${cid}','${mid}')">复制全文</button><button class="btn g" onclick="chatFileSave('${cid}','${mid}')">保存到手机</button><button class="btn p" onclick="closeModal()">看完了</button></div>`);}
 function chatFileCopy(cid,mid){const m=chatFileFind(cid,mid);if(!m)return;copyTextCompat(String(m.text||''));toast('全文已复制');}
 function chatFileSave(cid,mid){const m=chatFileFind(cid,mid);if(!m)return;
@@ -435,7 +437,7 @@ async function codeTaskRun(cid,mid){const m=chatFileFind(cid,mid);if(!m||!m.code
  finally{_codeJobs.delete(mid);if(valid())refreshChatMessages(cid);}
 }
 function codeTaskOpen(cid,mid){const m=chatFileFind(cid,mid);if(!m||!m.codeTask)return;const busy=_codeJobs.has(mid);openModal('<h3>'+esc(m.name)+'</h3><p role="status">'+esc(codeTaskState(m))+'</p><p class="hint">'+esc(m.codeTask.error||'请保持小手机开启。完成后这里会变成完整文件；离开后可回来查看。')+'</p><div class="btns">'+(!busy?'<button class="btn p" style="background:#07c160;color:white" onclick="closeModal();codeTaskRun(\''+cid+'\',\''+mid+'\')">继续生成</button>':'')+'<button class="btn g" onclick="closeModal()">关闭</button></div>');}
-function codeFileActions(cid,m){if(!codeFileEditable(m))return '';return '<div class="btns" style="margin:12px 0">'+(/\.html?$/i.test(m.name)?'<button class="btn p" style="background:#07c160;color:white" onclick="codeFileRun(\''+cid+'\',\''+m.id+'\')">运行</button>':'')+'<button class="btn g" onclick="codeFileEdit(\''+cid+'\',\''+m.id+'\')">修改</button></div>';}
+function codeFileActions(cid,m){if(!codeFileEditable(m))return '';return '<div class="btns" style="margin:12px 0">'+(/\.html?$/i.test(m.name)?'<button class="btn p" style="background:#07c160;color:white" onclick="codeFileRun(\''+cid+'\',\''+m.id+'\')">运行</button>':'')+(cid==='__favorite__'?'':'<button class="btn g" onclick="codeFileEdit(\''+cid+'\',\''+m.id+'\')">修改</button>')+'</div>';}
 function codeFileEdit(cid,mid){const m=chatFileFind(cid,mid);if(!codeFileEditable(m))return;openModal('<h3>修改 '+esc(m.name)+'</h3><div class="field"><label>告诉角色要改哪里</label><textarea id="code_edit_request" maxlength="4000" rows="5" placeholder="例如：点击地鼠没有反应，请修复，其他样式保留。"></textarea></div><div class="btns"><button class="btn g" onclick="chatFileOpen(\''+cid+'\',\''+mid+'\')">返回</button><button class="btn p" style="background:#07c160;color:white" onclick="codeFileEditSend(\''+cid+'\',\''+mid+'\')">发给角色</button></div>');}
 function codeFileEditSend(cid,mid){const m=chatFileFind(cid,mid),el=$('#code_edit_request'),request=String(el&&el.value||'').trim();if(!codeFileEditable(m)||!request)return toast('请写下需要修改的地方');closeModal();pushMsg(cid,{id:uid(),role:'user',type:'text',content:'请修改文件「'+m.name+'」（文件ID:'+m.id+'）：'+request});scheduleReply(cid);}
 function codeFileDocument(text){const doc=new DOMParser().parseFromString(text,'text/html');doc.querySelectorAll('base,meta[http-equiv]').forEach(e=>e.remove());const policy=doc.createElement('meta');policy.httpEquiv='Content-Security-Policy';policy.content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; worker-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";doc.head.prepend(policy);return '<!doctype html>\n'+doc.documentElement.outerHTML;}

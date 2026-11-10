@@ -292,7 +292,7 @@ function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=�
   if(canRegen){const i=list.findIndex(x=>x.id===mid);for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){canRegen=false;break;}}}
   openModal(`<h3>消息操作</h3>
     ${m.type==='image'&&m.src?`<button class="btn g" style="margin-bottom:8px" onclick="viewWechatMsgImage('${cid}','${mid}')">查看图片</button>`:''}
-    ${['text','voice','image'].includes(m.type)&&typeof wxFavoriteAdd==='function'?`<button class="btn g" style="margin-bottom:8px" onclick="favoriteMsg('${cid}','${mid}')">☆ 收藏${m.type==='voice'?'原声':''}</button>`:''}
+    ${['text','voice','image','file'].includes(m.type)&&typeof wxFavoriteAdd==='function'?`<button class="btn g" style="margin-bottom:8px" onclick="favoriteMsg('${cid}','${mid}')">☆ 收藏${m.type==='voice'?'原声':''}</button>`:''}
     ${canQuote?`<button class="btn g" style="margin-bottom:8px" onclick="quoteSet('${cid}','${mid}')">引用这句</button>`:''}
     ${canTextVoice?`<button class="btn g" style="margin-bottom:8px" onclick="openTextToVoice('${cid}','${mid}')">${svgIc('mic',15,'#eee')} 文字转语音</button>`:''}
     ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">${m.type==='voice'?'编辑语音文字':'编辑'}</button>`:''}

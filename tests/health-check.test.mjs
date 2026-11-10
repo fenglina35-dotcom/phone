@@ -49,7 +49,7 @@ async function runPage(label, entry) {
   const origin = 'http://127.0.0.1:8791';
   try {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 760 }, hasTouch: true, isMobile: true });
-    const page = await ctx.newPage(), errors = [];
+    const page = await ctx.newPage(), errors = [];let probeResponse=null;const probeRequests=[];
     page.on('pageerror', (e) => errors.push(String(e)));
     if (label === 'private') await page.addInitScript(() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
@@ -59,8 +59,9 @@ async function runPage(label, entry) {
       const req = route.request(), u = new URL(req.url());
       if (u.host === 'api.test') {
         const body = String(req.postData() || '');
+        if(probeResponse!==null){const request=JSON.parse(body);probeRequests.push(request);const answer=typeof probeResponse==='function'?probeResponse(request):probeResponse;return route.fulfill({status:200,contentType:answer.startsWith('data:')?'text/event-stream':'application/json',body:answer});}
         if (body.includes('main-model')) return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":{"message":"Invalid API key provided"}}' });
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { content: body.includes('image_url') ? 'AB12' : '在' } }] }) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: body.includes('image_url') ? 'AB12' : '在' } }] }) });
       }
       if (u.host === 'license.smallphoneapp.com') return route.fulfill({ status: 200, body: 'ok' });
       if (u.origin !== origin) return route.abort('failed');
@@ -101,6 +102,35 @@ async function runPage(label, entry) {
     const after = await page.evaluate(() => document.getElementById('healthscroll').scrollTop);
     assert.ok(before > 100 && Math.abs(after - before) < 2, '重画后不弹回顶部 ' + before + '→' + after);
     assert.match(await page.evaluate(() => healthReportText()), /原因：HTTP 401/);
+    await page.evaluate(()=>{openSettings('network');window.__testConfirmOriginal=uiConfirm;uiConfirm=async()=>false;});
+    for(const payload of ['<html>upstream unavailable</html>',JSON.stringify({error:{message:'no quota'}}),JSON.stringify({choices:[{finish_reason:'length',message:{content:'在'}}]})]){
+      probeResponse=payload;
+      for(const which of ['s_cmodel','s_xmodel']){
+        const result=await page.evaluate(async which=>{await testModel('s_cbase','s_ckey',which,'testC','');return document.getElementById('testC').textContent;},which);
+        assert.ok(!result.includes('✅'),label+' must not show green success for '+payload);assert.match(result,/失败/);
+      }
+      const codeResult=await page.evaluate(async()=>{try{await codeModelRequest([{role:'user',content:'连接测试'}],{base:'https://api.test/v1',key:'fixture',model:'code-model',maxTokens:256,_connectionProbe:true});return true;}catch(_){return false;}});assert.equal(codeResult,false);
+    }
+    probeResponse=JSON.stringify({choices:[{finish_reason:'stop',message:{content:'在'}}]});
+    const success=await page.evaluate(async()=>{await testModel('s_cbase','s_ckey','s_cmodel','testC','');return document.getElementById('testC').textContent;});
+    assert.match(success,/已收到完整模型正文/);
+    const codeSuccess=await page.evaluate(()=>codeModelRequest([{role:'user',content:'连接测试'}],{base:'https://api.test/v1',key:'fixture',model:'code-model',maxTokens:256,_connectionProbe:true}));assert.equal(codeSuccess,'在');
+    const imageCheck=await page.evaluate(async()=>{try{await modelProbeImage('data:image/png;base64,bm90LWFuLWltYWdl');return true;}catch(_){return false;}});assert.equal(imageCheck,false);
+    await page.evaluate(async()=>{const canvas=document.createElement('canvas');canvas.width=2;canvas.height=2;await modelProbeImage(canvas.toDataURL('image/png'));});
+    const audioCheck=await page.evaluate(async()=>{const original=ttsArr;try{ttsArr=async()=>new TextEncoder().encode('<html>error</html>').buffer;return await healthTtsProbe();}finally{ttsArr=original;}});assert.equal(audioCheck.state,'bad');
+    const sse='data: '+JSON.stringify({choices:[{index:0,delta:{content:'在'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n';
+    probeRequests.length=0;probeResponse=request=>request.stream?sse:'<html>non-stream failed</html>';
+    const savedModes=await page.evaluate(()=>{uiConfirm=window.__testConfirmOriginal;document.getElementById('s_cstream').checked=false;return JSON.stringify({global:S.settings.chatStreaming,chat:S.settings.chat,aux:S.settings.aux});});
+    await page.evaluate(()=>{window.__probeTest=testModel('s_cbase','s_ckey','s_cmodel','testC','');});
+    await page.locator('#cfm.show').waitFor();assert.equal(probeRequests.length,1,'must wait for confirmation before the second billed request');
+    await page.locator('#cfmYes').click();await page.evaluate(()=>window.__probeTest);
+    assert.deepEqual(probeRequests.map(x=>x.stream),[false,true]);assert.match(await page.locator('#testC').textContent(),/✅/);
+    assert.equal(await page.evaluate(()=>JSON.stringify({global:S.settings.chatStreaming,chat:S.settings.chat,aux:S.settings.aux})),savedModes);
+    // Code and search clients also consume complete streams when their own flag is on.
+    const ownModes=await page.evaluate(async()=>{
+      const code=await codeModelRequest([{role:'user',content:'在'}],{base:'https://api.test/v1',key:'fixture',model:'code-model',maxTokens:256,streaming:true});
+      const old=S.settings.search;try{S.settings.search={mode:'model',base:'https://api.test/v1',key:'fixture',model:'search-model',streaming:true};return {code,search:await webSearch('测试')};}finally{S.settings.search=old;}
+    });assert.deepEqual(ownModes,{code:'在',search:'在'});
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 }

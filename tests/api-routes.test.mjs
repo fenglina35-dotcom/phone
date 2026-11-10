@@ -191,3 +191,21 @@ context.chatRouteSwitch(1);assert.equal(fields.s_reasoning_on.checked,false);
 context.chatRouteSwitch(0);assert.equal(fields.s_reasoning_on.checked,true);assert.equal(fields.s_reasoning_effort.value,'max');
 assert.equal(context.chatMainCopy({}).reasoningEnabled,false);
 assert.equal(context.chatMainCopy({reasoningEffort:'invalid'}).reasoningEffort,'high');
+
+// Independent main/aux flags persist across route switches and serialized reload.
+context.S.settings.chatStreaming=true;
+assert.equal(context.chatMainCopy({model:'legacy'}).streaming,true);
+assert.equal(context.chatAuxCopy({model:'legacy-aux'}).streaming,true);
+assert.equal(context.chatMainCopy({}).streaming,false);
+assert.equal(context.chatAuxCopy({}).streaming,false);
+fields.s_cstream={checked:true};fields.s_xstream={checked:false};context.S.settings.chatRouteActive=0;
+context.chatRouteCaptureForm();context.chatRouteSwitch(1);fields.s_cstream.checked=false;fields.s_xstream.checked=true;context.chatRouteCaptureForm();
+context.S.settings=JSON.parse(JSON.stringify(context.S.settings));context.chatRouteSwitch(0);
+assert.equal(fields.s_cstream.checked,true);assert.equal(fields.s_xstream.checked,false);
+context.chatRouteSwitch(1);assert.equal(fields.s_cstream.checked,false);assert.equal(fields.s_xstream.checked,true);
+assert.equal(context.S.settings.chatStreaming,true,'legacy flag is not rewritten by per-slot switches');
+
+vm.runInContext(functionSource('chatRequestRoute')+';'+functionSource('healthRouteName')+';'+functionSource('healthChatCfg'),context);
+context.S.settings.chatRoutes[1].reasoningEnabled=true;context.S.settings.chatRoutes[1].reasoningEffort='max';
+assert.equal(context.healthChatCfg(true).reasoningEnabled,true,'aux health probe must inherit the reasoning setting used by real aux requests');
+assert.equal(context.healthChatCfg(true).reasoningEffort,'max');assert.equal(context.healthChatCfg(true).streaming,true);

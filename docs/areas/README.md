@@ -923,3 +923,31 @@ CODE_FILE_WORKFLOW_V1 测试复用 chat-file-fresh 与 NORTH_CODE_FILE_PREVIEW�
 - 用户新增但明确低优先级的待办（本轮不混入修复）：收藏增加文件分类，可收藏角色文件/小游戏并运行，需截图；任务便签加小事可指派角色，指定日期时间、合理随机完成、关闭后重开补处理、发文字/照片完成卡；朋友圈右上角+增加按本人/指定角色/全部批量清除并确认。每日原定三任务抽卡资格不可受指派角色任务影响。
 
 2026-11-10 验证补充：坏画布撤除也从_lg.cache移除，滑动恢复最多重试6次。完整5160/5160与普通/查岗双端聊天门禁通过；真实手机后台恢复、原生数据补读及网页故障用户复现待验。本地候选未发布。
+
+
+## 文件收藏、角色小事与朋友圈批量清除（2026-11-10）
+
+文件收藏：wechat-me.js 的 wxFavoriteAdd 接受完整 file，收藏内独立保存 name/text/size/format，文件正文不拼入普通聊天上下文。未读完、截断、代码任务未完成时不收藏。wxFavoriteFind 导出供 chatFileFind 的 __favorite__ 入口使用，按当前微信账号读取；文件筛选可直接打开、复制全文、下载，HTML 复用 codeFileRun 隔离运行。收藏副本不依赖原消息，修改仍从原聊天发给角色；不改变已有原声收藏和转发来源语义。两个模块及 CSS 同步私人资源，原生窗口与桥不改。
+
+角色小事：task-notes.js 的 S.taskNotes.assigned 独立于 items/c.tasks/每日三任务奖励，保存 account/cid/date/time/runAt/kind。新增表单选择给谁、文字或照片；指定时间后0–30分钟内随机安排，不填时间在当天09:00至23:59范围内（已过部分从当前起）随机安排，时间只抽取一次。保存后普通角色事件确认收到，buildSystem 注入该账号该角色的安排。只在前台 tick/重开时调用角色自己的模型；离线期间不调用、不伪造后台活动。完成卡包含实际文字内容；照片沿用 lineToMsg 图片设置（真图或图文照片卡）。串行、稳定消息ID防重复，取消/切账号/角色删除后丢弃迟到回复；失败15分钟冷却，最多3次自动尝试，之后手动重试。已生成文字保存供重试，未完成不标成功。未完成任务不套用自己待办3天删除规则，关闭数天仍可补。没有新增私人原生/云后台调度。
+
+朋友圈：+ 菜单 momentClearOpen/Confirm 可选本人、指定作者、全部；仅当前账号。二次确认条数，只删除确认时的对象，保留确认期间新发布的内容和其他账号；写入失败恢复删除项。未实际清理用户数据，测试仅操作夹具。
+
+验证入口：tests/wechat-me-suite.test.mjs、task-privilege.test.mjs、social-retention.test.mjs；NORTH_ADDED_FEATURES=1 scripts/run_tests_mac.sh --check scripts/check_chat_authorized_phone.cjs 做双端真实页面、文件运行、重载持久化、任务文字/照片、前后台和去重。模型HTTP与私人游戏窗口原生请求为模拟，不代表真机或真实付费模型验收。固定预览目录已有 favorite-files / role-task-form / role-task-card / moments-clear 四张PNG。
+
+2026-11-10 用户纠正样式并新增电话回放：文件收藏列表改为文件名、类型/大小、作者日期与文件图标，列表没有运行大按钮；点击文件才复用chatFileOpen。角色交回的小事卡复用已有doneCard/DCARD_CSS/全文浮层，照片仍嵌入现有图片卡；不再另造绿色条框。电话新增与视频相同的回放/导出入口，callReplayStoreAudio/ReplaceAudio与speakWait缓存扩展到voice，callReplayRows仍按当前账号、角色和通话session选择，保留私人字幕清洗。导出为含字幕与原声的回放视频，名称/标题区分电话；旧记录无音频不自动配音，用户仍可明确选择付费重新配音。没有原生桥变更。双端真实HTML以本地0.1秒WAV夹具验证MediaRecorder生成非空有声回放文件，未使用付费语音或真实手机分享。专项通过，最终完整回归另记。网页v1909推送因GitHub SSL错误失败，按规则没有重试，线上尚未更新。
+
+电话旧记录缺少_cs时，回放入口传legacy:时间戳，callReplaySessionMatches只取对应时间段；空编号不再选中全部旧记录。电话与视频仅复用导出管线，不改原生音频权限。
+
+2026-11-10 文件长按补齐：消息菜单已有收藏，但buildMsg的longPressable此前遗漏file。加入file，chatFileOpen增加长按释放后的点击保护，避免菜单被文件窗口顶替。NORTH_FILE_MENU_PREVIEW实际鼠标按住650ms再松开，双端菜单可见且点击收藏后完整文件成功保存，pageErrors0。固定file-favorite-menu.png已查看，未安装/推送。
+
+## 模型测试防误报
+
+2026-11-10 MODEL_PROBE_VALIDATION_V1：模型连接测试不能仅以HTTP成功判定可用。主副模型、旧入口、通话规模、联网模型、体检、代码模型测试校验实际正文和正常结束状态；错误网页、空回复、仅思考、错误结构、截断均不绿灯。短测256 token并复用DeepSeek参数。识图完整匹配随机码，生图验证加载，语音验证解码与非空文字，向量验证有效数值，Jina验证搜索结果。成功仅代表本次测试，不保证长期服务或实时联网。失败不保存配置，不自动重试计费。正常聊天和代码文件生成不清洗、不改变；原生桥及私人伴生不改。旧实现HTTP200错误网页误报已复现，新双端函数及实际页面回归通过，全量结果稍后追加。本地未发布；已有未提交功能保留。三份DOCX仍为历史XML损坏，追加同名TXT且保留原件。
+入口：011-saveSettings.js的modelProbe系列，010-svgIc.js体检及代码测试；回归chat-model-type-guard与health-check。
+
+## 模型流式按路线独立设置及单次重测
+
+2026-11-10 MODEL_PROBE_MODES_V1 / MODEL_STREAM_ISOLATION_V1：用户确认先补齐双模式测试，再增加独立流式设置。主/副模型每条路线各存streaming；旧已配置槽位缺字段时沿用旧chatStreaming值，新空槽位关闭；全局旧值只保留兼容读取，不再提供全局修改按钮。代码和联网文字模型各自开关，旧行为非流式保持；识图、生图、语音、Jina不硬加。真实chatAPI选择所调用主/副槽位，显式opt.stream仍优先；代码及联网真实请求接入既有完整SSE读取器。模型测试先用对应表单模式，失败提示另一模式未测，用户确认额外调用后才切换单笔请求；成功区分请求模式与实际返回JSON/SSE，取消不重试，双失败分别显示原因、不武断归因站点。切路线使旧测试结果失效，不自动保存开关或重复付费。体检只测已配置模式，不自动弹出重试。代码文件不经过测试正文清洗；原生桥及私人后台不改。双端旧HEAD主副隔离回归失败，新定向33项通过；实际HTML确认前仅1次请求、确认后切另一模式、配置未改、代码及联网完整流读取均通过。维护指南与当前测试继续复用，无新工作树/临时目录；全量及核心结果随后追加，尚未发布。
+
+主要消费者：010-svgIc.js配置/迁移/代码/体检，011-saveSettings.js保存和测试，004-roleImageTimeRangeActive.js真实聊天主副，041-fetchWeather.js联网文字模型。回归复用api-routes、request-diagnostics、chat-model-type-guard、health-check；核心门禁改为保存当前主模型开关并读回同字段，不再要求改全局。

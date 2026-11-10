@@ -9,8 +9,8 @@ const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
 // The already-paid call audio is cached with the video-call message and reused.
 assert.match(source, /async function callReplayStoreAudio\(m,ab,dur\)/);
-assert.match(source, /if\(!m\|\|!ab\|\|m\._ck!==\x27video\x27\)return/);
-assert.match(source, /cacheMessage:video\?callMsg:null/);
+assert.match(source, /includes\(m\._ck\|\|'voice'\)/);
+assert.match(source, /cacheMessage:callMsg/);
 assert.match(source, /if\(opt\.cacheMessage\)await callReplayStoreAudio\(opt\.cacheMessage,ready\.ab,ready\.buf\.duration\)/);
 assert.doesNotMatch(source, /callReplayStoreAudio[\s\S]{0,200}ttsArr/);
 
@@ -68,3 +68,16 @@ assert.doesNotMatch(html, /\.callinput button\{[^}]*#ff6fa5/);
 assert.doesNotMatch(html, /\.callrewind/);
 
 console.log("video call replay tests passed");
+
+
+// Both bundles retain paid voice-call audio and isolate replay to its session/account.
+{
+ const vm=await import('node:vm'),{read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+ for(const [,file] of BUNDLES){const src=read(file),stored=new Map(),c={id:'r'},m={id:'phone',_call:true,_ck:'voice',_cs:'s',role:'assistant',content:'电话里的原话'},history=[m,{id:'video',_call:true,_ck:'video',_cs:'v',content:'另一次视频'}];
+ const ctx=vm.createContext({Date,Math,Map,Set,getC:()=>c,msgs:()=>history,uid:()=> 'id',audioBufToDataUrl:()=> 'data:audio/wav;base64,fixture',imgPut:async(k,v)=>stored.set(k,v),imgDel:async k=>stored.delete(k),save(){},callStoredLineParts:m=>({text:m.content,trans:''}),hasCN:()=>false,callIsActionLine:()=>false,ttsRequestedCue:()=>'',ttsAutoCue:()=>''});
+ vm.runInContext(['callReplayAudioKey','callReplayStoreAudio','callReplayReplaceAudio','callReplayCue','callReplayRows','callReplayKind','callReplaySessionMatches'].map(n=>fnSource(src,n)).join('\n'),ctx);
+ assert.equal(await ctx.callReplayStoreAudio(m,new ArrayBuffer(8),1),'idb-audio:call_phone');assert.equal(ctx.callReplayRows('r','s').length,1);assert.equal(ctx.callReplayRows('r','s')[0].audio,m.callAudio);assert.equal(ctx.callReplayKind('r','s'),'voice');assert.equal(ctx.callReplayKind('r','v'),'video');
+ assert.equal(await ctx.callReplayStoreAudio({id:'ordinary'},new ArrayBuffer(8),1),'');
+ const old=m.callAudio;ctx.imgPut=async()=>{throw Error('storage');};assert.equal(await ctx.callReplayReplaceAudio(m,new ArrayBuffer(8),1),'');assert.equal(m.callAudio,old);assert.equal(ctx.callReplayRows('r','missing').length,0);history.push({_call:true,time:10,content:'旧电话一'},{_call:true,time:20,content:'旧电话二'});assert.equal(ctx.callReplayRows('r','legacy:10').length,1);assert.equal(ctx.callReplayRows('r','').length,0);
+ }
+}

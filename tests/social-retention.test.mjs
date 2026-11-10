@@ -81,3 +81,13 @@ test('role-set app limits keep counting and locking without a floating countdown
   assert.match(tick,/S\.couple\.locks/);
   assert.doesNotMatch(tick,/textContent='⏳|style\.display=.*block/);
 });
+
+
+test('batch moments deletion protects other accounts, new posts and rollback',async()=>{
+ const vm=await import('node:vm'),{read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+ for(const [,bundle] of BUNDLES){const src=read(bundle),mine={id:'mine',acct:'main',authorId:'me'},role={id:'role',acct:'main',authorId:'a'},other={id:'other',acct:'other',authorId:'a'},fresh={id:'new',acct:'main',authorId:'a'},state={moments:[mine,role,other]};let account='main',saved=true;
+ const ctx=vm.createContext({S:state,Set,document:{getElementById:()=>({value:'a'})},actId:()=>account,saveNowAsync:async()=>saved,uiConfirm:async()=>{state.moments.push(fresh);return true;},toast(){},closeModal(){},momentRenderKeepScroll(){}});
+ vm.runInContext('let _momentClearDraft={state:S,account:"main"};\n'+fnSource(src,'momentClearConfirm'),ctx);await ctx.momentClearConfirm();assert.deepEqual(state.moments,[mine,other,fresh]);
+ state.moments=[mine,role,other];saved=false;ctx.uiConfirm=async()=>true;await ctx.momentClearConfirm();assert.deepEqual(state.moments,[mine,role,other]);
+ saved=true;ctx.uiConfirm=async()=>{account='other';return true;};await ctx.momentClearConfirm();assert.deepEqual(state.moments,[mine,role,other]);}
+});

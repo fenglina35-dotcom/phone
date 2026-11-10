@@ -100,3 +100,28 @@ test('正式卡片、中文分隔符与确定的使用语句都生成卡片，�
   }
   assert.equal(read(PRIV_DIR+'task-notes.js'),notes);
 });
+
+
+// Assigned role tasks must not consume the owner's rewards or deliver twice.
+function assignedFixture(){
+ const c={id:'a',name:'甲'},history=[],st={assigned:[]},state={taskNotes:st,me:{name:'我'},contacts:[c]};let account='main',calls=0,answer=JSON.stringify({text:'已经写好，等你来看。',photo:'桌上的手写故事'}),saved=true;
+ const ctx=vm.createContext({S:state,document:{hidden:false},window:{},Date,Math,JSON,Set,store:()=>st,actId:()=>account,getC:()=>c,chatAPI:async()=>{calls++;return answer;},save(){},saveNowAsync:async()=>saved,msgs:()=>history,buildSystem:()=>'',cur:()=>({p:'home'}),showMsgBanner(){},lineToMsg:line=>({type:'image',desc:line,textCard:true,role:'assistant'}),replyGenerationBusy:()=>false});
+ vm.runInContext(['assignedRows','assignedValid','assignedPrompt','assignedTick'].map(n=>fnSource(notes,n)).join('\n')+'\nlet assignedBusy=false;',ctx);
+ const row={id:'one',account:'main',cid:'a',text:'写故事',date:'2026-11-01',time:'12:00',runAt:Date.now()-86400000,kind:'text',done:false};st.assigned.push(row);
+ return {ctx,row,history,st,c,calls:()=>calls,account:v=>account=v,answer:v=>answer=v,saved:v=>saved=v};
+}
+test('role assignment catches up once, respects account/background and persists model output',async()=>{
+ const f=assignedFixture();f.ctx.document.hidden=true;await f.ctx.assignedTick();assert.equal(f.calls(),0);f.ctx.document.hidden=false;
+ f.account('other');await f.ctx.assignedTick();assert.equal(f.calls(),0);f.account('main');
+ await Promise.all([f.ctx.assignedTick(),f.ctx.assignedTick()]);await f.ctx.assignedTick();assert.equal(f.calls(),1);assert.equal(f.history.length,1);assert(f.row.done);assert.equal(f.history[0].tnAssigned.title,'写故事');assert.match(f.ctx.assignedPrompt(f.c),/已完成并交卡/);
+});
+test('role assignment failures remain pending with cooldown; no fabricated success',async()=>{
+ const f=assignedFixture();f.answer('not json');await f.ctx.assignedTick();await f.ctx.assignedTick();assert.equal(f.calls(),1);assert(!f.row.done);assert.equal(f.history.length,0);assert(f.row.error);
+ f.row.retryAt=0;f.answer(JSON.stringify({text:'做完了',photo:'完成照片'}));f.row.kind='photo';await f.ctx.assignedTick();assert(f.row.done);assert.equal(f.history[0].type,'image');assert(f.history[0].desc.includes('完成照片'));
+});
+test('role assignment keeps generated content when local persistence fails',async()=>{
+ const f=assignedFixture();f.saved(false);await f.ctx.assignedTick();assert(!f.row.done);assert(f.row.result);assert.equal(f.history.length,0);f.saved(true);f.row.retryAt=0;await f.ctx.assignedTick();assert(f.row.done);assert.equal(f.calls(),1);
+});
+test('cancel or account switch during model call discards late completion',async()=>{
+ for(const action of ['cancel','account']){const f=assignedFixture();f.ctx.chatAPI=async()=>{if(action==='cancel')f.row.cancelled=true;else f.account('other');return JSON.stringify({text:'做完了'});};await f.ctx.assignedTick();assert(!f.row.done);assert.equal(f.history.length,0);assert(!f.row.result);}
+});

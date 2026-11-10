@@ -300,6 +300,7 @@ const MODEL_FEATURES=[
  ['letter','信箱·角色写信','信箱与任务',0,1,'genLetter'],
  ['letter_mood','信箱·按心情拆信','信箱与任务',0,1,'genMoodLetter'],
  ['letter_reply','信箱·角色回信','信箱与任务',0,1,'mail-outbox.js:mailReply'],
+ ['assigned_tasks','任务便签·角色完成小事','信箱与任务',0,1,'task-notes.js:assignedTick'],
  ['tasks','任务便签·布置任务','信箱与任务',0,1,'genTasks'],
  ['task_notes','任务便签·小猫和水晶球的信','信箱与任务',0,1,'task-notes.js:writeLine','task-notes.js:writeLetter'],
  ['jail','小黑屋·对话','线下与剧情',0,'在情侣空间「禁闭室用辅助模型」切换','jailAI'],
@@ -401,7 +402,7 @@ async function chatAPI(messages,opt){opt=opt||{};const _modelFeature=typeof mode
 //@@ end
   const pendingAux=opt.aux?(fixedRoute?fixedRoute.aux:S.settings.aux):null,guardModel=opt.model||((pendingAux&&pendingAux.model)||a.model);chatModelAssertText(guardModel,opt.aux?'辅助模型':'聊天模型');
 
-  if(opt.aux){const x=fixedRoute?fixedRoute.aux:S.settings.aux;if(x&&x.model)a=Object.assign({},a,{base:x.base||a.base,key:x.key||a.key,model:x.model});else opt._auxMissing=true;}
+  if(opt.aux){const x=fixedRoute?fixedRoute.aux:S.settings.aux;if(x&&x.model)a=Object.assign({},a,{base:x.base||a.base,key:x.key||a.key,model:x.model,streaming:typeof x.streaming==='boolean'?x.streaming:S.settings.chatStreaming===true});else opt._auxMissing=true;}
 //@@ web
   if(!a.base||!a.key)throw annotateChatRequestError(new Error('还没设置聊天 API（去 设置→API）'),opt,fixedRoute,a,startedAt);
 //@@ private
@@ -409,7 +410,7 @@ async function chatAPI(messages,opt){opt=opt||{};const _modelFeature=typeof mode
 //@@ end
   const _thinkingPlan=typeof roleThinkingRequest==='function'?roleThinkingRequest(messages,opt,a):null;
   chatRequestDiagnostic('configured',_requestDiag,Object.assign({},opt,{max:_thinkingPlan?_thinkingPlan.body.max_tokens:chatCompletionBody(messages,opt,a,false).max_tokens}),a,false);
-  const stream=opt.stream==null?S.settings.chatStreaming===true:opt.stream===true;const request=async()=>{let res;try{res=await fetchT(_thinkingPlan?_thinkingPlan.url:a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
+  /* MODEL_STREAM_ISOLATION_V1 */const stream=opt.stream==null?(typeof a.streaming==='boolean'?a.streaming:S.settings.chatStreaming===true):opt.stream===true;const request=async()=>{let res;try{res=await fetchT(_thinkingPlan?_thinkingPlan.url:a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
     headers:_thinkingPlan?_thinkingPlan.headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
 //@@ web
     body:JSON.stringify(_thinkingPlan?_thinkingPlan.body:chatCompletionBody(messages,opt,a,stream))},Math.max(10000,Math.min(190000,+opt.timeout||190000)));}catch(cause){const e=new Error(apiCaughtCN(cause));e.transportRaw=String(cause&&cause.message||cause||'').slice(0,500);e.transportName=String(cause&&cause.transportName||cause&&cause.name||'');e.transportTimedOut=!!(cause&&cause.transportTimedOut);e.transportTimeoutMs=Number(cause&&cause.transportTimeoutMs)||Math.max(10000,Math.min(190000,+opt.timeout||190000));throw annotateChatRequestError(e,opt,fixedRoute,a,startedAt);}

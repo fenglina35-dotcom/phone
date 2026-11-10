@@ -1,9 +1,9 @@
 function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+id).value.trim();
   const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive;
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||4096,offlineMaxTokens:$('#s_cmax_offline').value||4096,letterMaxTokens:$('#s_cmax_letter').value||4096,callMaxTokens:$('#s_cmax_call')?$('#s_cmax_call').value||0:(S.settings.chat&&S.settings.chat.callMaxTokens)||0};
-  S.settings.chat.reasoningEnabled=!!($('#s_reasoning_on')&&$('#s_reasoning_on').checked);S.settings.chat.reasoningEffort=['low','high','max'].includes(g('s_reasoning_effort'))?g('s_reasoning_effort'):'high';S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
+  S.settings.chat.streaming=!!($('#s_cstream')&&$('#s_cstream').checked);S.settings.chat.reasoningEnabled=!!($('#s_reasoning_on')&&$('#s_reasoning_on').checked);S.settings.chat.reasoningEffort=['low','high','max'].includes(g('s_reasoning_effort'))?g('s_reasoning_effort'):'high';S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel'),streaming:!!($('#s_xstream')&&$('#s_xstream').checked)};
   routes[routeActive]=chatRouteCopy(Object.assign({},S.settings.chat,{aux:S.settings.aux}));
-  S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
+  S.settings.search={streaming:$('#s_sestream')?$('#s_sestream').checked===true:(S.settings.search||{}).streaming===true,mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
   {const ov=S.settings.vision||{};S.settings.vision={base:g('s_vbase'),key:g('s_vkey'),model:g('s_vmodel'),fallbackModel:g('s_vfallback'),protocols:ov.protocols||{},lastGoodModel:ov.lastGoodModel||'',chatImageFailedKey:ov.chatImageFailedKey||'',chatImageFailedAt:+ov.chatImageFailedAt||0};}
   const oldTts=S.settings.tts||{},tbase=g('s_tbase'),tkey=g('s_tkey'),explicitTts=oldTts.enabled===true||oldTts.enabled===false;
   S.settings.tts={provider:($('#s_tprovider')?$('#s_tprovider').value.trim():(oldTts.provider||'')),base:tbase,key:tkey,model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:explicitTts?!!oldTts.enabled:!!(tbase&&(tkey||($('#s_tprovider')&&$('#s_tprovider').value.trim()==='fishmcp'))),relay:!!oldTts.relay,relayLang:oldTts.relayLang||''};
@@ -51,12 +51,79 @@ async function clearAllData(){
 }
 function requestNotificationPermission(){return new Promise(res=>{let done=false,finish=p=>{if(done)return;done=true;res(p||Notification.permission||'default');};try{const out=Notification.requestPermission(finish);if(out&&typeof out.then==='function')out.then(finish).catch(()=>finish('default'));}catch(_){finish('default');}});}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}registerSW().finally(()=>requestNotificationPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许')));}
+/* MODEL_PROBE_VALIDATION_V1：接通不等于模型可用；测试必须读完并验证正文，不自动重试计费。 */
+function modelProbeText(data){
+ if(!data||typeof data!=='object'||data.error)throw new Error('接口返回错误或无有效模型结果');
+ const choice=Array.isArray(data.choices)&&data.choices[0],message=choice&&choice.message,finish=String(choice&&choice.finish_reason||'');
+ if(/length|max_tokens/i.test(finish))throw new Error('回复达到输出上限，未完整返回；本次不能判定测试成功');
+ if(finish!=='stop')throw new Error('回复未正常结束（'+(finish||'缺少结束状态')+'），本次未通过验证');
+ const content=message&&message.content;
+ let text=typeof content==='string'?content:Array.isArray(content)?content.filter(x=>x&&x.type==='text'&&typeof x.text==='string').map(x=>x.text).join(''):'';
+ text=typeof wechatStripReasoningEnvelope==='function'?wechatStripReasoningEnvelope(text):text.trim();
+ if(message&&message.refusal||!text.trim())throw new Error('模型没有返回可用正文（可能只有思考或拒绝结果）');
+ if(/^\s*(?:<!doctype|<html|<head|<body)/i.test(text))throw new Error('返回的是网页内容，不是有效测试回复');
+ return text;
+}
+async function modelProbeRead(res,ms){
+ let timer;try{
+  const raw=await Promise.race([res.text(),new Promise((_,reject)=>{timer=setTimeout(()=>{try{if(res.body)res.body.cancel().catch(()=>{});}catch(_){}reject(new Error('读取模型回复超时，本次未通过验证'));},ms||45000);})]);
+  if(!res.ok)throw new Error(apiErrorCN(res.status,raw));
+  return raw;
+ }finally{clearTimeout(timer);}
+}
+async function modelProbeResponse(res,ms,stream){
+ const raw=await modelProbeRead(res,ms);let data,actualStream=false;
+ if(stream&&/^\s*(?:data:|event:|:)/.test(raw)){
+  if(typeof NorthRequestDiagnostics==='undefined')throw new Error('流式读取模块未加载，本次无法验证');
+  data=await NorthRequestDiagnostics.read({ok:true,status:res.status,headers:{get:()=> 'text/event-stream'},text:async()=>raw},null,{stream:true,timeout:ms||45000});actualStream=true;
+ }else try{data=JSON.parse(raw);}catch(_){throw new Error('HTTP '+res.status+'，但返回的不是有效'+(stream?'模型响应':'非流式 JSON')+'，不能算模型测试成功');}
+ return {text:modelProbeText(data),data,actualStream};
+}
+/* MODEL_PROBE_MODES_V1：切换仅限这一笔测试，第二次计费请求须由用户确认。 */
+async function modelProbeModes(output,base,key,body,label,timeout,initialMode){
+ const ticket=(output._modelProbeTicket||0)+1;output._modelProbeTicket=ticket;
+ const active=()=>output._modelProbeTicket===ticket&&output.isConnected!==false;
+ const initial=typeof initialMode==='boolean'?initialMode:S.settings.chatStreaming===true,mode=flag=>flag?'流式':'非流式';let firstError='';
+ for(let attempt=0;attempt<2;attempt++){
+  const stream=attempt?!initial:initial;
+  if(!active())return null;output.style.color='#999';output.textContent=label+' · 正在测试'+mode(stream)+'…';
+  try{
+   const res=await fetchT(base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({...body,stream})},timeout||45000);
+   const result=await modelProbeResponse(res,timeout||45000,stream);if(!active())return null;
+   const actual=stream&&!result.actualStream?'（接口实际返回非流式 JSON，未验证真正的流式输出）':'';
+   output.style.color='#19a463';output.textContent='✅ '+label+'连接成功，已收到完整模型正文 · '+mode(stream)+'请求'+actual+'（仅验证本次短测）'+(attempt?'\n'+mode(initial)+'测试失败：'+firstError+'\n本次换用'+mode(stream)+'请求后通过；可在使用前检查流式设置，测试没有修改任何模型的开关。':'');
+   return {...result,usedAlternate:attempt===1,requestedStream:stream};
+  }catch(e){
+   if(!active())return null;const reason=apiCaughtCN(e);output.style.color='#e85';
+   if(attempt){output.textContent='❌ '+label+'本次两种模式均测试失败\n'+mode(initial)+'：'+firstError+'\n'+mode(stream)+'：'+reason+'\n尚不能仅凭本次结果确定是站点、网络还是配置问题。';return null;}
+   firstError=reason;output.textContent='❌ '+label+mode(stream)+'测试失败：'+reason+'\n'+mode(!stream)+'尚未测试，暂不能判定模型不可用。';
+   const retry=await uiConfirm(mode(stream)+'测试未通过。是否换用'+mode(!stream)+'再测一次？\n会额外调用一次模型，可能消耗额度；不会修改任何已保存的流式设置。');
+   if(!retry||!active())return null;
+  }
+ }
+ return null;
+}
+async function modelProbeSearch(res){
+ const raw=await modelProbeRead(res),trimmed=raw.trim();let valid=false;
+ try{const data=JSON.parse(raw);valid=!data.error&&Array.isArray(data.data)&&data.data.some(x=>x&&typeof x.title==='string'&&x.title.trim()&&/^https?:\/\//i.test(x.url||''));}
+ catch(_){valid=!/^<(?:!doctype|html|head|body)/i.test(trimmed)&&/(?:URL Source:|\]\()\s*https?:\/\//i.test(raw);}
+ if(!valid)throw new Error('接口已接通，但没有返回可验证的搜索结果');
+}
+
+function modelProbeBody(model,base,content,max){
+ const on=$('#s_reasoning_on'),effort=$('#s_reasoning_effort'),saved=S.settings.chat||{};
+ const cfg={model,base,maxTokens:max||256,reasoningEnabled:on?on.checked===true:saved.reasoningEnabled===true,reasoningEffort:effort?effort.value:saved.reasoningEffort};
+ const body=chatCompletionBody([{role:'user',content}],{max:max||256},cfg,false);body.stream=false;return body;
+}
+async function modelProbeImage(url){
+ if(typeof url!=='string'||!/^https?:\/\/|^data:image\//i.test(url))throw new Error('没有可验证的图片地址');
+ await new Promise((resolve,reject)=>{const img=new Image(),timer=setTimeout(()=>finish(new Error('图片加载超时，尚未验证出图成功')),30000);function finish(err){clearTimeout(timer);img.onload=img.onerror=null;if(err){img.src='';reject(err);}else resolve();}img.onload=()=>finish(img.naturalWidth>0&&img.naturalHeight>0?null:new Error('返回的图片无法显示'));img.onerror=()=>finish(new Error('图片地址无法加载，尚未验证出图成功'));img.src=url;});
+}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
   if(!base||!key){o.style.color='#e85';o.textContent='先填地址和 Key';return;}
-  try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5,...(($('#s_reasoning_on')||{}).checked===true?{reasoning_effort:(($('#s_reasoning_effort')||{}).value||'high')}:{})})});
-    if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
+  await modelProbeModes(o,base,key,modelProbeBody(model,base,'说"在"'),'模型',45000,$('#s_cstream')?$('#s_cstream').checked===true:undefined);}
+
 let _taskBusy=false;
 let _pageHiddenMark=0;
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.hidden)_pageHiddenMark=Date.now();});
@@ -69,44 +136,41 @@ async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)retu
   if(!ub||!uk){o.style.color='#e85';o.textContent='先填地址和Key';return;}
   if(!model){o.style.color='#e85';o.textContent='先填模型名';return;}
   const routeIndex=Math.max(0,Math.min(CHAT_ROUTE_NAMES.length-1,parseInt(S.settings&&S.settings.chatRouteActive,10)||0)),slot=mId==='s_xmodel'?'副模型':'主模型',target=CHAT_ROUTE_NAMES[routeIndex]+' · '+slot+'「'+model+'」';
-  try{const r=await fetchT(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}],...(($('#s_reasoning_on')||{}).checked===true?{reasoning_effort:(($('#s_reasoning_effort')||{}).value||'high')}:{})})});
-    if(r.ok)o.style.color='#19a463',o.textContent='✅ '+target+'连接成功';else{const raw=await r.text();o.style.color='#e85';o.textContent='❌ '+target+'测试失败\n'+apiErrorCN(r.status,raw);}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+target+'测试失败\n'+apiCaughtCN(e);}}
+  await modelProbeModes(o,ub,uk,modelProbeBody(model,ub,'说"在"'),target,45000,$(mId==='s_xmodel'?'#s_xstream':'#s_cstream')?$(mId==='s_xmodel'?'#s_xstream':'#s_cstream').checked===true:undefined);}
+
 function testMain(){testModel('s_cbase','s_ckey','s_cmodel','testC','gpt-4o-mini');}
 function testAux(){testModel('s_xbase','s_xkey','s_xmodel','testX','');}
-/* 「测试主模型」只发 82 字符、5 个 token、25 秒超时，通话发的是上万字符、上千 token、190 秒超时。
+/* 「测试主模型」使用短提示和至少256 token正文额度，通话发的是上万字符、上千 token、190 秒超时。
    两者差两个数量级，所以测试通过完全不代表通话打得通。这一条按通话的真实规模发一次。 */
 function callScaleFiller(chars){const unit='这是一次按真实通话规模构造的连通性测试，用来把上下文占到通话那么大，好看清这条线路扛不扛得住。';const times=Math.max(1,Math.ceil(chars/unit.length));return unit.repeat(times).slice(0,chars);}
 async function testCallScale(){const o=$('#testCall');if(!o)return;
   const base=(($('#s_cbase')||{value:''}).value||'').trim().replace(/\/+$/,''),key=(($('#s_ckey')||{value:''}).value||'').trim(),model=(($('#s_cmodel')||{value:''}).value||'').trim();
   if(!base||!key||!model){o.style.color='#e85';o.textContent='先填地址、Key 和模型名';return;}
   const max=Math.max(200,Math.min(8192,parseInt(($('#s_cmax_call')||{value:''}).value,10)||parseInt(($('#s_cmax')||{value:''}).value,10)||900)),chars=18000;
-  const body=JSON.stringify({model,temperature:0.8,max_tokens:max,messages:[{role:'system',content:callScaleFiller(chars)},{role:'user',content:'只回三个字：我在。'}],...(($('#s_reasoning_on')||{}).checked===true?{reasoning_effort:(($('#s_reasoning_effort')||{}).value||'high')}:{})});
+  const request=modelProbeBody(model,base,'只回三个字：我在。',max);request.messages.unshift({role:'system',content:callScaleFiller(chars)});const body=JSON.stringify(request);
   if(!await uiConfirm('这会按真实通话的大小真发一次请求：上下文约 '+chars+' 字符，回复上限 '+max+' token，最长等 190 秒。会真实消耗额度，继续吗？'))return;
   o.style.color='#999';o.textContent='测试中…按通话规模发，最长要等 190 秒';
   const started=Date.now(),secs=()=>((Date.now()-started)/1000).toFixed(1);
-  try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body},190000);
-    const raw=await r.text();
-    if(!r.ok){o.style.color='#e85';o.textContent='❌ 通话规模测试失败（'+secs()+' 秒）\n'+apiErrorCN(r.status,raw);return;}
-    o.style.color='#19a463';o.textContent='✅ 通话规模测试成功 · 用时 '+secs()+' 秒\n请求 '+body.length+' 字符 · 回复上限 '+max+' token · 返回 '+raw.length+' 字符';
-  }catch(e){o.style.color='#e85';o.textContent='❌ 通话规模测试失败（'+secs()+' 秒）\n'+apiCaughtCN(e)+'\n通话就是这个规模；上面那个「测试主模型」只发 82 字符，测不到这一层。';}}
-function saveTestedSearch(mode,seb,sek,sem){const old=S.settings.search||{},base=((seb&&seb.value.trim())||(mode==='jina'?'https://s.jina.ai':'')),key=(sek&&sek.value.trim())||'',model=(sem&&sem.value.trim())||old.model||'';S.settings.search={mode,base:base.replace(/\/+$/,''),key,model};S.settings.web=Object.assign({},S.settings.web||{},{enabled:true});save();}
+  await modelProbeModes(o,base,key,request,'通话规模测试',190000,$('#s_cstream')?$('#s_cstream').checked===true:undefined);}
+
+function saveTestedSearch(mode,seb,sek,sem){const old=S.settings.search||{},base=((seb&&seb.value.trim())||(mode==='jina'?'https://s.jina.ai':'')),key=(sek&&sek.value.trim())||'',model=(sem&&sem.value.trim())||old.model||'';S.settings.search={streaming:$('#s_sestream')?$('#s_sestream').checked===true:old.streaming===true,mode,base:base.replace(/\/+$/,''),key,model};S.settings.web=Object.assign({},S.settings.web||{},{enabled:true});save();}
 async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const mode=(S.settings.search||{}).mode||'jina';const seb=$('#s_sebase'),sek=$('#s_sekey'),sem=$('#s_semodel');
   try{
     if(mode==='model'){const a=S.settings.chat;const base=(((seb&&seb.value.trim())||a.base||'')).replace(/\/+$/,'');const key=(sek&&sek.value.trim())||a.key;const model=(sem&&sem.value.trim())||a.model;
       if(!base||!key){o.style.color='#e85';o.textContent='先填地址和Key';return;}
-      const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'回个"在"'}]})});
-      if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ 联网模型可用，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
+      const result=await modelProbeModes(o,base,key,modelProbeBody(model,base,'回个"在"'),'联网模型',45000,$('#s_sestream')?$('#s_sestream').checked===true:(S.settings.search||{}).streaming===true);
+      if(result&&!result.usedAlternate){saveTestedSearch(mode,seb,sek,sem);o.textContent+='；已保存。本次未验证实时联网能力。';}
+      else if(result)o.textContent+='；本次未保存配置，也未验证实时联网能力。';
     }else{const base=(((seb&&seb.value.trim())||'https://s.jina.ai')).replace(/\/+$/,'');const key=(sek&&sek.value.trim());const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(key)h['Authorization']='Bearer '+key;
       const r=await fetchT(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
-      if(r.ok){saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ jina 联网成功，已保存并启用角色联网';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：检查 jina 密钥或改用「用模型」';}}
+      await modelProbeSearch(r);saveTestedSearch(mode,seb,sek,sem);o.style.color='#19a463';o.textContent='✅ 已收到搜索结果，已保存并启用角色联网';}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 function visionTestImage(){try{const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let code='';for(let i=0;i<4;i++)code+=chars[Math.floor(Math.random()*chars.length)];const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d');x.fillStyle='#f7f7f4';x.fillRect(0,0,640,480);x.fillStyle='#e84b55';x.fillRect(42,45,150,115);x.fillStyle='#3d7ee8';x.beginPath();x.arc(535,105,66,0,Math.PI*2);x.fill();x.fillStyle='#202124';x.font='bold 112px sans-serif';x.textAlign='center';x.fillText(code,320,320);x.font='30px sans-serif';x.fillText('请读出上面的四位验证码',320,390);return {dataURL:c.toDataURL('image/jpeg',.9),code};}catch(_){return null;}}
 async function testVision(mode){mode=mode||'auto';const o=$('#testV');if(!o)return;o.style.color='#999';o.textContent=mode==='chat'?'正在只测试聊天模型看图…':mode==='backup'?'正在只测试备用识图…':'正在测试自动切换且不会并发重复…';
   const old=JSON.stringify(S.settings.vision||{}),oldObj=S.settings.vision||{};S.settings.vision={base:($('#s_vbase').value.trim()||'').replace(/\/+$/,''),key:$('#s_vkey').value.trim(),model:$('#s_vmodel').value.trim(),fallbackModel:($('#s_vfallback').value||'').trim(),protocols:oldObj.protocols||{},lastGoodModel:oldObj.lastGoodModel||'',chatImageFailedKey:oldObj.chatImageFailedKey||'',chatImageFailedAt:+oldObj.chatImageFailedAt||0};
   const hasExternalBackup=!!(S.settings.vision.base&&S.settings.vision.key&&S.settings.vision.model);if(mode==='backup'&&!hasExternalBackup&&!aiCoreOn()){try{S.settings.vision=JSON.parse(old);}catch(_){}o.style.color='#e85';o.textContent='先把备用识图的地址、Key 和模型填写完整';return;}
-  try{const card=visionTestImage();if(!card)throw new Error('测试图片生成失败');const txt=await visionAPI(card.dataURL,'请查看图片中央的大字，只回复四位验证码，不要解释。',mode==='chat'?{forceChat:true,primaryOnly:true}:mode==='backup'?{backupOnly:true}:{forceChat:true});if((''+txt).toUpperCase().replace(/[^A-Z0-9]/g,'').indexOf(card.code)<0)throw new Error('接口有回复，但没读出随机验证码 '+card.code+'，不能算真正识图');save();const vi=_visionLast||{},way=vi.protocol==='anthropic'?'Claude原生图片协议':vi.protocol==='openai'?'兼容图片协议':vi.protocol==='relay-chat'?'内置聊天线路':vi.protocol==='relay-vision'?'内置备用线路':'图片协议';o.style.color='#19a463';o.textContent=vi.fallback?'✅ 备用识图成功：'+vi.model+' · '+way+(mode==='auto'?'（确认是在聊天模型失败后才接管）':''):'✅ 聊天模型直接看图成功：'+vi.model+' · '+way+'（本次只请求了聊天线路）';toast('图片理解路线已严格验证并保存');}
+  try{const card=visionTestImage();if(!card)throw new Error('测试图片生成失败');const txt=await visionAPI(card.dataURL,'请查看图片中央的大字，只回复四位验证码，不要解释。',mode==='chat'?{forceChat:true,primaryOnly:true}:mode==='backup'?{backupOnly:true}:{forceChat:true});if((''+txt).toUpperCase().replace(/[^A-Z0-9]/g,'')!==card.code)throw new Error('接口有回复，但没读出随机验证码 '+card.code+'，不能算真正识图');save();const vi=_visionLast||{},way=vi.protocol==='anthropic'?'Claude原生图片协议':vi.protocol==='openai'?'兼容图片协议':vi.protocol==='relay-chat'?'内置聊天线路':vi.protocol==='relay-vision'?'内置备用线路':'图片协议';o.style.color='#19a463';o.textContent=vi.fallback?'✅ 备用识图成功：'+vi.model+' · '+way+(mode==='auto'?'（确认是在聊天模型失败后才接管）':''):'✅ 聊天模型直接看图成功：'+vi.model+' · '+way+'（本次只请求了聊天线路）';toast('图片理解路线已严格验证并保存');}
   catch(e){try{S.settings.vision=JSON.parse(old);save(0);}catch(_){}o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：模型或中转响应太慢':'❌ '+(e.message||'识图失败').slice(0,170);}}
 async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999';o.textContent='真生成一张测试图中…（约30-60秒，别急）';
   const base=((($('#s_ibase')&&$('#s_ibase').value.trim())||(S.settings.chat&&S.settings.chat.base)||'').replace(/\/+$/,''));
@@ -115,9 +179,9 @@ async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999
   if(!base||!key){o.style.color='#e85';o.textContent='先填接口地址和Key（留空会用聊天模型的，但聊天那栏也得先填好）';return;}
   const t0=Date.now();
   try{const out=await imageGenerateExternal(base,key,model,'一只可爱的小猫坐在窗台上，阳光明媚，真实照片质感','1024x1024'),sec=Math.round((Date.now()-t0)/1000),url=out&&out.url;
-    o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒，'+esc(out.endpoint||'image')+'）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');
+    await modelProbeImage(url);o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒，'+esc(out.endpoint||'image')+'）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
-async function testSTT(){const o=$('#testS');if(!o)return;const base=((($('#s_sbase')||{}).value)||'').trim().replace(/\/+$/,''),key=((($('#s_skey')||{}).value)||'').trim(),model=((($('#s_smodel')||{}).value)||'').trim()||'whisper-1',lang=sttLangCode(((($('#s_slang')||{}).value)||'zh-CN')),saved=S.settings.stt||{};if(!base||!key){o.style.color='#e85';o.textContent='先填语音转文字接口地址和 API Key';return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){o.style.color='#e85';o.textContent='当前浏览器不能录音，请用 Safari/Chrome 并允许麦克风权限';return;}let stream=null;try{o.style.color='#d7a8bf';o.textContent='🎙️ 正在录音，请说一句话（5秒）…';stream=await navigator.mediaDevices.getUserMedia({audio:true});const types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],type=types.find(t=>!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t))||'',chunks=[],mr=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream),stopped=new Promise((resolve,reject)=>{mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=resolve;mr.onerror=e=>reject((e&&e.error)||new Error('录音失败'));});mr.start(250);await new Promise(resolve=>setTimeout(resolve,5000));mr.stop();await stopped;stream.getTracks().forEach(t=>t.stop());stream=null;const blob=new Blob(chunks,{type:mr.mimeType||type||'audio/webm'});if(!blob.size)throw new Error('没有录到声音，请检查麦克风权限');o.textContent='录音完成，正在让模型识别并检查时间轴…';S.settings.stt={base,key,model,lang};const j=await sttRequest(blob,{timestamps:true,lang}),text=String(j&&j.text||'').replace(/\s+/g,' ').trim(),rows=Array.isArray(j&&j.segments)?j.segments:Array.isArray(j&&j.chunks)?j.chunks:[],timed=rows.some(x=>{const ts=x&&x.timestamp||x&&x.timestamps||[],a=Number(x&&x.start!=null?x.start:ts[0]),b=Number(x&&x.end!=null?x.end:ts[1]);return Number.isFinite(a)&&Number.isFinite(b)&&b>a;});if(!text&&!rows.length)throw new Error('接口已响应，但没有识别到文字；请对着麦克风清楚说一句再试');save(0);if(timed){o.style.color='#19a463';o.textContent='✅ 测试成功：能识别语音，也能返回影片字幕时间轴。识别到“'+(text||String(rows[0]&&rows[0].text||'').trim()).slice(0,36)+'”';}else{o.style.color='#d99b38';o.textContent='⚠️ 能识别语音，但这个模型没有返回分段时间轴：微信语音可用，影片“一键提取字幕”不可用。识别到“'+text.slice(0,36)+'”';}}catch(e){S.settings.stt=saved;o.style.color='#e85';o.textContent='❌ '+((e&&e.message)||apiCaughtCN(e)||'测试失败').slice(0,180);}finally{if(stream)stream.getTracks().forEach(t=>t.stop());}}
+async function testSTT(){const o=$('#testS');if(!o)return;const base=((($('#s_sbase')||{}).value)||'').trim().replace(/\/+$/,''),key=((($('#s_skey')||{}).value)||'').trim(),model=((($('#s_smodel')||{}).value)||'').trim()||'whisper-1',lang=sttLangCode(((($('#s_slang')||{}).value)||'zh-CN')),saved=S.settings.stt||{};if(!base||!key){o.style.color='#e85';o.textContent='先填语音转文字接口地址和 API Key';return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){o.style.color='#e85';o.textContent='当前浏览器不能录音，请用 Safari/Chrome 并允许麦克风权限';return;}let stream=null;try{o.style.color='#d7a8bf';o.textContent='🎙️ 正在录音，请说一句话（5秒）…';stream=await navigator.mediaDevices.getUserMedia({audio:true});const types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],type=types.find(t=>!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t))||'',chunks=[],mr=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream),stopped=new Promise((resolve,reject)=>{mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=resolve;mr.onerror=e=>reject((e&&e.error)||new Error('录音失败'));});mr.start(250);await new Promise(resolve=>setTimeout(resolve,5000));mr.stop();await stopped;stream.getTracks().forEach(t=>t.stop());stream=null;const blob=new Blob(chunks,{type:mr.mimeType||type||'audio/webm'});if(!blob.size)throw new Error('没有录到声音，请检查麦克风权限');o.textContent='录音完成，正在让模型识别并检查时间轴…';S.settings.stt={base,key,model,lang};const j=await sttRequest(blob,{timestamps:true,lang}),text=String(j&&j.text||'').replace(/\s+/g,' ').trim(),rows=Array.isArray(j&&j.segments)?j.segments:Array.isArray(j&&j.chunks)?j.chunks:[],timed=rows.some(x=>{const ts=x&&x.timestamp||x&&x.timestamps||[],a=Number(x&&x.start!=null?x.start:ts[0]),b=Number(x&&x.end!=null?x.end:ts[1]);return Number.isFinite(a)&&Number.isFinite(b)&&b>a;});if(!text&&!rows.some(x=>typeof x.text==='string'&&x.text.trim()))throw new Error('接口已响应，但没有识别到文字；请对着麦克风清楚说一句再试');save(0);if(timed){o.style.color='#19a463';o.textContent='✅ 测试成功：能识别语音，也能返回影片字幕时间轴。识别到“'+(text||String(rows[0]&&rows[0].text||'').trim()).slice(0,36)+'”';}else{o.style.color='#d99b38';o.textContent='⚠️ 能识别语音，但这个模型没有返回分段时间轴：微信语音可用，影片“一键提取字幕”不可用。识别到“'+text.slice(0,36)+'”';}}catch(e){S.settings.stt=saved;o.style.color='#e85';o.textContent='❌ '+((e&&e.message)||apiCaughtCN(e)||'测试失败').slice(0,180);}finally{if(stream)stream.getTracks().forEach(t=>t.stop());}}
 async function testTTS(){
   const o=$('#testT');if(!o)return;
   const value=id=>String(($('#'+id)||{}).value||'').trim(),provider=value('s_tprovider'),base=value('s_tbase').replace(/\/+$/,''),key=value('s_tkey'),model=value('s_tmodel'),voice=value('s_tvoice'),group=value('s_tgroup');

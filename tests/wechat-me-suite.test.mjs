@@ -176,6 +176,9 @@ console.log('WeChat me, QR, wallet, favorites, chat overlay, nearby avatar, and 
   card._favorite.forged=true;assert.match(ctx.wxFavoriteForwardText(card),/代发/);assert.doesNotMatch(ctx.wxFavoriteForwardText(card),/原作者是你/);
   aid='other';assert.equal(ctx.wxFavoriteRows().length,0);await ctx.wxFavoritePlay(x.id);aid='main';assert.equal(ctx.wxFavoriteRows().length,1);
   messages.a.push({id:'missing',type:'voice',role:'assistant',content:'仅文字'});const noAudio=await ctx.wxFavoriteAdd('a','missing');assert.equal(noAudio.audioState,'missing');played='';await ctx.wxFavoritePlay(noAudio.id);assert.equal(played,'','missing originals must not use TTS or system speech');
+  const full='<html>'+('code'.repeat(8000))+'</html>';messages.a.push({id:'file',type:'file',role:'assistant',name:'game.html',text:full,format:'HTML'});
+  const file=await ctx.wxFavoriteAdd('a','file');assert.equal(file.file.text,full);messages.a=[];assert.equal(ctx.wxFavoriteFind(file.id).file.text,full);aid='other';assert.equal(ctx.wxFavoriteFind(file.id),undefined);aid='main';
+  messages.a.push({id:'partial',type:'file',text:full,truncated:true});assert.equal(await ctx.wxFavoriteAdd('a','partial'),undefined);assert(!ctx.wxFavoriteRows().some(x=>x.mid==='partial'));
   messages.a.push({id:'failure',type:'text',role:'assistant',content:'保存失败'});saved=false;assert.equal(await ctx.wxFavoriteAdd('a','failure'),null);assert.equal(ctx.wxFavoriteRows().some(x=>x.mid==='failure'),false);
  }
 }

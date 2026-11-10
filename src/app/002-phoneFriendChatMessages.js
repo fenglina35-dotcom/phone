@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1909 · 玻璃恢复与伴生刷新及聊天诊断';
+const APP_VER='v1910 · 模型测试与独立流式及文件任务优化';
 //@@ private
-const APP_VER='v1912 · 玻璃恢复与伴生刷新及聊天诊断';
+const APP_VER='v1913 · 模型测试与独立流式及文件任务优化';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

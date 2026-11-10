@@ -85,3 +85,15 @@ for(const file of entries){
   assert.equal(w.calls(),1);assert.equal(w.ctx.NorthRequestDiagnostics.listAll()[0].state,'failed');
  });
 }
+
+for(const file of entries)test(file+' per-slot streaming isolates main aux and explicit overrides',async()=>{
+ const w=load(file);w.ctx.S.settings.chatStreaming=false;w.ctx.S.settings.chat.streaming=true;w.ctx.S.settings.aux.streaming=false;
+ w.set(JSON.stringify({choices:[{message:{content:'正常中文'},finish_reason:'stop'}]}));
+ await w.ctx.chatAPI([],{unfilteredOutput:true});assert.equal(w.requests.at(-1).stream,true);
+ await w.ctx.chatAPI([],{aux:true,unfilteredOutput:true});assert.notEqual(w.requests.at(-1).stream,true);
+ w.ctx.S.settings.chat.streaming=false;w.ctx.S.settings.aux.streaming=true;
+ await w.ctx.chatAPI([],{aux:true,unfilteredOutput:true});assert.equal(w.requests.at(-1).stream,true);
+ await w.ctx.chatAPI([],{unfilteredOutput:true});assert.notEqual(w.requests.at(-1).stream,true);
+ await w.ctx.chatAPI([],{aux:true,stream:false,unfilteredOutput:true});assert.notEqual(w.requests.at(-1).stream,true);
+ assert.equal(w.ctx.S.settings.chatStreaming,false);
+});
