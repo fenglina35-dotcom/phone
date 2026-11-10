@@ -68,8 +68,13 @@ test('private actual glass paints pixels, reveals canvas through native fallback
  const wall='data:image/png;base64,'+fs.readFileSync('assets/meituan-kangaroo.png').toString('base64');
  await page.evaluate(wall=>{S.me.uiMaterial='glass';S.me.homeBg=wall;S.me.liquidGlass={on:true};render();document.documentElement.classList.add('north-native-app','north-glass-ui');},wall);
  await page.waitForFunction(()=>document.querySelector('#homeDesktop canvas.lg-canvas'));
- const painted=await page.evaluate(()=>{const cv=document.querySelector('#homeDesktop canvas.lg-canvas'),host=cv.parentElement,pixels=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;return{width:cv.width,nonzero:pixels.some(v=>v>0),background:getComputedStyle(host).backgroundColor,image:getComputedStyle(host).backgroundImage,pointer:getComputedStyle(cv).pointerEvents,glFailed:_lg.failed,privateOn:privateNativeAppOn()};});
+ const paintedHandle=await page.waitForFunction(()=>{const cv=document.querySelector('#homeDesktop canvas.lg-canvas');if(!cv)return false;const host=cv.parentElement,pixels=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;return{width:cv.width,nonzero:pixels.some(v=>v>0),background:getComputedStyle(host).backgroundColor,image:getComputedStyle(host).backgroundImage,pointer:getComputedStyle(cv).pointerEvents,glFailed:_lg.failed,privateOn:privateNativeAppOn()};});const painted=await paintedHandle.jsonValue();
  assert(painted.width>0&&painted.nonzero);assert.equal(painted.glFailed,false);assert.equal(painted.privateOn,true);assert.equal(painted.background,'rgba(0, 0, 0, 0)');assert.equal(painted.image,'none');assert.equal(painted.pointer,'none');
+ // Exercise the direct swipe path with an already attached lens and a failed GPU draw.
+ await page.evaluate(()=>{window.savedGlassDraw=lgDraw;lgDraw=()=>false;document.querySelectorAll('#homeDesktop canvas.lg-canvas').forEach(cv=>cv._lgShift=NaN);lgSwipeFrame(true);});
+ assert.equal(await page.locator('#appswipe canvas.lg-canvas').count(),0);
+ await page.evaluate(()=>{lgDraw=window.savedGlassDraw;lgResumeRedraw(true);});
+ await page.waitForFunction(()=>document.querySelector('#homeDesktop canvas.lg-canvas'));
  await page.evaluate(()=>{go('settings');lgOpen();});assert((await page.locator('.modal').innerText()).includes('液态玻璃'));assert.equal(await page.locator('.modal input[type=range]').count(),11);
  await page.evaluate(()=>{lgSet('on',false);closeModal();home();render();});await page.waitForFunction(()=>!document.querySelector('#homeDesktop canvas.lg-canvas'));assert.deepEqual(errors,[]);
  await page.close();}finally{await browser.close();}

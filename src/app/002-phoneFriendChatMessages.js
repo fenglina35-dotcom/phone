@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1908 · 角色代码助手与独立游戏运行';
+const APP_VER='v1909 · 玻璃恢复与伴生刷新及聊天诊断';
 //@@ private
-const APP_VER='v1911 · 角色代码助手与独立游戏运行';
+const APP_VER='v1912 · 玻璃恢复与伴生刷新及聊天诊断';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

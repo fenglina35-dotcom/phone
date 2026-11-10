@@ -109,7 +109,7 @@ function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);
   document.getElementById('cfmYes').onclick=()=>done(true);});}
 function askConfirm(msg,onYes,opt){uiConfirm(msg,opt).then(v=>{if(v){try{onYes&&onYes();}catch(e){}}});}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal'&&!_phoneNoticeRequired)closeModal();});
-function openChat(id){wxChatRestore('role:'+id);const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');_scrollBottomOnce['chat:'+id]=Date.now();go('chat',{id});}
+function openChat(id){if(typeof window!=='undefined'&&window.NorthBrowserDiagnostics&&typeof window.NorthBrowserDiagnostics.mark==='function')window.NorthBrowserDiagnostics.mark('chat-open-start');wxChatRestore('role:'+id);const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}if(lockClearTarget({type:'chat',id},true))save(500);stack=stack.filter(s=>s.p!=='chat');_scrollBottomOnce['chat:'+id]=Date.now();go('chat',{id});if(typeof window!=='undefined'&&window.NorthBrowserDiagnostics&&typeof window.NorthBrowserDiagnostics.mark==='function')window.NorthBrowserDiagnostics.mark('chat-open-ready');}
 
 /* ---------- 备份 ---------- */
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);

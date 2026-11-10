@@ -53,6 +53,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1912 / web v1909",scope:"both",least:1,name:"玻璃恢复状态不被历史失败永久覆盖",marker:"HOME_GLASS_HEALTH_RECOVERY_V1"},
+  {release:"private v1912 / web v1909",scope:"private",least:1,name:"前台伴生低频补读并保持性能保护",marker:"COMPANION_FOREGROUND_FRESH_V1"},
+  {release:"private v1912 / web v1909",scope:"both",least:1,file:"browser-diagnostics.js",name:"聊天输入遮挡与Safari错误来源诊断",marker:"CHAT_INPUT_DIAGNOSTIC_V1"},
   {release:"private v1911 / web v1908",scope:"both",least:1,file:"app.js",name:"私人独立游戏窗口入口",marker:"code.game.open"},
   {release:"private v1911 / web v1908",scope:"both",least:1,file:"app.js",name:"专用代码模型完整文件与分段恢复及账号隔离",marker:"CODE_FILE_WORKFLOW_V1"},
   {release:"private v1910 / web v1907",scope:"both",least:1,file:"pixel-home.js",name:"像素小屋仅打开且可见时调用选衣，关闭不后台消耗",marker:"PIXEL_HOME_OPEN_ONLY_V1"},
@@ -2071,3 +2074,5 @@ test('APNs environment recovery only follows an explicit BadDeviceToken rejectio
 
 // 角色扮演复用约会页面，但剧情、存档与身份保持独立。
 test('roleplay keeps date surface, strict narration and archive-before-summary in both bundles',()=>{for(const file of [WEB,PRIVATE]){const app=read(file);for(const marker of ['ROLEPLAY_DATE_PAGE_V1','ROLEPLAY_SHARED_DATE_SURFACE_V2','ROLEPLAY_ARCHIVE_FIRST_V1','ROLEPLAY_FORMAT_SPLIT_V1','ROLEPLAY_COHAB_FORMAT_V1','ROLEPLAY_END_MESSAGE_V1','ROLEPLAY_TOUCH_SILENT_V1','ROLEPLAY_NATURAL_PLOT_V1','ROLEPLAY_INLINE_BOUNDARY_V1','ROLEPLAY_REASONING_ISOLATE_V1','ROLEPLAY_SAVE_SLOTS_V1','rpSummarizeArchive','rp-date-stage'])assert(app.includes(marker),file+': '+marker);}});
+
+test('chat input diagnostics ship identically in both bundles',()=>assert.equal(read('browser-diagnostics.js'),read(PRIVATE_DIR+'browser-diagnostics.js')));

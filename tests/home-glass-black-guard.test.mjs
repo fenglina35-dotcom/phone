@@ -55,3 +55,20 @@ for (const [label, file] of BUNDLES) {
     assert.equal(r.state, 'warn'); assert.match(r.why, /画出来是纯黑/);
   });
 }
+
+for (const [label,file] of BUNDLES) {
+ const src=read(file);
+ test(label+' swipe redraw failure removes the old lens and schedules recovery',()=>{
+  const cv={_lgShift:0,_lgScale:1},host={_lgGeo:{x:0,y:0}};cv.parentElement=host;
+  const page={querySelectorAll:()=>[cv]},sw={clientWidth:390,scrollLeft:30,querySelectorAll:()=>[page]};
+  let dropped=0,retry=0;
+  const ctx=vm.createContext({document:{getElementById:id=>id==='homeDesktop'?{}:sw},_lg:{texs:new Map([['wall',{}]])},lgActive:()=>true,lgWallSrc:()=> 'wall',lgCfg:()=>({}),lgDraw:()=>false,lgDropLens:()=>dropped++,lgSoon:()=>retry++,_lgSwipeRaf:0});
+  vm.runInContext(fnSource(src,'lgSwipeFrame'),ctx);ctx.lgSwipeFrame(true);
+  assert.equal(dropped,1);assert.equal(retry,1);
+ });
+ test(label+' recovered glass history does not remain a current fault',async()=>{
+  const i=src.indexOf('async glass(){'),body=src.slice(i,src.indexOf('},\n',i)+1);
+  const ctx=vm.createContext({Date,fmtDT:()=>'',lgDiagRows:()=>[{at:Date.now()-5000,detail:'旧失败'}],_lg:{homeHealth:{ok:true,at:Date.now()}}});
+  vm.runInContext('this.check={'+body+'}.glass;',ctx);assert.equal((await ctx.check()).state,'ok');
+ });
+}

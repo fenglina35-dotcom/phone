@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const base=new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/',import.meta.url);
-const app=fs.readFileSync(new URL('PhoneWeb.bundle/app.js',base),'utf8');
+import {read,fnSource,PRIV_DIR} from './_helpers.mjs';
+const app=read(PRIV_DIR+'app.js');
 const wellness=fs.readFileSync(new URL('CompanionWellnessService.swift',base),'utf8');
 const sync=fs.readFileSync(new URL('CompanionSyncView.swift',base),'utf8');
 function harness(){
@@ -44,4 +45,17 @@ test('passive panel health respects native authorization and sixty second thrott
  assert.match(sync,/if wantsHealth, !wellnessReadCompleted, !passiveHealthRefresh/);
  assert.match(sync,/wellnessReadCompleted && healthWasRead/);
  assert.match(sync,/if wantsHealth \{\s*wellnessReadCompleted = await refreshWellnessWithTimeout/);
+});
+
+test('stale allowed companion data refreshes outside couple page with cooldown and background protection',async()=>{
+ const st={linked:true,permissions:{location:true,screenTime:true},location:{ts:1},usageGeneratedAt:1},calls=[];
+ const ctx=vm.createContext({S:{couple:{companion:st}},Date,document:{hidden:false},_companionPollBusy:false,_companionPollAt:0,_companionPanelHealthPending:false,_couTab:1,
+ northNativeMaintenancePaused:()=>false,companionLocalNativeAvailable:()=>true,companionState:()=>st,companionPollMinDelay:()=>60000,
+ companionSnapshotPersistSignature:()=>'',companionNativeSnapshot:async focus=>{calls.push(focus);return st;},cur:()=>({p:'chat'})});
+ if(app.includes('function companionAutoRefreshFocus('))vm.runInContext(fnSource(app,'companionAutoRefreshFocus'),ctx);
+ vm.runInContext(fnSource(app,'companionPollSnapshot'),ctx);
+ await ctx.companionPollSnapshot(false);assert.match(calls[0],/定位/);assert.match(calls[0],/屏幕/);
+ ctx._companionPollAt=0;await ctx.companionPollSnapshot(false);assert.equal(calls[1],'状态');
+ ctx.document.hidden=true;ctx._companionPollAt=0;await ctx.companionPollSnapshot(false);assert.equal(calls.length,2);
+ ctx.document.hidden=false;st.permissions={location:false,screenTime:false};ctx._companionPollAt=0;await ctx.companionPollSnapshot(false);assert.equal(calls[2],'状态');
 });
