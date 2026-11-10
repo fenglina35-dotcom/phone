@@ -3524,3 +3524,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-09 角色代码助手发布：提交d6e9566f，网页v1908/私人v1911/iOS1.0.557(557)。升版前后全量5147/5147均通过，普通与查岗双端核心门禁通过。Release编译成功、签名通过、1915个PhoneWeb资源与提交逐字节Git对象核验一致。devicectl已安装并读回com.qianyi.PhoneCompanionTest/1.0.557/557。私人游戏窗口真实交互与付费模型尚待用户测试，安装验证不替代功能验收。
 
 2026-11-09 网页发布已核验：a144c733推送main成功，GitHub Pages任务42658490739 completed/success。线上app.js、小手机.html、index.html、sw.js与提交逐字节一致，网页v1908。私人iOS557已先安装并读回。仅清理本轮两张测试产物与空.codex_tmp，保留.claude/launch.json及用户模拟预览。
+
+2026-11-10 私人安装：功能提交f9213da5，私人v1912 / iOS1.0.558(558)、网页源码v1909未推送。升版前5160/5160通过；升版后5158通过、2项因未提交升版而跳过，提交后两项补跑通过；普通/查岗双端核心门禁pageErrors0。Release BUILD SUCCEEDED，codesign核验通过，1915个PhoneWeb资源与提交逐个Git blob核验一致。devicectl覆盖安装成功，并从0000的iPhone读回com.qianyi.PhoneCompanionTest/1.0.558/558；安装不等于真机功能验收。玻璃与伴生效果待用户测试，网页卡顿根因待新版诊断。遵从本次先提交安装，未推送网页。后续功能另行开发。
