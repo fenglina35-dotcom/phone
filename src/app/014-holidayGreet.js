@@ -95,7 +95,12 @@ function xFab(){openModal(`<h3>发布</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();xCompose()">我发一条推</button>
   <button class="btn g" style="margin-bottom:8px" onclick="closeModal();genContactTweet()">让角色发一条推</button>
   <button class="btn g" onclick="closeModal();genNetTweets('')">刷新网友动态</button>
+  <button class="btn g" style="margin-top:8px" onclick="xClearOpen()">清除动态</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+/* X_BATCH_CLEAR_V1 */
+let _xClearDraft=null;
+function xClearOpen(){const rows=S.x.tweets||[],owners=[...new Set(rows.map(t=>t.who||'net'))];_xClearDraft={state:S,account:actId(),x:S.x};openModal(`<h3>清除X动态</h3><div class="field"><label>清除谁的动态</label><select id="x_clear_owner"><option value="*">全部（${rows.length}条）</option>${owners.map(id=>{const c=getC(id);return `<option value="${esc(id)}">${esc(id==='me'?'我的':id==='net'?'网友':c?(c.remark||c.name):'已删除角色')}（${rows.filter(t=>(t.who||'net')===id).length}条）</option>`;}).join('')}</select></div><div class="hint">清除动态及其评论、点赞，保留私信。</div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn d" onclick="xClearConfirm()">清除</button></div>`);}
+async function xClearConfirm(){const d=_xClearDraft,el=document.getElementById('x_clear_owner');if(!d||d.state!==S||d.account!==actId()||d.x!==S.x||!el)return;const owner=el.value,rows=d.x.tweets.filter(t=>owner==='*'||(t.who||'net')===owner);if(!rows.length)return toast('没有可清除的动态');if(!await uiConfirm('确定清除选中的 '+rows.length+' 条动态？删除后无法恢复。',{yes:'清除',no:'保留',danger:true}))return;if(d.state!==S||d.account!==actId()||d.x!==S.x)return toast('账号已切换，未清除');const selected=new Set(rows),removed=[],oldLog=d.x._mylog,oldDeleted=d.x.deletedTweetIds&&d.x.deletedTweetIds.slice();d.x.tweets=d.x.tweets.filter((t,i)=>{if(!selected.has(t))return true;removed.push({t,i});return false;});rows.forEach(xForgetTweet);try{if(await saveNowAsync()===false)throw Error('保存失败');}catch(_){for(const {t,i} of removed)if(!d.x.tweets.includes(t))d.x.tweets.splice(Math.min(i,d.x.tweets.length),0,t);d.x._mylog=oldLog;d.x.deletedTweetIds=oldDeleted;return toast('清除未保存，已恢复，请重试');}if(d.state!==S||d.account!==actId())return;closeModal();render();toast('已清除 '+removed.length+' 条动态');}
 function xtb(k,t){return `<div class="xt ${xTab===k?'on':''}" onclick="xTab='${k}';render()">${t}</div>`;}
 let _feedTab='follow';
 function xFeed(){let ts=[...S.x.tweets].filter(t=>!S.x.blocked.includes(t.name)).sort((a,b)=>b.time-a.time);

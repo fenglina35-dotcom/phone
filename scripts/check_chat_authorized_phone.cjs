@@ -42,6 +42,15 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    openChat(role.id);
   });
 
+  if(process.env.NORTH_FIVE_FIXES==='1'){
+   await page.evaluate(()=>{pushMsg(testId,{id:'yellow-file-check',role:'assistant',type:'file',name:'游戏.html',text:'<!doctype html><html><body>游戏</body></html>',time:Date.now()});openChat(testId);});
+   const icon=page.locator('.chat-file-yellow').last();assert.equal(await icon.innerText(),'HTML');assert.equal(await icon.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(228, 155, 62)');
+   await icon.click();assert(await page.locator('#modalSheet').getByRole('button',{name:'复制全文',exact:true}).count());await page.evaluate(()=>closeModal());
+   await page.evaluate(()=>{S.x.tweets=[{id:'one',who:'me',name:S.me.name,text:'自己',time:Date.now()},{id:'two',who:testId,name:getC(testId).name,text:'角色',time:Date.now()}];openX();xFab();});
+   await page.getByRole('button',{name:'清除动态',exact:true}).click();await page.locator('#x_clear_owner').selectOption(await page.evaluate(()=>testId));
+   const ids=await page.evaluate(async()=>{const original=uiConfirm;uiConfirm=async()=>true;try{await xClearConfirm();return S.x.tweets.map(t=>t.id);}finally{uiConfirm=original;}});assert.deepEqual(ids,['one']);
+   await page.evaluate(()=>openChat(testId));
+  }
   if(process.env.NORTH_FILE_MENU_PREVIEW==='1'){
    await page.evaluate(()=>{getC(testId).remark='克劳德先生';pushMsg(testId,{id:'file-menu-preview',role:'assistant',type:'file',name:'打地鼠.html',format:'HTML',text:'<!doctype html><html><body>打地鼠小游戏</body></html>',time:Date.now()});openChat(testId);});
    const file=page.locator('[data-message-id="file-menu-preview"] .col');await file.scrollIntoViewIfNeeded();const box=await file.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+20);await page.mouse.down();await page.waitForTimeout(650);await page.mouse.up();assert(await page.getByRole('heading',{name:'消息操作',exact:true}).isVisible());assert(await page.getByRole('button',{name:'☆ 收藏',exact:true}).isVisible());

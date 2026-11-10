@@ -39,3 +39,6 @@ for (const [label, file] of BUNDLES) {
   assert.match(fnSource(src, 'lgAfterRender'), /if\(!was\)\{lgFreeCache\(\);desk\.querySelectorAll\('canvas\.lg-canvas'\)\.forEach\(c=>\{c\.dataset\.lgKey='';\}\);/, `${label}: coming back to home redraws fresh`);
 }
 console.log('home glass fresh tests passed');
+
+// Returning from background must discard wallpaper textures too, even if GL reports healthy.
+for(const [label,file] of BUNDLES){let deleted=0;const textures=new Map([['wall',{tex:{}}]]),c=vm.createContext({_lg:{texs:textures,gl:{deleteTexture(){deleted++;}},cache:new Map()},document:{hidden:false,querySelectorAll:()=>[]},lgActive:()=>true,lgFreeCache(){},lgSoon(){},lgDropLens(){}});vm.runInContext(fnSource(read(file),'lgResumeRedraw'),c);c.lgResumeRedraw(true);assert.equal(textures.size,0,label+': stale GPU wallpaper must be reuploaded');assert.equal(deleted,1);}

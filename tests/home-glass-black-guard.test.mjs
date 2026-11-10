@@ -49,7 +49,7 @@ for (const [label, file] of BUNDLES) {
     assert.ok(i > 0, '缺少 glass 检查');
     const ctx = vm.createContext({ fmtDT: () => '11-02 20:00', Date, lgDiagRows: () => [] });
     vm.runInContext('this.check={' + body + '}.glass;', ctx);
-    assert.equal((await ctx.check()).state, 'ok');
+    assert.equal((await ctx.check()).state, 'skip', 'absence of evidence is not a fresh successful draw');
     ctx.lgDiagRows = () => [{ at: Date.now(), kind: 'black', detail: '画出来是纯黑' }];
     const r = await ctx.check();
     assert.equal(r.state, 'warn'); assert.match(r.why, /画出来是纯黑/);

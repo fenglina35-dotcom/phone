@@ -91,3 +91,12 @@ test('batch moments deletion protects other accounts, new posts and rollback',as
  state.moments=[mine,role,other];saved=false;ctx.uiConfirm=async()=>true;await ctx.momentClearConfirm();assert.deepEqual(state.moments,[mine,role,other]);
  saved=true;ctx.uiConfirm=async()=>{account='other';return true;};await ctx.momentClearConfirm();assert.deepEqual(state.moments,[mine,role,other]);}
 });
+
+ test('X batch deletion keeps new tweets and cancels across account switches',async()=>{
+ const vm=await import('node:vm'),{read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+ for(const [,bundle] of BUNDLES){const old={id:'a',who:'role'},mine={id:'b',who:'me'},fresh={id:'c',who:'role'},x={tweets:[old,mine],dms:[{id:'dm'}]},S={x};let account='main';
+ const c=vm.createContext({S,Set,document:{getElementById:()=>({value:'role'})},actId:()=>account,uiConfirm:async()=>{x.tweets.push(fresh);return true;},saveNowAsync:async()=>true,xForgetTweet(){},toast(){},closeModal(){},render(){}});
+ vm.runInContext('let _xClearDraft={state:S,account:"main",x:S.x};'+fnSource(read(bundle),'xClearConfirm'),c);await c.xClearConfirm();assert.deepEqual(x.tweets,[mine,fresh]);assert.equal(x.dms.length,1);
+ x.tweets=[old,mine];c.uiConfirm=async()=>{account='other';return true;};await c.xClearConfirm();assert.deepEqual(x.tweets,[old,mine]);
+ }
+ });

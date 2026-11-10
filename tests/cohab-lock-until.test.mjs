@@ -46,7 +46,7 @@ function load(file) {
     cohabPhoneTarget: () => '', cohabRunPhoneInspection() {},
     roleInterceptDiagnosticAction() {}, roleInterceptDiagnosticTurnRememberFailure() {},
   };
-  c.window.SmallPhoneNative = { request: (cmd, body) => { native.push([cmd, body]); return Promise.resolve(); } };
+  c.window.SmallPhoneNative = { request: (cmd, body) => { native.push([cmd, body]); return Promise.resolve({scheduled:true}); } };
   vm.createContext(c);
   vm.runInContext(source.slice(start, end), c);
   vm.runInContext(fnSource(source, 'cohabApplyPhoneTags'), c);
@@ -55,13 +55,14 @@ function load(file) {
 }
 
 for (const file of FILES) {
-  test(file + ': a 共同生活 lock records its unlock time and tells the iPhone', () => {
+  test(file + ': a 共同生活 lock records its unlock time and tells the iPhone', async () => {
     const { c, dispatched, native } = load(file);
     const role = { id: 'r1', name: '先生', remark: '先生' };
     const before = Date.now();
     const out = c.cohabApplyPhoneTags('他把手机扣在桌上。\n[共同生活锁定|抖音|2小时]', role, {}, { schedule: false });
     assert.equal(out.text, '他把手机扣在桌上。', 'the tag never reaches the scene');
     assert.deepEqual(dispatched, [['lock', '抖音']], 'the lock goes out for the app alone, without the time segment');
+    await new Promise(resolve=>setImmediate(resolve));
     const at = c.S.couple.lockUntil && c.S.couple.lockUntil['ext:ios.douyin'];
     assert.ok(at >= before + 2 * 3600e3 - 5e3 && at <= Date.now() + 2 * 3600e3 + 5e3, 'two hours from now is recorded');
     assert.deepEqual(native.map(r => r[0]), ['device.autoUnlock'], 'the shield shows the time and the iPhone reopens the app by itself');
@@ -69,10 +70,11 @@ for (const file of FILES) {
     assert.equal(native[0][1].unlockAt, at);
   });
 
-  test(file + ': a 线下 lock without a time still gets one (the role\'s words, else the next 07:00)', () => {
+  test(file + ': a 线下 lock without a time still gets one (the role\'s words, else the next 07:00)', async () => {
     const { c } = load(file);
     const role = { id: 'r1', name: '先生' };
     c.cohabApplyPhoneTags('明天中午再给你开。\n[线下锁定|X]', role, {}, { schedule: false });
+    await new Promise(resolve=>setImmediate(resolve));
     const at = c.S.couple.lockUntil && c.S.couple.lockUntil['ext:ios.x'];
     assert.ok(at > Date.now(), 'an unlock time is always set');
     const d = new Date(at);

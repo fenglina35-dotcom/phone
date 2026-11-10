@@ -54,6 +54,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"双模式测试需确认且不改配置",marker:"MODEL_PROBE_MODES_V1"},
+  {release:"private v1914 / web v1911",scope:"both",least:1,name:"聊天黄色文件样式",marker:"chat-file-yellow"},
+  {release:"private v1914 / web v1911",scope:"both",least:1,name:"X按作者批量清除",marker:"X_BATCH_CLEAR_V1"},
+  {release:"private v1914 / web v1911",scope:"both",least:1,name:"更新解锁时间须设备确认",marker:"LOCK_TIME_RECEIPT_V1"},
+  {release:"private v1914 / web v1911",scope:"both",least:1,name:"后台恢复重传玻璃纹理",marker:"HOME_GLASS_TEXTURE_RESUME_V1"},
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"单次确认双模式测试与模型流式隔离",marker:"MODEL_STREAM_ISOLATION_V1"},
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"模型测试验证实际正文与结束状态防止误报",marker:"MODEL_PROBE_VALIDATION_V1"},
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"电话保存原声并复用回放导出",marker:"VOICE_CALL_REPLAY_V1"},

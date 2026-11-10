@@ -854,7 +854,8 @@ async function roleMessage(
               const decision = parseRoleAppDecision(text);
               if (decision) return { kind: "message", body: decision.body,
                 failureBody: decision.failureBody, appAction: decision.action };
-              return { kind: "message", body: text, appAction: "remind" };
+              // ROLE_LOCK_RECEIPT_V1: malformed tool output is not a reminder or a lock receipt.
+              return { kind: "unavailable", body: "", reason: "invalid-app-decision" };
             }
             if (effectiveAllowSilent && /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text.trim())) return { kind: "silent", body: "" };
             return { kind: "message", body: text };
@@ -1603,6 +1604,7 @@ async function persistAndPush(
 ) {
   // App-decision protocol is never chat content, even when a model puts it last.
   // Keep mood metadata in the outbox; APNs strips it separately.
+  if (/[\[【]\s*锁定(?:成功|失败)\s*[\]】]/.test(String(body || ""))) return false;
   body = String(body || "").replace(/[\[【]\s*(?:保持安静|不说话|沉默|不回)\s*[\]】]/g, "").replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').trim();
   if (!body) return true;
   const { data: outbox, error } = await client.from("phone_role_push_outbox").upsert({
@@ -2158,8 +2160,11 @@ Deno.serve(async (request) => {
           : null;
         const commandStatus = String(command?.status || "");
         const elapsed = Date.now() - snapshotTime(command?.created_at || earlyInspect.startedAt);
-        const completed = commandStatus === "completed";
-        const failed = ["failed", "expired", "canceled", "superseded"].includes(commandStatus) || elapsed >= 15 * 60_000;
+        const receiptLink = commandStatus === "completed"
+          ? (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data : null;
+        const completed = commandStatus === "completed" && snapshotApps((receiptLink?.snapshot || {}) as Record<string, unknown>)
+          .some(app => String(app.id || "") === String(earlyInspect.appId || "") && app.locked === true);
+        const failed = commandStatus === "completed" && !completed || ["failed", "expired", "canceled", "superseded"].includes(commandStatus) || elapsed >= 15 * 60_000;
         if (!completed && !failed) {
           await client.from("phone_role_push_profiles").update({
             claimed_until: null, next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),

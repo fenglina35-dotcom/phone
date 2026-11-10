@@ -31,11 +31,11 @@ for (const [app, css, me] of [['app.js', 'glass-theme.css', 'wechat-me.js'], [PB
   test(app + ': home glass is redrawn when the app comes back', () => {
     const canvases = [{ dataset: { lgKey: 'k1' } }, { dataset: { lgKey: 'k2' } }];
     let soon = 0;
-    const ctx = { document: { hidden: false, querySelectorAll: () => canvases }, lgActive: () => true, lgSoon: () => { soon++; }, _lg: { failed: true, cache: new Map([['k1', {}]]) } };
+    const ctx = { document: { hidden: false, querySelectorAll: () => canvases }, lgActive: () => true, lgSoon: () => { soon++; }, _lg: { failed: true, texs:new Map(), cache: new Map([['k1', {}]]) } };
     vm.createContext(ctx); vm.runInContext(fn(s, 'lgDropLens')+'\n'+fn(s, 'lgResumeRedraw'), ctx);
     ctx.lgResumeRedraw();
     assert.equal(ctx._lg.cache.size, 0); assert.equal(ctx._lg.failed, false); assert.equal(canvases[0].dataset.lgKey, ''); assert.equal(soon, 1);
-    assert(s.includes("document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(lgResumeRedraw,250);});"));
+    assert(s.includes("document.addEventListener('visibilitychange',()=>{if(document.hidden)_lg.homeHealth=null;else setTimeout(lgResumeRedraw,250);});"));
   });
   const bday = () => {
     const ctx = { S: { me: { name: 'North', birthday: '1999-10-30' }, couple: { cid: 'r1', anniversaries: [] }, contacts: [] }, calls: [], F: {} };

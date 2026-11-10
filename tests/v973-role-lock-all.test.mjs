@@ -126,7 +126,7 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
     { action: 'unlock', id: 'wechat', scope: 'internal' },
   ]);
   assert.match(functionSource('companionDispatchRoleExternal'), /companionSendCommand\(st,action,app/);
-  assert.match(functionSource('companionSendCommand'), /companionNativeCommandRun\(command\)/);
+  assert.match(functionSource('companionSendCommand'), /companionNativeCommandRun\(command,\(\)=>!log\|\|log.status==='pending'\)/);
   assert.match(functionSource('companionNativeCommandRun'), /SmallPhoneNative\.request\('device\.command',command\)/);
 });
 

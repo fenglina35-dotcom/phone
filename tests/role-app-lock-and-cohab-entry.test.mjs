@@ -12,6 +12,14 @@ const content = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const shield = read('native/private-small-phone/XcodeProject/PhoneCompanionShield/ShieldConfigurationExtension.swift');
 const monitor = read('native/private-small-phone/XcodeProject/PhoneCompanionMonitor/DeviceActivityMonitorExtension.swift');
 
+test('malformed background lock protocol never becomes a successful plain reminder',async()=>{
+ const {stripTypeScriptTypes}=await import('node:module'),{read:fixtureRead}=await import('./_helpers.mjs');
+ const source=fixtureRead('supabase/functions/phone-role-push/index.ts'),js=stripTypeScriptTypes(source.slice(0,source.indexOf('Deno.serve(')).replace(/^import .*;\r?$/gm,''),{mode:'strip'});
+ const c=vm.createContext({console,URL,Date,Intl,AbortController,setTimeout,clearTimeout,Deno:{env:{get:()=>''}},fetch:async()=>({ok:true,json:async()=>({choices:[{message:{content:'[应用处理|锁定]\n[锁定成功]我已经锁好了。'},finish_reason:'stop'}]})})});vm.runInContext(js,c);
+ const result=await c.roleMessage({role_name:'角色',user_name:'对方',time_aware:false,message_min:1,message_max:4,automation_config:{modelOutputUnfiltered:true,modelRoute:{base:'https://fixture.invalid/v1',key:'fixture',model:'fixture'}}},[],'','',false,false,true);
+ assert.equal(result.kind,'unavailable');assert.equal(result.body,'');
+});
+
 function functionSource(source,name){
   const start=source.indexOf(`function ${name}(`);
   assert.notEqual(start,-1,`missing ${name}`);

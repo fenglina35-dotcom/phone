@@ -1906,7 +1906,7 @@ final class CompanionSyncService: ObservableObject {
             let result: String
             var reportForReceipt = latestDirectUsageSnapshot
             do {
-                result = try await applyRemoteCommand(
+                result = try await applyRemoteCommandWithRetry(
                     row.command,
                     locationManager: locationManager
                 )
@@ -1981,6 +1981,26 @@ final class CompanionSyncService: ObservableObject {
         }
 
         return appliedCount
+    }
+
+    // ROLE_LOCK_RECEIPT_V1: same command, at most three attempts; no new model call.
+    private func applyRemoteCommandWithRetry(
+        _ command: RemoteCommand,
+        locationManager: LocationManager
+    ) async throws -> String {
+        for attempt in 0..<3 {
+            do { return try await applyRemoteCommand(command, locationManager: locationManager) }
+            catch {
+                let message = error.localizedDescription
+                let transient = message.contains("本地屏蔽配置写入失败")
+                    || message.localizedCaseInsensitiveContains("temporarily")
+                    || message.localizedCaseInsensitiveContains("busy")
+                guard command.action == "lock", attempt < 2, transient,
+                      !message.contains("授权"), !Task.isCancelled else { throw error }
+                try await Task.sleep(nanoseconds: 360_000_000)
+            }
+        }
+        throw CompanionSyncError.message("锁定未完成")
     }
 
     private func applyRemoteCommand(
@@ -2535,14 +2555,10 @@ final class CompanionSyncService: ObservableObject {
 
     func scheduleAutoUnlock(externalID: String, at date: Date) -> Bool {
         guard let token = token(forExternalID: externalID),
+              effectiveLockedTokens().contains(token), date > Date(),
               let tokenData = try? JSONEncoder().encode(token) else { return false }
         var map = autoUnlockMap()
-        map[externalID] = date.timeIntervalSince1970
-        sharedDefaults?.set(map, forKey: autoUnlockKey)
-        sharedDefaults?.set(tokenData, forKey: autoUnlockTokenPrefix + externalID)
-        sharedDefaults?.synchronize()
         let name = autoUnlockActivity(externalID)
-        activityCenter.stopMonitoring([name])
         // DeviceActivity needs at least 15 minutes; a shorter lock is released by the app's own check.
         let start = Date()
         let end = max(date, start.addingTimeInterval(15 * 60 + 30))
@@ -2553,6 +2569,11 @@ final class CompanionSyncService: ObservableObject {
             repeats: false
         )
         do { try activityCenter.startMonitoring(name, during: schedule) } catch { return false }
+        // LOCK_TIME_RECEIPT_V1: do not advertise the new deadline before scheduling succeeds.
+        map[externalID] = date.timeIntervalSince1970
+        sharedDefaults?.set(map, forKey: autoUnlockKey)
+        sharedDefaults?.set(tokenData, forKey: autoUnlockTokenPrefix + externalID)
+        sharedDefaults?.synchronize()
         return true
     }
 

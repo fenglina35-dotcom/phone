@@ -6,6 +6,30 @@ import vm from 'node:vm';
 // A role's lock always carries an unlock time (default: the next 07:00 at least an hour away) and
 // reopens on its own, in the small phone and on the real iPhone (ROLE_LOCK_UNTIL_V1).
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/';
+test('device timer changes require a positive receipt and preserve old time on failure',async()=>{
+  const {read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+  for(const [,file] of BUNDLES){const s=read(file),old=Date.now()+3600000,next=old+3600000;let response={scheduled:false},calls=0;
+    const c=vm.createContext({S:{couple:{lockUntil:{'ext:ios.a':old}}},actId:()=> 'main',Map,Promise,window:{SmallPhoneNative:{request:async()=>{calls++;return response;}}},companionLocalNativeAvailable:()=>true,save(){},toast(){},sleep:async()=>{},companionNativeCommandRetryable:()=>false});
+    vm.runInContext('let _lockUntilNativeJobs=new Map();'+fnSource(s,'lockUntilNative'),c);
+    assert.equal(await c.lockUntilNative('ios.a',next),false);assert.equal(c.S.couple.lockUntil['ext:ios.a'],old);
+    response={scheduled:true};assert.equal(await c.lockUntilNative('ios.a',next),true);assert.equal(c.S.couple.lockUntil['ext:ios.a'],next);assert.equal(calls,2);
+  }
+});
+test('transient lock retries are capped at three and permission failures are not retried',async()=>{
+  const {read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+  for(const [,file] of BUNDLES){let calls=0;const c=vm.createContext({window:{SmallPhoneNative:{request:async()=>{calls++;throw Error('temporarily busy');}}},sleep:async()=>{}});
+    vm.runInContext(fnSource(read(file),'companionNativeCommandRetryable')+'\n'+fnSource(read(file),'companionNativeCommandRun'),c);
+    await assert.rejects(()=>c.companionNativeCommandRun({action:'lock'}));assert.equal(calls,3);
+    calls=0;c.window.SmallPhoneNative.request=async()=>{calls++;throw Error('missing permission');};await assert.rejects(()=>c.companionNativeCommandRun({action:'lock'}));assert.equal(calls,1);
+    calls=0;await assert.rejects(()=>c.companionNativeCommandRun({action:'lock'},()=>false));assert.equal(calls,0);
+  }
+});
+test('updating an existing lock without a timer changes only its explicit target',async()=>{
+ const {read,fnSource,BUNDLES}=await import('./_helpers.mjs');
+ for(const [,file] of BUNDLES){const now=Date.now(),c=vm.createContext({Date,S:{couple:{locks:{x:{},music:{}},lockUntil:{'int:music':now+3600000}}},LOCKABLE:{x:'X',music:'音乐'},companionState:()=>({apps:[]}),lockUntilFromText:()=>0,lockUntilDefault:()=>now+600000,_appKeys:(target,keys)=>keys.filter(k=>k===target),save(){}});
+ vm.runInContext(fnSource(read(file),'lockUntilCommit'),c);c.lockUntilCommit({items:[{target:'x',at:now+7200000}]},{int:{x:{},music:{}},ext:{}},{},'');assert.equal(c.S.couple.lockUntil['int:x'],now+7200000);assert.equal(c.S.couple.lockUntil['int:music'],now+3600000);
+ }
+});
 function lockUntil(file) {
   const source = fs.readFileSync(file, 'utf8');
   const start = source.indexOf('/* ROLE_LOCK_UNTIL_V1');
