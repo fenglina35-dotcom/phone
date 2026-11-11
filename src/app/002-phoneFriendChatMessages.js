@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1911 · 文件样式与锁定回执及玻璃恢复';
+const APP_VER='v1912 · 任务便签与记忆搜索进度';
 //@@ private
-const APP_VER='v1914 · 文件样式与锁定回执及玻璃恢复';
+const APP_VER='v1915 · 任务便签与记忆搜索进度';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

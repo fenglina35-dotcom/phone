@@ -42,6 +42,21 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    openChat(role.id);
   });
 
+  if(process.env.NORTH_MEMORY_SEARCH_PREVIEW){
+   const out=process.env.NORTH_MEMORY_SEARCH_PREVIEW;
+   const shot=async name=>{if(privateApp)await page.screenshot({path:path.join(out,name+'.png')});};
+   await page.evaluate(()=>{document.getElementById('gate')?.remove();S.me.locked=false;renderLockScreen();const c=getC(testId);c.remark='先生';S.taskNotes={items:[],assigned:[{account:actId(),cid:c.id,id:'preview-task',date:todayStr(),text:'报备',kind:'text',runAt:Date.now()+3600000}]};go('tasks');TaskNotes.tab('today');});
+   assert(await page.getByRole('button',{name:'取消任务'}).isVisible());await shot('assigned-task');
+   await page.evaluate(()=>{const c=getC(testId);c.memory=['我记得她喜欢小猫。','我记得她喜欢吃甜品。'];openChat(testId);editMemory(testId);});
+   const search=page.getByRole('searchbox');await search.fill('小猫');assert.equal(await page.locator('[data-memory-row]:visible').count(),1);await shot('memory-search');
+   await search.fill('甜品');await page.getByRole('button',{name:'编辑记忆'}).last().click();assert((await page.locator('#mi_t').inputValue()).includes('甜品'));
+   await page.evaluate(()=>{const c=getC(testId);S.settings.summaryRounds=5;const aid=memoryScopeKey();const rows=msgsForAccount(testId,aid);rows.splice(0);summaryStateSave(c,aid,0,rows);c.summaries=[{time:'周三 · 傍晚',text:'我记得她想周末一起去花店挑一束花。',imp:4}];for(let i=0;i<2;i++){rows.push({id:'p-u'+i,type:'text',role:'user',content:'去散步吗？'},{id:'p-a'+i,type:'text',role:'assistant',content:'走吧。'});}editSummary(testId);});
+   assert(await page.getByText('距离下次总结还差 3 轮').isVisible());await shot('summary-progress');
+   await page.evaluate(()=>{const d=cohabData(testId);d.settings.summaryRounds=5;d.summarySeq=0;d.msgs=[{cohabSeq:1,who:'me',text:'早'},{cohabSeq:2,who:'ta',text:'早'}];d.summaries=[{id:'one',text:'记得一起买花',imp:4,ts:Date.now()},{id:'two',text:'周末看电影',imp:3,ts:Date.now()}];cohabMemoryOpen(testId);});
+   assert(await page.getByText('距离下次总结还差 4 轮').isVisible());await search.fill('买花');assert.equal(await page.locator('[data-memory-row]:visible').count(),1);await shot('cohab-search');
+   for(const mode of ['date','rp']){await page.evaluate(mode=>{if(mode==='date'){offData(testId).memory=['周末看花','一起散步'];offMemory(testId);}else{rpData(testId).memory=[{text:'一起散步'},{text:'雨夜书店'}];rpMemory(testId,'sum');}},mode);await search.fill('散步');assert.equal(await page.locator('[data-memory-row]:visible').count(),1);await search.fill('没有的词');assert(await page.getByText('没有找到匹配的记录').isVisible());}
+   assert.deepEqual(errors,[]);console.log('任务卡、筛选索引及自动总结进度通过', privateApp?'私人':'网页');await page.close();continue;
+  }
   if(process.env.NORTH_FIVE_FIXES==='1'){
    await page.evaluate(()=>{pushMsg(testId,{id:'yellow-file-check',role:'assistant',type:'file',name:'游戏.html',text:'<!doctype html><html><body>游戏</body></html>',time:Date.now()});openChat(testId);});
    const icon=page.locator('.chat-file-yellow').last();assert.equal(await icon.innerText(),'HTML');assert.equal(await icon.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(228, 155, 62)');

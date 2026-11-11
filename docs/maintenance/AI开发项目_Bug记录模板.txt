@@ -2760,3 +2760,5 @@ MODEL_DAILY_USAGE_V1 request-diagnostics.js 按天按功能累计次数、接着
 2026-11-10 五项修改最终验证：完整5194/5194通过，0失败/跳过。NORTH_FIVE_FIXES双端真实HTML验证黄色file图标、原文件查看入口、X按角色清除，随后普通核心授权聊天全通过、pageErrors=0；NORTH_CHECKIN_PREVIEW双端核心与私人查岗全通过、pageErrors=0。最终保留网页无原生环境的原有本地到点解锁机制，私人更新时间严格等scheduled；差异补完后定向21项含共同生活、定时、跨bundle引用和生成一致性通过。JS/后台TS语法与私人Swift parse通过；未做完整Xcode构建、真实手机长后台恢复或实际目标App屏蔽验收。后台修复尚未部署，网页/私人版本未升版、未提交/安装/推送。对玻璃只能确认恢复缺口修补，不能宣称已根治实机黑块。清理本轮核心测试生成的两张临时证明图及空.codex_tmp目录，保留原.claude和已有固定预览；未新增工作树、源码副本、备份包。
 
 2026-11-10 私人安装核验：代码提交97c89c5c，私人v1914 / iOS1.0.560(560)，网页候选v1911未推送。升版后全量5194项：5192通过、0失败、2项待提交跳过；提交后版本工具/源码一致性4项通过，补齐跳过项。普通及查岗双端核心聊天通过、pageErrors=0。Release从已提交干净源码编译成功，codesign deep strict通过，安装包1915个PhoneWeb.bundle文件与HEAD blob逐一一致。devicectl覆盖安装0000的iPhone成功，并读回com.qianyi.PhoneCompanionTest版本1.0.560、build560。保留原生桥42；本轮未推GitHub/网页、未部署phone-role-push，云端锁定消息修复仍待发布。真实长后台玻璃/锁定使用效果待用户验收；不将编译安装当成实机功能验收。清理本轮两张.codex_tmp测试图及空目录，保留原.claude、固定截图与现有DerivedData。
+
+2026-11-11 私人云 phone-role-push：主动消息每次请求的 max_tokens 固定 4096，原每批 1～8 条设置和公开项目预算不变。线上独立页面读回源码与单行补丁一致，后台定向测试通过。三条残句的原始结束原因未记录，未验证真实模型下一次生成。

@@ -54,6 +54,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"双模式测试需确认且不改配置",marker:"MODEL_PROBE_MODES_V1"},
+  {release:"private v1915 / web v1912",scope:"both",least:1,name:"记忆搜索与实际轮数进度",marker:"function summaryProgressView("},
   {release:"private v1914 / web v1911",scope:"both",least:1,name:"聊天黄色文件样式",marker:"chat-file-yellow"},
   {release:"private v1914 / web v1911",scope:"both",least:1,name:"X按作者批量清除",marker:"X_BATCH_CLEAR_V1"},
   {release:"private v1914 / web v1911",scope:"both",least:1,name:"更新解锁时间须设备确认",marker:"LOCK_TIME_RECEIPT_V1"},

@@ -809,7 +809,7 @@ async function roleMessage(
             body: JSON.stringify({
               model: provider.model,
               temperature: 0.95,
-              max_tokens: Math.min(700, 120 + messageMax * 70),
+              max_tokens: publicNorthCloud() ? Math.min(700, 120 + messageMax * 70) : 4096,
               messages: attemptMessages,
             }),
           });
