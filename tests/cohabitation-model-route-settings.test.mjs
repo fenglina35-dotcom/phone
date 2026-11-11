@@ -60,7 +60,7 @@ test('common-life settings visibly separate models from api routes',()=>{
   };
   vm.runInNewContext([
     functionSource('cohabSettings'),functionSource('cohabModelLabel'),functionSource('cohabApiRouteLabel'),
-    functionSource('cohabSettingsBrief'),functionSource('cohabSettingsPanel'),'globalThis.panel=cohabSettingsPanel;'
+    functionSource('summaryProgressView'),functionSource('cohabSummaryCompletedRounds'),functionSource('cohabSummaryRows'),functionSource('cohabSettingsBrief'),functionSource('cohabSettingsPanel'),'globalThis.panel=cohabSettingsPanel;'
   ].join('\n'),sandbox);
   const html=sandbox.panel('c1',{settings:{replyModel:'role',replyApiRoute:'follow',summaryModel:'reply',summaryApiRoute:'reply'},summaries:[]});
   assert.match(html,/对话模型/);

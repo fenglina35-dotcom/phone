@@ -164,7 +164,7 @@ for(const priv of [false,true]){
  });
  test((priv?'private':'web')+' cohab settings expose existing date-scoped chat deletion without executing deletion',()=>{
   const app=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+base+'app.js'],{encoding:'utf8',maxBuffer:12e6}):fs.readFileSync(new URL('../'+base+'app.js',import.meta.url),'utf8');
-  const line=app.split('\n').find(l=>l.startsWith('function cohabSettingsPanel('));const c={cohabSettings:()=>({}),cohabSettingsBrief:()=>'',getC:()=>null,cohabTogetherScene:()=>false,CHAT_ROUTE_NAMES:[],esc:n=>String(n||''),roleScheduleBrief:()=>'',_offSel:null};vm.createContext(c);vm.runInContext(line+';this.panel=cohabSettingsPanel;',c);assert.match(c.panel('role',{summaries:[]}),/cohab-history-delete[^>]*offDelHistory/);assert.match(app,/function offHistMatch/);assert.match(app,/删除一天前的记录/);assert.match(app,/删除三天前的记录/);assert.match(app,/删除这一天的记录/);
+  const line=app.split('\n').find(l=>l.startsWith('function cohabSettingsPanel('));const c={cohabSettings:()=>({}),cohabSettingsBrief:()=>'',getC:()=>null,cohabTogetherScene:()=>false,CHAT_ROUTE_NAMES:[],esc:n=>String(n||''),roleScheduleBrief:()=>'',_offSel:null};vm.createContext(c);vm.runInContext(['summaryProgressView','cohabSummaryCompletedRounds','cohabSummaryRows'].map(name=>app.split('\n').find(l=>l.startsWith('function '+name+'('))).concat(line,'this.panel=cohabSettingsPanel;').join('\n'),c);assert.match(c.panel('role',{summaries:[]}),/cohab-history-delete[^>]*offDelHistory/);assert.match(app,/function offHistMatch/);assert.match(app,/删除一天前的记录/);assert.match(app,/删除三天前的记录/);assert.match(app,/删除这一天的记录/);
  });
 }
 
