@@ -64,10 +64,10 @@ for (const gone of [
 ]) assert.equal(app.includes(gone), false, `防跳出残留：${gone}`);
 
 // 通话首次请求回到单一路径，拒绝时就地重答，不再切模型
-assert.match(app, /let content=_roleSongPlan\?'\[唱歌\|'\+_roleSongPlan\.id\+'\]':await _callChat\(_initialCallMessages,_md\);/);
+assert.match(app, /let content,_roleSongIntroUnavailable=false;try\{content=await _callChat\(_initialCallMessages,_md\);/);
 assert.match(app, /\{for\(let _ra=0;_ra<2&&isRefusal\(content\);_ra\+\+\)/);
 // 外语通话缺翻译的纠正不再被防跳出挡住
-assert.match(app, /if\(!_roleSongPlan&&!_rawOutput&&_langN&&content\)/);
+assert.match(app, /if\(!_roleSongIntroUnavailable&&!_rawOutput&&_langN&&content\)/);
 
 // 通话系统提示条本身保留（角色手动切换主/副模型仍然可用）
 assert.match(app, /toast\(c\.model==='aux'\?'已切换副模型':'已切换主模型',3000\)/);

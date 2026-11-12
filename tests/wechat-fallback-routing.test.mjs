@@ -12,7 +12,7 @@ assert.ok(visibleStart>=0&&visibleEnd>visibleStart,'visible reply envelope parse
 
 assert.match(source,/具体约会只能使用本轮已选中的一条相关记忆/);
 assert.doesNotMatch(source,/_off\.memory\.map\(offMemText\)/);
-assert.match(source,/let content;if\(_roleSongPlan\)content='\[唱歌\|'\+_roleSongPlan\.id\+'\]';else try\{content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState,c\)/);
+assert.match(source,/let content;try\{content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState,c\)/);
 assert.match(source,/const _replyAudit=roleInterceptDiagnosticTurn\(c,'online',replyAccount,'线上微信'\)/);
 assert.match(source,/_md=\{allowWechatThought:true,roleReplyLanguageGuard:true,routeIndex:_routeIndex,aux:c\.model==='aux',complete:true,unfilteredOutput:_rawOutput,roleInterceptAudit:_replyAudit,roleInterceptStage:'微信回复候选',roleVoiceFormatRepair:true,roleVoiceRequested:_voiceRequired\}/);
 assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(_routeIndex\),roleInterceptStage:'微信纠正候选'\}\)/);

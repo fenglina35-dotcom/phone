@@ -63,7 +63,7 @@ function singingHarness(src){
     playUrl:url=>played.push(url),voiceBarWant:()=>{},save:()=>{},toast:()=>{},msgs:()=>rows,updateCallSub:()=>{},stopCallMediaAudio:why=>stops.push(why),stopBufSource:()=>{},
     playCallMediaWait:async(ab,buf,start,live)=>{if(!live())return false;start();return new Promise(r=>release=r);},setTimeout,clearTimeout,setInterval,clearInterval,
   });
-  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongReadySongs','roleSongRequestPlan','roleSongRequestPlanValid','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
+  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongReadySongs','roleSongRequestPlan','roleSongRequestPlanValid','roleSongAttachPlan','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
   vm.runInContext('const _roleSongConversions=new Map();',cx);cx.fetch=async()=>{throw new Error('unexpected network')};
   cx.VOICE_MAX_SECONDS=60;cx.VOICE_AUDIO_TTL_MS=60000;cx.voiceEstimatedSeconds=()=>5;
   return {cx,stored,played,stops,rows,state,blob,setAccount:x=>account=x,finish:x=>release&&release(x)};
@@ -98,6 +98,15 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   for(const text of ['小星星是谁唱的','发小星星的歌词','我不想听小星星','不要给我唱小星星','别给我放小星星','我想听小星星，但别唱了','我想听小星星，不要语音','我想听乙的歌','给我转账然后唱小星星','我想听小星星歌曲卡片'])assert.equal(cx.roleSongRequestPlan(c,text),null,text);
   const plan=cx.roleSongRequestPlan(c,'我想听小星星');h.state.music.songs.find(s=>s.id==='a1').src={t:'url',url:'https://changed.test/track.mp3'};assert.equal(cx.roleSongRequestPlanValid('a',plan),false);
   assert.ok(cx.roleSongPrompt(c,'我想听小星星','wechat').includes('"id":"a1"'));
+ });
+ test(label+' preserves role introduction and guarantees one selected recording even without a model song tag',()=>{
+  const h=singingHarness(src),cx=h.cx,c=h.state.contacts[0],plan=cx.roleSongRequestPlan(c,'我想听小星星');
+  const intro='[语音|我在，给你唱。]',attached=cx.roleSongAttachPlan(intro,'a',plan);
+  assert.equal(attached,intro+'\n[唱歌|a1]');
+  const duplicated=cx.roleSongAttachPlan(intro+'\n[唱歌|b1]\n[唱歌|a1]','a',plan);assert.equal(duplicated,attached);assert.equal(cx.roleSongAttachPlan(intro+'\n【唱歌｜b1】','a',plan),attached);
+  assert.equal(cx.roleSongAttachPlan(intro,'a',null),intro);
+  const prompt=cx.roleSongPrompt(c,'我想听小星星','wechat',plan);assert.ok(prompt.includes('自然接话'));assert.ok(prompt.includes('一两句'));assert.ok(prompt.includes('"id":"a1"'));
+  h.state.music.songs.find(s=>s.id==='a1').roleSongOwner='b';assert.equal(cx.roleSongAttachPlan(intro,'a',plan),intro);
  });
  test(label+' spoken singing requests bypass ordinary voice coercion without affecting speech',async()=>{
   const h=singingHarness(src),cx=h.cx;

@@ -16,7 +16,7 @@ assert.match(source,/_need\('phone'\)/);
 assert.match(source,/_need\('profile'\)/);
 assert.match(source,/_stableSys=_naturalOn\?buildSystem/,'fallback still needs the complete unified prompt');
 assert.match(source,/natural:true,allModules:true/);
-assert.match(source,/catch\(e\)\{if\(!_naturalOn\|\|_routeState\.fallback\)throw e;/,'an auxiliary fallback must not run twice');
+assert.match(source,/catch\(e\)\{if\(_roleSongPlan\)\{content=roleSongAttachPlan\('',id,_roleSongPlan\);toast\('[^']+'\);\}else\{if\(!_naturalOn\|\|_routeState\.fallback\)throw e;/,'an auxiliary fallback must not run twice');
 assert.match(source,/wechatRoleDrift\(content\)[\s\S]{0,1600}content:_stableSys/,'role drift must retry with the stable prompt');
 
 console.log('WeChat unified natural system tests passed');
