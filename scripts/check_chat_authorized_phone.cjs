@@ -129,7 +129,7 @@ try{parent.document.body.dataset.stolen="yes"}catch(e){document.body.dataset.par
    assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,codeFileFlow:flow,edit,persistence:restored,runtime:privateApp?'isolated native entry request passed with mock; device runtime unverified':'click, isolation and teardown passed',pageErrors:errors.length}));await page.close();continue;
   }
   if(process.env.NORTH_CODE_MODEL_PREVIEW==='1'){
-   await page.evaluate(()=>{window.originalRoleRoute=JSON.stringify(S.settings.chat);openSettings('');});
+   const originalCodeRoleRoute=await page.evaluate(()=>{window.originalRoleRoute=JSON.stringify(S.settings.chat);openSettings('');return originalRoleRoute;});
    assert.equal(await page.getByRole('button',{name:'代码模型 专用于角色委托编写与修改代码 ›',exact:true}).count(),1);
    await page.getByRole('button',{name:'代码模型 专用于角色委托编写与修改代码 ›',exact:true}).click();
    assert(await page.locator('#code_base').isVisible());assert.equal(await page.locator('#modal.show').count(),0);
@@ -145,9 +145,28 @@ try{parent.document.body.dataset.stolen="yes"}catch(e){document.body.dataset.par
    await page.evaluate(()=>{S.me.locked=false;document.getElementById('gate')?.remove();renderLockScreen();openSettings('code');});
    assert.equal(await page.locator('#code_model').inputValue(),'code-fixture');
    assert.equal(await page.evaluate(()=>S.settings.codeModel.key),'fixture-code-only');
+   // Deletions must persist after normal reload and disable paid delegation.
+   for(const field of ['base','key','model','max']){
+    await page.locator('#code_'+field).fill('');await page.getByRole('button',{name:'保存设置',exact:true}).click();
+    assert(await page.evaluate(()=>saveNowAsync()));await page.reload();await page.waitForFunction(()=>window.__northBootReady);
+    await page.evaluate(()=>{S.me.locked=false;document.getElementById('gate')?.remove();renderLockScreen();openSettings('code');});
+    assert.equal(await page.locator('#code_'+field).inputValue(),'');
+    if(field!=='max')assert.equal(await page.evaluate(()=>codeModelConfig().enabled),false);
+   }
+   await page.locator('#code_base').fill('https://fake.invalid/code');await page.locator('#code_key').fill('fixture-code-only');await page.locator('#code_model').fill('code-fixture');
+   await page.getByRole('button',{name:'保存设置',exact:true}).click();
+   await page.getByRole('button',{name:'路线2 · 未配齐',exact:true}).click();assert.equal(await page.locator('#code_key').inputValue(),'');
+   await page.locator('#code_base').fill('https://other.invalid/v1');await page.locator('#code_key').fill('fixture-second');await page.locator('#code_model').fill('second-coder');await page.locator('#code_protocol').selectOption('responses');
+   await page.getByRole('button',{name:'保存设置',exact:true}).click();await page.getByRole('button',{name:'路线1',exact:true}).click();assert.equal(await page.locator('#code_key').inputValue(),'fixture-code-only');assert.equal(await page.locator('#code_protocol').inputValue(),'auto');
+   await page.locator('#code_enabled').uncheck();await page.getByRole('button',{name:'保存设置',exact:true}).click();
+   assert.equal(await page.evaluate(()=>codeTaskPrompt(S.contacts[0])),'');
+   const offProof=await page.evaluate(async()=>{const original=fetchT;let calls=0;fetchT=async()=>{calls++;throw new Error('不应发请求');};try{await codeModelRequest([{role:'user',content:'不应调用'}]);return false;}catch(_){return calls===0;}finally{fetchT=original;}});assert(offProof);
+   assert(await page.evaluate(()=>saveNowAsync()));await page.reload();await page.waitForFunction(()=>window.__northBootReady);await page.evaluate(()=>{S.me.locked=false;document.getElementById('gate')?.remove();renderLockScreen();openSettings('code');});assert.equal(await page.locator('#code_enabled').isChecked(),false);
+   await page.locator('#code_enabled').check();await page.getByRole('button',{name:'保存设置',exact:true}).click();
+   assert.equal(await page.evaluate(()=>JSON.stringify(S.settings.chat)),originalCodeRoleRoute);
    await page.locator('#code_key').fill('');await page.locator('#code_base').fill('https://api.deepseek.com');await page.locator('#code_model').fill('deepseek-v4-pro');
    await page.setViewportSize({width:430,height:1000});
-   await page.waitForTimeout(1800);if(privateApp)await page.screenshot({path:process.env.NORTH_CODE_MODEL_IMAGE,fullPage:true});
+   await page.waitForTimeout(1800);if(privateApp&&process.env.NORTH_CODE_MODEL_IMAGE)await page.screenshot({path:process.env.NORTH_CODE_MODEL_IMAGE,fullPage:true});
    const apiProof=await page.evaluate(async()=>{
     window.apiBodies=[];fetchT=async(url,opt)=>{apiBodies.push(JSON.parse(opt.body));return{ok:true,status:200,json:async()=>({model:'deepseek-v4-pro',choices:[{message:{content:'测试正文'},finish_reason:'stop'}]})};};
     const route=chatRoutesInit()[0];Object.assign(route,{base:'https://api.deepseek.com',key:'fixture-only',model:'deepseek-v4-pro',maxTokens:4096,reasoningEnabled:false});

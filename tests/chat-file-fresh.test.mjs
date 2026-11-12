@@ -55,3 +55,11 @@ for(const [label,file] of BUNDLES){
   assert.throws(()=>ctx.codeFileComplete('x.html','<html><body>半截'),/缺少/);
  });
 }
+
+for(const [label,file] of BUNDLES)test(label+': disabling code assistant during a request pauses without saving late code or calling again',async()=>{
+ const src=read(file),list=[],config={base:'https://code.invalid',key:'fixture',model:'coder',maxTokens:16384,enabled:true};let unblock,calls=0;
+ const ctx=vm.createContext({S:{},Map,TextEncoder,CHAT_FILE_TEXT_EXT:['html'],actId:()=> 'main',getC:()=>({id:'role'}),msgs:()=>list,save(){},refreshChatMessages(){},toast(){},uid:()=> 'one',fmtSize:n=>String(n),persistWechatMessagesNow:async()=>true,codeModelConfig:()=>({...config}),codeModelRequest:()=>{calls++;return new Promise(resolve=>{unblock=resolve;});}});
+ vm.runInContext('const _codeJobs=new Map();',ctx);for(const n of ['chatFileExt','chatFileFind','chatFileSize','codeFileName','codeFileHash','codeFileEditable','codeTaskPart','codeFileComplete','codeTaskValid','codeTaskPersist','codeTaskStart','codeTaskRun'])vm.runInContext(fnSource(src,n),ctx);
+ const m=await ctx.codeTaskStart('role',{name:'new.html',request:'做游戏',baseId:'新建'},'source');await new Promise(r=>setImmediate(r));config.enabled=false;unblock(JSON.stringify({part:1,offset:0,chunk:'<html></html>',done:true}));await new Promise(r=>setImmediate(r));
+ assert.equal(m.text,'');assert.equal(m.codeTask.draft,'');assert.equal(m.codeTask.status,'error');assert.match(m.codeTask.error,/设置已改变/);assert.equal(calls,1);await ctx.codeTaskRun('role',m.id);assert.equal(calls,1);
+});

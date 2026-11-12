@@ -2088,3 +2088,10 @@ test('APNs environment recovery only follows an explicit BadDeviceToken rejectio
 test('roleplay keeps date surface, strict narration and archive-before-summary in both bundles',()=>{for(const file of [WEB,PRIVATE]){const app=read(file);for(const marker of ['ROLEPLAY_DATE_PAGE_V1','ROLEPLAY_SHARED_DATE_SURFACE_V2','ROLEPLAY_ARCHIVE_FIRST_V1','ROLEPLAY_FORMAT_SPLIT_V1','ROLEPLAY_COHAB_FORMAT_V1','ROLEPLAY_END_MESSAGE_V1','ROLEPLAY_TOUCH_SILENT_V1','ROLEPLAY_NATURAL_PLOT_V1','ROLEPLAY_INLINE_BOUNDARY_V1','ROLEPLAY_REASONING_ISOLATE_V1','ROLEPLAY_SAVE_SLOTS_V1','rpSummarizeArchive','rp-date-stage'])assert(app.includes(marker),file+': '+marker);}});
 
 test('chat input diagnostics ship identically in both bundles',()=>assert.equal(read('browser-diagnostics.js'),read(PRIVATE_DIR+'browser-diagnostics.js')));
+
+
+test('code assistant keeps deletable settings, independent routes and protocol adapters in both bundles',()=>{
+ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+  const src=read(file);for(const marker of ['CODE_MODEL_ROUTES_V2','function codeModelRoutes(','function codeModelProtocol(','function codeModelReadNative(','config.enabled===false||!config.key','代码助手设置已改变，任务暂停'])assert(src.includes(marker),file+' lost '+marker);
+ }
+});
