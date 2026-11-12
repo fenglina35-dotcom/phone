@@ -108,3 +108,27 @@ test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>
   const webViewMount=nativeRoot.slice(nativeRoot.indexOf('LocalPhoneWebView('),nativeRoot.indexOf('.id(webViewGeneration)')+'.id(webViewGeneration)'.length);
   assert.doesNotMatch(webViewMount,/\.ignoresSafeArea\(\)/,'the web view itself must never extend under the iPhone status bar');
 });
+
+
+// ANDROID_HOME_FULLSCREEN_V1: execute the real inline manifest builder, not a source regex.
+for(const [name,navigator,display] of [
+ ['Android Chrome',{userAgent:'Mozilla/5.0 (Linux; Android 15) Chrome/130.0 Mobile',platform:'Linux armv8l'},'fullscreen'],
+ ['Android Edge',{userAgent:'Mozilla/5.0 (Linux; Android 14) EdgA/130.0 Mobile',platform:'Linux armv8l'},'fullscreen'],
+ ['iPhone',{userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)',platform:'iPhone'},'standalone'],
+ ['iPad desktop UA',{userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:5},'standalone'],
+ ['desktop',{userAgent:'Mozilla/5.0 (Macintosh)',platform:'MacIntel',maxTouchPoints:0},'standalone']
+])test(name+' keeps its intended installed display mode and existing identity',async()=>{
+ const {read}=await import('./_helpers.mjs'),page=read('小手机.html'),script=page.match(/<script>\s*\/\* PWA：[\s\S]*?<\/script>/)[0].replace(/^<script>|<\/script>$/g,'');
+ let manifest;const nodes={pwaAppleIcon:{},pwaManifest:{}};
+ vm.runInNewContext(script,{navigator,location:{href:'https://example.test/phone/小手机.html?source=launcher'},document:{getElementById:id=>nodes[id]},Blob:class{constructor(parts){manifest=JSON.parse(parts.join(''));}},URL:{createObjectURL:()=> 'blob:fixture'}});
+ assert(manifest);assert.equal(manifest.display,display);assert.equal(manifest.name,'North');assert.equal(manifest.start_url,'https://example.test/phone/小手机.html');assert.equal(manifest.scope,'https://example.test/phone/');assert.equal(manifest.background_color,'#111111');assert.equal(manifest.theme_color,'#ff8fab');assert.equal(manifest.orientation,'portrait');assert.equal(manifest.icons.length,2);
+});
+test('Android fullscreen is recognized by web health only when it is not an element fullscreen session',async()=>{
+ const {read}=await import('./_helpers.mjs'),src=read('app.js'),method=src.match(/  async pwa\(\)\{[^\n]+/)[0];
+ for(const [ua,standalone,fullscreen,element,expected] of [
+ ['Android Chrome',false,true,null,'ok'],['Android Chrome',false,false,null,'warn'],['Android Chrome',false,true,{},'warn'],['iPhone Safari',true,false,null,'ok'],['iPhone Safari',false,true,null,'warn'],['Macintosh Safari',false,true,null,'warn']
+ ]){
+  const result=await vm.runInNewContext('({'+method+'}).pwa()',{navigator:{userAgent:ua,standalone:false},window:{matchMedia:q=>({matches:q==='(display-mode: standalone)'?standalone:fullscreen})},document:{fullscreenElement:element}});
+  assert.equal(result.state,expected,JSON.stringify({ua,standalone,fullscreen,element}));
+ }
+});

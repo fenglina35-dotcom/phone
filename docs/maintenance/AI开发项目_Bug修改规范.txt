@@ -1977,3 +1977,7 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 
 
 2026-11-12 CHAT_COMPOSER_SESSION_V1：输入框的字符串相同不等于保留原键盘会话。编辑时更新同一页面不得断开textarea及其祖先，不重设value/focus/selection干扰组合态。保存/恢复输入归属必须读实际挂载节点的角色、账号、状态对象身份，不能拿已切换后的cur给旧DOM贴新key；迟到事件也须检查连接和归属。回归必须走真实路由并断言节点连接、0次重赋值/焦点事件、中文组合Enter、跨角色/账号隔离；锁聊/登录/拉黑等权限变化仍必须立即生效。用户未实机验收前，分别记录已确认代码缺口与尚未确认的原故障原因。三份DOCX原有XML问题不扩大处理，沿既有对应TXT追加，原件保留。
+
+2026-11-12 ANDROID_HOME_FULLSCREEN_V1：主屏display模式必须按平台隔离，不能把安卓fullscreen直接推广到苹果/私人包，也不能连带覆盖用户主题色、安全区或键盘。display-mode:fullscreen与Fullscreen API并非同义；体检/设备标签要识别全屏启动，并排除document.fullscreenElement/webkitFullscreenElement存在的临时元素全屏，不能因此改变授权规则。先枚举standalone消费者再改manifest，保护start_url/scope和图标身份，测试真实构造出的manifest而非只查字符串。原生沉浸式API不等于网页能力，系统导航栏实际效果及主屏重加须真实设备验证。维护DOCX历史XML问题保持原件，使用既有TXT追加。
+
+2026-11-12 安卓全屏范围补充：授权客户端有两端逐字节一致的永久保护，外观/PWA元数据需求不得放宽此保护或顺手复制私人包。设备标签属于附带描述，本轮选择不改授权模块，体检仍正确识别Android fullscreen。

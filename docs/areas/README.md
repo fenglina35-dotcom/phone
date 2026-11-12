@@ -982,3 +982,12 @@ CODE_MODEL_ROUTES_V2：五条独立路线，旧单路线配置迁入首条，空
 消费者：全局render/capture/restore（只对微信私聊启用保留分支）、afterChat事件、sendText发送入口与原chatComposerReflow；发送按钮和键盘均校验当前输入归属，既有refreshChatMessages/roleServerPushPull/replyGenerationRefresh继续原局部刷新。回归复用tests/chat-composer-preservation.test.mjs与永久守卫，真实双端路由验证DOM不断开、0次重赋值/焦点事件、几何不变、组合态不误发、切角色/账号/S替换隔离、旧事件拒绝及锁聊/拉黑。浏览器使用受控隔离数据，不能代替该用户iPhone键盘与真实站点验收。
 
 CHAT_COMPOSER_SESSION_V1最终本地验证：完整5213/5213及普通/查岗双端核心门禁通过，页面错误0；HTML/CSS/原生工程未改。未提交/升版/安装/发布，iPhone14实际键盘故障是否闭环仍待用户反馈。首轮全量的旧wrapper字符串断言与测试提取函数问题见维护Bug记录；保留原样式类和模型入口要求，未放宽功能边界。
+
+
+## 安卓主屏全屏启动（ANDROID_HOME_FULLSCREEN_V1，2026-11-12，本地候选）
+用户提供sharelife的fullscreen manifest参考，授权收起安卓网页底部系统区，前提苹果正常。小手机没有独立manifest.webmanifest，根小手机.html原有脚本用Blob动态生成manifest；复用该脚本，仅Android且非iPhone/iPad（含MacIntel多触点iPad桌面UA）选择display:fullscreen，其他环境保持standalone。start_url/scope、名称、图标、竖屏、原#111111/#ff8fab配色、Apple meta与全部CSS不改，不套用参考项目浅蓝背景，不改私人两个HTML、私人资源或原生。
+消费者检查：Apple home兼容仅iOS生效，维持原逻辑；网页一键体检HEALTH_CHECKS.pwa补认Android全屏窗口（display-mode:fullscreen且没有Fullscreen API元素），避免错误报未从主屏启动，临时视频/元素全屏不算安装信号。授权客户端license-gate.js要求两端完全一致；本轮不改该文件和设备标签，安卓全屏设备列表仍可能沿用原浏览器名称，鉴权/会话/绑定保持；src/app/010用web/private分支保留私人生成app.js原字节。诊断中原standalone媒体字段仍按原定义，不谎报为standalone。
+已有主屏图标可能沿用旧模式，需要重新添加主屏图标试验，不清网站数据或用户存档，不以卸载WebAPK代替移除快捷方式。普通浏览器标签页不会因此自动全屏；系统手势横线、键盘/边缘滑动后系统栏是否显现由系统/浏览器决定，不承诺永久隐藏，也可能同时隐藏顶部时间电量。
+参考：https://www.w3.org/TR/appmanifest/#display-member 、https://developer.android.com/develop/ui/views/layout/immersive 。后者为安卓原生沉浸式文档，不把原生WindowInsetsController API当成网页可调用的能力。测试复用ios-standalone-viewport/license-gate及永久守卫；旧实现Android两种UA的manifest仍standalone、一键体检fullscreen报warn三项先失败，修改后专项18通过；完整结果随后追加。无独立新文件/工作树/静态manifest、无付费模型调用；未经真实安卓主屏安装及苹果实机验证，不冒充系统导航区已实际隐藏。未升版/提交/发布。
+
+ANDROID_HOME_FULLSCREEN_V1最终范围与验收：不改授权客户端或设备标签，仅改网页manifest与网页体检；完整5220/5220、双端核心聊天通过，页面错误0，私人整个工程与资源未变。未升版/提交/发布，真实安卓新主屏图标效果及苹果实机仍待验收；测试/暂时撤回的附带标签尝试见维护Bug记录。

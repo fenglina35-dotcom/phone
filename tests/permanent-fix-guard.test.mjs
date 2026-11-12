@@ -2101,3 +2101,8 @@ test('chat keyboard sessions keep their connected input and never migrate betwee
   const src=read(file);for(const marker of ['CHAT_COMPOSER_SESSION_V1','function chatComposerOwnsRoute(','function chatComposerPatchPage(','ta._chatAccount===actId()','ta._chatOwner===S','if(!_composerKept)restoreChatComposer','e.isComposing||ta._chatComposing||e.keyCode===229','!chatComposerOwnsRoute(ta,cur())||ta._chatId!==id'])assert(src.includes(marker),file+' lost '+marker);
  }
 });
+
+test('only Android web home launch requests fullscreen while private and Apple defaults stay standalone',()=>{
+ const web=read('小手机.html');assert(web.includes('ANDROID_HOME_FULLSCREEN_V1'));assert(web.includes("display:android?'fullscreen':'standalone'"));assert(web.includes('android=/Android/i.test(ua)&&!ios'));
+ for(const entry of ['index.html','小手机.html']){const html=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+entry);assert(html.includes("display:'standalone'"));assert(!html.includes('ANDROID_HOME_FULLSCREEN_V1'));}
+});
