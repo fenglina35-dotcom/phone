@@ -90,6 +90,25 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   h.state.music.songs.push({id:'requested-old-song',title:'月亮晚安曲',roleSongAliases:['月亮睡眠曲'],roleSongOwner:'a',roleSongReady:true,src:{t:'idb'}});
   const prompt=h.cx.roleSongPrompt(h.state.contacts[0],'给我唱月亮睡眠曲吧','wechat');assert.ok(prompt.includes('requested-old-song'));assert.ok(!prompt.includes('乙的歌'));
  });
+ test(label+' spoken singing requests bypass ordinary voice coercion without affecting speech',async()=>{
+  const h=singingHarness(src),cx=h.cx;
+  for(const name of ['explicitVoiceReplyRequest','voiceReplyTagValid','forceRequestedVoiceReply','finalizeVoiceReply'])vm.runInContext(fnSource(src,name),cx);
+  if(src.includes('function roleSongRequestAvailable('))vm.runInContext(fnSource(src,'roleSongRequestAvailable'),cx);
+  cx.voiceLangName=()=> '中文';cx.roleReplyEnglishOnly=()=>false;cx.wechatRoleDrift=()=>false;cx.voiceTagNeedsLangFix=()=>false;cx.roleReplyAssertLanguage=()=>{};cx.ttsContentLang=()=> 'zh';cx.splitBubbles=s=>s.split('\n');cx.parseVoiceTagLine=line=>{const m=line.match(/^\[语音\|([^\]]+)\]$/);return m?{text:m[1]}:null;};cx.VOICE_MAX_CHARS=300;cx.ttsRequestedCue=()=>'';cx.ttsAutoCue=()=>'';
+  const expression=src.match(/const _voiceRequired=(.*?),_voiceTurnPrompt/)[1];
+  const required=text=>{cx._userText=text;cx.note='';cx.c=h.state.contacts[0];return vm.runInContext(expression,cx);};
+  const request='我想听小星星用语音给我唱。',forceVoice=required(request);let repairs=0;
+  const content=await cx.finalizeVoiceReply('[唱歌|a1]',forceVoice?request:'',cx.c,async()=>{repairs++;return '[语音|一闪一闪亮晶晶]';});
+  assert.equal(repairs,0,'真实唱歌指令不应被普通语音修正再次送模');
+  assert.equal(content,'[唱歌|a1]');assert.equal(forceVoice,false);
+  assert.equal(required('请用语音回复我'),true);
+  h.state.music.songs=h.state.music.songs.filter(s=>s.roleSongOwner!=='a');
+  assert.equal(required(request),true,'没有本角色曲目时不改变原语音规则');
+  h.state.music.songs.push({id:'raw',title:'小星星',roleSongOwner:'a',roleSongReady:false,src:{t:'idb'}});
+  assert.equal(required(request),true,'未连接云端的原曲不能声称可演唱');
+  h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'test-key',pitch:-12,model:'claude_fish'}}};
+  assert.equal(required(request),false,'已连接本角色的原曲应进入翻唱流程');
+ });
  test(label+' stores actual song audio, preserves long duration and never expires it into speech',async()=>{
   const {cx,stored,played}=singingHarness(src);
   const m=await cx.roleSongVoiceMessage('a','a1');

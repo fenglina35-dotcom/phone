@@ -42,6 +42,17 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    openChat(role.id);
   });
 
+  if(process.env.NORTH_ROLE_SONG_VOICE==='1'){
+   const result=await page.evaluate(async()=>{
+    const c=getC(testId),samples=8000,bytes=new ArrayBuffer(44+samples*2),v=new DataView(bytes),str=(at,t)=>[...t].forEach((ch,i)=>v.setUint8(at+i,ch.charCodeAt(0)));
+    str(0,'RIFF');v.setUint32(4,36+samples*2,true);str(8,'WAVE');str(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,samples*2,true);for(let i=0;i<samples;i++)v.setInt16(44+i*2,Math.sin(i/8000*440*Math.PI*2)*3000,true);
+    const blob=new Blob([bytes],{type:'audio/wav'}),stored=await mPutVerified('song-voice-fixture',blob,'audio');musicInit();S.music.songs=[{id:'song-voice-fixture',title:'小星星',roleSongOwner:c.id,roleSongReady:true,src:{t:'idb'},mediaKind:'audio',fileSize:stored.size||blob.size}];
+    const originalTts=ttsArr;let tts=0;ttsArr=async()=>{tts++;throw Error('演唱不能调用普通TTS');};
+    try{S.messages[accountMessageKey(c.id,actId())]=[];pushMsg(c.id,{role:'user',type:'text',content:'我想听小星星用语音给我唱。',time:Date.now(),id:uid()});fixtureRaw='[唱歌|song-voice-fixture]';openChat(c.id);await aiReply(c.id);const song=msgs(c.id).find(m=>m.roleSong),prompts=testCalls.flatMap(call=>call.messages||[]).filter(m=>m.role==='system').map(m=>m.content).join('\n');return {calls:testCalls.length,tts,ordinaryForce:prompts.includes('# 本轮必须发语音'),singingPrompt:prompts.includes('# 本轮可用的真实演唱'),audio:!!(song&&song.audio&&await audioPlayableUrl(song.audio)),duration:song&&song.dur,busy:replyGenerationBusy(c.id)};}finally{ttsArr=originalTts;}
+   });
+   assert.equal(result.calls,1);assert.equal(result.tts,0);assert.equal(result.ordinaryForce,false);assert.equal(result.singingPrompt,true);assert.equal(result.audio,true);assert.equal(result.duration,1);assert.equal(result.busy,false);assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,singingVoiceRequest:result,pageErrors:0}));await page.close();continue;
+  }
+
   if(process.env.NORTH_MEMORY_SEARCH_PREVIEW){
    const out=process.env.NORTH_MEMORY_SEARCH_PREVIEW;
    const shot=async name=>{if(privateApp)await page.screenshot({path:path.join(out,name+'.png')});};
