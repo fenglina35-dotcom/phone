@@ -92,12 +92,24 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
  });
  test(label+' resolves named listening requests and random requests without interpreting information or refusal as playback',()=>{
   const h=singingHarness(src),cx=h.cx,c=h.state.contacts[0];
-  for(const text of ['我想听小星星','我想听你唱小星星','给我唱小星星哄我睡觉','Sing Twinkle','随便唱一首歌','随机唱首歌']){
+  for(const text of ['我想听小星星','我想听你唱小星星','给我唱小星星哄我睡觉','再来一次 小星星','小星星再来一次','再来一遍《小星星》','小星星再放一遍','Sing Twinkle','随便唱一首歌','随机唱首歌']){
    const plan=cx.roleSongRequestPlan(c,text);assert.ok(plan,text);assert.equal(plan.id,'a1');assert.equal(cx.roleSongRequestPlanValid('a',plan),true);assert.equal(cx.roleSongRequestPlanValid('b',plan),false);
   }
-  for(const text of ['小星星是谁唱的','发小星星的歌词','我不想听小星星','不要给我唱小星星','别给我放小星星','我想听小星星，但别唱了','我想听小星星，不要语音','我想听乙的歌','给我转账然后唱小星星','我想听小星星歌曲卡片'])assert.equal(cx.roleSongRequestPlan(c,text),null,text);
+  for(const text of ['小星星是谁唱的','发小星星的歌词','我不想听小星星','不要给我唱小星星','别给我放小星星','我想听小星星，但别唱了','我想听小星星，不要语音','我想听乙的歌','给我转账然后唱小星星','我想听小星星歌曲卡片','不要再来一次小星星','别重新来一遍小星星','小星星再来一次，但别唱了','再来一次小星星的歌词','再来一次小猩猩','再来一次'])assert.equal(cx.roleSongRequestPlan(c,text),null,text);
   const plan=cx.roleSongRequestPlan(c,'我想听小星星');h.state.music.songs.find(s=>s.id==='a1').src={t:'url',url:'https://changed.test/track.mp3'};assert.equal(cx.roleSongRequestPlanValid('a',plan),false);
   assert.ok(cx.roleSongPrompt(c,'我想听小星星','wechat').includes('"id":"a1"'));
+ });
+ test(label+' repeat requests use dynamically uploaded titles and aliases rather than one fixed song',()=>{
+  const h=singingHarness(src),cx=h.cx,c=h.state.contacts[0];
+  h.state.music.songs.push({id:'new-lullaby',title:'晚风晚安曲',roleSongAliases:['月光摇篮曲'],roleSongOwner:'a',roleSongReady:true,src:{t:'idb'},mediaKind:'audio'});
+  h.state.music.songs.push({id:'other-lullaby',title:'海边的歌',roleSongOwner:'b',roleSongReady:true,src:{t:'idb'},mediaKind:'audio'});
+  for(const text of ['我想听晚风晚安曲','给我唱晚风晚安曲','再来一次 晚风晚安曲','晚风晚安曲再来一遍','重新来一次月光摇篮曲']){
+   const plan=cx.roleSongRequestPlan(c,text);assert.ok(plan,text);assert.equal(plan.id,'new-lullaby',text);
+   assert.equal(cx.roleSongAttachPlan('[语音|好，给你唱。]','a',plan),'[语音|好，给你唱。]\n[唱歌|new-lullaby]');
+  }
+  assert.equal(cx.roleSongRequestPlan(c,'再来一次海边的歌'),null);
+  h.state.music.songs.find(s=>s.id==='new-lullaby').roleSongReady=false;
+  assert.equal(cx.roleSongRequestPlan(c,'再来一次晚风晚安曲'),null);
  });
  test(label+' preserves role introduction and guarantees one selected recording even without a model song tag',()=>{
   const h=singingHarness(src),cx=h.cx,c=h.state.contacts[0],plan=cx.roleSongRequestPlan(c,'我想听小星星');

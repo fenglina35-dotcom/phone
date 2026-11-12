@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1921'){
+if(window.__NORTH_SHELL_BUILD__!=='1922'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1921 · 角色先接话再演唱';
+const APP_VER='v1922 · 重复点唱保持原音';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -3711,8 +3711,10 @@ function roleSongRequestPlan(c,text){
   if(!ready.length||/(?:画一张|生成图片|发照片|查询|搜索|写代码|下单|订票|转账|发红包|定位|闹钟|提醒我|打电话|歌曲卡片|音乐卡片|分享歌曲|的歌词|歌词是什么|作词|作曲|翻译|介绍|讲故事|讲个故事|谁.{0,6}唱|哪个歌手)/.test(raw)||/(?:不要|不用|别|禁止|不许)(?:再)?[^，。！？!?\n]{0,6}语音/.test(raw))return null;
   let selected=null;
   for(const clause of raw.split(/[，,。！？!?；;\n]+/).map(x=>x.trim()).filter(Boolean)){
-    if(/(?:不要|别|不用|不许|不想|停止|取消|先不)(?:再|给我|你|继续|听你|让你|帮我|为我){0,3}(?:唱|听|哼|播放|放歌|放|来一首|来首)|\b(?:don't|do not|stop)\b.{0,12}\b(?:sing|play)\b/i.test(clause)){selected=null;continue;}
-    if(!/(?:想听|要听|想要听|给我|为我|帮我|请|能不能|可以|来一首|来首|随机|随便|唱一首|唱首|清唱|哼一|播放|^唱|^哼|^放|\bsing\b|\bplay\b)/i.test(clause)||!/(?:听|唱|哼|播放|放|来一首|来首|语音|\bsing\b|\bplay\b)/i.test(clause))continue;
+    if(/(?:不要|别|不用|不许|不想|停止|取消|先不)(?:再|重新|给我|你|继续|听你|让你|帮我|为我){0,3}(?:唱|听|哼|播放|放歌|放|来一首|来首|来(?:一)?(?:次|遍|回))|\b(?:don't|do not|stop)\b.{0,12}\b(?:sing|play)\b/i.test(clause)){selected=null;continue;}
+    /* ROLE_SONG_REPEAT_REQUEST_V1：带准确歌名的重复点唱也须进入原音计划。 */
+    const repeat=/(?:再|重新)(?:来|唱|听|放|播放)(?:一)?(?:次|遍|回)/.test(clause);
+    if(!repeat&&(!/(?:想听|要听|想要听|给我|为我|帮我|请|能不能|可以|来一首|来首|随机|随便|唱一首|唱首|清唱|哼一|播放|^唱|^哼|^放|\bsing\b|\bplay\b)/i.test(clause)||!/(?:听|唱|哼|播放|放|来一首|来首|语音|\bsing\b|\bplay\b)/i.test(clause)))continue;
     const requested=musicKeyText(clause),scored=ready.map(song=>({song,score:[song.title,...(Array.isArray(song.roleSongAliases)?song.roleSongAliases:[])].reduce((best,title)=>{const key=musicKeyText(title);return key.length>=2&&requested.includes(key)?Math.max(best,key.length):best;},0)})),best=Math.max(0,...scored.map(x=>x.score)),hits=scored.filter(x=>best&&x.score===best);
     if(hits.length===1)selected=hits[0].song;
     else if(!best&&/(?:随机|随便|你(?:来|自己)?(?:选|挑)|(?:唱|来|放)(?:一)?首(?:歌)?(?:吧|给我|哄我睡觉|听听|好吗|好不好|$))/i.test(clause))selected=ready[Math.floor(Math.random()*ready.length)];
