@@ -195,6 +195,24 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
    assert.equal(await work,null);assert.equal(h.stored.size,0);
   }
  });
+ test(label+' choosing vocal output from mixed audio sends separation while already-vocal input can skip it',async()=>{
+  for(const selected of ['mixed','vocals']){
+   const h=singingHarness(src),cx=h.cx,fields={mu_owner:{value:'role'},mu_role:{value:'a'},mu_ready:{value:'source'},mu_accompaniment:{value:selected}};
+   cx.esc=x=>String(x);cx.document={getElementById:id=>fields[id]};
+   for(const name of ['musicSongOwnerFields','musicSongOwnerRead'])vm.runInContext(fnSource(src,name),cx);
+   const html=cx.musicSongOwnerFields('mu',h.state.music.songs.find(s=>s.id==='a0'));
+   assert.match(html,/<option value="mixed"[^>]*>生成清唱（先去除背景音乐）<\/option>/);
+   assert.match(html,/<option value="vocals"[^>]*>音源已是纯人声（无需分离）<\/option>/);
+   const source=h.state.music.songs.find(s=>s.id==='a0');Object.assign(source,cx.musicSongOwnerRead('mu'));
+   assert.equal(source.roleSongHasAccompaniment,selected==='mixed');
+   h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'fixture',pitch:-6,model:'preview'}}};const urls=[];
+   cx.fetch=async(url,opts)=>{urls.push(url);if(url.includes('/jobs?')){assert.equal(opts.body,h.blob);return{ok:true,status:200,json:async()=>({id:'fc-clear',proof:'fixture'})};}return{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};
+   cx.mPutVerified=async()=>({size:12,type:'audio/mpeg',sig:'verified',duration:187});cx.musicApplyStoredMeta=(target,p,stored)=>Object.assign(target,{fileSize:stored.size,fileSig:stored.sig});
+   const result=await cx.roleSongConvert('a','a0');
+   assert.equal(new URL(urls[0]).searchParams.get('separate'),String(selected==='mixed'));
+   assert.equal(result.roleSongReady,true);assert.equal(source.roleSongReady,false);
+  }
+ });
  test(label+' cloud conversion preserves the original, verifies output and stores only in its role',async()=>{
   const h=singingHarness(src),calls=[];h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'private-test-key',pitch:-12,model:'claude_fish'}}};
   h.cx.fetch=async(url,opts)=>{calls.push({url,opts});return url.includes('/jobs?')?{ok:true,status:200,json:async()=>({id:'fc-own',proof:'own-proof'})}:{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};
