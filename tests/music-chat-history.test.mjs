@@ -63,7 +63,7 @@ function singingHarness(src){
     playUrl:url=>played.push(url),voiceBarWant:()=>{},save:()=>{},toast:()=>{},msgs:()=>rows,updateCallSub:()=>{},stopCallMediaAudio:why=>stops.push(why),stopBufSource:()=>{},
     playCallMediaWait:async(ab,buf,start,live)=>{if(!live())return false;start();return new Promise(r=>release=r);},setTimeout,clearTimeout,setInterval,clearInterval,
   });
-  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
+  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongReadySongs','roleSongRequestPlan','roleSongRequestPlanValid','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
   vm.runInContext('const _roleSongConversions=new Map();',cx);cx.fetch=async()=>{throw new Error('unexpected network')};
   cx.VOICE_MAX_SECONDS=60;cx.VOICE_AUDIO_TTL_MS=60000;cx.voiceEstimatedSeconds=()=>5;
   return {cx,stored,played,stops,rows,state,blob,setAccount:x=>account=x,finish:x=>release&&release(x)};
@@ -89,6 +89,15 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   const h=singingHarness(src);for(let i=0;i<45;i++)h.state.music.songs.push({id:'extra'+i,title:'演唱曲目'+i,roleSongOwner:'a',roleSongReady:true,src:{t:'idb'}});
   h.state.music.songs.push({id:'requested-old-song',title:'月亮晚安曲',roleSongAliases:['月亮睡眠曲'],roleSongOwner:'a',roleSongReady:true,src:{t:'idb'}});
   const prompt=h.cx.roleSongPrompt(h.state.contacts[0],'给我唱月亮睡眠曲吧','wechat');assert.ok(prompt.includes('requested-old-song'));assert.ok(!prompt.includes('乙的歌'));
+ });
+ test(label+' resolves named listening requests and random requests without interpreting information or refusal as playback',()=>{
+  const h=singingHarness(src),cx=h.cx,c=h.state.contacts[0];
+  for(const text of ['我想听小星星','我想听你唱小星星','给我唱小星星哄我睡觉','Sing Twinkle','随便唱一首歌','随机唱首歌']){
+   const plan=cx.roleSongRequestPlan(c,text);assert.ok(plan,text);assert.equal(plan.id,'a1');assert.equal(cx.roleSongRequestPlanValid('a',plan),true);assert.equal(cx.roleSongRequestPlanValid('b',plan),false);
+  }
+  for(const text of ['小星星是谁唱的','发小星星的歌词','我不想听小星星','不要给我唱小星星','别给我放小星星','我想听小星星，但别唱了','我想听小星星，不要语音','我想听乙的歌','给我转账然后唱小星星','我想听小星星歌曲卡片'])assert.equal(cx.roleSongRequestPlan(c,text),null,text);
+  const plan=cx.roleSongRequestPlan(c,'我想听小星星');h.state.music.songs.find(s=>s.id==='a1').src={t:'url',url:'https://changed.test/track.mp3'};assert.equal(cx.roleSongRequestPlanValid('a',plan),false);
+  assert.ok(cx.roleSongPrompt(c,'我想听小星星','wechat').includes('"id":"a1"'));
  });
  test(label+' spoken singing requests bypass ordinary voice coercion without affecting speech',async()=>{
   const h=singingHarness(src),cx=h.cx;
