@@ -107,7 +107,37 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   h.state.music.songs.push({id:'raw',title:'小星星',roleSongOwner:'a',roleSongReady:false,src:{t:'idb'}});
   assert.equal(required(request),true,'未连接云端的原曲不能声称可演唱');
   h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'test-key',pitch:-12,model:'claude_fish'}}};
-  assert.equal(required(request),false,'已连接本角色的原曲应进入翻唱流程');
+  assert.equal(required(request),true,'仅连接的原曲不自动启动翻唱');
+ });
+ test(label+' singing a pending source never starts conversion without the music action',async()=>{
+  const h=singingHarness(src),cx=h.cx;h.state.settings={roleSongCloud:{a:{url:'https://fixture.invalid',key:'test-key',pitch:-12,model:'claude_fish'}}};
+  let calls=0;cx.roleSongConvert=async()=>{calls++;throw Error('unexpected automatic conversion');};
+  await assert.rejects(cx.roleSongVoiceMessage('a','a0'),/还没有准备好/);assert.equal(calls,0);
+  const prompt=cx.roleSongPrompt(h.state.contacts[0],'给我唱未转换','wechat');assert.ok(!prompt.includes('"id":"a0"'));
+ });
+ test(label+' upload respects selected performance and rejects unsupported video without silently changing it',async()=>{
+  for(const kind of ['audio','video']){
+   const h=singingHarness(src),cx=h.cx,fields={mu_owner:{value:'role'},mu_role:{value:'a'},mu_ready:{value:'performance'},mu_accompaniment:{value:'vocals'},mu_t:{value:'上传成品'},mu_a:{value:''},mu_l:{value:''},mu_url:{value:''}};
+   const before=h.state.music.songs.length,notices=[],deleted=[];let closed=0;
+   cx.document={getElementById:id=>fields[id]};cx.$=selector=>fields[selector.slice(1)];cx.window={_muBlob:h.blob,_muFileMeta:{mediaKind:kind,fileName:'finished.'+(kind==='video'?'mp4':'wav')}};cx.musicInit=()=>{};cx.mPutVerified=async()=>({size:h.blob.size,type:h.blob.type,sig:'verified',duration:187,mediaKind:kind});cx.mDelIDB=async id=>deleted.push(id);cx.closeModal=()=>{closed++;};cx.render=()=>{};cx.toast=t=>notices.push(t);
+   for(const name of ['musicSongOwnerRead','musicApplyStoredMeta','musicAddSave'])vm.runInContext(fnSource(src,name),cx);
+   await cx.musicAddSave();
+   if(kind==='audio'){assert.equal(h.state.music.songs.length,before+1);assert.equal(h.state.music.songs[0].roleSongReady,true);assert.equal(h.state.music.songs[0].roleSongOwner,'a');assert.equal(closed,1);}
+   else{assert.equal(h.state.music.songs.length,before,'不能把选择的成品静默保存为待转换');assert.equal(closed,0);assert.equal(deleted.length,1);assert.ok(notices.some(t=>t.includes('视频')));}
+  }
+ });
+ test(label+' reuses an uploaded performance when the model names the old source entry',async()=>{
+  const h=singingHarness(src),cx=h.cx;h.state.settings={roleSongCloud:{a:{url:'https://fixture.invalid',key:'test-key',pitch:-12,model:'claude_fish'}}};
+  h.state.music.songs.find(s=>s.id==='a0').title='小星星';
+  h.state.music.songs.find(s=>s.id==='a1').roleSongConvertedFrom='prior-cloud-result';
+  h.state.music.songs.unshift({id:'uploaded-performance',title:'小星星',roleSongOwner:'a',roleSongReady:true,src:{t:'idb'},mediaKind:'audio',fileSize:12});
+  let conversions=0;cx.roleSongConvert=async()=>{conversions++;throw Error('不应再次转换');};
+  const voice=await cx.roleSongVoiceMessage('a','a0');
+  assert.equal(conversions,0);assert.equal(voice.roleSong.id,'uploaded-performance');
+  assert.equal(cx.roleSongFind('a','小星星').id,'uploaded-performance');assert.equal(cx.roleSongFind('a','a1').id,'uploaded-performance');assert.equal(cx.roleSongFind('a','随机').id,'uploaded-performance');
+  const prompt=cx.roleSongPrompt(h.state.contacts[0],'给我唱小星星','call');
+  assert.ok(prompt.includes('uploaded-performance'));assert.ok(!prompt.includes('prior-cloud-result'));assert.ok(!prompt.includes('"id":"a1"'));
+  assert.equal(cx.roleSongFind('b','a0'),null);
  });
  test(label+' stores actual song audio, preserves long duration and never expires it into speech',async()=>{
   const {cx,stored,played}=singingHarness(src);
