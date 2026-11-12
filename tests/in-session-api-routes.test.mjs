@@ -1,3 +1,4 @@
+import {fnSource} from './_helpers.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -48,7 +49,12 @@ assert.match(mount,/#talewrap/);
 assert.match(mount,/\.offstage/);
 assert.match(source,/const _isWxPage=_wxGlassPages\.includes\(c\.p\);/);
 assert.match(source,/const _wxG='';/);
-assert.match(source,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxsupport'[^\]]*\]\.includes\(c\.p\);\s*const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':'';[\s\S]{0,520}?app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+_wxFont\+'">'\+html\+'<\/div>';[\s\S]{0,1200}?chatRouteMount\(c\);/);
+assert.match(source,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxsupport'[^\]]*\]\.includes\(c\.p\);\s*const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':'';/);
+const renderedPage=fnSource(source,'render');
+assert.match(renderedPage,/const _pageClass='page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+_wxFont;/,'all existing page appearance classes must still be applied');
+assert.match(renderedPage,/chatComposerPatchPage\(c,app,html,_pageClass,_composerState\)/,'the preserved page must receive the same appearance classes');
+assert.match(renderedPage,/app\.innerHTML='<div class="'\+_pageClass\+'">'\+html\+'<\/div>';/,'fallback rendering must use the same wrapper and appearance classes');
+assert(renderedPage.indexOf('chatRouteMount(c);')>renderedPage.indexOf('app.innerHTML='),'model route controls must still mount after the page is rendered');
 
 const calls=[];
 const context=vm.createContext({

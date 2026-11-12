@@ -972,3 +972,13 @@ CODE_MODEL_ROUTES_V2：五条独立路线，旧单路线配置迁入首条，空
 自动格式只根据明确端点/官方域名判断，普通中转站默认OpenAI兼容，不根据Claude/Gemini模型名猜原生协议；可手动选Chat Completions、Responses、Claude Messages、Gemini GenerateContent。保留自定义路径前缀，接受完整生成端点；仅官方根域名补其版本前缀。四种协议适配鉴权、系统消息、输出额度、JSON/SSE正文及结束状态；代码原始字符串不做聊天标点清洗，思考不混入原生正文，截断/流中错误/缺失结束状态拒绝。OpenAI推理模型用max_completion_tokens，Responses显式store:false。不同模型的思考参数仍受平台支持范围约束。模型拉取只用本路线凭证，不借角色密钥；平台未提供列表可手填。
 消费者核对：010设置/测试/请求与模型拉取，035前台私聊委托/分段/重试；代码调用统计沿原codeModelRequest。普通聊天chatAPI、群聊、联网、私人原生桥/伴生/后台均未改。测试不保存配置，失败后切另一种模式须确认额外调用，不自动轮流尝试其他站点或协议。未对真实付费服务做调用，浏览器跨域/网络/站点权限及非标准私有协议无法由本地适配保证。
 协议参考：[Claude Messages/SSE](https://platform.claude.com/docs/en/build-with-claude/streaming)、[Gemini REST](https://ai.google.dev/api)、[Responses](https://developers.openai.com/api/reference/resources/responses/methods/create)。只按这些常见格式适配，非标准网关需针对其文档核验，不宣称所有站点均可用。
+
+
+## 微信私聊输入会话与切角色（CHAT_COMPOSER_SESSION_V1，2026-11-12，本地候选）
+用户现象：iPhone 14 的情侣角色键盘能弹出、按字母却不显示文字；其他角色正常，同份备份迁到安卓可输入。旧1850/1908报告缺少发生当下输入会话证据，不能归因手机性能或宣称本修复已根治该机现象。
+确认的代码缺口：render按新cur生成captureChatComposer的key，却读取旧DOM输入框，真实openChat(A→B)会把A草稿和焦点带给B；同一角色整页render会销毁输入框再赋value/selection并focus，原测试只验证字符串恢复及sendText局部刷新，未覆盖输入框本体/组合输入会话。
+实现：src/app/007的chatComposerOwnsRoute以DOM上的角色ID、当前账号和S对象身份确认归属；同一私聊通过chatComposerPatchPage保留page、输入栏及textarea的连接，不设置value、不重新focus/selection、不改变其高度/滚动样式，只替换其他内容和按钮并同步原生成属性。角色/账号/状态对象改变时不恢复旧草稿/焦点，旧输入先blur。锁聊、微信被登录和多选仍走移除输入栏的完整渲染；拉黑仍同步disabled。页面HTML/CSS、布局、入口和存储格式不改，音乐等其他页面沿原路径。
+035 afterChat只在原节点绑定一次，输入/组合/回车/rAF必须仍属于当前会话；组合输入中的Enter（isComposing/229/本机组合标记）不触发发送，切角色后的旧DOM迟到事件不能把当前文字发给旧角色。消息发送、手动/忙碌队列、引用、表情和模型配置保持，未改私人原生或伴生。
+消费者：全局render/capture/restore（只对微信私聊启用保留分支）、afterChat事件、sendText发送入口与原chatComposerReflow；发送按钮和键盘均校验当前输入归属，既有refreshChatMessages/roleServerPushPull/replyGenerationRefresh继续原局部刷新。回归复用tests/chat-composer-preservation.test.mjs与永久守卫，真实双端路由验证DOM不断开、0次重赋值/焦点事件、几何不变、组合态不误发、切角色/账号/S替换隔离、旧事件拒绝及锁聊/拉黑。浏览器使用受控隔离数据，不能代替该用户iPhone键盘与真实站点验收。
+
+CHAT_COMPOSER_SESSION_V1最终本地验证：完整5213/5213及普通/查岗双端核心门禁通过，页面错误0；HTML/CSS/原生工程未改。未提交/升版/安装/发布，iPhone14实际键盘故障是否闭环仍待用户反馈。首轮全量的旧wrapper字符串断言与测试提取函数问题见维护Bug记录；保留原样式类和模型入口要求，未放宽功能边界。

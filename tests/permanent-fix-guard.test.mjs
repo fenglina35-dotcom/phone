@@ -2095,3 +2095,9 @@ test('code assistant keeps deletable settings, independent routes and protocol a
   const src=read(file);for(const marker of ['CODE_MODEL_ROUTES_V2','function codeModelRoutes(','function codeModelProtocol(','function codeModelReadNative(','config.enabled===false||!config.key','代码助手设置已改变，任务暂停'])assert(src.includes(marker),file+' lost '+marker);
  }
 });
+
+test('chat keyboard sessions keep their connected input and never migrate between roles or accounts',()=>{
+ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+  const src=read(file);for(const marker of ['CHAT_COMPOSER_SESSION_V1','function chatComposerOwnsRoute(','function chatComposerPatchPage(','ta._chatAccount===actId()','ta._chatOwner===S','if(!_composerKept)restoreChatComposer','e.isComposing||ta._chatComposing||e.keyCode===229','!chatComposerOwnsRoute(ta,cur())||ta._chatId!==id'])assert(src.includes(marker),file+' lost '+marker);
+ }
+});

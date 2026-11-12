@@ -2986,7 +2986,29 @@ function rememberValidInnerThought(c){if(!c)return false;const text=naturalInner
 function visibleRoleThought(c){if(!wechatNaturalOn())return String(c&&c.mood||'');if(!c)return'';if(rememberValidInnerThought(c)&&typeof save==='function')save(500);return naturalInnerThoughtText(c.innerThought)||naturalInnerThoughtText(c.innerThoughtLastValid);}
 function refreshChatMood(id){if(cur().p!=='chat'||cur().id!==id)return false;const c=getC(id),bar=$('#chatMoodBar'),label=$('#chatMoodText');if(!c||!bar||!label)return false;const natural=wechatNaturalOn(),thought=visibleRoleThought(c),visible=S.settings.showMoodTag!==false;bar.style.display=visible?'flex':'none';bar.setAttribute('onclick',"toggleChatThought('"+id+"')");const full=$('#chatThoughtFullText');if(full)full.textContent=thought||'…';label.textContent=bar.getAttribute&&bar.getAttribute('aria-expanded')==='true'?'心声':thought?thought.slice(0,24)+(thought.length>24?'…':''):'…';return true;}
 function refreshChatMessages(id){if(cur().p!=='chat'||cur().id!==id)return false;const cb=$('#chatbg'),c=getC(id);if(!cb||!c)return false;const stick=nearBottom(cb),top=cb.scrollTop;cb.innerHTML=chatMessageListHTML(id,c);refreshChatMood(id);if(stick)chatPinBottom(cb);else cb.scrollTop=top;return true;}
-function captureChatComposer(c){if(!c||!['chat','music'].includes(c.p))return null;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta)return null;let start=null,end=null;try{start=ta.selectionStart;end=ta.selectionEnd;}catch(_){}return{key:renderPageKey(c),value:ta.value||'',start,end,focused:document.activeElement===ta,height:ta.style.height||'',scrollTop:ta.scrollTop||0};}
+/* CHAT_COMPOSER_SESSION_V1: preserve the live editor, not just its text; never carry a native input session to another role/account. */
+function chatComposerOwnsRoute(ta,c){return !!(ta&&ta.isConnected&&c&&c.p==='chat'&&ta._chatId===c.id&&ta._chatAccount===actId()&&ta._chatOwner===S);}
+function chatComposerCopyAttributes(target,next,preserveStyle){for(const a of Array.from(target.attributes)){if(preserveStyle&&a.name==='style')continue;if(!next.hasAttribute(a.name))target.removeAttribute(a.name);}for(const a of Array.from(next.attributes)){if(preserveStyle&&a.name==='style')continue;if(target.getAttribute(a.name)!==a.value)target.setAttribute(a.name,a.value);}}
+function chatComposerPatchPage(c,app,html,className,st){
+ if(!st||c.p!=='chat')return false;
+ const ta=app.querySelector('#cinput'),page=app.firstElementChild,bar=ta&&ta.closest('.chat-inputbar');
+ if(!chatComposerOwnsRoute(ta,c)||!page||!bar||bar.parentNode!==page)return false;
+ const next=document.createElement('div');next.innerHTML=html;
+ const nextInput=next.querySelector('#cinput'),nextBar=nextInput&&nextInput.closest('.chat-inputbar');
+ // Locking, selection and login screens must still remove the editable composer immediately.
+ if(!nextInput||!nextBar||nextBar.parentNode!==next)return false;
+ if(bar.childNodes.length!==nextBar.childNodes.length)return false;
+ const oldChildren=Array.from(bar.childNodes),newChildren=Array.from(nextBar.childNodes);
+ if(oldChildren.indexOf(ta)!==newChildren.indexOf(nextInput))return false;
+ page.className=className;chatComposerCopyAttributes(bar,nextBar,false);chatComposerCopyAttributes(ta,nextInput,true);
+ for(let i=0;i<oldChildren.length;i++)if(oldChildren[i]!==ta)bar.replaceChild(newChildren[i],oldChildren[i]);
+ const before=document.createDocumentFragment(),after=document.createDocumentFragment();let passed=false;
+ for(const node of Array.from(next.childNodes)){if(node===nextBar){passed=true;continue;}(passed?after:before).appendChild(node);}
+ for(const node of Array.from(page.childNodes))if(node!==bar)page.removeChild(node);
+ page.insertBefore(before,bar);page.appendChild(after);
+ return true;
+}
+function captureChatComposer(c){if(!c||!['chat','music'].includes(c.p))return null;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta||c.p==='chat'&&!chatComposerOwnsRoute(ta,c))return null;let start=null,end=null;try{start=ta.selectionStart;end=ta.selectionEnd;}catch(_){}return{key:renderPageKey(c),value:ta.value||'',start,end,focused:document.activeElement===ta,height:ta.style.height||'',scrollTop:ta.scrollTop||0};}
 function restoreChatComposer(c,st){if(!st||!c||st.key!==renderPageKey(c))return;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta)return;ta.value=st.value;ta.style.height=st.height||'auto';ta.scrollTop=st.scrollTop||0;if(c.p==='chat'&&typeof chatComposerStateSync==='function')chatComposerStateSync(ta);if(st.start!=null)try{ta.setSelectionRange(st.start,st.end==null?st.start:st.end);}catch(_){}if(st.focused)try{ta.focus({preventScroll:true});if(st.start!=null)ta.setSelectionRange(st.start,st.end==null?st.start:st.end);}catch(_){} }
 function renderScrollStateKey(c,el){return String(el&&el.getAttribute&&el.getAttribute('data-render-scroll-key')||renderPageKey(c));}
 function renderScrollElement(t){return !t?null:(String(t.id).charAt(0)==='.'?document.querySelector(t.id):document.getElementById(t.id));}
@@ -3143,7 +3165,12 @@ function render(){
   const _wxP=(c.p==='wechat'||_wxStandalonePremium)?' wx-premium':['chat','pfchat','pfgroup','group'].includes(c.p)?' wx-chat-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab==='moments'?'discover':(wxTab||'chats')):'';
   const _wxFont=S.me&&S.me.wxFeatures&&S.me.wxFeatures.fontScale!=='normal'?' wx-font-'+S.me.wxFeatures.fontScale:'';
-  app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont+'">'+html+'</div>';
+  const _pageClass='page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont;
+  const _composerKept=chatComposerPatchPage(c,app,html,_pageClass,_composerState);
+  if(!_composerKept){
+    const active=document.activeElement;if(active&&active.id==='cinput')active.blur();
+    app.innerHTML='<div class="'+_pageClass+'">'+html+'</div>';
+  }
   if(c.p==='spy'&&!_spyApp)requestAnimationFrame(()=>spyHomeMount(c.id));
   if(c.p==='music'){const b=app.querySelector('.music-app-head>button:first-child');if(b)b.onclick=back;}
   if(c.p==='browser'){const b=app.querySelector('.br-nav .l');if(b)b.onclick=back;}
@@ -3159,7 +3186,7 @@ function render(){
   renderLockScreen();renderLockPull();
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='group'||c.p==='pfgroup'||c.p==='pfchat')afterGroupComposer(c);
-  restoreChatComposer(c,_composerState);
+  if(!_composerKept)restoreChatComposer(c,_composerState);
   if(c.p==='cinemawatch')cinemaAfterVideoRender();
   if(c.p==='cinemaread')cinemaAfterReaderRender();
   if(c.p==='drawguess')requestAnimationFrame(dgMount);
@@ -16976,10 +17003,11 @@ function chatComposerReflow(ta){if(!ta)return;const min=36,max=84,oldScroll=ta.s
 function chatComposerStateSync(ta){if(!ta)return;const bar=ta.closest('.chat-inputbar');if(bar)bar.classList.toggle('has-text',!!ta.value.trim());}
 function afterChat(id){
   const ta=$('#cinput');if(ta&&!ta._chatBound){ta._chatBound=1;ta._chatId=id;let raf=0;
-    ta.addEventListener('compositionend',function(){chatComposerReflow(this);chatComposerStateSync(this);});
-    ta.addEventListener('input',function(){chatComposerStateSync(this);if(raf)return;raf=requestAnimationFrame(()=>{raf=0;chatComposerReflow(this);});});
-    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId||id);}});}
-  if(ta){ta._chatId=id;chatComposerStateSync(ta);}
+    ta.addEventListener('compositionstart',function(){if(chatComposerOwnsRoute(this,cur()))this._chatComposing=true;});
+    ta.addEventListener('compositionend',function(){this._chatComposing=false;if(!chatComposerOwnsRoute(this,cur()))return;chatComposerReflow(this);chatComposerStateSync(this);});
+    ta.addEventListener('input',function(){if(!chatComposerOwnsRoute(this,cur()))return;chatComposerStateSync(this);if(raf)return;raf=requestAnimationFrame(()=>{raf=0;if(chatComposerOwnsRoute(this,cur()))chatComposerReflow(this);});});
+    ta.addEventListener('keydown',e=>{if(!chatComposerOwnsRoute(ta,cur())||e.isComposing||ta._chatComposing||e.keyCode===229)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId);}});}
+  if(ta){ta._chatId=id;ta._chatAccount=actId();ta._chatOwner=S;chatComposerStateSync(ta);}
   maybeProactive(id);maybeSpyIdle(id);}
 
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchSoon(id,m.time,900);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
@@ -16993,9 +17021,10 @@ function chatPanelOpen(page){chatPanelKeyboardDismiss();chatPanelSetPage(page);c
 function chatPanelToggle(page){const p=$('#panel');if(!p)return;const next=page==='emoji'?'emoji':'fn';if(p.classList.contains('show')&&p.dataset.page===next){p.classList.remove('show');return;}chatPanelOpen(next);}
 function chatFunctionPanelScroll(el){if(!el||el._pageRaf)return;el._pageRaf=requestAnimationFrame(()=>{el._pageRaf=0;_chatFnPage=Math.max(0,Math.min(1,Math.round(el.scrollLeft/Math.max(1,el.clientWidth))));const p=el.closest('.chat-tools-panel');if(p)p.querySelectorAll('.chat-panel-dot').forEach((x,i)=>x.classList.toggle('on',i===_chatFnPage));});}
 function chatVoiceToggle(){_voiceMode=!_voiceMode;const ta=$('#cinput'),bar=ta&&ta.closest('.chat-inputbar'),send=bar&&bar.querySelector('.chat-send');if(bar)bar.classList.toggle('voice-on',_voiceMode);if(ta)ta.placeholder=_voiceMode?'输入文字，发送为语音条…':'发消息…';if(send)send.textContent=_voiceMode?'发语音':'发送';if(ta)chatComposerStateSync(ta);}
-function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
+function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(!c)return;if(c.blocked){toast('已拉黑，先解除吧');return;}
+  const ta=$('#cinput');if(!chatComposerOwnsRoute(ta,cur())||ta._chatId!==id)return;
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
-  const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';chatComposerStateSync(ta);
+  const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';chatComposerStateSync(ta);
   const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;quoteComposerRefresh(id);
   if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
   else pushMsg(id,{role:'user',type:'text',content:t,quote:q});

@@ -47,7 +47,29 @@ function rememberValidInnerThought(c){if(!c)return false;const text=naturalInner
 function visibleRoleThought(c){if(!wechatNaturalOn())return String(c&&c.mood||'');if(!c)return'';if(rememberValidInnerThought(c)&&typeof save==='function')save(500);return naturalInnerThoughtText(c.innerThought)||naturalInnerThoughtText(c.innerThoughtLastValid);}
 function refreshChatMood(id){if(cur().p!=='chat'||cur().id!==id)return false;const c=getC(id),bar=$('#chatMoodBar'),label=$('#chatMoodText');if(!c||!bar||!label)return false;const natural=wechatNaturalOn(),thought=visibleRoleThought(c),visible=S.settings.showMoodTag!==false;bar.style.display=visible?'flex':'none';bar.setAttribute('onclick',"toggleChatThought('"+id+"')");const full=$('#chatThoughtFullText');if(full)full.textContent=thought||'…';label.textContent=bar.getAttribute&&bar.getAttribute('aria-expanded')==='true'?'心声':thought?thought.slice(0,24)+(thought.length>24?'…':''):'…';return true;}
 function refreshChatMessages(id){if(cur().p!=='chat'||cur().id!==id)return false;const cb=$('#chatbg'),c=getC(id);if(!cb||!c)return false;const stick=nearBottom(cb),top=cb.scrollTop;cb.innerHTML=chatMessageListHTML(id,c);refreshChatMood(id);if(stick)chatPinBottom(cb);else cb.scrollTop=top;return true;}
-function captureChatComposer(c){if(!c||!['chat','music'].includes(c.p))return null;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta)return null;let start=null,end=null;try{start=ta.selectionStart;end=ta.selectionEnd;}catch(_){}return{key:renderPageKey(c),value:ta.value||'',start,end,focused:document.activeElement===ta,height:ta.style.height||'',scrollTop:ta.scrollTop||0};}
+/* CHAT_COMPOSER_SESSION_V1: preserve the live editor, not just its text; never carry a native input session to another role/account. */
+function chatComposerOwnsRoute(ta,c){return !!(ta&&ta.isConnected&&c&&c.p==='chat'&&ta._chatId===c.id&&ta._chatAccount===actId()&&ta._chatOwner===S);}
+function chatComposerCopyAttributes(target,next,preserveStyle){for(const a of Array.from(target.attributes)){if(preserveStyle&&a.name==='style')continue;if(!next.hasAttribute(a.name))target.removeAttribute(a.name);}for(const a of Array.from(next.attributes)){if(preserveStyle&&a.name==='style')continue;if(target.getAttribute(a.name)!==a.value)target.setAttribute(a.name,a.value);}}
+function chatComposerPatchPage(c,app,html,className,st){
+ if(!st||c.p!=='chat')return false;
+ const ta=app.querySelector('#cinput'),page=app.firstElementChild,bar=ta&&ta.closest('.chat-inputbar');
+ if(!chatComposerOwnsRoute(ta,c)||!page||!bar||bar.parentNode!==page)return false;
+ const next=document.createElement('div');next.innerHTML=html;
+ const nextInput=next.querySelector('#cinput'),nextBar=nextInput&&nextInput.closest('.chat-inputbar');
+ // Locking, selection and login screens must still remove the editable composer immediately.
+ if(!nextInput||!nextBar||nextBar.parentNode!==next)return false;
+ if(bar.childNodes.length!==nextBar.childNodes.length)return false;
+ const oldChildren=Array.from(bar.childNodes),newChildren=Array.from(nextBar.childNodes);
+ if(oldChildren.indexOf(ta)!==newChildren.indexOf(nextInput))return false;
+ page.className=className;chatComposerCopyAttributes(bar,nextBar,false);chatComposerCopyAttributes(ta,nextInput,true);
+ for(let i=0;i<oldChildren.length;i++)if(oldChildren[i]!==ta)bar.replaceChild(newChildren[i],oldChildren[i]);
+ const before=document.createDocumentFragment(),after=document.createDocumentFragment();let passed=false;
+ for(const node of Array.from(next.childNodes)){if(node===nextBar){passed=true;continue;}(passed?after:before).appendChild(node);}
+ for(const node of Array.from(page.childNodes))if(node!==bar)page.removeChild(node);
+ page.insertBefore(before,bar);page.appendChild(after);
+ return true;
+}
+function captureChatComposer(c){if(!c||!['chat','music'].includes(c.p))return null;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta||c.p==='chat'&&!chatComposerOwnsRoute(ta,c))return null;let start=null,end=null;try{start=ta.selectionStart;end=ta.selectionEnd;}catch(_){}return{key:renderPageKey(c),value:ta.value||'',start,end,focused:document.activeElement===ta,height:ta.style.height||'',scrollTop:ta.scrollTop||0};}
 function restoreChatComposer(c,st){if(!st||!c||st.key!==renderPageKey(c))return;const ta=$(c.p==='music'?'#m_chat':'#cinput');if(!ta)return;ta.value=st.value;ta.style.height=st.height||'auto';ta.scrollTop=st.scrollTop||0;if(c.p==='chat'&&typeof chatComposerStateSync==='function')chatComposerStateSync(ta);if(st.start!=null)try{ta.setSelectionRange(st.start,st.end==null?st.start:st.end);}catch(_){}if(st.focused)try{ta.focus({preventScroll:true});if(st.start!=null)ta.setSelectionRange(st.start,st.end==null?st.start:st.end);}catch(_){} }
 function renderScrollStateKey(c,el){return String(el&&el.getAttribute&&el.getAttribute('data-render-scroll-key')||renderPageKey(c));}
 function renderScrollElement(t){return !t?null:(String(t.id).charAt(0)==='.'?document.querySelector(t.id):document.getElementById(t.id));}
@@ -214,7 +236,12 @@ function render(){
   const _wxP=(c.p==='wechat'||_wxStandalonePremium)?' wx-premium':['chat','pfchat','pfgroup','group'].includes(c.p)?' wx-chat-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab==='moments'?'discover':(wxTab||'chats')):'';
   const _wxFont=S.me&&S.me.wxFeatures&&S.me.wxFeatures.fontScale!=='normal'?' wx-font-'+S.me.wxFeatures.fontScale:'';
-  app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont+'">'+html+'</div>';
+  const _pageClass='page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont;
+  const _composerKept=chatComposerPatchPage(c,app,html,_pageClass,_composerState);
+  if(!_composerKept){
+    const active=document.activeElement;if(active&&active.id==='cinput')active.blur();
+    app.innerHTML='<div class="'+_pageClass+'">'+html+'</div>';
+  }
   if(c.p==='spy'&&!_spyApp)requestAnimationFrame(()=>spyHomeMount(c.id));
   if(c.p==='music'){const b=app.querySelector('.music-app-head>button:first-child');if(b)b.onclick=back;}
   if(c.p==='browser'){const b=app.querySelector('.br-nav .l');if(b)b.onclick=back;}
@@ -230,7 +257,7 @@ function render(){
   renderLockScreen();renderLockPull();
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='group'||c.p==='pfgroup'||c.p==='pfchat')afterGroupComposer(c);
-  restoreChatComposer(c,_composerState);
+  if(!_composerKept)restoreChatComposer(c,_composerState);
   if(c.p==='cinemawatch')cinemaAfterVideoRender();
   if(c.p==='cinemaread')cinemaAfterReaderRender();
   if(c.p==='drawguess')requestAnimationFrame(dgMount);

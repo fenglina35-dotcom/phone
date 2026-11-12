@@ -234,7 +234,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1913 · 代码助手多接口与停用设置';
+const APP_VER='v1914 · 聊天输入会话保持与角色隔离';
 //@@ private
 const APP_VER='v1916 · 代码助手多接口与停用设置';
 //@@ end

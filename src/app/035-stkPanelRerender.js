@@ -208,10 +208,11 @@ function chatComposerReflow(ta){if(!ta)return;const min=36,max=84,oldScroll=ta.s
 function chatComposerStateSync(ta){if(!ta)return;const bar=ta.closest('.chat-inputbar');if(bar)bar.classList.toggle('has-text',!!ta.value.trim());}
 function afterChat(id){
   const ta=$('#cinput');if(ta&&!ta._chatBound){ta._chatBound=1;ta._chatId=id;let raf=0;
-    ta.addEventListener('compositionend',function(){chatComposerReflow(this);chatComposerStateSync(this);});
-    ta.addEventListener('input',function(){chatComposerStateSync(this);if(raf)return;raf=requestAnimationFrame(()=>{raf=0;chatComposerReflow(this);});});
-    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId||id);}});}
-  if(ta){ta._chatId=id;chatComposerStateSync(ta);}
+    ta.addEventListener('compositionstart',function(){if(chatComposerOwnsRoute(this,cur()))this._chatComposing=true;});
+    ta.addEventListener('compositionend',function(){this._chatComposing=false;if(!chatComposerOwnsRoute(this,cur()))return;chatComposerReflow(this);chatComposerStateSync(this);});
+    ta.addEventListener('input',function(){if(!chatComposerOwnsRoute(this,cur()))return;chatComposerStateSync(this);if(raf)return;raf=requestAnimationFrame(()=>{raf=0;if(chatComposerOwnsRoute(this,cur()))chatComposerReflow(this);});});
+    ta.addEventListener('keydown',e=>{if(!chatComposerOwnsRoute(ta,cur())||e.isComposing||ta._chatComposing||e.keyCode===229)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(ta._chatId);}});}
+  if(ta){ta._chatId=id;ta._chatAccount=actId();ta._chatOwner=S;chatComposerStateSync(ta);}
   maybeProactive(id);maybeSpyIdle(id);}
 
 //@@ web
@@ -229,9 +230,10 @@ function chatPanelOpen(page){chatPanelKeyboardDismiss();chatPanelSetPage(page);c
 function chatPanelToggle(page){const p=$('#panel');if(!p)return;const next=page==='emoji'?'emoji':'fn';if(p.classList.contains('show')&&p.dataset.page===next){p.classList.remove('show');return;}chatPanelOpen(next);}
 function chatFunctionPanelScroll(el){if(!el||el._pageRaf)return;el._pageRaf=requestAnimationFrame(()=>{el._pageRaf=0;_chatFnPage=Math.max(0,Math.min(1,Math.round(el.scrollLeft/Math.max(1,el.clientWidth))));const p=el.closest('.chat-tools-panel');if(p)p.querySelectorAll('.chat-panel-dot').forEach((x,i)=>x.classList.toggle('on',i===_chatFnPage));});}
 function chatVoiceToggle(){_voiceMode=!_voiceMode;const ta=$('#cinput'),bar=ta&&ta.closest('.chat-inputbar'),send=bar&&bar.querySelector('.chat-send');if(bar)bar.classList.toggle('voice-on',_voiceMode);if(ta)ta.placeholder=_voiceMode?'输入文字，发送为语音条…':'发消息…';if(send)send.textContent=_voiceMode?'发语音':'发送';if(ta)chatComposerStateSync(ta);}
-function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
+function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(!c)return;if(c.blocked){toast('已拉黑，先解除吧');return;}
+  const ta=$('#cinput');if(!chatComposerOwnsRoute(ta,cur())||ta._chatId!==id)return;
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
-  const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';chatComposerStateSync(ta);
+  const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';chatComposerStateSync(ta);
   const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;quoteComposerRefresh(id);
   if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
   else pushMsg(id,{role:'user',type:'text',content:t,quote:q});
