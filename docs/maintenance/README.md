@@ -3540,3 +3540,7 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 2026-11-12 网页v1914发布完成：用户明确本次先发网页，未编译/安装私人版，私人资源标签v1916/iOS562/桥42保持。功能提交74751b7f、首次推送提交3f7d61ef；git push origin HEAD:main成功（38cd1674→3f7d61ef）。Pages运行43234800444的build/deploy/report-build-status均completed/success。线上index.html、小手机.html、app.js、sw.js、task-notes.js、web-hotfix.js六项与3f7d61ef逐字节一致，app.js SHA256前16位f963f3dd63cf43d5。一次Python只读状态查询遇TLS EOF，随后正常证书校验的curl读取成功，未改部署或服务。完整5213/5213、普通双端门禁和原样复跑的查岗双端门禁通过，页面错误0；真实iPhone14按键问题仍待对方在v1914试用，不用发布/自动测试替代真机验收。此后只补交本发布记录，功能源码不变。清理本轮测试两张临时图、空.codex_tmp及五份临时日志，保留原.claude/launch.json、交接TXT、既有设置预览图和私人安装产物；无新工作树/源码副本/备份包。
 
 2026-11-12 安卓主屏全屏网页发布准备：用户明确“先发布”，本轮功能仅安卓网页，按本轮范围只发布网页v1915。私人资源v1916/iOS562/桥42保持，不编译安装；本次PhoneWeb.bundle、原生代码与授权客户端均零修改。安卓独立fullscreen，iPhone/iPad及其他设备仍standalone，原配色/Apple meta/安全区/键盘保持；网页体检兼容，设备标签未改。复用原43个分块并证明双端生成字节不变；升版后的提交、完整发布检查及线上结果随后追加。
+
+2026-11-12 安卓主屏全屏网页v1915发布受阻（未上线确认）：功能提交7504a89b；升版并提交后完整5220/5220通过、失败0/跳过0（166.54秒），普通与NORTH_CHECKIN_PREVIEW双端核心聊天全部通过，页面错误0。PRIVATE PhoneWeb.bundle、原生及授权客户端与上版完全一致，苹果仍standalone；只请求安卓主屏fullscreen，保留主题/安全区/键盘。
+本次第一次且唯一一次git push origin HEAD:main返回128：连接github.com:443时LibreSSL SSL_connect: SSL_ERROR_SYSCALL，未取得远端接收或Pages部署证据，不写成已上线。按AGENTS.md第93行“首次推送失败停止重试，提交留给用户手动推送”，没有更换写入通道、没有再次推送。发布前只读远端main为048a269c；当前v1915功能与后续本地记录提交均保留，可在当前项目手动git push origin HEAD:main。用户明确本轮只网页，未编译/安装私人版，私人资源v1916/iOS562/桥42维持。
+安全收尾：本轮两张检查临时图及空.codex_tmp、四份/tmp/android-fullscreen-*.log已删除；必要结果归入本记录。原.claude/launch.json、交接TXT、既有预览图和私人安装产物保留，无新工作树/源码副本/备份包。
