@@ -3549,3 +3549,5 @@ STICKER_EXPLICIT_FORMAT_V1：复现“好呀。[表情包：偷笑]”未拆分�
 Pages运行43252782383的build/report-build-status/deploy均completed/success（连接器读取步骤确认）；一次直连api.github.com只读查询又遇SSL_ERROR_SYSCALL，未把该读取失败当作推送失败。实际线上index.html、小手机.html、app.js、sw.js、task-notes.js、web-hotfix.js六项与6f1a9de9逐字节一致，app.js SHA256前16位66ed20e7d0342d69。
 网页Android主屏启动请求fullscreen，iPhone/iPad及其他平台仍standalone；原主题/安全区/键盘、私人PhoneWeb.bundle/原生/授权代码保持。私人资源v1916/iOS562/桥42未编译安装。本条更新此前“发布受阻”的状态为已上线，保留首次失败历史。安卓旧主屏图标可能沿用旧模式，需新添加主屏图标实测，不清网站数据、不把卸载WebAPK当作移除快捷方式；系统手势条不能承诺永久隐藏。尚无真实Android安装或iPhone实机体验反馈。
 本轮重发只做Git/Pages/线上只读核验及维护记录，无新临时产物，原.claude/launch.json、交接TXT、已展示预览图及现有安装产物均保留。后续仅补交本记录，不改已核对的功能源码。
+
+2026-11-12 补充文档同步受阻：v1915功能提交及首次失败记录已按用户要求成功推到6f1a9de9，Pages43252782383成功、线上六项字节一致，功能已上线。随后仅文档提交2496b60d推送返回128：remote Invalid username or token，Authentication failed。该失败仅影响补充核验文档，未修改已上线功能；停止重试，未读取或改写凭据、未更换写入通道。核验文档及此失败记录保留本地提交，待用户处理文档同步。私人版未安装，本轮没有新增临时产物，原配置、交接与存档保持。
