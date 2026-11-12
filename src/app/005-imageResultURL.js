@@ -411,15 +411,16 @@ function volMul(){const v=(S.settings&&S.settings.volume!=null)?S.settings.volum
 let _voiceBarWant='',_voiceBarOn='',_voiceBarSafety=0;
 function voiceBarSel(id){return '[data-vid="'+String(id||'').replace(/["\\]/g,'')+'"]';}
 function voiceBarStop(){clearTimeout(_voiceBarSafety);_voiceBarWant='';if(_voiceBarOn){const on=_voiceBarOn;_voiceBarOn='';try{document.querySelectorAll(on).forEach(e=>e.classList.remove('playing'));}catch(_){}}}
+function voiceDisplayDuration(m){const duration=Number(m&&m.dur)||voiceEstimatedSeconds(m&&m.content||'');return Math.min(m&&m.roleSong?21600:VOICE_MAX_SECONDS,Math.max(1,duration));}
 function voiceBarWant(id){voiceBarStop();_voiceBarWant=id?voiceBarSel(id):'';}
-function voiceBarStart(){if(!_voiceBarWant)return;_voiceBarOn=_voiceBarWant;_voiceBarWant='';try{document.querySelectorAll(_voiceBarOn).forEach(e=>e.classList.add('playing'));}catch(_){}clearTimeout(_voiceBarSafety);_voiceBarSafety=setTimeout(voiceBarStop,(VOICE_MAX_SECONDS+10)*1000);}
+function voiceBarStart(duration){if(!_voiceBarWant)return;_voiceBarOn=_voiceBarWant;_voiceBarWant='';try{document.querySelectorAll(_voiceBarOn).forEach(e=>e.classList.add('playing'));}catch(_){}clearTimeout(_voiceBarSafety);_voiceBarSafety=setTimeout(voiceBarStop,(Math.max(VOICE_MAX_SECONDS,Math.min(21600,Number(duration)||0))+10)*1000);}
 function voiceBarActive(id){return !!id&&_voiceBarOn===voiceBarSel(id);}
-function playUrl(url){if(_curAudio&&_voiceBarOn){const want=_voiceBarWant;voiceBarStop();_voiceBarWant=want;}try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const active=_curAudio,vol=volMul();try{active.addEventListener('playing',()=>{if(_curAudio===active)voiceBarStart();});['ended','pause','error'].forEach(ev=>active.addEventListener(ev,()=>{if(_curAudio===active)voiceBarStop();}));}catch(_){}
+function playUrl(url){if(_curAudio&&_voiceBarOn){const want=_voiceBarWant;voiceBarStop();_voiceBarWant=want;}try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const active=_curAudio,vol=volMul();try{active.addEventListener('playing',()=>{if(_curAudio===active)voiceBarStart(active.duration);});['ended','pause','error'].forEach(ev=>active.addEventListener(ev,()=>{if(_curAudio===active)voiceBarStop();}));}catch(_){}
   try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
   try{const p=_curAudio.play();if(p&&typeof p.catch==='function')p.catch(async()=>{if(_curAudio!==active)return;try{const ab=await audioDataToBuf(url),buf=await decodeBuf(ab);if(buf)await playBuf(buf);}catch(_){}});}catch(_){} }
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return false;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_audio.state!=='running')return false;stopBufSource('replaced-by-buffer');const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>{if(_curSrc===s||!_curSrc)voiceBarStop();};s.start();_curSrc=s;voiceBarStart();return true;}catch(e){return false;}}
 function voiceAudioKey(m){const x=m&&String(m.audio||'').match(/^idb-audio:(.+)$/i);return x?x[1]:'';}
-function voiceAudioExpired(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
+function voiceAudioExpired(m){if(m&&m.roleSong)return false;return !!(m&&m.role!=='user'&&m.type==='voice'&&m.audio&&Date.now()-Number(m.audioTs||m.time||0)>VOICE_AUDIO_TTL_MS);}
 function clearVoiceAudio(m){try{const k=voiceAudioKey(m);if(k)imgDel('__audio_'+k);}catch(_){}if(m){try{if(/^blob:/i.test(String(m._aurl||'')))URL.revokeObjectURL(m._aurl);}catch(_){}delete m.audio;delete m.audioTs;delete m._aurl;delete m._ttsFailAt;}}
 function voiceAudioGC(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(voiceAudioExpired(m)){clearVoiceAudio(m);changed=true;}});}}catch(_){}return changed;}
 async function audioDataToBuf(audio){if(!audio)return null;
@@ -487,7 +488,7 @@ async function speak(text,o){const v=o?getVoice(o):null;
   if(ttsApiOn(o)){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf)return await playBuf(buf);if(ab)await ttsRefundAudio(ab,'tts-decode-failed');return false;}
   const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),o),o);if(!t||!('speechSynthesis'in window))return false;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;applySystemVoice(u,v);}u.onstart=()=>voiceBarStart();u.onend=u.onerror=()=>voiceBarStop();speechSynthesis.cancel();speechSynthesis.speak(u);return true;}catch(e){voiceBarStop();return false;}}
-async function speakMsg(m,o){const v=o?getVoice(o):null;
+async function speakMsg(m,o){if(m&&m.roleSong)return roleSongSpeakMessage(m,o);const v=o?getVoice(o):null;
   // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(m.audio){const u=await audioPlayableUrl(m.audio);if(u){playUrl(u);return;}}
@@ -498,4 +499,4 @@ async function speakMsg(m,o){const v=o?getVoice(o):null;
 const _voiceWarmLive=new Set();
 function voiceTtsPending(m){return !!(m&&m.role!=='user'&&m.type==='voice'&&!m.audio&&!m._aurl&&(m._ttsTask instanceof Promise||!!m.id&&_voiceWarmLive.has(m.id)));}
 function refreshVoiceBubble(m){if(!m||!m.id)return;const el=document.querySelector('[data-vid="'+m.id+'"]');if(!el)return;
-  const loading=voiceTtsPending(m),dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.content||'')),de=el.querySelector('.vdur');el.classList.toggle('loading',loading);el.classList.toggle('queued',!!m._playWhenReady);el.classList.toggle('playing',voiceBarActive(m.id));el.setAttribute('aria-busy',loading?'true':'false');el.style.minWidth=Math.min(60+dur*8,200)+'px';if(de)de.textContent=dur+'″';}
+  const loading=voiceTtsPending(m),dur=voiceDisplayDuration(m),de=el.querySelector('.vdur');el.classList.toggle('loading',loading);el.classList.toggle('queued',!!m._playWhenReady);el.classList.toggle('playing',voiceBarActive(m.id));el.setAttribute('aria-busy',loading?'true':'false');el.style.minWidth=Math.min(60+dur*8,200)+'px';if(de)de.textContent=dur+'″';}

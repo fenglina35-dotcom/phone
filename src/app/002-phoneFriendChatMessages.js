@@ -233,11 +233,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-//@@ web
-const APP_VER='v1915 · 安卓主屏全屏启动';
-//@@ private
-const APP_VER='v1916 · 代码助手多接口与停用设置';
-//@@ end
+const APP_VER='v1917 · 角色歌单与云端翻唱';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;

@@ -61,7 +61,7 @@ test('a role that mutes me messages me privately and can release me with [群解
   assert.match(fn('gmMute'), /if\(target==='me'&&until&&actor!=='me'&&getC\(actor\)\)gmMuteDM\(id,actor\);/);
   assert.match(fn('gmMuteDM'), /scheduleFeatureReply\(cid,featureEventNote\('你在群里禁言了'/);
   assert.match(app, /content=applyControlTags\(content,c,id,_statedPwd,_userText,_replyActionOutcome\);content=applyGroupUnmuteTag\(content,c\);/);
-  assert.match(app, /\+_thoughtTurnPrompt\+_usageTruth\+wxGroupMutePrompt\(c\),_sys=/);
+  assert.match(app, /\+_thoughtTurnPrompt\+_usageTruth\+wxGroupMutePrompt\(c\)\+roleSongPrompt\(c,note\?'':_userText,'wechat'\),_sys=/);
   assert.match(fn('applyGroupUnmuteTag'), /gmMute\('role',hit\.g\.id,c\.id,'me',0\)/);
 });
 

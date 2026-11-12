@@ -46,3 +46,121 @@ assert.doesNotMatch(home,/<em>\$\{chatCount/);
 assert.match(functionSource('musicChatHistoryModal'),/onchange="musicChatHistoryModal\(this\.value\)"/);
 
 console.log('music chat history tests passed');
+
+// ROLE_SONG_LIBRARY_V1：拥有者、真实音频和取消边界都必须在两包一致。
+const {default:test}=await import('node:test');
+const {read,fnSource,PRIV_DIR}=await import('./_helpers.mjs');
+function singingHarness(src){
+  let account='main',serial=0,release=null;
+  const stored=new Map(),played=[],stops=[],rows=[];
+  const blob=new Blob([new Uint8Array(12)],{type:'audio/mpeg'});
+  const song=(id,owner,ready,title)=>({id,title,roleSongOwner:owner,roleSongReady:ready,src:{t:'idb'},mediaKind:'audio',fileSize:12});
+  const state={contacts:[{id:'a',name:'甲'},{id:'b',name:'乙'}],couple:{cid:'a'},music:{songs:[song('mine','',false,'我的原曲'),song('a1','a',true,'小星星'),song('a0','a',false,'未转换'),song('b1','b',true,'乙的歌')],libraryTab:'mine'}};
+  state.music.songs[1].roleSongAliases=['Twinkle'];
+  const cx=vm.createContext({S:state,Blob,URL,AbortController,Uint8Array,Math,Date,String,Number,Promise,Error,JSON,location:{href:'https://example.test/'},_mCur:null,_ma:null,_mPlaying:false,_call:{id:'a',session:'s1',state:'active',kind:'voice'},_roleSongCallJob:null,
+    actId:()=>account,getC:id=>cx.S.contacts.find(c=>c.id===id),uid:()=>String(++serial),mGet:async()=>blob,
+    decodeBuf:async()=>({duration:187}),audioBufToDataUrl:()=> 'data:audio/mpeg;base64,AAAA',imgPut:async(k,v)=>stored.set(k,v),imgDel:async k=>stored.delete(k),audioPlayableUrl:async ref=>ref?'blob:song':null,
+    playUrl:url=>played.push(url),voiceBarWant:()=>{},save:()=>{},toast:()=>{},msgs:()=>rows,updateCallSub:()=>{},stopCallMediaAudio:why=>stops.push(why),stopBufSource:()=>{},
+    playCallMediaWait:async(ab,buf,start,live)=>{if(!live())return false;start();return new Promise(r=>release=r);},setTimeout,clearTimeout,setInterval,clearInterval,
+  });
+  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
+  vm.runInContext('const _roleSongConversions=new Map();',cx);cx.fetch=async()=>{throw new Error('unexpected network')};
+  cx.VOICE_MAX_SECONDS=60;cx.VOICE_AUDIO_TTL_MS=60000;cx.voiceEstimatedSeconds=()=>5;
+  return {cx,stored,played,stops,rows,state,blob,setAccount:x=>account=x,finish:x=>release&&release(x)};
+}
+for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
+ const src=read(file);
+ test(label+' separates mine, each role, source songs and unambiguous aliases',()=>{
+  const {cx}=singingHarness(src);
+  assert.deepEqual(Array.from(cx.musicLibrarySongs(),s=>s.id),['mine']);
+  assert.deepEqual(Array.from(cx.musicLibrarySongs('role','a'),s=>s.id),['a1','a0']);
+  assert.deepEqual(Array.from(cx.musicRoleSongs('a'),s=>s.id),['a1']);
+  assert.equal(cx.musicRoleSongs('').length,0);
+  assert.equal(cx.roleSongFind('a','Twinkle').id,'a1');
+  assert.equal(cx.roleSongFind('a','b1'),null);
+  assert.equal(cx.roleSongFind('a','未转换'),null);
+  assert.equal(cx.roleSongFind('a','随机').id,'a1');
+  const prompt=cx.roleSongPrompt(cx.S.contacts[0],'随机唱首歌','wechat');
+  assert.ok(prompt.includes('小星星'));assert.ok(!prompt.includes('乙的歌'));assert.ok(!prompt.includes('未转换'));
+  cx._mCur='a1';assert.deepEqual(Array.from(cx.musicPlaybackSongs(),s=>s.id),['a1','a0']);
+  cx.S={contacts:[],music:{songs:[]}};assert.equal(cx.musicRoleSongs('a').length,0);
+ });
+ test(label+' includes an explicitly requested older song even when the library exceeds the prompt limit',()=>{
+  const h=singingHarness(src);for(let i=0;i<45;i++)h.state.music.songs.push({id:'extra'+i,title:'演唱曲目'+i,roleSongOwner:'a',roleSongReady:true,src:{t:'idb'}});
+  h.state.music.songs.push({id:'requested-old-song',title:'月亮晚安曲',roleSongAliases:['月亮睡眠曲'],roleSongOwner:'a',roleSongReady:true,src:{t:'idb'}});
+  const prompt=h.cx.roleSongPrompt(h.state.contacts[0],'给我唱月亮睡眠曲吧','wechat');assert.ok(prompt.includes('requested-old-song'));assert.ok(!prompt.includes('乙的歌'));
+ });
+ test(label+' stores actual song audio, preserves long duration and never expires it into speech',async()=>{
+  const {cx,stored,played}=singingHarness(src);
+  const m=await cx.roleSongVoiceMessage('a','a1');
+  assert.equal(m.type,'voice');assert.equal(m.dur,187);assert.equal(m.roleSong.cid,'a');assert.equal(stored.size,1);
+  assert.equal(cx.voiceDisplayDuration(m),187);assert.equal(cx.voiceDisplayDuration({dur:187}),60);
+  m.audioTs=1;assert.equal(cx.voiceAudioExpired(m),false);assert.equal(cx.voiceAudioExpired({role:'assistant',type:'voice',audio:'old',audioTs:1}),true);
+  await cx.roleSongSpeakMessage(m,cx.S.contacts[0]);assert.deepEqual(played,['blob:song']);
+  assert.equal(await cx.roleSongSpeakMessage(m,cx.S.contacts[1]),false);assert.equal(played.length,1);
+ });
+ test(label+' rejects late file loads after account switches without persisting or delivering',async()=>{
+  const h=singingHarness(src);let ready;h.cx.mGet=()=>new Promise(r=>ready=r);
+  const work=h.cx.roleSongVoiceMessage('a','a1');await Promise.resolve();h.setAccount('alt');ready(h.blob);
+  assert.equal(await work,null);assert.equal(h.stored.size,0);assert.equal(h.played.length,0);
+ });
+ test(label+' does not play a historical song after a late account switch',async()=>{
+  const h=singingHarness(src);let resolve;h.cx.audioPlayableUrl=()=>new Promise(r=>resolve=r);
+  const work=h.cx.roleSongSpeakMessage({id:'m1',audio:'idb-audio:old',roleSong:{cid:'a',id:'a1'}},h.state.contacts[0]);
+  h.setAccount('alt');resolve('blob:late');assert.equal(await work,false);assert.equal(h.played.length,0);
+ });
+ test(label+' cancels pending song delivery when ownership, source or contact changes',async()=>{
+  for(const mutation of [h=>h.state.music.songs[1].roleSongOwner='b',h=>h.state.music.songs.splice(1,1),h=>h.state.contacts[0].deleted=true,h=>h.state.music.songs[1].src={t:'url',url:'https://example.test/replaced.mp3'}]){
+   const h=singingHarness(src);let resolve;h.cx.mGet=()=>new Promise(r=>resolve=r);
+   const work=h.cx.roleSongVoiceMessage('a','a1');mutation(h);resolve(h.blob);
+   assert.equal(await work,null);assert.equal(h.stored.size,0);
+  }
+ });
+ test(label+' cloud conversion preserves the original, verifies output and stores only in its role',async()=>{
+  const h=singingHarness(src),calls=[];h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'private-test-key',pitch:-12,model:'claude_fish'}}};
+  h.cx.fetch=async(url,opts)=>{calls.push({url,opts});return url.includes('/jobs?')?{ok:true,status:200,json:async()=>({id:'fc-own',proof:'own-proof'})}:{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};
+  h.cx.mPutVerified=async(id,blob,kind)=>{assert.equal(kind,'audio');assert.equal(blob,h.blob);return {size:12,type:'audio/mpeg',sig:'verified',duration:187};};h.cx.musicApplyStoredMeta=(target,prepared,stored)=>Object.assign(target,{fileSize:stored.size,fileType:stored.type,fileSig:stored.sig,mediaDuration:stored.duration});
+  const original=h.state.music.songs.find(s=>s.id==='a0'),result=await h.cx.roleSongConvert('a','a0');
+  assert.equal(result.roleSongReady,true);assert.equal(result.roleSongOwner,'a');assert.equal(result.mediaDuration,187);assert.equal(original.roleSongReady,false);assert.ok(h.state.music.songs.includes(original));
+  assert.equal(calls.length,2);assert.ok(calls[0].url.includes('separate=true'));assert.equal(calls[0].opts.headers.Authorization,'Bearer private-test-key');assert.ok(!JSON.stringify(h.state.music).includes('private-test-key'));assert.ok(!JSON.stringify(h.state.music).includes('own-proof'));
+  assert.equal(await h.cx.roleSongConvert('b','a0'),null);
+ });
+ test(label+' explicitly making a new pitch creates a new performance while unchanged settings reuse it',async()=>{
+  const h=singingHarness(src);h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'private-test-key',pitch:-12,model:'claude_fish'}}};let requests=0;
+  h.cx.fetch=async(url)=>{requests++;return url.includes('/jobs?')?{ok:true,status:200,json:async()=>({id:'fc-own',proof:'proof'})}:{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};h.cx.mPutVerified=async()=>({size:12,type:'audio/mpeg',sig:'verified',duration:187});h.cx.musicApplyStoredMeta=(target,p,stored)=>Object.assign(target,{fileSize:stored.size,fileSig:stored.sig});
+  const first=await h.cx.roleSongConvert('a','a0');h.state.settings.roleSongCloud.a.pitch=0;const second=await h.cx.roleSongConvert('a','a0');assert.notEqual(first.id,second.id);assert.equal(requests,4);assert.equal((await h.cx.roleSongConvert('a','a0')).id,second.id);assert.equal(requests,4);assert.ok(!JSON.stringify(h.state.music).includes('private-test-key'));
+ });
+ test(label+' cloud job resumes without a second upload and rejects late account results',async()=>{
+  const h=singingHarness(src);h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'private-test-key',pitch:-12,model:'claude_fish'}},roleSongJobs:{}};const song=h.state.music.songs.find(s=>s.id==='a0'),stamp=h.cx.roleSongSourceStamp(song);
+  h.state.settings.roleSongJobs['main|a|a0']={id:'fc-own',proof:'own-proof',source:stamp,config:JSON.stringify(['https://song.example','claude_fish',-12]),time:Date.now()};let resolve,uploads=0;
+  h.cx.fetch=(url,opts)=>{if(opts.method==='POST')uploads++;return new Promise(r=>resolve=r);};
+  const work=h.cx.roleSongConvert('a','a0');h.setAccount('alt');resolve({ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob});
+  assert.equal(await work,null);assert.equal(uploads,0);assert.equal(h.state.music.songs.length,4);
+ });
+ test(label+' keeps the source and releases a confirmed failed cloud job for a later explicit retry',async()=>{
+  const h=singingHarness(src);h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'test-key',pitch:-12,model:'claude_fish'}},roleSongJobs:{}};const source=h.state.music.songs.find(s=>s.id==='a0');h.state.settings.roleSongJobs['main|a|a0']={id:'fc-failed',proof:'proof',source:h.cx.roleSongSourceStamp(source),config:JSON.stringify(['https://song.example','claude_fish',-12]),time:Date.now()};let calls=0;h.cx.fetch=async()=>{calls++;return{ok:false,status:422};};
+  await assert.rejects(h.cx.roleSongConvert('a','a0'));assert.equal(calls,1);assert.equal(h.state.settings.roleSongJobs['main|a|a0'],undefined);assert.ok(h.state.music.songs.includes(source));assert.equal(source.roleSongReady,false);
+ });
+ test(label+' call singing waits for audio and stop releases only that session',async()=>{
+  const h=singingHarness(src);const work=h.cx.roleSongPlayCall(h.state.contacts[0],'a1','s1');
+  for(let i=0;i<20&&!h.rows.length;i++)await new Promise(r=>setTimeout(r,0));
+  assert.equal(h.rows.length,1);assert.equal(h.rows[0]._cs,'s1');assert.equal(h.rows[0].callAudio,h.rows[0].audio);
+  assert.equal(h.cx._call.sub.text,'♪ 小星星');assert.ok(h.cx._roleSongCallJob);
+  assert.equal(h.cx.roleSongStopCall('manual'),true);assert.equal(await work,false);assert.equal(h.cx._roleSongCallJob,null);
+  assert.deepEqual(h.stops,['manual']);
+ });
+}
+for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
+ test(label+' historical song audio does not age into a spoken replacement',()=>{
+  const cx=vm.createContext({Date,Number,VOICE_AUDIO_TTL_MS:1000});vm.runInContext(fnSource(read(file),'voiceAudioExpired'),cx);
+  assert.equal(cx.voiceAudioExpired({role:'assistant',type:'voice',audio:'stored-song',audioTs:1,roleSong:{cid:'a',id:'song'}}),false);
+  assert.equal(cx.voiceAudioExpired({role:'assistant',type:'voice',audio:'ordinary-tts',audioTs:1}),true);
+ });
+}
+for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
+ test(label+' call replay never bills a recorded song as regenerated spoken text',async()=>{
+  let confirmations=0,ttsCalls=0;
+  const cx=vm.createContext({_callReplayRevoiceBusy:false,getC:()=>({id:'a'}),callReplayPickRows:()=>[{role:'assistant',roleSong:true,action:false,text:'♪ 小星星'}],ttsApiOn:()=>true,ttsContentLang:()=> 'zh',pickSpoken:x=>x,toast:()=>{},uiConfirm:async()=>{confirmations++;return false;},ttsArr:async()=>{ttsCalls++;}});
+  vm.runInContext(fnSource(read(file),'clReplayRevoice'),cx);await cx.clReplayRevoice('a','session');assert.equal(confirmations,0);assert.equal(ttsCalls,0);
+ });
+}

@@ -1,22 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {fnSource} from './_helpers.mjs';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 
-function functionSource(name){
-  const start=source.indexOf(`function ${name}`);
-  assert.ok(start>=0,`missing ${name}`);
-  const brace=source.indexOf('{',start);
-  let depth=0,quote='',escaped=false;
-  for(let i=brace;i<source.length;i++){
-    const ch=source[i];
-    if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote='';continue;}
-    if(ch==="'"||ch==='"'||ch==='`'){quote=ch;continue;}
-    if(ch==='{')depth++;else if(ch==='}'&&--depth===0)return source.slice(start,i+1);
-  }
-  throw new Error(`unterminated ${name}`);
-}
+function functionSource(name){return fnSource(source,name);}
 
 const context=vm.createContext({});
 vm.runInContext(functionSource('parseLyrics'),context);
@@ -106,7 +95,7 @@ const raceContext=vm.createContext({
 });
 vm.runInContext('let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mWantPlay=false,_mLyricIndex=-2,_mLyricPaintAt=0,_mPlayToken=0,_mAudioSongId=null;',raceContext);
 vm.runInContext('function musicMediaElement(){if(!_ma)_ma=new Audio();return _ma;}',raceContext);
-vm.runInContext('async '+functionSource('musicPlay'),raceContext);
+vm.runInContext(functionSource('musicPlay'),raceContext);
 const firstPlay=raceContext.musicPlay('first');
 const secondPlay=raceContext.musicPlay('second');
 pending.get('second')({id:'second'});await Promise.resolve();await Promise.resolve();

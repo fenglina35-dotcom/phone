@@ -1,4 +1,5 @@
 function warmVoiceMsg(m,o){
+  if(m&&m.roleSong)return m.audio||m._aurl||null;
   if(voiceAudioExpired(m))clearVoiceAudio(m);
   if(!m||m.role==='user'||m.type!=='voice'||m.audio||m._aurl||!ttsApiOn(o))return m&&m._aurl;
   if(m._ttsTask instanceof Promise)return m._ttsTask;delete m._ttsTask;
@@ -35,7 +36,7 @@ function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navig
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
 //@@ web
-  const url='sw.js?v=1915&r=v1915-owner-todo-report-1';
+  const url='sw.js?v=1917&r=v1917-owner-todo-report-1';
 //@@ private
   const url='sw.js?v=1419&r=v1419-private-pf-role-1';
 //@@ end

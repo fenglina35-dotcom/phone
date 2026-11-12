@@ -2106,3 +2106,7 @@ test('only Android web home launch requests fullscreen while private and Apple d
  const web=read('小手机.html');assert(web.includes('ANDROID_HOME_FULLSCREEN_V1'));assert(web.includes("display:android?'fullscreen':'standalone'"));assert(web.includes('android=/Android/i.test(ua)&&!ios'));
  for(const entry of ['index.html','小手机.html']){const html=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+entry);assert(html.includes("display:'standalone'"));assert(!html.includes('ANDROID_HOME_FULLSCREEN_V1'));}
 });
+
+test('role singing stays owner-bound and plays recordings instead of regenerating lyrics as speech',()=>{
+ for(const file of [WEB,PRIVATE]){const src=read(file);for(const marker of ['ROLE_SONG_LIBRARY_V1','ROLE_SONG_CLOUD_V1','function roleSongConvert(','function roleSongCloudRequest(','function musicRoleSongs(','function roleSongVoiceMessage(','function roleSongPlayCall(','if(m&&m.roleSong)return roleSongSpeakMessage(m,o)','if(m&&m.roleSong)return false','roleSongStopCall(\'call-ended\')','x.role===\'assistant\'&&!x.roleSong&&!x.action'])assert(src.includes(marker),file+' lost '+marker);}
+});
