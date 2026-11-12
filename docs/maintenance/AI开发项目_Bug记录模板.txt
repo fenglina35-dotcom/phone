@@ -2779,3 +2779,5 @@ CODE_MODEL_ROUTES_V2：五条独立路线，旧单路线配置迁入首条，空
 
 2026-11-11 代码助手私人版安装完成：功能提交6066d622，网页v1913 / 私人资源v1916 / iOS1.0.562 (562) / 桥42。升版后完整5202项中5200通过、0失败、2项按设计因未提交升版跳过；提交后升版工具两项及源码一致性共4/4补测通过。普通与NORTH_CHECKIN_PREVIEW双端核心聊天全部通过，pageErrors=0。Release BUILD SUCCEEDED，codesign --verify --deep --strict通过，包内1915个PhoneWeb资源与6066d622的Git对象逐字节一致；devicectl覆盖安装成功，并从用户iPhone15读回com.qianyi.PhoneCompanionTest / 1.0.562 / build562。只更新原生版本标记，私人伴生与桥协议保持；不部署后台函数、不调用真实付费模型。真机新设置交互及各实际中转站仍待用户体验。此条记录时网页尚未推送，下一步按授权推送并核对Pages和线上文件。
 本轮首次在沙盒内枚举设备遇CoreDeviceService初始化超时，沙盒外正常权限枚举与后续安装/读回均成功，未修改或重启手机服务。测试生成的两张临时证明图与空.codex_tmp目录已清理，原.claude/launch.json、交接TXT和预览截图保留。
+
+2026-11-11 代码助手网页发布核验：在私人iPhone实际读回1.0.562 / build562之后，首次git push origin HEAD:main成功（53bf49e7→4abc93f4），网页v1913 / 私人资源v1916 / 桥42。GitHub Pages运行43144461227的build、report-build-status、deploy均completed/success。线上index.html、小手机.html、app.js、sw.js、task-notes.js、web-hotfix.js六项与4abc93f4逐字节一致；app.js SHA256前16位ed92a9de2db13ee2。代码助手清空/停用与五路线四协议均在本次包/网页内，不部署云函数。此后只补交本发布记录，功能源码不变，不需重复安装。真机交互和真实中转站仍待用户使用反馈；安装、上线与用户验收分别记录。清理本轮测试临时图片、空.codex_tmp和临时日志/设备JSON；保留原.claude/launch.json、交接TXT、已展示预览图与现有Release构建产物，无新工作树/源码副本/备份包。
