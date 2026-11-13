@@ -195,6 +195,7 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
    assert.equal(await work,null);assert.equal(h.stored.size,0);
   }
  });
+ if(label==='private'){
  test(label+' choosing vocal output from mixed audio sends separation while already-vocal input can skip it',async()=>{
   for(const selected of ['mixed','vocals']){
    const h=singingHarness(src),cx=h.cx,fields={mu_owner:{value:'role'},mu_role:{value:'a'},mu_ready:{value:'source'},mu_accompaniment:{value:selected}};
@@ -284,6 +285,7 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   const h=singingHarness(src);h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'test-key',pitch:-12,model:'claude_fish'}},roleSongJobs:{}};const source=h.state.music.songs.find(s=>s.id==='a0');h.state.settings.roleSongJobs['main|a|a0']={id:'fc-failed',proof:'proof',source:h.cx.roleSongSourceStamp(source),config:JSON.stringify(['https://song.example','claude_fish',-12]),time:Date.now()};let calls=0;h.cx.fetch=async()=>{calls++;return{ok:false,status:422};};
   await assert.rejects(h.cx.roleSongConvert('a','a0'));assert.equal(calls,1);assert.equal(h.state.settings.roleSongJobs['main|a|a0'],undefined);assert.ok(h.state.music.songs.includes(source));assert.equal(source.roleSongReady,false);
  });
+ }
  test(label+' call singing waits for audio and stop releases only that session',async()=>{
   const h=singingHarness(src);const work=h.cx.roleSongPlayCall(h.state.contacts[0],'a1','s1');
   for(let i=0;i<20&&!h.rows.length;i++)await new Promise(r=>setTimeout(r,0));
@@ -325,10 +327,24 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   const work=cx.roleSongCloudQuotaRefresh('a',{...cfg,quotaSupported:true});for(let i=0;i<10&&!resolve;i++)await new Promise(r=>setImmediate(r));assert.equal(typeof resolve,'function');
   const before=el.textContent;account='other';resolve({unit:'audio_seconds',period:'2026-11',limit:60,used:0,reserved:0,remaining:60});await work;assert.equal(el.textContent,before);assert.equal(calls,1);
  });
- test(label+' quota and busy rejections remain distinct and do not retry requests',async()=>{
+ if(label==='private')test(label+' quota and busy rejections remain distinct and do not retry requests',async()=>{
   const {execFileSync}=await import('node:child_process');const old=execFileSync('git',['show','619419d5:'+file],{encoding:'utf8',maxBuffer:20e6});
   const run=async(source,code)=>{const h=singingHarness(src);vm.runInContext(fnSource(source,'roleSongCloudRequest'),h.cx);let calls=0;h.cx.fetch=async()=>{calls++;return{ok:false,status:429,json:async()=>({code})}};let message='';try{await h.cx.roleSongCloudRequest({url:'https://fixture.invalid',key:'fixture'},'/jobs',{method:'POST'});}catch(e){message=e.message;}assert.equal(calls,1);return message;};
   assert.ok(!(await run(old,'quota_exhausted')).includes('时长限额'),'affected old code must fail the distinct quota message requirement');
   assert.ok((await run(src,'quota_exhausted')).includes('时长限额'));assert.ok((await run(src,'queue_busy')).includes('另一首歌'));assert.ok((await run(src,'untrusted arbitrary message')).includes('限制新任务'));
  });
 }
+
+// 公开网页只导入演唱成品；私人转换保持独立。
+test('web external performances hide cloud creation and refuse stale conversion calls without touching saved data',async()=>{
+ const src=read('app.js'),h=singingHarness(src),cx=h.cx;let html='',requests=0,converted=0;
+ cx.esc=x=>String(x||'');cx.openModal=x=>html=x;cx.musicInit=()=>{};cx.musicLibraryRoleId=()=> 'a';
+ for(const name of ['musicSongOwnerFields','musicSongSourceLabel','roleSongCloudModal','roleSongConvertOpen'])vm.runInContext(fnSource(src,name),cx);
+ const fields=cx.musicSongOwnerFields('mu');assert.doesNotMatch(fields,/等待转换|生成清唱|转换方式/);assert.match(fields,/<option value="performance" selected>/);
+ assert.ok(!cx.musicSongSourceLabel(h.state.music.songs[2],'').includes('待转换'));
+ cx.roleSongCloudModal('a');assert.match(html,/外部/);assert.doesNotMatch(html,/rsc_key|rsc_url|导入连接文件/);
+ h.state.settings={roleSongCloud:{a:{url:'https://fixture.invalid',key:'fixture'}},roleSongJobs:{old:{id:'keep'}}};const before=JSON.stringify(h.state);
+ cx.roleSongConvert=async()=>{converted++;};cx.fetch=async()=>{requests++;throw Error('unexpected request');};
+ await cx.roleSongConvertOpen('a0',true);assert.equal(converted,0);assert.equal(JSON.stringify(h.state),before);
+ await assert.rejects(cx.roleSongCloudRequest({url:'https://fixture.invalid',key:'fixture'},'/jobs',{method:'POST'}),/外部/);assert.equal(requests,0);
+});
