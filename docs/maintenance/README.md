@@ -3570,3 +3570,5 @@ Pages运行43252782383的build/report-build-status/deploy均completed/success（
 火车缺载专项验收：旧双端模块回归均复现ReferenceError，新模块10/10；NORTH_MISSING_TRAIN实际阻断查询脚本后双端原buildSystem/myActivity、16种权限/原文/笔记组合、手动/自动回复、忙碌释放、保存刷新均通过且pageErrors0。正常核心聊天与双端音乐专项通过，公开无转换设置/传输、私人保留转换、微信及电话原音未改。首轮全量5279中3项失败：新增守卫误默认扫描app.js而标记在booking独立文件（已分别登记双端真实文件），Mac说明在测试读取后才补版本（补齐后1255项守卫/继承原样通过）。不是放宽断言；最终提交后重新跑全量。
 
 提交64bcb5dc后验收补充：iOS571 Release编译成功、codesign严格验证通过，1915个私人Web资源逐项与该提交Git blob一致，Info身份1.0.571/571。提交后全量发现升版工具验证器把私人下一版等于网页当前版误判为旧号，已改为分别核对网页/私人APP_VER目标，保留iOS旧号检查；实际数字转换回归及完整/网页独立dry-run4/4通过。该补丁仅发布工具，不改App内容；最终全量重跑。
+
+2026-11-13 火车缺载修复私人安装验收：源码64bcb5dc、发布工具e339aa96；最终完整5280/5280、0失败0跳过。普通、NORTH_MISSING_TRAIN真实缺载、NORTH_CHECKIN_PREVIEW、NORTH_ROLE_SONG_VOICE双端门禁均通过，页面错误0。Release编译成功、codesign严格签名通过、1915个私人Web资源与提交逐项一致；devicectl覆盖安装后从0000的iPhone读回com.qianyi.PhoneCompanionTest 1.0.571/571并成功启动。私人资源v1925、桥42；公开网页候选v1926。公开音乐外部成品导入/教程与私人云端转换差异已验，无实调收费模型，无数据清理/恢复操作。本轮两张可重建测试图及空.codex_tmp已清理；保留原未跟踪.claude和交接TXT。下一步用户已授权推网页并核对线上，不把安装等同真实用户键盘/聊天验收。
