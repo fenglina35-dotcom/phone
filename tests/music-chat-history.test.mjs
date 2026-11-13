@@ -63,8 +63,8 @@ function singingHarness(src){
     playUrl:url=>played.push(url),voiceBarWant:()=>{},save:()=>{},toast:()=>{},msgs:()=>rows,updateCallSub:()=>{},stopCallMediaAudio:why=>stops.push(why),stopBufSource:()=>{},
     playCallMediaWait:async(ab,buf,start,live)=>{if(!live())return false;start();return new Promise(r=>release=r);},setTimeout,clearTimeout,setInterval,clearInterval,
   });
-  for(const name of ['roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongReadySongs','roleSongRequestPlan','roleSongRequestPlanValid','roleSongAttachPlan','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
-  vm.runInContext('const _roleSongConversions=new Map();',cx);cx.fetch=async()=>{throw new Error('unexpected network')};
+  for(const name of ['roleSongProgressKey','roleSongProgressText','roleSongProgressHTML','roleSongProgressPaint','roleSongProgressUpdate','roleSongCloudConfig','roleSongSourceStamp','roleSongConvertCandidate','roleSongCloudRequest','roleSongConvert','musicLibraryRoleId','musicLibrarySongs','musicRoleSongs','musicPlaybackSongs','musicKeyText','roleSongIntent','roleSongReadySongs','roleSongRequestPlan','roleSongRequestPlanValid','roleSongAttachPlan','roleSongFind','roleSongPrompt','roleSongLoad','roleSongVoiceMessage','roleSongSpeakMessage','roleSongStopCall','roleSongPlayCall','voiceAudioExpired','voiceDisplayDuration'])vm.runInContext(fnSource(src,name),cx);
+  vm.runInContext('const _roleSongConversions=new Map();let _roleSongProgressTimer=0;',cx);cx.fetch=async()=>{throw new Error('unexpected network')};
   cx.VOICE_MAX_SECONDS=60;cx.VOICE_AUDIO_TTL_MS=60000;cx.voiceEstimatedSeconds=()=>5;
   return {cx,stored,played,stops,rows,state,blob,setAccount:x=>account=x,finish:x=>release&&release(x)};
 }
@@ -212,6 +212,52 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
    assert.equal(new URL(urls[0]).searchParams.get('separate'),String(selected==='mixed'));
    assert.equal(result.roleSongReady,true);assert.equal(source.roleSongReady,false);
   }
+ });
+ test(label+' conversion click commits the visible editor choice before submitting an existing mixed track',async()=>{
+  const h=singingHarness(src),cx=h.cx,source=h.state.music.songs.find(s=>s.id==='a0');source.title='timemachine';source.roleSongHasAccompaniment=false;
+  const fields={me_owner:{value:'role'},me_role:{value:'a'},me_ready:{value:'source'},me_accompaniment:{value:'mixed'},me_t:{value:'timemachine'},me_a:{value:''},me_l:{value:''}};
+  cx.document={getElementById:id=>fields[id]};cx.$=selector=>fields[selector.slice(1)];cx.closeModal=()=>{};cx.render=()=>{};
+  for(const name of ['musicSongOwnerRead','musicEditSave','roleSongConvertOpen'])vm.runInContext(fnSource(src,name),cx);
+  h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'fixture',pitch:-6,model:'new-model'}}};const urls=[];
+  cx.fetch=async(url)=>{urls.push(url);return url.includes('/jobs?')?{ok:true,status:200,json:async()=>({id:'fc-editor',proof:'fixture'})}:{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};
+  cx.mPutVerified=async()=>({size:12,type:'audio/mpeg',sig:'verified',duration:187});cx.musicApplyStoredMeta=(target,p,stored)=>Object.assign(target,{fileSize:stored.size,fileSig:stored.sig});
+  await cx.roleSongConvertOpen('a0',true);
+  assert.equal(new URL(urls[0]).searchParams.get('separate'),'true','current visible clear-output choice must win over old saved false');
+  assert.equal(source.roleSongHasAccompaniment,true);
+ });
+ test(label+' invalid editor state and already-finished performances never submit conversion',async()=>{
+  for(const mode of ['invalid-owner','performance','mine','video-performance']){
+   const h=singingHarness(src),cx=h.cx,source=h.state.music.songs.find(s=>s.id==='a0');
+   const fields={me_owner:{value:mode==='mine'?'mine':'role'},me_role:{value:mode==='invalid-owner'?'missing':'a'},me_ready:{value:mode.includes('performance')?'performance':'source'},me_accompaniment:{value:'mixed'},me_t:{value:'track'},me_a:{value:''},me_l:{value:''}};
+   if(mode==='video-performance')source.mediaKind='video';
+   cx.document={getElementById:id=>fields[id]};cx.$=selector=>fields[selector.slice(1)];cx.closeModal=()=>{};cx.render=()=>{};let submitted=0;
+   for(const name of ['musicSongOwnerRead','musicEditSave','roleSongConvertOpen'])vm.runInContext(fnSource(src,name),cx);
+   cx.roleSongConvert=async()=>{submitted++;};h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'fixture',pitch:-6,model:'preview'}}};
+   await cx.roleSongConvertOpen('a0',true);assert.equal(submitted,0,mode);
+  }
+ });
+ test(label+' conversion shows real phases, releases busy state, and retains a finished notice',async()=>{
+  const run=async implementation=>{
+   const h=singingHarness(src),cx=h.cx,source=h.state.music.songs.find(s=>s.id==='a0'),labels=[],urls=[];let polls=0;
+   if(implementation)vm.runInContext(fnSource(implementation,'roleSongConvert'),cx);
+   h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'fixture',pitch:-6,model:'model'}}};
+   cx.roleSongProgressPaint=()=>labels.push(cx.roleSongProgressText(source));
+   cx.setTimeout=(fn,ms)=>ms===3000?(queueMicrotask(fn),0):setTimeout(fn,ms);
+   cx.fetch=async url=>{urls.push(url);if(url.includes('/jobs?'))return{ok:true,status:200,json:async()=>({id:'fc-progress',proof:'fixture'})};polls++;return polls===1?{ok:true,status:202,json:async()=>({phase:'separating',total:0,completed:0})}:polls===2?{ok:true,status:202,json:async()=>({phase:'converting',total:3,completed:1})}:{ok:true,status:200,headers:{get:()=> 'audio/mpeg'},blob:async()=>h.blob};};
+   cx.mPutVerified=async()=>({size:12,type:'audio/mpeg',sig:'verified',duration:187});cx.musicApplyStoredMeta=(target,p,stored)=>Object.assign(target,{fileSize:stored.size,fileSig:stored.sig});
+   await cx.roleSongConvert('a','a0');return{labels,urls,notice:source.roleSongMakeNotice,after:cx.roleSongProgressText(source)};
+  };
+  const {execFileSync}=await import('node:child_process'),old=execFileSync('git',['show','3cb754ab:'+file],{encoding:'utf8',maxBuffer:20e6});
+  const baseline=await run(old);assert.throws(()=>assert.ok(baseline.labels.some(x=>x.includes('分离背景音乐'))),assert.AssertionError,'old implementation must fail the phase visibility requirement');
+  const fixed=await run();assert.ok(fixed.labels.some(x=>x.includes('分离背景音乐')));assert.ok(fixed.labels.some(x=>x.includes('1/3')));assert.ok(fixed.labels.some(x=>x.includes('正在保存')));assert.equal(fixed.urls.filter(x=>x.includes('/jobs?')).length,1);assert.equal(fixed.notice,'done');assert.ok(fixed.after.includes('制作完成'));assert.ok(fixed.labels.every(x=>!x.includes('%')));
+ });
+ test(label+' saved conversion resumes by lookup only and a confirmed failure remains visible',async()=>{
+  const h=singingHarness(src),cx=h.cx,source=h.state.music.songs.find(s=>s.id==='a0');
+  const cfg={url:'https://song.example',key:'fixture',pitch:-6,model:'model'};h.state.settings={roleSongCloud:{a:cfg},roleSongJobs:{}};
+  const stamp=cx.roleSongSourceStamp(source);h.state.settings.roleSongJobs['main|a|a0']={id:'fc-saved',proof:'fixture',source:stamp,config:JSON.stringify([cfg.url,cfg.model,cfg.pitch]),time:Date.now()};
+  assert.ok(cx.roleSongProgressText(source).includes('继续查看'));
+  let requests=0;cx.fetch=async url=>{requests++;assert.ok(!url.includes('/jobs?'),'must not create a new conversion');return{ok:false,status:422};};
+  await assert.rejects(cx.roleSongConvert('a','a0'));assert.equal(requests,1);assert.equal(h.state.settings.roleSongJobs['main|a|a0'],undefined);assert.ok(cx.roleSongProgressText(source).includes('制作失败'));
  });
  test(label+' cloud conversion preserves the original, verifies output and stores only in its role',async()=>{
   const h=singingHarness(src),calls=[];h.state.settings={roleSongCloud:{a:{url:'https://song.example',key:'private-test-key',pitch:-12,model:'claude_fish'}}};

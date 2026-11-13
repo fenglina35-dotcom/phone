@@ -53,6 +53,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1924 / web v1924",scope:"both",least:1,name:"制作阶段和等待时间持续可见且查任务不重复提交",marker:"ROLE_SONG_VISIBLE_PROGRESS_V1"},
+  {release:"private v1924 / web v1924",scope:"both",least:1,name:"制作按当前可见编辑值提交分离开关",marker:"ROLE_SONG_EDITOR_SUBMIT_V1"},
   {release:"private v1923 / web v1923",scope:"both",least:1,name:"清唱输出选择明确启用伴奏分离",marker:"ROLE_SONG_CLEAR_OUTPUT_CHOICE_V1"},
   {release:"private v1922 / web v1922",scope:"both",least:1,name:"准确歌名重复点唱继续交付原音",marker:"ROLE_SONG_REPEAT_REQUEST_V1"},
   {release:"private v1913 / web v1910",scope:"both",least:1,name:"双模式测试需确认且不改配置",marker:"MODEL_PROBE_MODES_V1"},
