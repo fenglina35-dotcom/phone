@@ -233,7 +233,11 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
+//@@ web
+const APP_VER='v1925 · 角色唱歌导入与点唱';
+//@@ private
 const APP_VER='v1924 · 翻唱设置提交与真实进度';
+//@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1924'){
+if(window.__NORTH_SHELL_BUILD__!=='1925'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1924 · 翻唱设置提交与真实进度';
+const APP_VER='v1925 · 角色唱歌导入与点唱';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2327,7 +2327,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1924&r=v1924-owner-todo-report-1';
+  const url='sw.js?v=1925&r=v1925-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -3716,7 +3716,7 @@ async function roleSongCloudQuotaRefresh(cid,cfg){
 function roleSongSourceStamp(song){return JSON.stringify([song.id,song.roleSongOwner,song.src,song.fileSig,song.fileSize,song.roleSongHasAccompaniment]);}
 function roleSongConvertCandidate(cid,query){if(!roleSongCloudConfig(cid)||!(S.contacts||[]).some(c=>c&&!c.deleted&&String(c.id)===String(cid)))return null;const songs=musicLibrarySongs('role',cid).filter(s=>s.roleSongReady!==true&&s.src),q=String(query||'').trim();if(/^(随机|随便|random)$/i.test(q))return songs.length?songs[Math.floor(Math.random()*songs.length)]:null;const exact=songs.find(s=>String(s.id)===q);if(exact)return exact;const key=musicKeyText(q),hits=songs.filter(s=>[s.title,...(Array.isArray(s.roleSongAliases)?s.roleSongAliases:[])].some(t=>key&&musicKeyText(t)===key));return hits.length===1?hits[0]:null;}
 /* ROLE_SONG_EXTERNAL_IMPORT_V1：公开版只导入外部制作的演唱，不连接转换服务。 */
-function roleSongCloudModal(cid){openModal(`<h3>让角色唱给你听</h3><div class="hint" style="line-height:1.9">先在外部翻唱工具使用自己的音色制作歌曲。完成后下载 MP3、M4A 或 WAV，保存到手机“文件”或“下载”中。<br><br>回到音乐 → 添加歌曲 → 他的歌单，选择演唱角色，音频内容选“已经是他的演唱”，上传并保存。之后在微信或电话里说出歌名，也可以请他随机唱一首。<br><br>小手机会播放保存的演唱，不在这里制作或转换。外部工具的费用由本人账号承担；角色普通开场仍使用原聊天和语音配置。</div><div class="btns"><button class="btn g" onclick="musicMenu()">返回</button><button class="btn p" onclick="closeModal();musicAdd()">添加歌曲</button></div>`);}
+function roleSongCloudModal(cid){openModal(`<h3>让角色唱给你听</h3><div class="hint" style="line-height:1.9">先在外部翻唱工具使用自己的音色制作歌曲。完成后下载 MP3、M4A 或 WAV，保存到手机“文件”或“下载”中。<br><br>回到音乐 → 添加歌曲 → 他的歌单，选择演唱角色，音频内容选“已经是他的演唱”，上传并保存。之后在微信或电话里说出歌名，也可以请他随机唱一首。<br><br>小手机会播放保存的演唱，不在这里制作或转换。外部工具的费用由本人账号承担；角色普通开场仍使用原聊天和语音配置。<br><br><a href="角色唱歌使用教程.html" target="_blank" rel="noopener noreferrer">查看完整手机教程（含图解）</a></div><div class="btns"><button class="btn g" onclick="musicMenu()">返回</button><button class="btn p" onclick="closeModal();musicAdd()">添加歌曲</button></div>`);}
 async function roleSongCloudRequest(cfg,path,options){throw new Error('请先在外部翻唱工具制作，再导入已经完成的演唱');}
 async function roleSongCloudImport(input){const file=input.files&&input.files[0],state=S,account=String(actId()),cid=($('#rsc_role')||{}).value;if(!file)return;if(file.size>16384){input.value='';return toast('连接文件过大，请选择翻唱服务的JSON配置');}try{const cfg=JSON.parse(await file.text());if(S!==state||String(actId())!==account||!input.isConnected||($('#rsc_role')||{}).value!==cid)return;if(!cfg||typeof cfg.url!=='string'||typeof (cfg.key||cfg.ROLE_SONG_API_KEY)!=='string')throw new Error();$('#rsc_url').value=cfg.url;$('#rsc_key').value=cfg.key||cfg.ROLE_SONG_API_KEY;$('#rsc_pitch').value=Number.isInteger(cfg.pitch)?cfg.pitch:-12;await roleSongCloudSave();}catch(_){if(S===state&&String(actId())===account)toast('这不是有效的翻唱连接文件');}finally{input.value='';}}
 async function roleSongCloudSave(){const state=S,account=String(actId()),cid=($('#rsc_role')||{}).value||'',key=String(($('#rsc_key')||{}).value||'').trim(),raw=String(($('#rsc_url')||{}).value||'').trim(),pitch=Number(($('#rsc_pitch')||{}).value);if(!getC(cid)||getC(cid).deleted)return toast('先选择演唱角色');if(!S.settings)S.settings={};if(!key){if(S.settings.roleSongCloud)delete S.settings.roleSongCloud[cid];save();musicMenu();toast('已停用这个角色的云端翻唱');return;}let url;try{url=new URL(raw);if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw new Error();}catch(_){return toast('请填写不带参数的HTTPS服务地址');}if(!Number.isInteger(pitch)||pitch< -24||pitch>24)return toast('变调请输入-24到24之间的整数');const cfg={url:url.href.replace(/\/$/,''),key,pitch};try{const r=await roleSongCloudRequest(cfg,'/health'),info=await r.json();if(S!==state||String(actId())!==account||!getC(cid)||getC(cid).deleted)return;if(info.ok!==true||!info.model)throw new Error('这不是兼容的角色翻唱服务');cfg.model=String(info.model);cfg.quotaSupported=!!(info.capabilities&&info.capabilities.quota===true);const previous=roleSongCloudConfig(cid);cfg.revision=previous&&previous.url===cfg.url&&previous.model===cfg.model?previous.revision||uid():uid();S.settings.roleSongCloud=S.settings.roleSongCloud||{};S.settings.roleSongCloud[cid]=cfg;save();musicMenu();toast('已连接这个角色的翻唱服务');}catch(e){if(S===state&&String(actId())===account)toast(e.message||'转换服务连接失败');}}

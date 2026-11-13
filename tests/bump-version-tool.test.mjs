@@ -9,6 +9,19 @@ const ver = (text) => (String(text).match(/const APP_VER='v(\d+) /) || [])[1];
 // 发布进行到一半（版本号刚升、还没提交）时，工具按设计会拒绝再升一次，这两项跳过
 const midRelease = ver(cp.execFileSync('git', ['show', 'HEAD:app.js'], { encoding: 'utf8', maxBuffer: 64e6 })) !== ver(cp.execFileSync('cat', ['app.js'], { encoding: 'utf8', maxBuffer: 64e6 }));
 
+test('web-only guard marking preserves private pending releases', () => {
+  const r = cp.spawnSync('python3', ['-c', `import runpy
+f = runpy.run_path('scripts/bump_version.py')['mark_pending_guards']
+source = '\\n'.join('{release:"pending",scope:"%s"}' % scope for scope in ['web', 'private', 'both'])
+web = f(source, 'web fixture', True)
+assert web.count('release:"pending"') == 1
+assert '{release:"pending",scope:"private"}' in web
+assert web.count('release:"web fixture"') == 2
+assert 'release:"pending"' not in f(source, 'full fixture', False)
+`], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+});
+
 test('a full bump dry-run finds the last release, passes its own checks and writes nothing', { skip: midRelease && '版本号已升、还没提交' }, () => {
   const before = status();
   const r = run(['--label', '测试', '--dry-run']);

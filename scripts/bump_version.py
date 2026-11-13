@@ -73,6 +73,14 @@ def added_lines(sha):
     return files
 
 
+def mark_pending_guards(guard, release, web_only):
+    return '\n'.join(
+        line if web_only and 'scope:"private"' in line
+        else line.replace('release:"pending"', 'release:"%s"' % release)
+        for line in guard.split('\n')
+    )
+
+
 def main():
     ap = argparse.ArgumentParser(description='发布时把版本号各加 1')
     ap.add_argument('--label', required=True, help='新的版本说明文字，例如「一键体检」')
@@ -134,8 +142,8 @@ def main():
             total += n
 
     guard = read(GUARD)
-    guard_new = guard.replace('release:"pending"', ('release:"web v%d"' % nw) if a.web_only else ('release:"private v%d / web v%d"' % (np_, nw)))
-    pending = guard.count('release:"pending"')
+    guard_new = mark_pending_guards(guard, ('web v%d' % nw) if a.web_only else ('private v%d / web v%d' % (np_, nw)), a.web_only)
+    pending = guard.count('release:"pending"') - guard_new.count('release:"pending"')
 
     print('会改 %d 个文件、%d 行；修复登记里 %d 条「pending」改成这次的版本' % (len(changed), total, pending))
 
