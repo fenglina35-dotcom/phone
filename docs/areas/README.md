@@ -992,3 +992,7 @@ CHAT_COMPOSER_SESSION_V1最终本地验证：完整5213/5213及普通/查岗双�
 参考：https://www.w3.org/TR/appmanifest/#display-member 、https://developer.android.com/develop/ui/views/layout/immersive 。后者为安卓原生沉浸式文档，不把原生WindowInsetsController API当成网页可调用的能力。测试复用ios-standalone-viewport/license-gate及永久守卫；旧实现Android两种UA的manifest仍standalone、一键体检fullscreen报warn三项先失败，修改后专项18通过；完整结果随后追加。无独立新文件/工作树/静态manifest、无付费模型调用；未经真实安卓主屏安装及苹果实机验证，不冒充系统导航区已实际隐藏。未升版/提交/发布。
 
 ANDROID_HOME_FULLSCREEN_V1最终范围与验收：不改授权客户端或设备标签，仅改网页manifest与网页体检；完整5220/5220、双端核心聊天通过，页面错误0，私人整个工程与资源未变。未升版/提交/发布，真实安卓新主屏图标效果及苹果实机仍待验收；测试/暂时撤回的附带标签尝试见维护Bug记录。
+
+## 火车查询组件缺载与普通聊天
+
+NorthTrainBooking与NorthTravelTrain独立加载。缺查询组件时rolePrompt仍读取既有订单、忽略查询；checkDue保护全局及方法存在；明确订票失败且不扣款。tests/travel-train.test.mjs覆盖缺载/空state/缺people/恢复；NORTH_MISSING_TRAIN=1核心聊天脚本真实阻断查询组件并验证双端请求回复与持久化。具体缺载网络原因未确认。

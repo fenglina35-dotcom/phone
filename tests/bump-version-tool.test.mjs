@@ -40,3 +40,20 @@ test('a web-only bump dry-run leaves every private and iOS file alone', { skip: 
   assert.doesNotMatch(r.stdout, /\snative\//);
   assert.match(r.stdout, /私人 v(\d+) \/ iOS (\d+)　→　网页 v\d+ \/ 私人 v\1 \/ iOS \2/);
 });
+
+test('full bump changes each APP_VER once when private next equals old web', () => {
+ const r=cp.spawnSync('python3',['-c',`import ast,types
++from pathlib import Path
++from types import SimpleNamespace
++import re
++tree=ast.parse(Path('scripts/bump_version.py').read_text())
++main=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='main')
++tr=next(n for n in main.body if isinstance(n,ast.FunctionDef) and n.name=='tr')
++scope=dict(re=re,web=100,priv=99,ios=20,nw=101,np_=100,ni=21,web_label='web',priv_label='private',a=SimpleNamespace(web_only=False,label='new'))
++exec(compile(ast.Module(body=[tr],type_ignores=[]),'bump-tr','exec'),scope)
++f=scope['tr']
++assert f("const APP_VER='v100 · web';")=="const APP_VER='v101 · new';"
++assert f("const APP_VER='v99 · private';")=="const APP_VER='v100 · new';"
++`.replace(/^\+/gm,'')],{encoding:'utf8'});
+ assert.equal(r.status,0,r.stdout+r.stderr);
+});

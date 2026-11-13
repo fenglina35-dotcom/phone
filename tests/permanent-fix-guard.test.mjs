@@ -53,8 +53,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1925 / web v1926",scope:"web",file:"travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
+  {release:"private v1925 / web v1926",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"web v1925",scope:"web",least:1,name:"网页只导入外部演唱且拒绝转换请求",marker:"ROLE_SONG_EXTERNAL_IMPORT_V1"},
-  {release:"pending",scope:"private",least:1,name:"翻唱只读真实时长配额兼容旧服务且429不重试",marker:"ROLE_SONG_QUOTA_VIEW_V1"},
+  {release:"private v1925 / web v1926",scope:"private",least:1,name:"翻唱只读真实时长配额兼容旧服务且429不重试",marker:"ROLE_SONG_QUOTA_VIEW_V1"},
   {release:"private v1924 / web v1924",scope:"private",least:1,name:"制作阶段和等待时间持续可见且查任务不重复提交",marker:"ROLE_SONG_VISIBLE_PROGRESS_V1"},
   {release:"private v1924 / web v1924",scope:"private",least:1,name:"制作按当前可见编辑值提交分离开关",marker:"ROLE_SONG_EDITOR_SUBMIT_V1"},
   {release:"private v1923 / web v1923",scope:"private",least:1,name:"清唱输出选择明确启用伴奏分离",marker:"ROLE_SONG_CLEAR_OUTPUT_CHOICE_V1"},

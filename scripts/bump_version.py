@@ -109,9 +109,8 @@ def main():
 
     def tr(line):
         if 'APP_VER' in line:
-            line = line.replace("v%d · %s'" % (web, web_label), "v%d · %s'" % (nw, a.label))
-            if not a.web_only:
-                line = line.replace("v%d · %s'" % (priv, priv_label), "v%d · %s'" % (np_, a.label))
+            # 先只换说明；版本号统一在下面替换，避免私人新号恰等于网页旧号时被再加一次。
+            line = re.sub(r"(const APP_VER='v\d+ · )[^']*", lambda m: m.group(1) + a.label, line)
         line = re.sub(r'(?<!\d)%d(?!\d)' % web, str(nw), line)
         if not a.web_only:
             line = re.sub(r'(?<!\d)%d(?!\d)' % priv, str(np_), line)

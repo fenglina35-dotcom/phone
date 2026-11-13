@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1925 · 角色唱歌导入与点唱';
+const APP_VER='v1926 · 修复火车组件缺载阻断聊天';
 //@@ private
-const APP_VER='v1924 · 翻唱设置提交与真实进度';
+const APP_VER='v1925 · 修复火车组件缺载阻断聊天';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

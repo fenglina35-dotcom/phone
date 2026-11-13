@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {read,PRIV_DIR} from './_helpers.mjs';
 
 function fixture(){
   let id=0;
@@ -10,7 +11,7 @@ function fixture(){
   vm.runInContext(fs.readFileSync(new URL('../travel-hotel-data.js',import.meta.url),'utf8'),ctx);
   vm.runInContext(fs.readFileSync(new URL('../travel-train-booking.js',import.meta.url),'utf8'),ctx);
   const q={account:'main',id:'query',type:'one',cls:'second',adults:2,children:1,infants:1,people:[{id:'me',name:'我'},{id:'role:r',name:'同行角色'}],legs:[{from:'北京',to:'上海',date:'2099-10-05'}],selectedLeg:0};
-  return {api:ctx.NorthTrainBooking,S,q};
+  return {api:ctx.NorthTrainBooking,S,q,ctx};
 }
 
 test('rail fares include all adults and half-price children; infants without seats are free',()=>{const {api,q}=fixture();const f=api.trains(q)[0];assert.equal(f.totalCents,f.adultCents*2+Math.round(f.adultCents*.5));});
@@ -23,3 +24,22 @@ test('rail lookup rejects a flight record even if its id is provided',()=>{const
 test("large role wallet is not mistaken for insufficient funds and refunds exactly",()=>{const {api,q,S}=fixture();S.contacts[0].wallet='999999999999999999999999.00';const f=api.trains(q)[0];assert.equal(api.bookQuote(q,f.id,S.contacts[0]),true);assert.notEqual(S.contacts[0].wallet,'999999999999999999999999.00');assert.equal(S.me.balance,10000);const paid=S.contacts[0].wallet;assert.equal(api.refund(S.travel.trips[0].id),false);assert.equal(S.contacts[0].wallet,paid);});
 
 test("user cannot refund a role-booked train",()=>{const {api,q,S}=fixture();assert(api.bookQuote(q,api.trains(q)[0].id,S.contacts[0]));const paid=S.contacts[0].wallet;assert.equal(api.refund(S.travel.trips[0].id),false);assert.equal(S.contacts[0].wallet,paid);});
+
+for(const base of ['',PRIV_DIR+'/'])test(base+' rail chat survives missing query module without charges and recovers later',()=>{
+ const {ctx,S}=fixture();delete ctx.NorthTravelTrain;
+ vm.runInContext(read(base+'travel-train-booking.js'),ctx);
+ const api=ctx.NorthTrainBooking,c=S.contacts[0];
+ S.travel.trips.push({id:'saved-rail',railV2:true,accountId:'main',date:'2099-10-05',from:'北京',to:'上海',dep:'09:00',arr:'11:00',cls:'second',adults:1,children:0,infants:0,people:[{id:'role:r',name:c.name}],knownRoleIds:['r'],status:'upcoming',payer:'ta',price:100,_reminded:true});
+ const before=JSON.stringify(S);
+ assert.match(api.rolePrompt(c),/北京→上海/);
+ assert.doesNotThrow(()=>api.checkDue());
+ assert.equal(api.roleDirect(c,'北京','上海','2099-10-05','二等座','我自己'),false);
+ assert.equal(api.roleQuery(c,'1'),false);
+ assert.equal(JSON.stringify(S),before);
+ ctx.NorthTravelTrain={state:()=>null,active:()=>false};
+ assert.doesNotThrow(()=>api.rolePrompt(c));
+ ctx.NorthTravelTrain.state=()=>({quote:{account:'main'}});
+ assert.doesNotThrow(()=>api.rolePrompt(c));
+ ctx.NorthTravelTrain.state=()=>({quote:{account:'main',people:[{id:'role:r'}],legs:[],cls:'second',adults:1}});
+ assert.match(api.rolePrompt(c),/用户当前火车票查询/);
+});

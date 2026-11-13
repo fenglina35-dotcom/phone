@@ -13,7 +13,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   await page.addInitScript(()=>{if(window.speechSynthesis){const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);window.speechSynthesis.speak=utterance=>{utterance.volume=0;return speak(utterance);};}});
   if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/*',r=>process.env.NORTH_MISSING_FLIGHT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-flight.js')?r.abort():new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  await page.route('**/*',r=>(process.env.NORTH_MISSING_FLIGHT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-flight.js')||process.env.NORTH_MISSING_TRAIN==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-train.js'))?r.abort():new URL(r.request().url()).origin===origin?r.continue():r.abort());
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview='+(process.env.NORTH_PAGE_ART==='1'?'page-art':'black-home'));
   await page.waitForFunction(()=>window.__northBootReady);
   if(process.env.NORTH_PAGE_ART==='1'){
@@ -31,6 +31,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(!privateApp)assert(await page.evaluate(async()=>{for(const src of window.__NORTH_PAGE_ART__){const r=await fetch(src);if(!r.ok||!(await r.arrayBuffer()).byteLength)return false;}return true;}));
    assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,pageArt:true,decodedBeforeNavigation:decoded,offlineCache:!privateApp,navigation,pageErrors:0}));await page.close();continue;
   }
+  if(process.env.NORTH_MISSING_TRAIN==='1')assert(await page.evaluate(()=>typeof NorthTravelTrain==='undefined'&&typeof NorthTrainBooking!=='undefined'),'train query absent while real booking module remains loaded');
   if(process.env.NORTH_MISSING_FLIGHT==='1')assert(await page.evaluate(()=>typeof NorthTravelFlight==='undefined'&&typeof NorthFlightBooking!=='undefined'),'only the optional query component must be absent');
   await page.evaluate(()=>{
    S.me.locked=false;S.me.active='main';const role=S.contacts[0];window.testId=role.id;
@@ -39,6 +40,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    aiCoreOn=()=>false;window.testCalls=[];window.fixtureRaw='[内心|想听你说话]\n我在，慢慢说。';
    fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return{ok:true,json:async()=>false,text:async()=>'false'};testCalls.push(JSON.parse(opt.body));return{ok:true,json:async()=>({choices:[{message:{content:fixtureRaw},finish_reason:'stop'}]})};};
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
+   if(typeof NorthTravelTrain==='undefined'){tvInit().trips.push({id:'missing-component-saved-train',accountId:'main',railV2:true,from:'北京',to:'上海',date:'2099-10-05',dep:'09:00',arr:'11:00',cls:'second',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
 
