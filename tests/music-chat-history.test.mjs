@@ -307,3 +307,28 @@ for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
   vm.runInContext(fnSource(read(file),'clReplayRevoice'),cx);await cx.clReplayRevoice('a','session');assert.equal(confirmations,0);assert.equal(ttsCalls,0);
  });
 }
+
+for(const [label,file] of [['web','app.js'],['private',PRIV_DIR+'app.js']]){
+ const src=read(file);
+ test(label+' quota reports actual seconds without inventing cloud-account balance',()=>{
+  const cx=vm.createContext({});vm.runInContext(fnSource(src,'roleSongQuotaText'),cx);
+  const info={unit:'audio_seconds',period:'2026-11',limit:600,used:60,reserved:16,remaining:524,billing:'invented balance'};
+  const text=cx.roleSongQuotaText(info);assert.ok(text.includes('8分44秒'));assert.ok(text.includes('不是云平台账户余额'));assert.ok(!text.includes('invented balance'));
+  for(const changes of [{remaining:600},{used:-1},{limit:Infinity},{remaining:.5},{period:'<script>'},{unit:'USD'}])assert.equal(cx.roleSongQuotaText({...info,...changes}),'');
+ });
+ test(label+' legacy service is not queried for unsupported quota and late account responses are ignored',async()=>{
+  const el={isConnected:true,textContent:''},role={value:'a'},state={};let account='main',calls=0,resolve;
+  const cx=vm.createContext({S:state,actId:()=>account,$:s=>s==='#rsc_quota'?el:role,roleSongCloudRequest:async()=>{calls++;return{json:()=>new Promise(r=>resolve=r)}}});
+  for(const name of ['roleSongQuotaText','roleSongCloudQuotaRefresh'])vm.runInContext(fnSource(src,name),cx);
+  const cfg={url:'https://fixture.invalid',key:'fixture'};
+  await cx.roleSongCloudQuotaRefresh('a',cfg);assert.equal(calls,0);assert.ok(el.textContent.includes('尚未提供'));
+  const work=cx.roleSongCloudQuotaRefresh('a',{...cfg,quotaSupported:true});for(let i=0;i<10&&!resolve;i++)await new Promise(r=>setImmediate(r));assert.equal(typeof resolve,'function');
+  const before=el.textContent;account='other';resolve({unit:'audio_seconds',period:'2026-11',limit:60,used:0,reserved:0,remaining:60});await work;assert.equal(el.textContent,before);assert.equal(calls,1);
+ });
+ test(label+' quota and busy rejections remain distinct and do not retry requests',async()=>{
+  const {execFileSync}=await import('node:child_process');const old=execFileSync('git',['show','619419d5:'+file],{encoding:'utf8',maxBuffer:20e6});
+  const run=async(source,code)=>{const h=singingHarness(src);vm.runInContext(fnSource(source,'roleSongCloudRequest'),h.cx);let calls=0;h.cx.fetch=async()=>{calls++;return{ok:false,status:429,json:async()=>({code})}};let message='';try{await h.cx.roleSongCloudRequest({url:'https://fixture.invalid',key:'fixture'},'/jobs',{method:'POST'});}catch(e){message=e.message;}assert.equal(calls,1);return message;};
+  assert.ok(!(await run(old,'quota_exhausted')).includes('时长限额'),'affected old code must fail the distinct quota message requirement');
+  assert.ok((await run(src,'quota_exhausted')).includes('时长限额'));assert.ok((await run(src,'queue_busy')).includes('另一首歌'));assert.ok((await run(src,'untrusted arbitrary message')).includes('限制新任务'));
+ });
+}

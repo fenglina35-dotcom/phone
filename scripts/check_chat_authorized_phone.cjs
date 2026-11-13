@@ -42,6 +42,23 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    openChat(role.id);
   });
 
+  if(process.env.NORTH_ROLE_SONG_QUOTA==='1'){
+   const result=await page.evaluate(async()=>{
+    const cid=testId,original=window.fetch,requests=[];
+    const cfg={url:'https://quota-fixture.invalid',key:'fixture-not-a-real-key',model:'fixture',pitch:0,quotaSupported:true};
+    S.settings.roleSongCloud={[cid]:cfg};
+    window.fetch=async(url,opts)=>{if(String(url).startsWith(cfg.url)){requests.push({url:String(url),method:opts&&opts.method||'GET'});return new Response(JSON.stringify({unit:'audio_seconds',period:'2026-11',limit:3600,used:600,reserved:60,remaining:2940}),{status:200,headers:{'Content-Type':'application/json'}});}return original(url,opts);};
+    window.restoreQuotaFixture=()=>{window.fetch=original;};roleSongCloudModal(cid);
+    for(let i=0;i<100&&!$('#rsc_quota').textContent.includes('49分00秒');i++)await new Promise(r=>setTimeout(r,10));
+    if(!$('#rsc_quota').textContent.includes('49分00秒')||!$('#rsc_quota').textContent.includes('不是云平台账户余额'))throw Error('Quota display did not use real service seconds');
+    if(requests.length!==1||requests[0].method!=='GET'||!requests[0].url.endsWith('/quota'))throw Error('Opening quota view must not create conversion jobs');
+    return{secondsAccurate:true,noConversion:true};
+   });
+   if(privateApp&&process.env.NORTH_ROLE_SONG_QUOTA_PREVIEW)await page.screenshot({path:process.env.NORTH_ROLE_SONG_QUOTA_PREVIEW});
+   await page.evaluate(async()=>{const cid=testId;S.settings.roleSongCloud[cid].quotaSupported=false;roleSongCloudModal(cid);if(!$('#rsc_quota').textContent.includes('尚未提供'))throw Error('Legacy service compatibility lost');restoreQuotaFixture();closeModal();});
+   assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,quota:result,pageErrors:0}));await page.close();continue;
+  }
+
   if(process.env.NORTH_ROLE_SONG_VOICE==='1'){
    if(privateApp&&process.env.NORTH_ROLE_SONG_PROGRESS_PREVIEW)await page.exposeFunction('captureRoleSongProgress',async view=>{const file=view==='editor'?'music-role-song-upload.png':'music-role-song-library.png';await page.screenshot({path:path.join(process.env.NORTH_ROLE_SONG_PROGRESS_PREVIEW,file)});});
    const result=await page.evaluate(async()=>{
