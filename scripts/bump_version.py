@@ -154,9 +154,14 @@ def main():
         new_count = len(re.findall(r'CURRENT_PROJECT_VERSION = %d;|MARKETING_VERSION = 1\.0\.%d;' % (ni, ni), pbx_new))
         if new_count != old_count:
             problems.append('Xcode 工程里新版本号 %d 处，原来是 %d 处' % (new_count, old_count))
-    old_tokens = [re.compile(r"const APP_VER='v%d " % web)]
+    # 两版允许相邻版本：私人新号可能正好等于网页旧号，不能全文件扫描误报。
+    for path, expected in [('app.js', nw)] + ([] if a.web_only else [(PRIV, np_)]):
+        candidate = changed.get(path, (read(path), 0))[0]
+        if not re.search(r"const APP_VER='v%d " % expected, candidate):
+            problems.append('%s 的 APP_VER 未升到 v%d' % (path, expected))
+    old_tokens = []
     if not a.web_only:
-        old_tokens += [re.compile(r"const APP_VER='v%d " % priv), re.compile(r'1\\?\.0\\?\.%d(?!\d)' % ios), re.compile(r'CURRENT_PROJECT_VERSION = %d;' % ios)]
+        old_tokens += [re.compile(r'1\\?\.0\\?\.%d(?!\d)' % ios), re.compile(r'CURRENT_PROJECT_VERSION = %d;' % ios)]
     for path, (text, _) in changed.items():
         for pat in old_tokens:
             if pat.search(text):
