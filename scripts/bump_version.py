@@ -108,7 +108,7 @@ def main():
     print('照着这次提交改：' + git('log', '-1', '--format=%h %s', sha).strip())
 
     def tr(line):
-        if 'APP_VER' in line:
+        if re.match(r"^const APP_VER='v(?:%d|%d) " % (web, priv), line):
             # 先只换说明；版本号统一在下面替换，避免私人新号恰等于网页旧号时被再加一次。
             line = re.sub(r"(const APP_VER='v\d+ · )[^']*", lambda m: m.group(1) + a.label, line)
         line = re.sub(r'(?<!\d)%d(?!\d)' % web, str(nw), line)
