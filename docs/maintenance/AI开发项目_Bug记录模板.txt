@@ -3006,3 +3006,13 @@ Modal刷新后累计0.14美元credits、0美元charges、1美元平台上限，�
 提交64bcb5dc后验收补充：iOS571 Release编译成功、codesign严格验证通过，1915个私人Web资源逐项与该提交Git blob一致，Info身份1.0.571/571。提交后全量发现升版工具验证器把私人下一版等于网页当前版误判为旧号，已改为分别核对网页/私人APP_VER目标，保留iOS旧号检查；实际数字转换回归及完整/网页独立dry-run4/4通过。该补丁仅发布工具，不改App内容；最终全量重跑。
 
 2026-11-13 火车缺载修复私人安装验收：源码64bcb5dc、发布工具e339aa96；最终完整5280/5280、0失败0跳过。普通、NORTH_MISSING_TRAIN真实缺载、NORTH_CHECKIN_PREVIEW、NORTH_ROLE_SONG_VOICE双端门禁均通过，页面错误0。Release编译成功、codesign严格签名通过、1915个私人Web资源与提交逐项一致；devicectl覆盖安装后从0000的iPhone读回com.qianyi.PhoneCompanionTest 1.0.571/571并成功启动。私人资源v1925、桥42；公开网页候选v1926。公开音乐外部成品导入/教程与私人云端转换差异已验，无实调收费模型，无数据清理/恢复操作。本轮两张可重建测试图及空.codex_tmp已清理；保留原未跟踪.claude和交接TXT。下一步用户已授权推网页并核对线上，不把安装等同真实用户键盘/聊天验收。
+
+2026-11-13 网页v1926发布完成：私人iPhone已读回1.0.571/571后，用户授权恢复推送。Git凭据管理器认证管线预检成功，git push origin HEAD:main成功6f1a9de9→4e451bb0；Pages运行43367290878的build/deploy/report-build-status全部success。线上index.html、小手机.html、app.js、sw.js、web-hotfix.js、task-notes.js、travel-train-booking.js、角色唱歌使用教程.html八项与4e451bb0逐字节一致；app.js SHA256前16位351513dd08556c3f，火车修复c14f94901d391455。完整5280/5280、双端正常/缺载/查岗/音乐门禁通过，不替代用户真实模型与手机操作验收。私人音乐云端制作与公开成品导入差异保留，私人伴生/桥协议42不变。本轮可重建测试临时图和空目录已清理，原.claude与交接TXT保护；后补上线记录留在维护文件，业务发布提交保持4e451bb0。
+
+2026-11-14 ElevenLabs音色配置只读排查：用户报告JRPscaTbHaocsMlOlC6o外置语音HTTP401。根因尚不能仅凭状态码确认。固定转发URL/v1/text-to-speech/{voice_id}及xi-api-key请求头与官方一致；隔离双端五平台真实表单测试确认provider/key/voice来自当前表单且不覆盖已保存设置，外置测试tries=1，不调用真实语音。语音/转发单元23项与路线/绑定/超时18项通过。旧check_tts_test_isolation.cjs在网页通过五平台后调用已删除aiTestVoice失败；仅内存去掉过期内置调用后，双端表单传参/空表单不请求/旧设置保留通过，不编辑脚本或放宽相关断言。双端模拟401 detail.status=invalid_api_key明确复现externalTtsRelay只显示HTTP401，已确认漏解析detail字段；当前pullVoices仅支持MiniMax/Mossland/Fish，ElevenLabs不支持。角色固定路线/路线专属音色优先是既有设计，设置测试不等于角色通话配置；本轮未读取手机私钥、未改业务/配置、未生成语音、未发布。建议最小先补安全错误解析，再依据真实detail判断认证/套餐，不能承诺充值解决。
+
+
+2026-11-14 外置语音失败原因显示修复（候选私人v1926/iOS572/桥42，网页源码v1927不推送）
+用户明确授权修复后直接安装私人iPhone，暂不推送网页。根因externalTtsRelay只读error/message/code，漏读ElevenLabs detail.status/code/message，导致认证/缺权限/套餐等均退化成HTTP401。新增EXTERNAL_TTS_ERROR_DETAIL_V1，兼容detail对象/字符串、error对象、顶层格式和纯文本；依据明确平台code给中文说明，不凭401要求充值；显示前隐藏当前密钥、常见凭据格式并限制长度，保持状态码/source。测试仍只发一次，原配置不覆盖，不修改KEY/音色/模型路由，不新增音色或充值，不调用真实收费语音。
+旧双端回归均以只显示HTTP401失败，新覆盖认证、权限、套餐、额度、音色缺失及凭据反射8种格式；专项32项通过。旧浏览器检查引用已删除aiTestVoice/aiRelay入口，改为断言其保持不存在，新增双端实际设置页四类HTTP错误与脱敏/单次请求断言，双端通过。完整回归、核心聊天、签名安装读回随后记录。
+私人音乐云端翻唱与网页成品导入的差异保持；不部署Worker，不改原生桥/伴生功能，原生仅更新版本标识。

@@ -996,3 +996,7 @@ ANDROID_HOME_FULLSCREEN_V1最终范围与验收：不改授权客户端或设备
 ## 火车查询组件缺载与普通聊天
 
 NorthTrainBooking与NorthTravelTrain独立加载。缺查询组件时rolePrompt仍读取既有订单、忽略查询；checkDue保护全局及方法存在；明确订票失败且不扣款。tests/travel-train.test.mjs覆盖缺载/空state/缺people/恢复；NORTH_MISSING_TRAIN=1核心聊天脚本真实阻断查询组件并验证双端请求回复与持久化。具体缺载网络原因未确认。
+
+## 外置语音平台错误原因
+
+externalTtsRelay经externalTtsErrorDetail读取detail.code/status/message与旧error格式，先隐藏凭据再显示平台原因；不凭HTTP401判定应充值。tests/tts-test-isolation.test.mjs执行双端真实解析和脱敏；check_tts_test_isolation.cjs执行两版实际设置页的四种错误、表单取值、不改配置和单次请求。ElevenLabs请求仍为固定官方/v1/text-to-speech/{voice}及xi-api-key；音色列表暂不支持ElevenLabs，角色专属路线/音色优先是现有设计。

@@ -53,6 +53,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1926 / web v1927",scope:"both",least:1,name:"外置语音显示平台具体原因并隐藏反射密钥",marker:"EXTERNAL_TTS_ERROR_DETAIL_V1"},
   {release:"private v1925 / web v1926",scope:"web",file:"travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"private v1925 / web v1926",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"web v1925",scope:"web",least:1,name:"网页只导入外部演唱且拒绝转换请求",marker:"ROLE_SONG_EXTERNAL_IMPORT_V1"},

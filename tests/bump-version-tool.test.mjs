@@ -52,8 +52,8 @@ test('full bump changes each APP_VER once when private next equals old web', () 
 +scope=dict(re=re,web=100,priv=99,ios=20,nw=101,np_=100,ni=21,web_label='web',priv_label='private',a=SimpleNamespace(web_only=False,label='new'))
 +exec(compile(ast.Module(body=[tr],type_ignores=[]),'bump-tr','exec'),scope)
 +f=scope['tr']
-+assert f("const APP_VER='v100 · web';")=="const APP_VER='v101 · new';"
-+assert f("const APP_VER='v99 · private';")=="const APP_VER='v100 · new';"
++assert f("const APP_VER='v100 · 外置语音明确失败原因';")=="const APP_VER='v101 · 外置语音明确失败原因';"
++assert f("const APP_VER='v99 · 外置语音明确失败原因';")=="const APP_VER='v100 · 外置语音明确失败原因';"
 +`.replace(/^\+/gm,'')],{encoding:'utf8'});
  assert.equal(r.status,0,r.stdout+r.stderr);
 });

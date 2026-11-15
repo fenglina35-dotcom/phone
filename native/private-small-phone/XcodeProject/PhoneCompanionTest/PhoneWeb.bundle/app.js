@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1925'){
+if(window.__NORTH_SHELL_BUILD__!=='1926'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1925 · 修复火车组件缺载阻断聊天';
+const APP_VER='v1926 · 外置语音明确失败原因';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2226,7 +2226,17 @@ async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e
 function ttsVoiceAccessErrorText(s){return /tts-private-voice-not-owned|tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
 function ttsRelayVoiceIds(tts){const selected=String(tts&&(tts.relayVoice||(typeof aiInternalVoiceId==='function'?aiInternalVoiceId():tts.voice))||'').trim();return[selected||DEFAULT_TTS_VOICE];}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
-async function externalTtsRelay(tts,body,timeoutMs){const payload=Object.assign({provider:ttsProviderKind(tts),operation:'synthesize',base:String(tts&&tts.base||''),key:String(tts&&tts.key||''),model:String(tts&&tts.model||''),group:String(tts&&tts.group||'')},body||{});if(!payload.key)throw new Error('外置语音缺少 API Key');let r;try{r=await fetchT(EXTERNAL_TTS_RELAY_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},timeoutMs||190000);}catch(e){throw new Error('外置语音转发连接失败：'+apiCaughtCN(e));}if(!r.ok){let detail='';try{const raw=await r.clone().text();try{const d=JSON.parse(raw);detail=String(d&&((d.error&&d.error.message)||d.error||d.message||d.code)||'');}catch(_){detail=String(raw||'');}}catch(_){}const e=new Error('外置语音平台 HTTP '+r.status+(detail?'：'+detail.slice(0,180):''));e.status=r.status;e.source='external-tts';throw e;}return r;}
+/* EXTERNAL_TTS_ERROR_DETAIL_V1: 保留平台明确原因，显示前去除密钥；HTTP码本身不能证明应充值。 */
+function externalTtsErrorDetail(raw,key){
+  let d;try{d=JSON.parse(String(raw||''));}catch(_){d=String(raw||'');}
+  const root=d&&typeof d==='object'?d:null,detail=root&&(root.detail!=null?root.detail:root.error!=null?root.error:root),item=detail&&typeof detail==='object'&&!Array.isArray(detail)?detail:null;
+  const code=String(item&&(item.code||item.status)||root&&root.code||'').trim(),validCode=/^[a-z0-9_-]{1,80}$/i.test(code)?code:'',message=typeof detail==='string'?detail:item&&typeof item.message==='string'?item.message:root&&typeof root.message==='string'?root.message:typeof d==='string'?d:'';
+  const hints={invalid_api_key:'密钥认证失败',missing_api_key:'未收到有效密钥',invalid_authorization_header:'认证格式不正确',missing_permissions:'密钥缺少所需权限',insufficient_permissions:'密钥缺少所需权限',paid_plan_required:'当前音色或功能需要付费套餐权限',subscription_required:'当前音色或功能需要付费套餐权限',feature_not_available:'当前套餐不支持此功能',payment_required:'账户付费或额度条件不满足',quota_exceeded:'账户额度不足',insufficient_credits:'账户额度不足',voice_not_found:'音色不存在或不可访问',voice_access_denied:'没有此音色的访问权限'};
+  let text=[Object.prototype.hasOwnProperty.call(hints,validCode)?hints[validCode]:'',validCode?'['+validCode+']':'',message].filter(Boolean).join(' ');
+  if(key)text=text.split(String(key)).join('[密钥已隐藏]');
+  return text.replace(/\b(?:sk[_-]|sb_[a-z]+_)[A-Za-z0-9_.-]+/gi,'[密钥已隐藏]').replace(/(Bearer\s+|(?:xi-api-key|api[_-]?key|token)\s*[=:]\s*)[^\s,;"'<>]+/gi,'$1[已隐藏]').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,240);
+}
+async function externalTtsRelay(tts,body,timeoutMs){const payload=Object.assign({provider:ttsProviderKind(tts),operation:'synthesize',base:String(tts&&tts.base||''),key:String(tts&&tts.key||''),model:String(tts&&tts.model||''),group:String(tts&&tts.group||'')},body||{});if(!payload.key)throw new Error('外置语音缺少 API Key');let r;try{r=await fetchT(EXTERNAL_TTS_RELAY_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},timeoutMs||190000);}catch(e){throw new Error('外置语音转发连接失败：'+apiCaughtCN(e));}if(!r.ok){let detail='';try{const raw=await r.clone().text();detail=externalTtsErrorDetail(raw,payload.key);}catch(_){}const e=new Error('外置语音平台 HTTP '+r.status+(detail?'：'+detail.slice(0,180):''));e.status=r.status;e.source='external-tts';throw e;}return r;}
 async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt.languageBoost||'auto'),provider=ttsProviderKind(tts);
   if(provider==='mossland'){
     r=await externalTtsRelay(tts,{voice_id:vid,text:t},opt&&opt.timeoutMs);if(r.ok){const type=String(r.headers.get('Content-Type')||'');if(/json/i.test(type)){const j=await r.json(),audio=j&&(j.audio||j.audio_file||j.audio_url||j.url),ab=await audioDataToBuf(audio);return ab?{buf:ab}:{err:'Mossland无音频'};}return {buf:await r.arrayBuffer()};}}

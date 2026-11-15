@@ -7,13 +7,13 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
  try{for(const privateApp of [false,true]){
-  const page=await browser.newPage({viewport:{width:390,height:844}}),requests=[],errors=[];page.setDefaultTimeout(15000);
+  const page=await browser.newPage({viewport:{width:390,height:844}}),requests=[],errors=[];let failureFixture=null;page.setDefaultTimeout(15000);
   if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',async r=>{const u=new URL(r.request().url());if(u.origin===origin)return r.continue();
    let body;try{body=r.request().postDataJSON();}catch(_){}
    if(u.host==='tts-fixture.invalid'){requests.push({kind:'external',url:u.href,auth:r.request().headers().authorization,body});return r.fulfill({status:200,contentType:'audio/mpeg',body:Buffer.from([1,2,3])});}
-   if(u.host==='license.smallphoneapp.com'&&u.pathname==='/functions/v1/external-tts'){requests.push({kind:'external-relay',url:u.href,body});if(body&&body.provider==='minimax')return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({base_resp:{status_code:0},data:{audio:'000102'}})});return r.fulfill({status:200,contentType:'audio/mpeg',body:Buffer.from([1,2,3])});}
+   if(u.host==='license.smallphoneapp.com'&&u.pathname==='/functions/v1/external-tts'){requests.push({kind:'external-relay',url:u.href,body});if(failureFixture)return r.fulfill({status:failureFixture.status,contentType:'application/json',body:JSON.stringify(failureFixture.body)});if(body&&body.provider==='minimax')return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({base_resp:{status_code:0},data:{audio:'000102'}})});return r.fulfill({status:200,contentType:'audio/mpeg',body:Buffer.from([1,2,3])});}
    if(body&&['tts','external_tts'].includes(body.action))requests.push({kind:'internal',action:body.action});return r.abort();
   });
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
@@ -37,8 +37,13 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    ['hume','https://api.hume.ai','octave-2','hume-voice'],
   ];
   for(const [provider,base,model,voice] of fixedProviders){const count=requests.length;await page.locator('#s_tprovider').selectOption(provider);await page.locator('#s_tbase').fill(base);await page.locator('#s_tkey').fill(provider+'-user-key');await page.locator('#s_tmodel').fill(model);await page.locator('#s_tvoice').fill(voice);await page.getByRole('button',{name:'测试外置语音（仅使用填写的接口）',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#testT').textContent.includes('已播放'));assert.equal(requests.length,count+1);assert.equal(requests.at(-1).kind,'external-relay');assert.equal(requests.at(-1).body.provider,provider);assert.equal(requests.at(-1).body.key,provider+'-user-key');assert.equal(requests.at(-1).body.voice_id,voice);}
-  const afterExternal=requests.length;await page.evaluate(async()=>{S.settings.tts.relay=false;await aiTestVoice();});assert.equal(requests.length,afterExternal);
-  const blocked=await page.evaluate(async()=>{try{await aiRelay('tts',{text:'test'});return false;}catch(e){return /已关闭/.test(e.message);}});assert(blocked);assert.equal(requests.length,afterExternal);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,blankFormNoRequests:true,externalOnlyWithOwnKey:true,internalOffNoRequests:true,oldSettingsPreserved:true}));await page.close();
+  await page.locator('#s_tprovider').selectOption('elevenlabs');await page.locator('#s_tbase').fill('https://api.elevenlabs.io');await page.locator('#s_tkey').fill('eleven-user-key');await page.locator('#s_tvoice').fill('eleven-voice');
+  for(const [status,code,expected] of [[401,'invalid_api_key','密钥认证失败'],[401,'paid_plan_required','需要付费套餐权限'],[403,'missing_permissions','缺少所需权限'],[402,'quota_exceeded','额度不足']]){
+   failureFixture={status,body:{detail:{code,message:'fixture reason eleven-user-key'}}};const count=requests.length;
+   await page.getByRole('button',{name:'测试外置语音（仅使用填写的接口）',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#testT').textContent.includes('测试失败'));
+   const text=await page.locator('#testT').innerText();assert(text.includes(expected),text);assert(!text.includes('eleven-user-key'));assert.equal(requests.length,count+1);
+  }
+  failureFixture=null;assert(await page.evaluate(()=>typeof aiTestVoice==='undefined'&&typeof aiRelay==='undefined'),'retired internal voice entrypoints remain absent');
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,blankFormNoRequests:true,externalOnlyWithOwnKey:true,retiredInternalControlsAbsent:true,oldSettingsPreserved:true}));await page.close();
  }}finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close();});
