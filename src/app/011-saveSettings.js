@@ -311,9 +311,9 @@ function spyDiaryPinDel(id){_spyDiaryPin=(_spyDiaryPin||'').slice(0,-1);render()
 function spyLockAvatar(c){const v=c&&((c._spyAppearance&&c._spyAppearance.avatar)||c.avatar);if(isImg(v))return `<img src="${v}" style="width:100%;height:100%;object-fit:cover">`;if(isStoredImgRef(v)){const key=v.slice(4),src=_imgCache[key];if(src)return `<img src="${src}" style="width:100%;height:100%;object-fit:cover">`;return `<div class="avatar" data-idb-avatar="${esc(key)}" style="width:100%;height:100%;border-radius:0">${_avIc('user')}</div>`;}return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:46px;background:linear-gradient(135deg,#3a3a44,#23232a)">${esc(v||'🙂')}</div>`;}
 function renderSpy(id){const c=getC(id);if(!c)return '';
   const nav=t=>`<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${t}</span><span class="r"></span></div>`;
-  if(!(S.couple&&S.couple.cid===id))return nav('📵 查手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">查手机只对【恋人】开放～<br>先去ta资料页 <b>💞 绑定情侣空间</b>，再开 <b>允许查我手机</b>，才能偷看ta的手机。</div></div>`;
+  if(!(S.couple&&S.couple.cid===id))return shellPageNav('📵 查手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">查手机只对【恋人】开放～<br>先去ta资料页 <b>💞 绑定情侣空间</b>，再开 <b>允许查我手机</b>，才能偷看ta的手机。</div></div>`;
   const sp=getSpy(c);
-  if(!sp.granted)return nav(esc(c.remark||c.name)+'的手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">还没拿到查看权限～<br>去 <b>${esc(c.remark||c.name)} 的资料页</b> 开「允许查我手机」，或在聊天里求ta同意💗</div></div>`;
+  if(!sp.granted)return shellPageNav((c.remark||c.name)+'的手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">还没拿到查看权限～<br>去 <b>${esc(c.remark||c.name)} 的资料页</b> 开「允许查我手机」，或在聊天里求ta同意💗</div></div>`;
   spyPwd(c);
   if(!_spyUnlock[id])return spyLockScreen(id,c);
   if(_spyApp)return spyAppView(id,c,_spyApp);

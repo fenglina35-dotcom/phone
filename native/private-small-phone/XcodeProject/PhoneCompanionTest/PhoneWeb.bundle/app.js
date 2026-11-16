@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1926'){
+if(window.__NORTH_SHELL_BUILD__!=='1927'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -645,7 +645,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1926 · 外置语音明确失败原因';
+const APP_VER='v1927 · 互动动效与微信自然入场';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2975,10 +2975,224 @@ function wechatMotionScroll(box,start){const st=_wechatMotion;if(!st||st.box!==b
 function wechatMotionMount(c){const target=naturalChatMotionTarget(c);const box=target&&(target[0]==='.'?document.querySelector(target):document.getElementById(target)),key=String(actId())+':'+renderPageKey(c)+':'+String(c.id||c.num||'')+':'+String(c.fid||'')+':'+String(c.mode||c.sk||c.xId||'')+':'+String(c.yId||'')+':'+String(c.p==='off'&&typeof _off!=='undefined'&&_off&&_off.mode||'')+':'+String(box&&box.getAttribute('data-render-scroll-key')||'');if(!box){wechatMotionDispose();return;}let st=_wechatMotion,initial=!st||st.key!==key;if(initial){wechatMotionDispose();st={key:key,box:box,rows:new Map(),times:new Map(),frame:0,observer:null,added:false,general:!['chat','group','pfchat','pfgroup'].includes(c.p),top:0,follow:true};_wechatMotion=st;}else{if(st.observer)st.observer.disconnect();cancelAnimationFrame(st.frame);st.box=box;st.added=false;}box.classList.add(st.general?'natural-motion-chat':'wx-motion-chat');if(!document.getElementById('wechatMessageMotionStyle')){const style=document.createElement('style');style.id='wechatMessageMotionStyle';style.textContent='.wx-motion-chat{padding-bottom:18px!important;overflow-anchor:none;scroll-behavior:auto!important}.wx-motion-chat .msg{margin-top:12px;margin-bottom:12px}.wx-motion-chat .msg.msg-enter{animation:none!important}.wx-motion-chat .msgread-line{pointer-events:none}.natural-motion-chat{overflow-anchor:none;scroll-behavior:auto!important}.natural-motion-chat .msg-enter,.natural-motion-chat .offreveal,.natural-motion-chat .jin{animation:none!important}.natural-motion-chat .offglyph{animation:none!important;opacity:1!important;filter:none!important;transform:none!important}';document.head.appendChild(style);}wechatMotionScan(st,initial);st.observer=new MutationObserver(()=>{const count=st.rows.size,top=st.top,follow=st.follow;wechatMotionScan(st,false);if(st.general&&st.rows.size>count&&follow)wechatMotionScroll(st.box,top);});st.observer.observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['data-wx-read']});if(!box._wxMotionInput){box._wxMotionInput=true;box.addEventListener('scroll',()=>{if(_wechatMotion&&_wechatMotion.box===box){_wechatMotion.top=box.scrollTop;if(!_wechatMotion.animating)_wechatMotion.follow=nearBottom(box);}},{passive:true});['wheel','touchstart','pointerdown','keydown'].forEach(type=>box.addEventListener(type,()=>{if(_wechatMotion&&_wechatMotion.box===box){cancelAnimationFrame(_wechatMotion.frame);_wechatMotion.animating=false;_wechatMotion.frame=0;_wechatMotion.follow=nearBottom(box);}},{passive:true}));} }
 document.addEventListener('visibilitychange',()=>{const st=_wechatMotion;if(!st)return;if(document.hidden)cancelAnimationFrame(st.frame);else wechatMotionScan(st,false);});
 let _scrollBottomOnce={};
+/* SHELL_INTERACTION_MOTION_V1：只负责呈现；导航、保存、请求和输入会话仍立即按原路径执行。 */
+let _shellMotionLast=null,_shellMotionOrigin=null,_shellMotionJobs=[],_shellMotionGhost=null,_shellMotionTimer=0;
+/* SHELL_LIVE_SURFACES_V1：媒体/画布只淡入；独立浮层不复制、不重建、不接管手势。 */
+const _shellSurfaceRecords=new Map(),_shellSurfaceJobs=new Set(),_shellFrameBindings=new WeakSet();
+let _shellSurfaceMounted=false;
+function shellMotionProfile(c,page){
+  if(c&&c.p==='robotFace')return 'protected';
+  if(c&&c.p==='couple'&&typeof privateCompanionAppOn==='function'&&privateCompanionAppOn()&&(c.sub==='device'||typeof _couTab!=='undefined'&&_couTab===3))return 'protected';
+  if(c&&c.p==='couple'&&document.querySelector('#cw-holder iframe'))return 'live';
+  if(c&&['cinemawatch','cinemaread','pixelhome','cozyhome','drawguess','beadstudio','pet'].includes(c.p))return 'live';
+  return page&&page.querySelector('video,audio,iframe,canvas')?'live':'standard';
+}
+function shellSurfaceClear(){_shellSurfaceJobs.forEach(a=>{try{a.cancel();}catch(_){}});_shellSurfaceJobs.clear();}
+function shellSurfaceFade(el){
+  if(!el||!el.isConnected||!shellMotionAllowed()||shellMotionProfile(cur(),null)==='protected'||document.fullscreenElement)return null;
+  try{const a=el.animate([{opacity:.35},{opacity:1}],{duration:220,easing:'cubic-bezier(.22,1,.36,1)'});_shellSurfaceJobs.add(a);const done=()=>_shellSurfaceJobs.delete(a);a.onfinish=done;a.oncancel=done;return a;}catch(_){return null;}
+}
+function shellSurfaceUpdate(el){
+  const rec=_shellSurfaceRecords.get(el);if(!rec)return;
+  if(el.id==='callLayer'&&typeof wxCallInteractionMount==='function')try{wxCallInteractionMount(el);}catch(_){}
+  const css=getComputedStyle(el),visible=!el.hidden&&css.display!=='none'&&css.visibility!=='hidden'&&(!['callLayer','viewer'].includes(el.id)||el.classList.contains('show'));
+  const variant=el.id==='callLayer'?(el.classList.contains('mini')?'mini':'full'):'';
+  const panel=el.matches('.nr-overlay')?el.firstElementChild:null;
+  const changed=visible&&(!rec.visible||variant!==rec.variant||panel!==rec.panel),sameOwner=rec.owner===S&&rec.account===actId();
+  rec.visible=visible;rec.variant=variant;rec.panel=panel;rec.owner=S;rec.account=actId();
+  if(!visible||changed){if(rec.animation)rec.animation.cancel();rec.animation=null;}
+  if(changed&&sameOwner){
+    const existing=css.animationName!=='none'||String(css.transitionDuration).split(',').some(t=>parseFloat(t)>0);
+    el.setAttribute('data-shell-surface',existing?'existing':'fade');if(!existing)rec.animation=shellSurfaceFade(el);
+  }
+}
+function shellSurfaceBind(root){
+  if(!root||root.nodeType!==1)return;
+  _shellSurfaceRecords.forEach((rec,el)=>{if(!el.isConnected){rec.observer.disconnect();if(rec.animation)rec.animation.cancel();_shellSurfaceRecords.delete(el);}});
+  const selector='#cw-holder,#callLayer,#viewer,#lockScreen,#msgBanner,#callBanner,.nr-root,.nr-overlay,.tn-dfull-ov,.tn-pack-ov,.tg-ov,.pc-reveal,.photo-meta-overlay';
+  const candidates=(root.matches(selector)?[root]:[]).concat(Array.from(root.querySelectorAll(selector)));
+  candidates.forEach(el=>{if(_shellSurfaceRecords.has(el))return;
+    const rec={visible:false,variant:'',panel:null,owner:S,account:actId(),animation:null,observer:null};_shellSurfaceRecords.set(el,rec);
+    rec.observer=new MutationObserver(()=>{try{shellSurfaceUpdate(el);}catch(_){}});
+    const panel=el.matches('.nr-overlay');rec.observer.observe(el,{attributes:true,attributeFilter:panel?['class','style','hidden']:['class','hidden'],childList:panel||el.id==='callLayer'});
+    shellSurfaceUpdate(el);
+  });
+}
+function shellMotionSurfacesMount(){
+  if(_shellSurfaceMounted||typeof MutationObserver!=='function')return;_shellSurfaceMounted=true;
+  [document.body,document.querySelector('.screen')].filter(Boolean).forEach(root=>{
+    shellSurfaceBind(root);
+    // 只看容器的直接增删，不观察整棵聊天DOM；新页面在render收尾单独登记。
+    const observer=new MutationObserver(changes=>{try{
+      _shellSurfaceRecords.forEach((rec,el)=>{if(!el.isConnected){rec.observer.disconnect();if(rec.animation)rec.animation.cancel();_shellSurfaceRecords.delete(el);}});
+      changes.forEach(change=>change.addedNodes.forEach(node=>shellSurfaceBind(node)));
+    }catch(_){}});observer.observe(root,{childList:true});
+  });
+}
+function shellMotionFramesMount(page,c){
+  if(!page||!['pixelhome','cozyhome','cinemawatch'].includes(c.p))return;
+  page.querySelectorAll('iframe').forEach(frame=>{if(_shellFrameBindings.has(frame))return;_shellFrameBindings.add(frame);
+    const owner=S,account=actId(),route=c.p;
+    frame.addEventListener('load',()=>{if(frame.isConnected&&owner===S&&account===actId()&&cur().p===route)shellSurfaceFade(frame);},{once:true});
+  });
+}
+function shellMotionReset(){
+  clearTimeout(_shellMotionTimer);_shellMotionTimer=0;
+  _shellMotionJobs.splice(0).forEach(a=>{try{a.cancel();}catch(_){}});
+  if(_shellMotionGhost){_shellMotionGhost.remove();_shellMotionGhost=null;}
+}
+function shellMotionAllowed(){return !document.hidden&&!wechatMotionReduced()&&typeof Element!=='undefined'&&typeof Element.prototype.animate==='function';}
+function shellMotionAnimate(el,frames,duration,delay){
+  if(!el||!shellMotionAllowed())return;
+  try{const a=el.animate(frames,{duration:duration,delay:delay||0,easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'});_shellMotionJobs.push(a);const done=()=>{const i=_shellMotionJobs.indexOf(a);if(i>=0)_shellMotionJobs.splice(i,1);};a.onfinish=done;a.oncancel=done;return a;}catch(_){}
+}
+function shellMotionStyle(){
+  if(document.getElementById('shellInteractionMotionStyle'))return;
+  const style=document.createElement('style');style.id='shellInteractionMotionStyle';
+  style.textContent=`
+  #app>.shell-motion-ghost{pointer-events:none!important;user-select:none!important;z-index:8;contain:layout paint;overflow:hidden}
+  #app>.shell-motion-ghost *{pointer-events:none!important;animation:none!important;caret-color:transparent!important}
+  @media(prefers-reduced-motion:no-preference){
+    #app button:not(:disabled),#modal button:not(:disabled),#app .nav .l,#app .nav .r{transition:scale 180ms cubic-bezier(.22,1,.36,1)}
+    #app button:not(:disabled):active,#modal button:not(:disabled):active,#app .nav .l:active,#app .nav .r:active{scale:.94}
+    #app .home:not(.home-editing) .app .b{transition:scale 260ms cubic-bezier(.22,1,.36,1)}
+    #app .home:not(.home-editing) .app:active .b{scale:.88}
+    #app .sw:after{transition:transform 280ms cubic-bezier(.22,1,.36,1),left 280ms cubic-bezier(.22,1,.36,1)}
+    #modal.show:not(.call-modal)>.sheet{animation:shellSheetIn 360ms cubic-bezier(.22,1,.36,1) both}
+    #modal.show:not(.call-modal){animation:shellVeilIn 240ms ease-out both}
+    #cfm.show .cfmbox{animation:shellSheetIn 320ms cubic-bezier(.22,1,.36,1) both}
+    #modal.show.call-modal,#modal.show.call-modal>.sheet{animation:shellVeilIn 220ms ease-out both}
+    #callLayer .cbtn,#lockScreen .lockquick,.nr-root button{transition:scale 180ms cubic-bezier(.22,1,.36,1)}
+    #callLayer .cbtn:active,#lockScreen .lockquick:active,.nr-root button:active{scale:.94}
+    @keyframes shellSheetIn{from{opacity:0;transform:translateY(24px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes shellVeilIn{from{opacity:0}to{opacity:1}}
+  }
+  @media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+    #app .home:not(.home-editing) .app:hover .b{scale:1.065}
+  }`;
+  document.head.appendChild(style);
+  shellMotionSurfacesMount();
+}
+function shellMotionLaunch(key){
+  const app=document.getElementById('app');if(!app||cur().p!=='home')return;
+  const icon=Array.from(app.querySelectorAll('.app[data-token]')).find(el=>el.getAttribute('data-token')===key);
+  if(!icon)return;
+  const r=(icon.querySelector('.b')||icon).getBoundingClientRect(),host=app.getBoundingClientRect();
+  _shellMotionOrigin={key:key,x:r.left+r.width/2-host.left,y:r.top+r.height/2-host.top,at:Date.now(),owner:S,account:actId()};
+}
+function shellMotionRoute(c){
+  let detail=c.p==='wechat'?wxTab:c.p==='settings'?String(_setCategory)+':'+_setTab:c.p==='music'?_mView:'';
+  if(c.p==='cinemaread'){const session=cinemaSession();detail=String(_cin.sessionId)+':'+String(session&&session.page||0);}
+  if(c.p==='drawguess'&&typeof _dg!=='undefined'&&_dg)detail=_dg.phase;
+  if(c.p==='beadstudio'&&typeof _bead!=='undefined'&&_bead)detail=_bead.phase;
+  if(/^dy/.test(c.p))detail=[typeof dyTab!=='undefined'?dyTab:'',typeof _dySub!=='undefined'?_dySub:'',typeof _dyMode!=='undefined'?_dyMode:'',typeof _dyMeTab!=='undefined'?_dyMeTab:'',typeof _dyUserTab!=='undefined'?_dyUserTab:'',typeof _dyCmTab!=='undefined'?_dyCmTab:'',typeof _dyRelTab!=='undefined'?_dyRelTab:'',typeof _dyHistTab!=='undefined'?_dyHistTab:'',typeof _dyUserKey!=='undefined'?_dyUserKey:'',typeof _dyWorkId!=='undefined'?_dyWorkId:'',typeof _dyGid!=='undefined'?_dyGid:'',typeof _dyCmOpen!=='undefined'?_dyCmOpen:false,typeof _dyCmFull!=='undefined'?_dyCmFull:false].join(':');
+  if(c.p==='x')detail=String(typeof xTab!=='undefined'?xTab:'')+':'+String(typeof _feedTab!=='undefined'?_feedTab:'');
+  if(c.p==='phoneapp'&&typeof phState==='function'){const ph=phState();detail=String(ph.tab||'')+':'+String(ph.filter||'');}
+  if(c.p==='album'||c.p==='aiaccount')detail=typeof _photoAlbumTab!=='undefined'?_photoAlbumTab:'';
+  if(c.p==='travel')detail=typeof _tvTab!=='undefined'?_tvTab:'';
+  if(c.p==='rphub')detail=typeof _rpStudioFilter!=='undefined'?_rpStudioFilter:'';
+  return renderPageKey(c)+':'+[c.id,c.gid,c.fid,c.key,c.pid,c.mode,c.tab,c.sub,c.num,c.mid,c.type,c.view,c.page,c.index,c.date,c.saveId,c.name,c.cid,c.target].map(v=>String(v==null?'':v)).join(':')+':'+detail;
+}
+function shellMotionPrepare(c,app){
+  shellMotionStyle();const old=_shellMotionLast,key=shellMotionRoute(c),owner=S,account=actId();
+  const changed=!!old&&old.key!==key&&old.owner===owner&&old.account===account;
+  if(_shellMotionOrigin&&(_shellMotionOrigin.owner!==owner||_shellMotionOrigin.account!==account))_shellMotionOrigin=null;
+  shellMotionReset();
+  if(!shellMotionAllowed())shellSurfaceClear();
+  const plan={key:key,page:c.p,depth:stack.length,owner:owner,account:account,changed:changed,old:old};
+  if(changed&&shellMotionAllowed()&&typeof wxRoleEntryGhost==='function')plan.roleGhost=wxRoleEntryGhost(c,app,old);
+  return plan;
+}
+/* SHELL_ALL_APPS_INTERACTION_V1：常规内页背景稳定，只移动内容；媒体和受保护页面保持原边界。 */
+function shellMotionContent(page){
+  if(!page)return null;
+  const explicit=page.querySelector('.dy-shell,.dywk-stage,.rp-studio-scroll,#dyfeed,#xscroll,#phbody,.phbody,.photo-album-scroll,.ctr-order-scroll,.ctr-scroll,.travel-scroll,#rpbg,#offbg,#settingsscroll,.wx-main-scroll,#chatbg,#pfchatbg,#pfgroupbg,.gmanage-scroll,.wx-role-moments,.wx-role-detail-scroll,.wx-real-scroll,.wx-directory-scroll,.scroll,main,.music-library,.music-app-body,.gamehub-scroll,.travel-scroll,.shop-scroll,.mail-scroll,.browser-body');
+  if(explicit)return explicit;
+  const candidates=Array.from(page.querySelectorAll('[class*="scroll"],[class*="feed"]')).slice(0,24);
+  for(const el of candidates){const css=getComputedStyle(el);if(el.clientHeight>40&&/auto|scroll/.test(css.overflowY))return el;}
+  return Array.from(page.children).find(el=>!el.matches('.nav,header,.tabbar,footer,.inputbar,.manual-reply-row')&&el.getBoundingClientRect().height>80)||null;
+}
+/* SHELL_INTERNAL_VIEWS_V1：页面目录、内部标签及局部视图一并识别，不把数据刷新当导航。 */
+function shellViewSignature(root,c){
+  if(!root||root.matches('#app>.page')&&(c.p==='home'||c.p==='settings'||naturalChatMotionTarget(c)))return '';
+  const parts=Array.from(root.children).slice(0,5).map(el=>el.tagName+':'+el.id+':'+String(el.className||'').split(/\s+/).filter(x=>!['show','open','on','active','loading','busy','paused'].includes(x)).join('.'));
+  const body=shellMotionContent(root);if(body){parts.push('body:'+String(body.getAttribute('data-render-scroll-key')||''));Array.from(body.children).slice(0,4).forEach(el=>parts.push('child:'+el.tagName+':'+el.id+':'+String(el.className||'').replace(/\b(on|active|loading|busy)\b/g,'')));}
+  const navs=root.querySelectorAll('nav,.tabbar,.tabs,.xtabs,.phtab,.phseg,.phlineswitch,.travel-tabs,.photo-album-tabs,.rp-memory-tabs,[role="tablist"],[class*="-tabs"],[class*="-filters"],[class*="-types"],[class*="tabbar"]');
+  Array.from(navs).slice(0,24).forEach((nav,i)=>{if(!nav.getClientRects().length)return;const selected=Array.from(nav.querySelectorAll('.on,.active,.selected,[aria-selected="true"],[aria-current="true"],[aria-current="page"],[aria-pressed="true"]')).slice(0,8).map(el=>el.id||el.getAttribute('data-tab')||el.getAttribute('onclick')||String(Array.from(nav.children).indexOf(el)));parts.push('nav'+i+':'+selected.join('|'));});
+  Array.from(root.querySelectorAll('main,[data-view],[data-stage],[class$="-screen"],[class$="-results"],[class$="-detail"],[class$="-form"]')).slice(0,16).forEach(el=>{if(el.getClientRects().length)parts.push('view:'+el.tagName+':'+el.id+':'+el.className+':'+String(el.getAttribute('data-view')||el.getAttribute('data-stage')||''));});
+  return parts.join(';');
+}
+/* SHELL_ANCHORED_TITLES_V3: animate independent content branches, never a title or its ancestors. */
+// SHELL_WECHAT_PROFILE_STEADY_V1: keep the profile identity out of content entrance motion.
+const SHELL_TITLE_SELECTOR='.nav,header,.xnav,.wx-main-title,.wxme-profile-card,.phtitle,h1,h2,[role="heading"],.page-title,.app-title,.music-app-title,.browser-title,[class*="-brand"],.ctn-hero,.ctf-hero,.cth-hero';
+function shellContentMotionExcluded(c,page,old){
+  if(c.p==='worldbook'||c.p==='travel'&&!page.querySelector('.ctr-app'))return true;
+  return !!(old&&old.page===c.p&&/^dy/.test(c.p)&&(old.dyMeTab!==String(typeof _dyMeTab==='undefined'?'':_dyMeTab)||old.dyUserTab!==String(typeof _dyUserTab==='undefined'?'':_dyUserTab)));
+}
+function shellMotionTargets(page){
+  const host=page.getBoundingClientRect(),queue=Array.from(page.children).map(el=>({el,depth:0})),out=[];
+  let visited=0;
+  while(queue.length&&visited++<96&&out.length<10){
+    const {el,depth}=queue.shift(),r=el.getBoundingClientRect();
+    if(!r.width||!r.height||r.bottom<=host.top||r.top>=host.bottom||el.matches('style,script,link,'+SHELL_TITLE_SELECTOR+',.tabbar,[class*="tabbar"],.phtab,.dytab,footer,.chat-inputbar,.inputbar,.manual-reply-row,input,textarea,select,canvas,video,iframe'))continue;
+    const split=r.top<host.top+90||el.querySelector(SHELL_TITLE_SELECTOR+',input,textarea,select,[contenteditable="true"],canvas,video,iframe')||document.activeElement&&el.contains(document.activeElement);
+    if(split){if(depth<8)queue.push(...Array.from(el.children).map(child=>({el:child,depth:depth+1})));continue;}
+    out.push(el);
+  }
+  return out;
+}
+function shellContentMotion(page,c,plan){
+  if(!page||!shellMotionAllowed()||shellMotionProfile(c,page)!=='standard')return;
+  if(shellContentMotionExcluded(c,page,plan&&plan.old)||naturalChatMotionTarget(c)){page.setAttribute('data-shell-content-motion','none');return;}
+  const launch=plan&&plan.old&&plan.old.page==='home',home=c.p==='home',backward=!!(plan&&plan.old&&plan.depth<plan.old.depth);
+  const family=/^dy/.test(c.p)?'douyin':c.p==='x'?'x':/^phone/.test(c.p)?'phone':c.p==='album'?'album':c.p==='tasks'?'tasks':/^rp|^off/.test(c.p)?'roleplay':c.p==='travel'?'travel':'standard';
+  const targets=home?Array.from(page.querySelectorAll('.app .b')).filter(el=>{const r=el.getBoundingClientRect();return r.top<page.getBoundingClientRect().bottom&&r.bottom>page.getBoundingClientRect().top;}).slice(0,12):shellMotionTargets(page);
+  page.setAttribute('data-shell-content-motion',targets.length?family+':'+(launch?'launch':'page'):'none');
+  targets.forEach((el,i)=>{const base=getComputedStyle(el).transform,from=launch?'translateY(18px) scale(.96)':'translateY('+(backward?-12:14)+'px)';shellMotionAnimate(el,[{transform:from+(base==='none'?'':' '+base)},{transform:base}],launch?440:340,Math.min(i,7)*18);});
+  if(targets.length)_shellMotionTimer=setTimeout(shellMotionReset,650);
+}
+function shellLocalPopupSnapshot(root){
+  if(!root)return [];
+  return Array.from(root.querySelectorAll('[class*="popover"],[class*="drawer"],[class*="-menu"],[class*="-panel"],[class*="-overlay"],[class*="-sheet"],[role="dialog"],[role="menu"]')).slice(0,32).filter(el=>{const css=getComputedStyle(el);return !el.closest('.chat-tools-panel')&&el.getClientRects().length&&css.display!=='none'&&css.visibility!=='hidden';});
+}
+function shellPartialMotion(root,c,before,panels){
+  if(!root||!root.isConnected||!shellMotionAllowed()||shellMotionProfile(c,root)==='protected')return;
+  const after=shellViewSignature(root,c);
+  if(before!==after){
+    root.setAttribute('data-shell-partial-motion','content');
+    if(root.matches('#app>.page'))shellContentMotion(root,c,{old:_shellMotionLast,depth:stack.length});
+    if(root.matches('#app>.page')&&_shellMotionLast&&_shellMotionLast.owner===S&&_shellMotionLast.account===actId())_shellMotionLast.view=after;
+  }
+  for(const panel of shellLocalPopupSnapshot(root)){if(panels.includes(panel)||panel.matches('.chat-tools-panel,.moment-action-popover,.moment-inline-compose'))continue;const input=panel.querySelector('input,textarea,select,canvas,video,iframe');shellMotionAnimate(panel,input?[{opacity:.85},{opacity:1}]:[{opacity:.85,transform:'translateY(12px)'},{opacity:1,transform:'none'}],260);}
+}
+function shellMotionFinish(c,app,plan){
+  const view=shellViewSignature(app.firstElementChild,c);
+  const panels=shellLocalPopupSnapshot(app.firstElementChild),panelKey=el=>el.id||String(el.className||'').replace(/\b(show|open|active)\b/g,'').trim(),panelKeys=panels.map(panelKey);
+  if(plan.old&&plan.old.owner===S&&plan.old.account===actId()&&plan.old.page===c.p&&plan.old.panelKeys){for(const panel of panels){if(plan.old.panelKeys.includes(panelKey(panel))||panel.matches('.moment-action-popover')||panel.getAnimations().length)continue;const safe=panel.querySelector('input,textarea,video,canvas,iframe');shellMotionAnimate(panel,safe?[{opacity:.85},{opacity:1}]:[{opacity:.85,transform:'translateY(12px)'},{opacity:1,transform:'none'}],260);panel.setAttribute('data-shell-panel-motion','open');}}
+  if(plan.old&&plan.old.owner===S&&plan.old.account===actId()&&plan.old.page===c.p&&plan.old.view!==undefined&&plan.old.view!==view)plan.changed=true;
+  _shellMotionLast={key:plan.key,view:view,panelKeys:panelKeys,page:plan.page,depth:plan.depth,owner:plan.owner,account:plan.account,dyMeTab:String(typeof _dyMeTab==='undefined'?'':_dyMeTab),dyUserTab:String(typeof _dyUserTab==='undefined'?'':_dyUserTab)};
+  shellSurfaceBind(app);shellMotionFramesMount(app.firstElementChild,c);
+  if(typeof shellControlMount==='function')shellControlMount(c,app,plan);
+  if(typeof wxInteractionMount==='function')try{if(wxInteractionMount(c,app,plan))return;}catch(_){if(typeof wxUiClear==='function')wxUiClear();}
+  if(!plan.changed||!shellMotionAllowed())return;
+  const page=app.firstElementChild;if(!page)return;
+  const profile=shellMotionProfile(c,page);page.setAttribute('data-shell-motion-profile',profile);
+  if(profile==='protected')return;
+  if(profile==='live'){
+    page.setAttribute('data-shell-motion','fade');shellMotionAnimate(page,[{opacity:.8},{opacity:1}],220);_shellMotionTimer=setTimeout(shellMotionReset,320);return;
+  }
+  // SHELL_STEADY_CONTENT_V2: the page root and headings keep their final coordinates.
+  page.setAttribute('data-shell-motion',plan.old.page==='home'?'launch':c.p==='home'?'home':'content');
+  shellContentMotion(page,c,plan);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){shellMotionReset();shellSurfaceClear();}});
+if(typeof matchMedia==='function'){const preference=matchMedia('(prefers-reduced-motion: reduce)');if(preference.addEventListener)preference.addEventListener('change',()=>{if(preference.matches){shellMotionReset();shellSurfaceClear();}});}
 function go(p,params){if(['gameshub','rphub','worldbook'].includes(p)&&typeof northPageArtWarm==='function')northPageArtWarm().catch(()=>{});if(p==='group'&&params&&params.id)wxChatRestore('group:'+params.id);if(p==='wxnearby'&&wxNearbyBlocked())return;stack.push(Object.assign({p},params));render();}
 function back(){if(typeof window!=='undefined'&&window.NorthRunner&&NorthRunner.back())return;const leaving=cur();if(leaving&&leaving.p==='food'&&typeof northMarketBack==='function'&&northMarketBack())return;if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
 function home(){if(window.wxScanStop)window.wxScanStop();window._wxReturnToDiscover=false;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
+/* SHELL_PAGE_FALLBACK_NAV_V1：失效内容仍有安全返回，不调用未定义的旧nav助手。 */
+function shellPageNav(title){return '<div class="nav"><button type="button" class="l" aria-label="返回" onclick="back()">‹</button><span class="t">'+esc(String(title||''))+'</span><span class="r"></span></div>';}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}
 function renderScrollTarget(c){if(!c)return null;if(c.p==='travel'&&typeof NorthTravelHotel!=='undefined'&&NorthTravelHotel.active())return NorthTravelHotel.scrollTarget();if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};/* ROLE_FEATURES_KEEP_SCROLL_V1：角色「聊天与主动」等功能页重新画时停在原位置；以前后台检查一做完就重画，一往下滑就弹回顶部 */const map={healthcheck:['healthscroll',0],roleFeatures:['roleFeatureScroll',0],settings:['settingsscroll',0],couple:['couplescroll',0],wxmoment:['wxMomentScroll',0],wxalbum:['.wxalbum-page',0],wxfavorites:['.wxfav-page',0],spy:['spyAppScroll',0],x:['xscroll',0],dy:['dyfeed',0],wxnearby:['wxNearbyScroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1],phonesms:['smsbody',1],calllog:['cllog',0],shop:['.shop-scroll',0],mail:['.mail-scroll',0],travel:['.travel-scroll',0]};if(c.p==='dy'){const sub=typeof _dySub==='string'?_dySub:'';
     if(sub==='group')return{id:'.dyg-box',stick:true};/* 群聊要贴着底部，跟微信一样 */
@@ -3034,6 +3248,7 @@ function render(){
   if(typeof cozyHomeKeepFrame==='function'&&cozyHomeKeepFrame())return;
   applyAppleHomeCompat();
   applyGlassTheme();
+  let _shellPlan=null;try{_shellPlan=shellMotionPrepare(c,app);}catch(_){shellMotionReset();}
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
   const _scrollState=captureRenderScroll(c),_composerState=captureChatComposer(c);
   let html='';
@@ -3183,6 +3398,8 @@ function render(){
     const active=document.activeElement;if(active&&active.id==='cinput')active.blur();
     app.innerHTML='<div class="'+_pageClass+'">'+html+'</div>';
   }
+  // SETTINGS_STEADY_PAINT_V1：先筛选设置分类，再恢复滚动和播放动画，不露出其他分类一帧。
+  if(c.p==='settings')settingsCategoryApply();
   if(c.p==='spy'&&!_spyApp)requestAnimationFrame(()=>spyHomeMount(c.id));
   if(c.p==='music'){const b=app.querySelector('.music-app-head>button:first-child');if(b)b.onclick=back;}
   if(c.p==='browser'){const b=app.querySelector('.br-nav .l');if(b)b.onclick=back;}
@@ -3214,6 +3431,7 @@ function render(){
   if(c.p==='phonesms'&&typeof phFxSwellAll==='function')requestAnimationFrame(phFxSwellAll);/* 被字撑大的气泡要重新量 */
   const _imageRouteKey=renderPageKey(c),_imageRouteChanged=_imageRouteKey!==_visibleImageRouteKey;_visibleImageRouteKey=_imageRouteKey;
   scheduleVisibleStoredImages(_imageRouteChanged,true);
+  if(_shellPlan)try{shellMotionFinish(c,app,_shellPlan);}catch(_){shellMotionReset();}
   if(_renderStarted)northNativePerformanceSample('render-'+c.p,(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())-_renderStarted);
 }
 
@@ -3480,7 +3698,7 @@ function cinemaBindControls(root){if(!root)return;root.querySelectorAll('[data-c
 function cinemaBindWatchControls(){const stage=$('#cinStage');cinemaBindControls(stage);const screen=stage&&stage.querySelector('.cin-screen');if(screen&&!screen._cinRevealBound){screen._cinRevealBound=true;screen.addEventListener('click',cinemaRevealControls);}}
 function cinemaBindReaderControls(){cinemaBindControls($('.cin-reader'));}
 function cinemaPlayerHTML(){if(_cin.provider==='bilibili'){const info=_cin.videoInfo||{},identity=info.idType==='episode'?'episodeId='+encodeURIComponent(info.id||_cin.externalId):info.idType==='season'?'seasonId='+encodeURIComponent(info.id||_cin.externalId):'bvid='+encodeURIComponent(info.bvid||_cin.externalId),q=['isOutside=true',identity,info.aid?'aid='+encodeURIComponent(info.aid):'',info.cid?'cid='+encodeURIComponent(info.cid):'','p=1','high_quality=1','danmaku=0','autoplay=0'].filter(Boolean).join('&');return'<div class="cin-platform-frame"><iframe id="cinBiliPlayer" class="cin-platform-player" src="https://player.bilibili.com/player.html?'+q+'" title="哔哩哔哩官方播放器" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>';}return `<video id="cinVideo" src="${esc(_cin.videoUrl)}" playsinline webkit-playsinline disablepictureinpicture preload="metadata"></video>`;}
-function renderCinemaWatch(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.videoUrl)return `<div class="cinema-home">${nav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">视频源已失效，请回到放映室重新选择视频。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;
+function renderCinemaWatch(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.videoUrl)return `<div class="cinema-home">${shellPageNav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">视频源已失效，请回到放映室重新选择视频。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;
   return `<div class="cin-watch"><div id="cinStage" class="cin-stage cin-theater ${_cin.provider?'cin-platform-stage '+_cin.provider:''} ${_cin.chatOpen?'chat-open':''} ${_cin.mediaOpen===false?'media-hidden':''}" style="--cin-chat-h:${cinemaComposerHeight()}px"><div class="cin-screen">${cinemaPlayerHTML()}<div id="cinDanmaku" class="cin-danmaku"></div><div id="cinSub" class="cin-sub"></div><div id="cinVoiceSub" class="cin-voice-sub"><b></b><span></span></div>
       <div id="cinTopLayer" class="cin-overlay-top ${_cin.topOpen?'':'collapsed'}"><div class="cin-overlay-head"><button class="cin-edge-btn" data-cin-action="back" aria-label="返回">‹</button><button class="cin-watch-meta" data-cin-action="rename" data-session="${s.id}"><b id="cinWatchTitle">${esc(s.title)}</b><span>${cinemaRoleName(c)} 正在陪你看 · 点片名可修改</span></button><button class="cin-fullscreen-btn" data-cin-action="fullscreen" aria-label="切换系统全屏">⛶</button><button class="cin-collapse-btn" data-cin-action="top-close" aria-label="收起功能">⌃</button><button class="cin-end" data-cin-action="end">结束</button></div>${cinemaStageTools()}</div>
       <button id="cinTopReveal" class="cin-top-reveal ${_cin.topOpen?'hidden':''}" data-cin-action="top-open" aria-label="展开功能">•••</button>
@@ -3637,7 +3855,7 @@ async function cinemaAnalyzeFrame(ev,automatic,opt){
     if(b&&b.isConnected){b.disabled=false;b.classList.remove('on');const t=b.querySelector('span');if(t)t.textContent=old||'识别此帧';}
   }
 }
-function renderCinemaRead(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.bookPages.length)return `<div class="cinema-home">${nav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">作品源已失效，请回到放映室重新导入。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;const i=Math.max(0,Math.min(s.page||0,_cin.bookPages.length-1)),pct=Math.round((i+1)/_cin.bookPages.length*100);
+function renderCinemaRead(){const s=cinemaSession(),c=s&&getC(s.cid);if(!s||!c||!_cin.bookPages.length)return `<div class="cinema-home">${shellPageNav('放映室')}<div class="cin-empty" style="margin:auto;padding:30px">作品源已失效，请回到放映室重新导入。<button class="btn p" style="margin-top:16px" onclick="back()">返回放映室</button></div></div>`;const i=Math.max(0,Math.min(s.page||0,_cin.bookPages.length-1)),pct=Math.round((i+1)/_cin.bookPages.length*100);
   const set=cinemaInit().settings;return `<div class="cin-reader"><div class="cin-reader-nav"><button onclick="cinemaReaderBack()">‹</button><div><b>${esc(s.title)}</b><span>${cinemaRoleName(c)} 陪读 · ${pct}%</span></div><button id="cinBookVoiceBtn" class="cin-reader-voice ${set.bookVoice?'on':''}" data-cin-action="book-voice" aria-label="${set.bookVoice?'关闭':'开启'}陪读语音">${svgIc(set.bookVoice?'volume':'mute',16)}<small>${set.bookVoice?'出声':'静音'}</small></button><button onclick="cinemaEnd()">结束</button></div><div class="cin-reader-companion"><button id="cinBookCompanionBtn" class="${cinemaCompanionMode()!=='quiet'?'on':''}" data-cin-action="auto">${svgIc('chat',14)}<span>${cinemaCompanionLabel()} · ${cinemaAutoLimit()}条/场</span><i>点这里调整书架陪伴</i></button></div><div id="cinPaperWrap" class="cin-paper-wrap" style="flex-basis:${cinemaReaderPaneHeight()}px"><article class="cin-paper"><div class="cin-page-no">${String(i+1).padStart(2,'0')} / ${String(_cin.bookPages.length).padStart(2,'0')}</div><div class="cin-prose">${esc(_cin.bookPages[i]).replace(/\n/g,'<br>')}</div><div class="cin-page-end">— ${pct}% —</div></article></div>
     <button type="button" class="cin-reader-divider" data-cin-resize="reader" aria-label="上下拖动调整正文和同屏对话的空间"><span></span></button><div class="cin-reader-actions"><button onclick="cinemaBookPage(-1)" ${i<=0?'disabled':''}>上一页</button><button class="comment" onclick="cinemaBookComment()">问问 ${cinemaRoleName(c)}</button><button onclick="cinemaBookPage(1)" ${i>=_cin.bookPages.length-1?'disabled':''}>下一页</button></div><div id="cinLog" class="cin-logbox reader">${cinemaLogHTML(s)}</div><div id="cinBookComposer" class="cin-book-input"><button id="cinBookMic" class="cin-mic ${_cin.micKind==='book'?'recording':''}" data-cin-action="mic" data-kind="book" aria-label="${_cin.micKind==='book'?'持续话筒已开启，点一下关闭':'点一下开启持续话筒'}">${svgIc('mic',17)}</button><textarea id="cinBookInput" rows="3" maxlength="160" placeholder="聊聊刚读到的这一页…"></textarea><button data-cin-action="book-send">发送</button></div></div>`;}
 function cinemaAfterReaderRender(){cinemaBindReaderControls();cinemaApplyReaderPaneHeight(cinemaReaderPaneHeight(),false);const inp=$('#cinBookInput');if(inp)inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();cinemaSend('book');}});}
@@ -4199,7 +4417,7 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   if(Date.now()<_aNoClick)return;
   if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}
   const f=APPRUN[k];if(f)f();}
-function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}const f=APPRUN[k];if(privateNativeAppOn()&&typeof queueMicrotask==='function')queueMicrotask(f);else setTimeout(f,0);}
+function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}try{if(typeof shellMotionLaunch==='function')shellMotionLaunch(k);}catch(_){}const f=APPRUN[k];if(privateNativeAppOn()&&typeof queueMicrotask==='function')queueMicrotask(f);else setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}
@@ -5195,7 +5413,7 @@ function ttsRouteFillForm(r){r=ttsRouteCopy(r);[['s_tprovider','provider'],['s_t
 function ttsRouteRefreshUI(){const rs=ttsRoutesInit(),active=S.settings.ttsRouteActive;try{document.querySelectorAll('[data-tts-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#7657a8':'#24242a';btn.style.borderColor=on?'#9d7bd0':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=ttsRouteSummary(rs[i]);});}catch(_){}}
 function ttsRouteSwitch(i){ttsRoutesInit();ttsRouteCaptureForm();const rs=ttsRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));S.settings.ttsRouteActive=i;const old=S.settings.tts||{};S.settings.tts=Object.assign({},old,ttsRouteCopy(rs[i]),{enabled:old.enabled,relay:!!old.relay,relayLang:old.relayLang||''});ttsRouteFillForm(S.settings.tts);save();ttsRouteRefreshUI();toast('已切换到'+TTS_ROUTE_NAMES[i]);}
 function chatRouteMount(page){if(!page||!chatRouteSessionPage())return;const color=(page.p==='off'?'#a9a197':page.p==='rp'?'#9eabb6':page.p==='dread'||page.p==='tale'?'#b9707e':'#bfc8d8'),root=document.querySelector('#app .page');if(!root)return;if(page.p==='off'){const dateActions=root.querySelector('.off-date-nav>.off-nav-actions');if(dateActions){if(!dateActions.querySelector('[data-chat-route-quick]'))dateActions.insertAdjacentHTML('afterbegin',chatRouteQuickButton(color));return;}}const navRight=root.querySelector('.nav .r');if(navRight){navRight.style.gap='8px';navRight.insertAdjacentHTML('afterbegin',chatRouteQuickButton(color));return;}const selector=page.p==='dread'?'#dreadwrap':page.p==='tale'?'#talewrap':page.p==='off'?'.offstage':'';if(!selector)return;const stage=root.querySelector(selector);if(!stage||page.p==='off'&&stage.querySelector('.cohab-status-chip'))return;stage.insertAdjacentHTML('beforeend',chatRouteQuickButton(color));const btn=stage.querySelector('[data-chat-route-quick]');if(btn){btn.style.position='absolute';btn.style.zIndex='490';btn.style.top='9px';btn.style.right=page.p==='tale'?'62px':'12px';}}
-function renderSettings(){if(_setCategory==='code')return codeModelSettingsHTML();const nativeBuild=privateNativeAppOn()?String(window.__SMALL_PHONE_PRIVATE_BUILD__||'未识别'):'';if(!_setCategory)return settingsHomeHTML(nativeBuild);const category=settingsCategoryMeta();_setTab=category.tab;const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive,voiceRoutes=ttsRoutesInit(),voiceRouteActive=S.settings.ttsRouteActive,a=chatMainCopy(S.settings.chat),v=S.settings.vision;setTimeout(settingsCategoryApply,0);
+function renderSettings(){if(_setCategory==='code')return codeModelSettingsHTML();const nativeBuild=privateNativeAppOn()?String(window.__SMALL_PHONE_PRIVATE_BUILD__||'未识别'):'';if(!_setCategory)return settingsHomeHTML(nativeBuild);const category=settingsCategoryMeta();_setTab=category.tab;const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive,voiceRoutes=ttsRoutesInit(),voiceRouteActive=S.settings.ttsRouteActive,a=chatMainCopy(S.settings.chat),v=S.settings.vision;
   return `<div class="nav settings-detail-nav"><span class="l" onclick="settingsCategoryBack()">‹</span><span class="t">${esc(category.title)}</span><span class="r">${privateNativeSettingsAction()}</span></div>
   <div class="scroll" id="settingsscroll" style="padding:12px;background:#000">
     <div data-build-verification="1" style="margin-bottom:10px;padding:10px 12px;border:1px solid rgba(124,214,255,.42);border-radius:11px;background:rgba(70,148,180,.13);color:#dff7ff;font-size:12px;line-height:1.6"><b style="font-size:14px">当前已加载：${APP_VER}</b><br>${nativeBuild?`私人安装包 ${esc(nativeBuild)}`:'网页版核心'}</div>
@@ -5676,9 +5894,9 @@ function spyDiaryPinDel(id){_spyDiaryPin=(_spyDiaryPin||'').slice(0,-1);render()
 function spyLockAvatar(c){const v=c&&((c._spyAppearance&&c._spyAppearance.avatar)||c.avatar);if(isImg(v))return `<img src="${v}" style="width:100%;height:100%;object-fit:cover">`;if(isStoredImgRef(v)){const key=v.slice(4),src=_imgCache[key];if(src)return `<img src="${src}" style="width:100%;height:100%;object-fit:cover">`;return `<div class="avatar" data-idb-avatar="${esc(key)}" style="width:100%;height:100%;border-radius:0">${_avIc('user')}</div>`;}return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:46px;background:linear-gradient(135deg,#3a3a44,#23232a)">${esc(v||'🙂')}</div>`;}
 function renderSpy(id){const c=getC(id);if(!c)return '';
   const nav=t=>`<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${t}</span><span class="r"></span></div>`;
-  if(!(S.couple&&S.couple.cid===id))return nav('📵 查手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">查手机只对【恋人】开放～<br>先去ta资料页 <b>💞 绑定情侣空间</b>，再开 <b>允许查我手机</b>，才能偷看ta的手机。</div></div>`;
+  if(!(S.couple&&S.couple.cid===id))return shellPageNav('📵 查手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">查手机只对【恋人】开放～<br>先去ta资料页 <b>💞 绑定情侣空间</b>，再开 <b>允许查我手机</b>，才能偷看ta的手机。</div></div>`;
   const sp=getSpy(c);
-  if(!sp.granted)return nav(esc(c.remark||c.name)+'的手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">还没拿到查看权限～<br>去 <b>${esc(c.remark||c.name)} 的资料页</b> 开「允许查我手机」，或在聊天里求ta同意💗</div></div>`;
+  if(!sp.granted)return shellPageNav((c.remark||c.name)+'的手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">还没拿到查看权限～<br>去 <b>${esc(c.remark||c.name)} 的资料页</b> 开「允许查我手机」，或在聊天里求ta同意💗</div></div>`;
   spyPwd(c);
   if(!_spyUnlock[id])return spyLockScreen(id,c);
   if(_spyApp)return spyAppView(id,c,_spyApp);
@@ -9770,6 +9988,280 @@ function taskPunishSweep(c){const p=c&&c.taskPunish;if(!p||p.status!=='pending')
   pushMsg(c.id,{role:'assistant',type:'sys',content:(c.remark||c.name)+' 罚你写一份检讨，已经放进今天的任务便签',id:uid()});save();}
 
 /* ---------- 微信主界面 ---------- */
+/* WECHAT_INTERACTION_STUDIO_V1：微信专属手感；事件只观察，不取消、延迟或重放业务点击。 */
+let _wxUiLast=null,_wxUiPress=null,_wxUiBloom=null,_wxUiReady=false;
+let _shellControlLast=null,_shellSwitchPending=null;
+const _wxUiJobs=new Set(),_wxUiMovingPanels=new Set();let _wxUiPanels=[],_wxUiPanelStates={};
+function wxInteractionPage(c){return !!c&&(/^wx/.test(c.p)||['wechat','chat','group','pfchat','pfgroup','pffriends','chatDetails','contactInfo','friendInfo','contactSettings','contactEdit','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','transferDetail','groupTransferDetail','grpSend','rpSend','tfSend','rpDetail','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p));}
+function wxUiAnimate(el,frames,duration,delay,done){
+  if(!el||!el.isConnected||!shellMotionAllowed())return null;
+  try{const a=el.animate(frames,{duration:duration||280,delay:delay||0,easing:'cubic-bezier(.2,.85,.25,1)',fill:'backwards'});_wxUiJobs.add(a);const finish=()=>{_wxUiJobs.delete(a);if(done)done();};a.onfinish=finish;a.oncancel=finish;return a;}catch(_){if(done)done();return null;}
+}
+function wxUiRelease(){if(_wxUiPress&&_wxUiPress.el)_wxUiPress.el.removeAttribute('data-wx-ui-pressed');_wxUiPress=null;}
+function wxUiClear(){wxRoleEntryClear();wxUiRelease();_shellSwitchPending=null;document.querySelectorAll('[data-shell-switch]').forEach(el=>el.removeAttribute('data-shell-switch'));if(typeof wxCallUiClear==='function')wxCallUiClear();_wxUiMovingPanels.forEach(panel=>{panel.removeAttribute('data-wx-ui-closing');panel._wxUiMotion=null;});_wxUiMovingPanels.clear();_wxUiJobs.forEach(a=>{try{a.cancel();}catch(_){}});_wxUiJobs.clear();if(_wxUiBloom){_wxUiBloom.remove();_wxUiBloom=null;}}
+function wxUiTarget(target){
+  if(!target||!target.closest)return null;
+  const c=cur(),page=document.querySelector('#app>.page');
+  const floating='#modal.show,#cfm.show,#callLayer.show,.nr-root,.nr-overlay,.tn-dfull-ov,.tn-pack-ov,.tg-ov,.pc-reveal,.photo-meta-overlay';
+  if(c.p==='home'&&!target.closest(floating)||shellMotionProfile(c,page)==='protected')return null;
+  if(target.closest('.dyme-tabs,.dyus-tabs'))return null;
+  if(target.closest('input,textarea,select,[contenteditable="true"],canvas,video,iframe'))return null;
+  if(!target.closest('#app>.shell-ui-scope,#app>.wx-ui-scope,'+floating))return null;
+  const el=target.closest('button,[role="button"],a[href],[onclick]');
+  if(!el||el.disabled||el.getAttribute('aria-disabled')==='true'||el.closest('[disabled],[inert],.shell-motion-ghost'))return null;
+  if(el.matches('label,input,textarea,select')||el.querySelector('input:not([type="hidden"]),textarea,select,[contenteditable="true"]'))return null;
+  if(el.matches('[onpointerdown],[ontouchstart],[onmousedown]')&&!el.hasAttribute('onclick'))return null;
+  const r=el.getBoundingClientRect(),host=page&&page.getBoundingClientRect();
+  if(!el.matches('button,[role="button"],.sw')&&host&&r.width*r.height>host.width*host.height*.55)return null;
+  return el;
+}
+function wxUiPressStart(e){
+  wxUiRelease();if(!shellMotionAllowed()||e.isPrimary===false||e.button>0||e.touches&&e.touches.length!==1)return;
+  const bloom=_wxUiBloom;if(bloom){_wxUiBloom=null;if(typeof bloom.getAnimations==='function')bloom.getAnimations().forEach(a=>a.cancel());bloom.remove();}
+  const el=wxUiTarget(e.target);if(!el)return;const point=e.touches?e.touches[0]:e;
+  _wxUiPress={el:el,x:point.clientX,y:point.clientY,id:e.pointerId,owner:S,account:actId(),at:Date.now()};el.setAttribute('data-wx-ui-pressed','true');
+}
+function wxUiPressMove(e){const p=_wxUiPress;if(!p)return;const point=e.touches?e.touches[0]:e;if(e.pointerId!=null&&p.id!=null&&e.pointerId!==p.id)return;if(Math.hypot(point.clientX-p.x,point.clientY-p.y)>9)wxUiRelease();}
+function wxUiBloom(el,x,y){
+  if(!shellMotionAllowed())return;
+  if(_wxUiBloom)_wxUiBloom.remove();const r=el.getBoundingClientRect(),size=Math.min(92,Math.max(32,Math.min(r.width,r.height)*1.6));
+  const node=document.createElement('i');node.className='wx-ui-touch-bloom';node.setAttribute('aria-hidden','true');
+  node.style.cssText='--shell-touch-rgb:'+(wxInteractionPage(cur())?'7,193,96':cur().p==='settings'?'90,160,255':'154,170,224')+';opacity:0;left:'+(Math.max(r.left,Math.min(r.right,x))-size/2)+'px;top:'+(Math.max(r.top,Math.min(r.bottom,y))-size/2)+'px;width:'+size+'px;height:'+size+'px;';document.body.appendChild(node);_wxUiBloom=node;
+  wxUiAnimate(node,[{opacity:.55,transform:'scale(.35)'},{opacity:0,transform:'scale(1.12)'}],360,0,()=>{node.remove();if(_wxUiBloom===node)_wxUiBloom=null;});
+}
+function wxUiPressEnd(e){
+  const p=_wxUiPress;if(!p||e.pointerId!=null&&p.id!=null&&e.pointerId!==p.id)return;wxUiRelease();
+  if(!p.el.isConnected||p.owner!==S||p.account!==actId()||Date.now()-p.at>650||!shellMotionAllowed())return;
+  wxUiBloom(p.el,p.x,p.y);const icon=p.el.querySelector('.wx-tab-icon,.chat-composer-icon svg,.wx-steps-icon')||p.el.querySelector('svg');
+  if(icon&&!p.el.matches('.wx-main-add,.tb'))wxUiAnimate(icon,[{scale:'.88'},{scale:'1.06',offset:.58},{scale:'1'}],280);
+}
+function wxInteractionStyle(){
+  if(_wxUiReady)return;_wxUiReady=true;const style=document.createElement('style');style.id='wechatInteractionStudioStyle';
+  style.textContent=`
+    .wx-ui-touch-bloom{position:fixed;z-index:20050;border-radius:50%;pointer-events:none!important;user-select:none;background:radial-gradient(circle,rgba(var(--shell-touch-rgb,7,193,96),.3),rgba(var(--shell-touch-rgb,7,193,96),.1) 48%,transparent 72%)}
+    @media(prefers-reduced-motion:no-preference){
+      #app>.shell-ui-scope button:not(:disabled),#app>.shell-ui-scope [role="button"],#app>.shell-ui-scope [onclick],body[data-shell-control-scope] #modal.show button,body[data-shell-control-scope] #modal.show .sw,body[data-shell-control-scope] #cfm.show button{transition:scale 190ms cubic-bezier(.2,.85,.25,1)}
+      #app>.shell-ui-scope [data-wx-ui-pressed],body[data-shell-control-scope] #modal.show [data-wx-ui-pressed],body[data-shell-control-scope] #cfm.show [data-wx-ui-pressed],#callLayer.show [data-wx-ui-pressed]{scale:.955}
+      #app>.shell-ui-scope .sw[data-wx-ui-pressed]{scale:.9}
+      body[data-shell-control-scope] [data-wx-ui-pressed]{scale:.955}
+      #app>.shell-ui-scope .sw[data-shell-switch="on"]::after{animation:shellSwitchOn 300ms cubic-bezier(.2,.85,.25,1)}
+      #app>.shell-ui-scope .sw[data-shell-switch="off"]::after{animation:shellSwitchOff 300ms cubic-bezier(.2,.85,.25,1)}
+      @keyframes shellSwitchOn{from{transform:translateX(-19px)}to{transform:translateX(0)}}
+      @keyframes shellSwitchOff{from{transform:translateX(19px)}to{transform:translateX(0)}}
+    }
+    #app>[data-wx-role-entry]{z-index:9}
+    .wx-ui-tab-glide{position:absolute;top:3px;bottom:11px;width:calc(25% - 22px);border-radius:17px;background:linear-gradient(160deg,rgba(7,193,96,.13),rgba(7,193,96,.025));border:1px solid rgba(7,193,96,.11);box-sizing:border-box;pointer-events:none;z-index:0}
+    .wx-ui-scope.wxlight .wx-ui-tab-glide{background:linear-gradient(160deg,rgba(7,193,96,.085),rgba(7,193,96,.015));border-color:rgba(7,193,96,.085)}
+    #app>.wx-ui-scope .wx-main-tabbar{position:relative;isolation:isolate}
+    #app>.wx-ui-scope .wx-main-tabbar>.tb{z-index:1}
+    @media(prefers-reduced-motion:no-preference){
+      #app>.wx-ui-scope button:not(:disabled),#app>.wx-ui-scope .nav .l,#app>.wx-ui-scope .nav .r,#app>.wx-ui-scope .row[onclick],#app>.wx-ui-scope .it[onclick],body[data-wechat-switches] #modal button,body[data-wechat-switches] #cfm button{transition:scale 190ms cubic-bezier(.2,.85,.25,1)}
+      #app>.wx-ui-scope button:not(:disabled):active,#app>.wx-ui-scope [data-wx-ui-pressed],body[data-wechat-switches] #modal button:active{scale:.955}
+      #app>.wx-ui-scope .wx-conversation-front>.row:active{scale:.985}
+      .wx-ui-scope .wx-tab-icon{transition:color 200ms ease}
+      .wx-ui-scope .wx-main-add>svg{transition:transform 250ms cubic-bezier(.2,.85,.25,1)}
+      .wx-ui-scope .wx-main-add[aria-expanded="true"]>svg{transform:rotate(45deg)}
+      .wx-ui-scope .chat-function-toggle>span{transform:rotate(0deg)}
+      .wx-ui-scope .chat-function-toggle[aria-expanded="true"]>span{transform:rotate(45deg)}
+    }
+    .wx-ui-scope .chat-tools-panel[data-wx-ui-closing]{display:block!important;pointer-events:none}
+    @media(prefers-reduced-motion:no-preference){
+      #callLayer>.cav[data-wx-call-waiting]{animation:wxCallWaitingRing 1500ms ease-out 2}
+      #callLayer .callbtns .cbtn{transition:scale 180ms cubic-bezier(.2,.85,.25,1)}
+      #callLayer .callbtns .cbtn:active{scale:.88}
+      @keyframes wxCallWaitingRing{0%{box-shadow:0 0 0 0 rgba(164,210,186,.05)}24%{box-shadow:0 0 0 9px rgba(164,210,186,.25)}100%{box-shadow:0 0 0 25px rgba(164,210,186,0)}}
+    }
+    #app>.wx-ui-scope button:focus-visible{outline:2px solid #07c160;outline-offset:3px}
+  `;document.head.appendChild(style);
+  const passive={capture:true,passive:true};
+  if(typeof PointerEvent!=='undefined'){document.addEventListener('pointerdown',wxUiPressStart,passive);document.addEventListener('pointermove',wxUiPressMove,passive);document.addEventListener('pointerup',wxUiPressEnd,passive);document.addEventListener('pointercancel',wxUiRelease,passive);}
+  else{document.addEventListener('touchstart',wxUiPressStart,passive);document.addEventListener('touchmove',wxUiPressMove,passive);document.addEventListener('touchend',wxUiPressEnd,passive);document.addEventListener('touchcancel',wxUiRelease,passive);}
+  document.addEventListener('scroll',wxUiRelease,passive);window.addEventListener('blur',wxUiClear);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)wxUiClear();});
+  if(typeof matchMedia==='function'){const pref=matchMedia('(prefers-reduced-motion: reduce)');if(pref.addEventListener)pref.addEventListener('change',()=>{if(pref.matches)wxUiClear();});}
+  document.addEventListener('click',e=>{if(!shellMotionAllowed())return;const el=wxUiTarget(e.target);if(!el)return;shellControlClick(el);if(e.detail!==0)return;const r=el.getBoundingClientRect();wxUiBloom(el,r.left+r.width/2,r.top+r.height/2);},passive);
+}
+function shellControlMount(c,app,plan){
+  const page=app.firstElementChild;if(!page)return;
+  const active=c.p!=='home'&&shellMotionProfile(c,page)!=='protected',old=_shellControlLast;
+  document.body.toggleAttribute('data-shell-control-scope',shellMotionProfile(c,page)!=='protected');
+  if(old&&(old.owner!==S||old.account!==actId()||old.key!==plan.key))wxUiClear();
+  _shellControlLast={key:plan.key,owner:S,account:actId()};page.classList.toggle('shell-ui-scope',active);
+  if(shellMotionProfile(c,page)!=='protected')wxInteractionStyle();
+  if(!shellMotionAllowed()){wxUiClear();_shellSwitchPending=null;return;}
+  if(_wxUiPress&&!_wxUiPress.el.isConnected)wxUiRelease();
+  _wxUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});
+  shellControlSwitchFinish();
+}
+function shellControlSwitchFinish(){
+  const p=_shellSwitchPending;if(!p)return;_shellSwitchPending=null;
+  if(p.owner!==S||p.account!==actId()||p.route!==shellMotionRoute(cur())||Date.now()-p.at>600||!shellMotionAllowed())return;
+  const matches=Array.from(document.querySelectorAll('#app>.shell-ui-scope .sw[onclick]')).filter(el=>el.getAttribute('onclick')===p.action),next=matches[p.index];
+  if(next&&next!==p.node&&next.classList.contains('on')!==p.on)next.setAttribute('data-shell-switch',next.classList.contains('on')?'on':'off');
+}
+function shellControlClick(el){
+  const owner=S,account=actId(),route=shellMotionRoute(cur()),page=el.closest('#app>.page');
+  const surface=el.closest('#modal.show,#cfm.show')||page,beforeView=shellViewSignature(surface,cur()),beforePanels=shellLocalPopupSnapshot(surface);
+  if(el.matches('.sw[onclick]')&&page){const action=el.getAttribute('onclick'),matches=Array.from(page.querySelectorAll('.sw[onclick]')).filter(n=>n.getAttribute('onclick')===action);_shellSwitchPending={owner:owner,account:account,route:route,action:action,index:matches.indexOf(el),node:el,on:el.classList.contains('on'),at:Date.now()};}
+  // 捕获监听后的微任务可能早于onclick；用下一绘制帧读业务结果，不调用或延迟业务。
+  requestAnimationFrame(()=>{
+    if(owner!==S||account!==actId()||route!==shellMotionRoute(cur())||!shellMotionAllowed())return;
+    shellControlSwitchFinish();
+    if(surface&&surface.isConnected&&(!surface.matches('#modal,#cfm')||surface.classList.contains('show')))shellPartialMotion(surface,cur(),beforeView,beforePanels);
+    if(!page||!page.isConnected)return;
+    const post=el.closest('.mpost,.wx-role-detail');
+    if(el.matches('.acts,[onclick*="momentMenu("]')&&post){const pop=post.querySelector('.moment-action-popover.show');if(pop)wxUiAnimate(pop,[{opacity:.6,transform:'translateX(9px) scale(.95)'},{opacity:1,transform:'none'}],260);}
+    if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes('momentCommentFocus(')&&post){const compose=post.querySelector('.moment-inline-compose.show,.wx-role-detail-compose');if(compose)wxUiAnimate(compose,[{opacity:.65},{opacity:1}],220);}
+    if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes('toggleMomentLike(')&&post){const social=post.querySelector('.moment-social-slot');if(social)wxUiAnimate(social,[{opacity:.75},{opacity:1}],260);wxUiAnimate(el,[{scale:'.92'},{scale:'1.08',offset:.6},{scale:'1'}],320);}
+  });
+}
+function wxSocialPageMotion(c,page){
+  const relation=['relnet','reledit','relperson'].includes(c.p),moments=['wxmoment','roleMoments','roleMomentDetail'].includes(c.p);
+  if(!relation&&!moments)return false;
+  page.setAttribute('data-wx-social-motion',relation?'relationships':'moments');
+  return true;
+}
+// WECHAT_COMPOSER_MOTION_V2：面板高度真实展开/收起，不复制输入栏，也不等待动画再执行业务。
+function wxUiPanelMotion(panel,open){
+  if(!open)panel.setAttribute('data-wx-ui-closing','');
+  const prior=panel._wxUiMotion,current=prior?panel.getBoundingClientRect().height:0;
+  if(prior)prior.cancel();
+  if(!shellMotionAllowed()){panel.removeAttribute('data-wx-ui-closing');return;}
+  if(!open)panel.setAttribute('data-wx-ui-closing','');
+  const full=panel.getBoundingClientRect().height;
+  const from=prior?current:open?0:full,to=open?full:0;
+  let animation;const finish=()=>{if(panel._wxUiMotion===animation){panel._wxUiMotion=null;panel.removeAttribute('data-wx-ui-closing');_wxUiMovingPanels.delete(panel);}};
+  animation=wxUiAnimate(panel,[{height:from+'px',minHeight:'0px',opacity:open?.45:1},{height:to+'px',minHeight:'0px',opacity:open?1:0}],open?380:300,0,finish);
+  panel._wxUiMotion=animation;if(animation)_wxUiMovingPanels.add(panel);else{panel.removeAttribute('data-wx-ui-closing');_wxUiMovingPanels.delete(panel);}
+}
+function wxInteractionPanels(page,key){
+  _wxUiPanels.forEach(o=>o.disconnect());_wxUiPanels=[];
+  page.querySelectorAll('.chat-tools-panel').forEach(panel=>{
+    const id=panel.id||'panel';const update=()=>{if(!panel.isConnected||!_wxUiLast||_wxUiLast.key!==key||_wxUiLast.owner!==S||_wxUiLast.account!==actId())return;
+      const open=panel.classList.contains('show'),kind=panel.dataset.page||'fn',state=open?kind:'closed',old=_wxUiPanelStates[id];_wxUiPanelStates[id]=state;
+      const bar=page.querySelector('.chat-inputbar');if(bar){const more=bar.querySelector('.chat-function-toggle'),emoji=bar.querySelector('.chat-emoji-toggle');if(more)more.setAttribute('aria-expanded',String(open&&kind==='fn'));if(emoji)emoji.setAttribute('aria-expanded',String(open&&kind==='emoji'));}
+      if(old!==state&&old!==undefined){
+        if(open&&old==='closed'||!open)wxUiPanelMotion(panel,open);
+        const more=page.querySelector('.chat-function-toggle>span');
+        if(more){const start=getComputedStyle(more).transform;more.getAnimations().forEach(a=>a.cancel());const expanded=open&&kind==='fn';wxUiAnimate(more,[{transform:start},{transform:'rotate('+(expanded?53:-7)+'deg)',offset:.72},{transform:'rotate('+(expanded?45:0)+'deg)'}],420);}
+        if(open){const pane=panel.querySelector('.chat-panel-pane.on')||panel;wxUiAnimate(pane,[{opacity:.2,transform:'translateY(22px)'},{opacity:1,transform:'none'}],380);
+          if(kind==='fn')Array.from(pane.querySelectorAll('.chat-function-page:first-child>.it')).slice(0,8).forEach((item,i)=>wxUiAnimate(item,[{opacity:0,transform:'translateY(12px) scale(.94)'},{opacity:1,transform:'none'}],300,40+i*18));}
+      }
+    };
+    const observer=new MutationObserver(()=>{try{update();}catch(_){}});observer.observe(panel,{attributes:true,attributeFilter:['class','data-page']});_wxUiPanels.push(observer);update();
+  });
+}
+/* WECHAT_CALL_PAYMENT_MOTION_V1：只动画通话装饰/控制与支付呈现，不调用通话或支付动作。 */
+let _wxCallUiRecord=null;
+const _wxCallUiJobs=new Set();
+function wxCallUiClear(){_wxCallUiJobs.forEach(a=>{try{a.cancel();}catch(_){}});_wxCallUiJobs.clear();const layer=document.getElementById('callLayer');if(layer)layer.querySelectorAll('[data-wx-call-waiting]').forEach(el=>el.removeAttribute('data-wx-call-waiting'));}
+function wxCallUiAnimate(el,frames,duration,delay){
+  if(!el||!el.isConnected||!shellMotionAllowed())return;
+  try{const a=el.animate(frames,{duration:duration||460,delay:delay||0,easing:'cubic-bezier(.2,.85,.25,1)',fill:'backwards'});_wxCallUiJobs.add(a);const done=()=>_wxCallUiJobs.delete(a);a.onfinish=done;a.oncancel=done;}catch(_){}
+}
+function wxCallInteractionMount(layer){
+  const call=typeof _call==='undefined'?null:_call,visible=layer.classList.contains('show');
+  if(!call||!visible||call.cohab||call.accountId&&call.accountId!==actId()){wxCallUiClear();_wxCallUiRecord=null;return;}
+  wxInteractionStyle();
+  if(call._motionPreview&&typeof NORTH_PREVIEW!=='undefined'&&NORTH_PREVIEW)layer.querySelectorAll('.cbtn.red').forEach(button=>{button.onclick=wxInteractionPreviewCallEnd;});
+  const key=String(call.session||call.id)+':'+call.kind+':'+call.state+':'+(call.min?'mini':'full'),old=_wxCallUiRecord;
+  if(!shellMotionAllowed()){wxCallUiClear();_wxCallUiRecord={key:key,owner:S,account:actId()};return;}
+  _wxCallUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});
+  if(old&&old.key===key&&old.owner===S&&old.account===actId())return;
+  wxCallUiClear();_wxCallUiRecord={key:key,owner:S,account:actId()};
+  layer.setAttribute('data-wx-call-motion',call.min?'mini':call.state);
+  if(call.min){wxCallUiAnimate(layer.querySelector('.cav'),[{opacity:.2,scale:'.7'},{opacity:1,scale:'1'}],360);return;}
+  const avatar=layer.querySelector(':scope>.cav');
+  if(avatar){
+    // 不缩放承载角色视频的容器；等待光环只是无点击装饰，最多呼吸两轮。
+    if(!avatar.querySelector('video,canvas,iframe'))wxCallUiAnimate(avatar,[{opacity:.1,transform:'translateY(22px) scale(.84)'},{opacity:1,transform:'translateY(-3px) scale(1.025)',offset:.74},{opacity:1,transform:'none'}],560);
+    if(call.state!=='active')avatar.setAttribute('data-wx-call-waiting','true');
+  }
+  layer.querySelectorAll('.callbtns>.cbtncol,.call-camera-tools,.call-screen-tools').forEach((el,i)=>wxCallUiAnimate(el,[{opacity:0,transform:'translateY(36px) scale(.9)'},{opacity:1,transform:'none'}],480,100+Math.min(i,5)*45));
+}
+function wxPaymentInteractionMount(page,c){
+  if(!['tfSend','rpSend','transferDetail','groupTransferDetail'].includes(c.p))return;
+  page.setAttribute('data-wx-payment-motion','enter');
+  if(c.p==='tfSend')page.querySelectorAll('.wx-tfs-keys>button').forEach((key,i)=>wxUiAnimate(key,[{opacity:0,transform:'translateY(32px) scale(.94)'},{opacity:1,transform:'none'}],430,100+Math.floor(i/4)*50+(i%4)*14));
+}
+function wxInteractionPreviewCallEnd(){if(typeof NORTH_PREVIEW==='undefined'||!NORTH_PREVIEW||typeof _call==='undefined'||!_call||!_call._motionPreview)return false;_call=null;renderCall();return true;}
+function wxInteractionPreviewCall(){
+  if(typeof NORTH_PREVIEW==='undefined'||!NORTH_PREVIEW||!['localhost','127.0.0.1'].includes(location.hostname))return;
+  if(typeof _call==='undefined'||_call&&!_call._motionPreview)return;
+  const contact=getC('preview_1')||S.contacts[0];if(!contact)return;
+  _call={id:contact.id,accountId:actId(),kind:'voice',state:'outgoing',dir:'outgoing',opened:true,session:'wx-motion-preview',_motionPreview:true,sub:null};renderCall();
+}
+/* WECHAT_ROLE_SLIDE_ENTRY_V1: one coherent page enters from the right; the name shares its motion. */
+let _wxRoleEntry=null;
+function wxRoleEntryGhost(c,app,old){
+  if(c.p!=='chat'||!old||!['wechat','contactInfo'].includes(old.page))return null;
+  const page=app.firstElementChild;if(!page||page.querySelectorAll('*').length>650||page.querySelector('video,audio,iframe,canvas'))return null;
+  const ghost=page.cloneNode(true),original=[page,...page.querySelectorAll('*')],copies=[ghost,...ghost.querySelectorAll('*')],scrolls=[];
+  original.forEach((el,i)=>{if(copies[i]&&(el.scrollTop||el.scrollLeft))scrolls.push({node:copies[i],top:el.scrollTop,left:el.scrollLeft});});
+  Array.from(ghost.querySelectorAll('input,textarea,select,[contenteditable]')).forEach(el=>{const block=document.createElement('span');block.style.cssText='display:inline-block;min-height:1em;min-width:3em';el.replaceWith(block);});
+  [ghost,...ghost.querySelectorAll('*')].forEach(el=>{Array.from(el.attributes).forEach(a=>{if(['id','name','for','autofocus','data-wx-ui-pressed'].includes(a.name)||a.name.startsWith('on'))el.removeAttribute(a.name);});if(el.matches('button,a,[tabindex]'))el.setAttribute('tabindex','-1');});
+  ghost.querySelectorAll('script,style,link,object,embed').forEach(el=>el.remove());ghost.classList.add('shell-motion-ghost');ghost.setAttribute('inert','');ghost.setAttribute('aria-hidden','true');
+  return {node:ghost,scrolls};
+}
+function wxRoleEntryClear(){
+  const rec=_wxRoleEntry;if(!rec)return;_wxRoleEntry=null;clearTimeout(rec.timer);if(rec.page)rec.page.removeAttribute('data-wx-role-entry');
+  if(rec.animation)rec.animation.cancel();if(rec.ghostAnimation)rec.ghostAnimation.cancel();if(rec.ghost)rec.ghost.remove();
+}
+function wxRoleEntryMount(c,app,plan){
+  const page=app.firstElementChild,key=plan.key,now=performance.now();
+  if(!shellMotionAllowed()){wxRoleEntryClear();return false;}
+  let rec=_wxRoleEntry;
+  if(rec&&(rec.owner!==S||rec.account!==actId()||rec.key!==key)){wxRoleEntryClear();rec=null;}
+  if(!rec){
+    if(c.p!=='chat'||!plan.old||!['wechat','contactInfo'].includes(plan.old.page))return false;
+    rec={owner:S,account:actId(),key,start:now,duration:360,width:app.getBoundingClientRect().width,page:null,animation:null,ghost:plan.roleGhost&&plan.roleGhost.node,timer:0,ghostAnimation:null};_wxRoleEntry=rec;
+    if(rec.ghost){app.appendChild(rec.ghost);plan.roleGhost.scrolls.forEach(s=>{s.node.scrollTop=s.top;s.node.scrollLeft=s.left;});rec.ghostAnimation=rec.ghost.animate([{transform:'none',opacity:1},{transform:'translateX('+(-rec.width*.16)+'px)',opacity:.8}],{duration:rec.duration,easing:'cubic-bezier(.22,1,.36,1)',fill:'forwards'});}
+    rec.timer=setTimeout(()=>{if(_wxRoleEntry===rec)wxRoleEntryClear();},rec.duration+100);
+  }
+  if(now-rec.start>=rec.duration){wxRoleEntryClear();return false;}
+  if(rec.page!==page){
+    const prior=rec.animation;rec.animation=null;if(prior)prior.cancel();rec.page=page;page.setAttribute('data-wx-role-entry','slide-left');
+    const a=page.animate([{transform:'translateX('+rec.width+'px)'},{transform:'none'}],{duration:rec.duration,easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'});rec.animation=a;a.currentTime=Math.max(0,now-rec.start);a.onfinish=()=>{if(_wxRoleEntry===rec&&rec.animation===a)wxRoleEntryClear();};
+  }
+  return true;
+}
+function wxInteractionMount(c,app,plan){
+  const previous=_wxUiLast,page=app.firstElementChild,inside=wxInteractionPage(c);
+  const key=shellMotionRoute(c);
+  const same=previous&&previous.owner===S&&previous.account===actId(),changed=!!same&&(previous.key!==key||c.p==='wechat'&&previous.tab!==wxTab);
+  if(!inside||!page){if(previous)wxUiClear();_wxUiLast=null;_wxUiPanels.forEach(o=>o.disconnect());_wxUiPanels=[];_wxUiPanelStates={};return false;}
+  wxInteractionStyle();if(changed||!same){wxUiClear();_wxUiPanelStates={};}
+  if(!shellMotionAllowed())wxUiClear();
+  _wxUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});if(_wxUiPress&&!_wxUiPress.el.isConnected)wxUiRelease();
+  page.classList.add('wx-ui-scope');_wxUiLast={key:key,page:c.p,tab:wxTab,quick:!!_wxQuickOpen,owner:S,account:actId(),depth:stack.length};
+  const tabs=['chats','contacts','moments','me'],tabbar=page.querySelector('.wx-main-tabbar'),tabIndex=tabs.indexOf(wxTab);
+  if(tabbar&&tabIndex>=0){
+    const marker=document.createElement('i');marker.className='wx-ui-tab-glide';marker.setAttribute('aria-hidden','true');marker.style.left='calc('+tabIndex*25+'% + 11px)';tabbar.appendChild(marker);
+    if(changed&&previous.page==='wechat'&&c.p==='wechat'){
+      const distance=(tabs.indexOf(previous.tab)-tabIndex)*tabbar.getBoundingClientRect().width/4;
+      wxUiAnimate(marker,[{transform:'translateX('+distance+'px)'},{transform:'translateX(0)'}],380);
+      wxUiAnimate(tabbar.querySelector('.tb.on .wx-tab-icon'),[{transform:'translateY(2px) scale(.88)'},{transform:'translateY(-2px) scale(1.09)',offset:.58},{transform:'none'}],360);
+    }
+  }
+  if(_wxQuickOpen&&c.p==='wechat'&&(!same||!previous.quick)){
+    const menu=page.querySelector('.wx-quick-menu');if(menu){menu.style.transformOrigin='calc(100% - 22px) 0';wxUiAnimate(menu,[{opacity:0,transform:'translateY(-7px) scale(.94)'},{opacity:1,transform:'none'}],270);}
+    wxUiAnimate(page.querySelector('.wx-quick-shade'),[{opacity:0},{opacity:1}],180);
+  }
+  if(same&&previous.page==='wechat'&&previous.tab==='chats'&&c.p==='wechat'&&wxTab==='chats'&&previous.quick!==!!_wxQuickOpen){
+    wxUiAnimate(page.querySelector('.wx-main-add>svg'),[{transform:'rotate('+(_wxQuickOpen?0:45)+'deg)'},{transform:'rotate('+(_wxQuickOpen?45:0)+'deg)'}],250);
+  }
+  wxInteractionPanels(page,key);
+  if(wxRoleEntryMount(c,app,plan)){page.setAttribute('data-wx-ui-navigation','push');return true;}
+  const owns=changed&&wxInteractionPage({p:previous.page})&&shellMotionProfile(c,page)==='standard';
+  if(!owns)return false;
+  wxPaymentInteractionMount(page,c);
+  if(wxSocialPageMotion(c,page)){shellContentMotion(page,c,plan);return true;}
+  const tabSwitch=previous.page==='wechat'&&c.p==='wechat',backward=stack.length<previous.depth;
+  page.setAttribute('data-wx-ui-navigation',tabSwitch?'tab':backward?'back':'push');
+  // Animate content branches while keeping the title and all its ancestors fixed.
+  shellContentMotion(page,c,plan);
+  return true;
+}
 function renderWeChat(){
   if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   let body='';
@@ -9782,7 +10274,7 @@ function renderWeChat(){
   if(wxTab!=='chats')_wxQuickOpen=false;
   const previewStatus=NORTH_PREVIEW?`<div class="wx-preview-status"><span><b>${hm()}</b>${wxPawIcon()}</span><span class="wx-preview-radio"><i></i><i></i><i></i><i></i>${wxWifiIcon()}<em>17</em></span></div>`:'';
   const addIcon=wxTab==='contacts'?wxContactAddIcon():wxPlusIcon();
-  return `${previewStatus}<div class="nav wx-main-nav"><button class="l wx-main-exit" type="button" onclick="home()" aria-label="返回主屏"></button><span class="t wx-main-title"><b>${titles[wxTab]}</b></span><button class="r wx-main-add" type="button" onclick="${wxTab==='chats'?'toggleWxQuickMenu()':wxTab==='contacts'?'editContact()':''}" aria-label="${showAdd?'添加':''}">${showAdd?addIcon:''}</button></div>
+  return `${previewStatus}<div class="nav wx-main-nav"><button class="l wx-main-exit" type="button" onclick="home()" aria-label="返回主屏"></button><span class="t wx-main-title"><b>${titles[wxTab]}</b></span><button class="r wx-main-add" type="button" onclick="${wxTab==='chats'?'toggleWxQuickMenu()':wxTab==='contacts'?'editContact()':''}" aria-label="${showAdd?'添加':''}" aria-expanded="${wxTab==='chats'&&_wxQuickOpen?'true':'false'}">${showAdd?addIcon:''}</button></div>
     ${wxTab==='chats'&&_wxQuickOpen?wxQuickMenuHTML():''}
     ${wxTab==='contacts'?wxContactSearchHTML():''}
     <div class="scroll wx-main-scroll">${body}</div>
@@ -9805,7 +10297,7 @@ function wxTabIcon(k){const icons={
   contacts:`<path class="wx-tab-outline" d="M14.5 4.3c3.3 0 5.3 2.6 5.3 6.1 0 4-2.2 7-5.3 7s-5.3-3-5.3-7c0-3.5 2-6.1 5.3-6.1ZM4.4 28c.9-5.3 4.4-8.2 10.1-8.2s9.2 2.9 10.1 8.2H4.4Zm20.5-14.6h5.6m-5.6 4.3h5.6m-5.6 4.3h5.6"/><path class="wx-tab-solid" d="M14.5 3.2c3.8 0 6.1 2.9 6.1 6.9 0 4.4-2.5 7.6-6.1 7.6s-6.1-3.2-6.1-7.6c0-4 2.3-6.9 6.1-6.9ZM2.9 29c.8-6 5-9.4 11.6-9.4S25.3 23 26.1 29H2.9Zm23-16.9h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Z"/>`,
   moments:`<circle class="wx-tab-outline" cx="16" cy="16" r="12.5"/><path class="wx-tab-outline" d="m10.6 21.2 3-7.7 7.8-3-3 7.8-7.8 2.9Z"/><circle class="wx-tab-solid" cx="16" cy="16" r="14"/><path class="wx-tab-solid-cut" d="m10.2 21.8 3.3-8.3 8.3-3.3-3.3 8.3-8.3 3.3Z"/>`,
   me:`<path class="wx-tab-outline" d="M16 4.4c3.2 0 5.1 2.6 5.1 6.1 0 3.9-2 6.8-5.1 6.8s-5.1-2.9-5.1-6.8c0-3.5 1.9-6.1 5.1-6.1ZM5.2 28.1c.9-5.5 4.7-8.6 10.8-8.6s9.9 3.1 10.8 8.6H5.2Z"/><path class="wx-tab-solid" d="M16 3.4c3.8 0 6.1 3 6.1 7 0 4.5-2.4 7.7-6.1 7.7s-6.1-3.2-6.1-7.7c0-4 2.3-7 6.1-7ZM3.7 29.3c.9-6.3 5.3-9.9 12.3-9.9s11.4 3.6 12.3 9.9H3.7Z"/>`};return `<svg class="wx-tab-icon wx-tab-${k}" viewBox="0 0 32 32" aria-hidden="true">${icons[k]}</svg>`;}
-function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}"><div class="i">${i}${k==='chats'?wxUnreadBadge(wxUnreadTotal()):k==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}</div><span>${t}</span></button>`;}
+function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}" data-wx-tab="${k}" aria-pressed="${wxTab===k?'true':'false'}"><div class="i">${i}${k==='chats'?wxUnreadBadge(wxUnreadTotal()):k==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}</div><span>${t}</span></button>`;}
 function wxDiscoverIcon(kind){const icons={
   moments:'<path d="M16 4.5 19.4 11.6 15.5 12.8Z" stroke="#f2c94c"/><path d="M23.8 8.2 20.4 15.4 17.2 13Z" stroke="#f2994a"/><path d="M27.5 16 20.4 19.4 19.2 15.5Z" stroke="#eb5757"/><path d="M23.8 23.8 16.6 20.4 19 17.2Z" stroke="#bb6bd9"/><path d="M16 27.5 12.6 20.4 16.5 19.2Z" stroke="#2f80ed"/><path d="M8.2 23.8 11.6 16.6 14.8 19Z" stroke="#2d9cdb"/><path d="M4.5 16 11.6 12.6 12.8 16.5Z" stroke="#27ae60"/><path d="M8.2 8.2 15.4 11.6 13 14.8Z" stroke="#6fcf97"/>',
   channels:'<path d="M7 9.2c3.7-4.7 8.1-3.7 9 1.5.9-5.2 5.3-6.2 9-1.5 3.2 4.1 1.5 11.5-9 17-10.5-5.5-12.2-12.9-9-17Z"/>',
@@ -10973,7 +11465,7 @@ function mgrSysHTML(t){t=''+(t||'');return `<div class="mgrsys"><span>${esc(t)}<
 function mgrMsgMenu(id,mid){const r=mgrRoom(id),m=r&&(r.msgs||[]).find(x=>x.id===mid);if(!m||m.kind==='sys')return;openModal(`<h3>编辑 / 删除</h3><div class="hint">修改只影响你手机里这间游戏房的聊天记录。</div><div class="field"><textarea id="mgr_e" rows="3">${esc(m.text)}</textarea></div><div class="btns"><button class="btn d" onclick="mgrDelMsg('${id}','${mid}')">删除</button><button class="btn p" onclick="mgrEditMsg('${id}','${mid}')">保存</button></div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function mgrEditMsg(id,mid){const r=mgrRoom(id),m=r&&(r.msgs||[]).find(x=>x.id===mid),v=(($('#mgr_e')||{}).value||'').trim();if(!m||m.kind==='sys'||!v)return;m.text=v;save();closeModal();render();}
 function mgrDelMsg(id,mid){const r=mgrRoom(id);if(!r)return;r.msgs=(r.msgs||[]).filter(x=>x.id!==mid||x.kind==='sys');save();closeModal();render();}
-function renderMGRoom(id){const r=mgrRoom(id);if(!r)return nav('游戏房间')+'<div class="scroll"><div class="empty">房间不存在</div></div>';const g=mgrGame(r.game),isDrama=r.game==='drama';
+function renderMGRoom(id){const r=mgrRoom(id);if(!r)return shellPageNav('游戏房间')+'<div class="scroll"><div class="empty">房间不存在</div></div>';const g=mgrGame(r.game),isDrama=r.game==='drama';
   const roleRows=(r.roleIds&&r.roleIds.length?r.roleIds.map(cid=>{const c=getC(cid),key=mgrPlayerKey('role',cid),nm=(c&&(c.remark||c.name))||cid;return `<div class="it">${c?av(c.avatar,'sm'):av('🙂','sm')}<span style="flex:1">${esc(nm)}${mgrDramaRole(r,key)?`<small style="display:block;color:#9aa2b5;margin-top:2px">饰：${esc(mgrDramaRole(r,key))}</small>`:''}</span><span class="v" style="color:#19a463">角色已入场</span></div>`;}):(r.roleNames||[]).map(n=>`<div class="it"><span style="flex:1">${esc(n)}</span><span class="v">虚拟角色</span></div>`)).join('')||'<div class="hint" style="padding:8px 14px">没有虚拟角色</div>';
   const pfRows=(r.pfIds&&r.pfIds.length?r.pfIds.map(pid=>{const m=r.members&&r.members[mgrPlayerKey('pf',pid)]||{},f=phoneFriendById(pid);return `<div class="it">${f?pfAvatarHTML(f,'sm'):av('🙂','sm')}<span style="flex:1">${esc(m.name||mgrPfName(pid))}</span><span class="v" style="color:${m.ready?'#19a463':'#999'}">${m.ready?'已准备':'等待准备'}</span></div>`;}):(r.pfNames||[]).map(n=>`<div class="it"><span style="flex:1">${esc(n)}</span><span class="v">真人玩家</span></div>`)).join('')||'<div class="hint" style="padding:8px 14px">没有小手机真人好友</div>';
   if(r.status!=='started')return `<div class="nav"><span class="l" onclick="mgrQuit()">‹</span><span class="t">${esc(r.title||g.n)}</span><span class="r"></span></div><div class="scroll" style="background:#0f1117"><div class="section" style="margin:12px"><div style="padding:13px 14px;font-weight:700;color:#e8d7ff">${g.e} ${esc(g.n)} 等待室</div><div class="hint" style="padding:0 14px 10px">${r.host?'你是房主。':'房主：'+esc(r.hostName||'小手机好友')}。所有真人玩家点准备后才能开始。</div><div class="it"><span>${esc(S.me.name)}（我）</span><span class="v" style="color:${r.readyMe?'#19a463':'#999'}">${r.readyMe?'已准备':'未准备'}</span></div></div><div class="section" style="margin:12px"><div style="padding:10px 14px;color:#9ec5fe;font-weight:700">虚拟角色</div>${roleRows}</div><div class="section" style="margin:12px"><div style="padding:10px 14px;color:#ffb6d0;font-weight:700">小手机真人好友</div>${pfRows}</div><div style="padding:0 12px 20px"><button class="btn p" onclick="mgrReady('${id}')">${r.readyMe?'取消准备':'我准备好了'}</button>${r.host?`<button class="btn ${mgrAllReady(r)?'p':'g'}" style="margin-top:8px" onclick="mgrStart('${id}')">${r._starting?'生成剧本中…':'开始游戏'}</button>`:''}</div></div>`;

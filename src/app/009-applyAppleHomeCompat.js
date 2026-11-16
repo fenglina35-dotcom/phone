@@ -146,7 +146,7 @@ function appTap(e,k){try{if(e)e.stopPropagation();}catch(_){}
   if(Date.now()<_aNoClick)return;
   if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}
   const f=APPRUN[k];if(f)f();}
-function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}const f=APPRUN[k];if(privateNativeAppOn()&&typeof queueMicrotask==='function')queueMicrotask(f);else setTimeout(f,0);}
+function appLaunch(k){_aNoClick=Date.now()+900;if(appLocked(k)){toast('「'+(LOCKABLE[k]||k)+'」已被ta锁定'+(typeof lockUntilToast==='function'?lockUntilToast(k):'')+'，暂时无法打开');return;}try{if(typeof shellMotionLaunch==='function')shellMotionLaunch(k);}catch(_){}const f=APPRUN[k];if(privateNativeAppOn()&&typeof queueMicrotask==='function')queueMicrotask(f);else setTimeout(f,0);}
 function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
   _aPend={k,x:e.clientX,y:e.clientY,t:Date.now(),el:e.currentTarget,pid:e.pointerId};clearTimeout(_aTimer);
   _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},APP_DRAG_MS);}

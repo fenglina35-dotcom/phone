@@ -53,6 +53,19 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:'wechat-profile-steady',scope:'both',least:1,name:'微信我页头像资料卡不参与通用位移且菜单反馈保留',marker:'// SHELL_WECHAT_PROFILE_STEADY_V1:'},
+  {release:'wechat-role-slide-entry',scope:'both',least:1,name:'微信进入角色整页向左滑入，名字同速自然进入且输入业务即时',marker:'/* WECHAT_ROLE_SLIDE_ENTRY_V1:'},
+  {release:'shell-anchored-titles',scope:'both',least:1,name:'恢复内容动效且标题与祖先始终固定，保留指定例外',marker:'/* SHELL_ANCHORED_TITLES_V3:'},
+  {release:'shell-steady-content',scope:'both',least:1,name:'页面根与标题原位呈现，内容通过独立分支动画',marker:'// SHELL_STEADY_CONTENT_V2:'},
+  {release:'shell-internal-views',scope:'both',least:1,name:'软件内部标签及局部视图判变且输入和媒体保持稳定',marker:'/* SHELL_INTERNAL_VIEWS_V1：'},
+  {release:'shell-page-fallback-nav',scope:'both',least:1,name:'失效放映和房间等页面保留可用返回栏',marker:'/* SHELL_PAGE_FALLBACK_NAV_V1：'},
+  {release:'shell-all-apps-interaction',scope:'both',least:1,name:'所有常规软件被动按钮反馈和稳定背景切换',marker:'/* SHELL_ALL_APPS_INTERACTION_V1：'},
+  {release:'settings-steady-paint',scope:'both',least:1,name:'设置分类同步筛选且内页背景不整屏淡出',marker:'// SETTINGS_STEADY_PAINT_V1：'},
+  {release:'wechat-call-payment-motion',scope:'both',least:1,name:'通话装饰与转账键盘分层动效保持业务即时执行',marker:'/* WECHAT_CALL_PAYMENT_MOTION_V1：'},
+  {release:'wechat-composer-motion',scope:'both',least:1,name:'聊天加号与面板连续展开收起并同步清理',marker:'// WECHAT_COMPOSER_MOTION_V2：'},
+  {release:'wechat-interaction-studio',scope:'both',least:1,name:'微信专属按钮和标签动效只观察事件并保护输入与侧滑',marker:'/* WECHAT_INTERACTION_STUDIO_V1：'},
+  {release:'shell-live-surfaces',scope:'both',least:1,name:'特殊媒体画布安全淡入且独立浮层不复制会话',marker:'/* SHELL_LIVE_SURFACES_V1：'},
+  {release:'shell-interaction-motion',scope:'both',least:1,name:'统一导航动效保持即时路由、减少动态效果与账号隔离',marker:'/* SHELL_INTERACTION_MOTION_V1：'},
   {release:"private v1926 / web v1927",scope:"both",least:1,name:"外置语音显示平台具体原因并隐藏反射密钥",marker:"EXTERNAL_TTS_ERROR_DETAIL_V1"},
   {release:"private v1925 / web v1926",scope:"web",file:"travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"private v1925 / web v1926",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},

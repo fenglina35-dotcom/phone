@@ -370,6 +370,280 @@ function taskPunishSweep(c){const p=c&&c.taskPunish;if(!p||p.status!=='pending')
   pushMsg(c.id,{role:'assistant',type:'sys',content:(c.remark||c.name)+' 罚你写一份检讨，已经放进今天的任务便签',id:uid()});save();}
 
 /* ---------- 微信主界面 ---------- */
+/* WECHAT_INTERACTION_STUDIO_V1：微信专属手感；事件只观察，不取消、延迟或重放业务点击。 */
+let _wxUiLast=null,_wxUiPress=null,_wxUiBloom=null,_wxUiReady=false;
+let _shellControlLast=null,_shellSwitchPending=null;
+const _wxUiJobs=new Set(),_wxUiMovingPanels=new Set();let _wxUiPanels=[],_wxUiPanelStates={};
+function wxInteractionPage(c){return !!c&&(/^wx/.test(c.p)||['wechat','chat','group','pfchat','pfgroup','pffriends','chatDetails','contactInfo','friendInfo','contactSettings','contactEdit','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','transferDetail','groupTransferDetail','grpSend','rpSend','tfSend','rpDetail','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p));}
+function wxUiAnimate(el,frames,duration,delay,done){
+  if(!el||!el.isConnected||!shellMotionAllowed())return null;
+  try{const a=el.animate(frames,{duration:duration||280,delay:delay||0,easing:'cubic-bezier(.2,.85,.25,1)',fill:'backwards'});_wxUiJobs.add(a);const finish=()=>{_wxUiJobs.delete(a);if(done)done();};a.onfinish=finish;a.oncancel=finish;return a;}catch(_){if(done)done();return null;}
+}
+function wxUiRelease(){if(_wxUiPress&&_wxUiPress.el)_wxUiPress.el.removeAttribute('data-wx-ui-pressed');_wxUiPress=null;}
+function wxUiClear(){wxRoleEntryClear();wxUiRelease();_shellSwitchPending=null;document.querySelectorAll('[data-shell-switch]').forEach(el=>el.removeAttribute('data-shell-switch'));if(typeof wxCallUiClear==='function')wxCallUiClear();_wxUiMovingPanels.forEach(panel=>{panel.removeAttribute('data-wx-ui-closing');panel._wxUiMotion=null;});_wxUiMovingPanels.clear();_wxUiJobs.forEach(a=>{try{a.cancel();}catch(_){}});_wxUiJobs.clear();if(_wxUiBloom){_wxUiBloom.remove();_wxUiBloom=null;}}
+function wxUiTarget(target){
+  if(!target||!target.closest)return null;
+  const c=cur(),page=document.querySelector('#app>.page');
+  const floating='#modal.show,#cfm.show,#callLayer.show,.nr-root,.nr-overlay,.tn-dfull-ov,.tn-pack-ov,.tg-ov,.pc-reveal,.photo-meta-overlay';
+  if(c.p==='home'&&!target.closest(floating)||shellMotionProfile(c,page)==='protected')return null;
+  if(target.closest('.dyme-tabs,.dyus-tabs'))return null;
+  if(target.closest('input,textarea,select,[contenteditable="true"],canvas,video,iframe'))return null;
+  if(!target.closest('#app>.shell-ui-scope,#app>.wx-ui-scope,'+floating))return null;
+  const el=target.closest('button,[role="button"],a[href],[onclick]');
+  if(!el||el.disabled||el.getAttribute('aria-disabled')==='true'||el.closest('[disabled],[inert],.shell-motion-ghost'))return null;
+  if(el.matches('label,input,textarea,select')||el.querySelector('input:not([type="hidden"]),textarea,select,[contenteditable="true"]'))return null;
+  if(el.matches('[onpointerdown],[ontouchstart],[onmousedown]')&&!el.hasAttribute('onclick'))return null;
+  const r=el.getBoundingClientRect(),host=page&&page.getBoundingClientRect();
+  if(!el.matches('button,[role="button"],.sw')&&host&&r.width*r.height>host.width*host.height*.55)return null;
+  return el;
+}
+function wxUiPressStart(e){
+  wxUiRelease();if(!shellMotionAllowed()||e.isPrimary===false||e.button>0||e.touches&&e.touches.length!==1)return;
+  const bloom=_wxUiBloom;if(bloom){_wxUiBloom=null;if(typeof bloom.getAnimations==='function')bloom.getAnimations().forEach(a=>a.cancel());bloom.remove();}
+  const el=wxUiTarget(e.target);if(!el)return;const point=e.touches?e.touches[0]:e;
+  _wxUiPress={el:el,x:point.clientX,y:point.clientY,id:e.pointerId,owner:S,account:actId(),at:Date.now()};el.setAttribute('data-wx-ui-pressed','true');
+}
+function wxUiPressMove(e){const p=_wxUiPress;if(!p)return;const point=e.touches?e.touches[0]:e;if(e.pointerId!=null&&p.id!=null&&e.pointerId!==p.id)return;if(Math.hypot(point.clientX-p.x,point.clientY-p.y)>9)wxUiRelease();}
+function wxUiBloom(el,x,y){
+  if(!shellMotionAllowed())return;
+  if(_wxUiBloom)_wxUiBloom.remove();const r=el.getBoundingClientRect(),size=Math.min(92,Math.max(32,Math.min(r.width,r.height)*1.6));
+  const node=document.createElement('i');node.className='wx-ui-touch-bloom';node.setAttribute('aria-hidden','true');
+  node.style.cssText='--shell-touch-rgb:'+(wxInteractionPage(cur())?'7,193,96':cur().p==='settings'?'90,160,255':'154,170,224')+';opacity:0;left:'+(Math.max(r.left,Math.min(r.right,x))-size/2)+'px;top:'+(Math.max(r.top,Math.min(r.bottom,y))-size/2)+'px;width:'+size+'px;height:'+size+'px;';document.body.appendChild(node);_wxUiBloom=node;
+  wxUiAnimate(node,[{opacity:.55,transform:'scale(.35)'},{opacity:0,transform:'scale(1.12)'}],360,0,()=>{node.remove();if(_wxUiBloom===node)_wxUiBloom=null;});
+}
+function wxUiPressEnd(e){
+  const p=_wxUiPress;if(!p||e.pointerId!=null&&p.id!=null&&e.pointerId!==p.id)return;wxUiRelease();
+  if(!p.el.isConnected||p.owner!==S||p.account!==actId()||Date.now()-p.at>650||!shellMotionAllowed())return;
+  wxUiBloom(p.el,p.x,p.y);const icon=p.el.querySelector('.wx-tab-icon,.chat-composer-icon svg,.wx-steps-icon')||p.el.querySelector('svg');
+  if(icon&&!p.el.matches('.wx-main-add,.tb'))wxUiAnimate(icon,[{scale:'.88'},{scale:'1.06',offset:.58},{scale:'1'}],280);
+}
+function wxInteractionStyle(){
+  if(_wxUiReady)return;_wxUiReady=true;const style=document.createElement('style');style.id='wechatInteractionStudioStyle';
+  style.textContent=`
+    .wx-ui-touch-bloom{position:fixed;z-index:20050;border-radius:50%;pointer-events:none!important;user-select:none;background:radial-gradient(circle,rgba(var(--shell-touch-rgb,7,193,96),.3),rgba(var(--shell-touch-rgb,7,193,96),.1) 48%,transparent 72%)}
+    @media(prefers-reduced-motion:no-preference){
+      #app>.shell-ui-scope button:not(:disabled),#app>.shell-ui-scope [role="button"],#app>.shell-ui-scope [onclick],body[data-shell-control-scope] #modal.show button,body[data-shell-control-scope] #modal.show .sw,body[data-shell-control-scope] #cfm.show button{transition:scale 190ms cubic-bezier(.2,.85,.25,1)}
+      #app>.shell-ui-scope [data-wx-ui-pressed],body[data-shell-control-scope] #modal.show [data-wx-ui-pressed],body[data-shell-control-scope] #cfm.show [data-wx-ui-pressed],#callLayer.show [data-wx-ui-pressed]{scale:.955}
+      #app>.shell-ui-scope .sw[data-wx-ui-pressed]{scale:.9}
+      body[data-shell-control-scope] [data-wx-ui-pressed]{scale:.955}
+      #app>.shell-ui-scope .sw[data-shell-switch="on"]::after{animation:shellSwitchOn 300ms cubic-bezier(.2,.85,.25,1)}
+      #app>.shell-ui-scope .sw[data-shell-switch="off"]::after{animation:shellSwitchOff 300ms cubic-bezier(.2,.85,.25,1)}
+      @keyframes shellSwitchOn{from{transform:translateX(-19px)}to{transform:translateX(0)}}
+      @keyframes shellSwitchOff{from{transform:translateX(19px)}to{transform:translateX(0)}}
+    }
+    #app>[data-wx-role-entry]{z-index:9}
+    .wx-ui-tab-glide{position:absolute;top:3px;bottom:11px;width:calc(25% - 22px);border-radius:17px;background:linear-gradient(160deg,rgba(7,193,96,.13),rgba(7,193,96,.025));border:1px solid rgba(7,193,96,.11);box-sizing:border-box;pointer-events:none;z-index:0}
+    .wx-ui-scope.wxlight .wx-ui-tab-glide{background:linear-gradient(160deg,rgba(7,193,96,.085),rgba(7,193,96,.015));border-color:rgba(7,193,96,.085)}
+    #app>.wx-ui-scope .wx-main-tabbar{position:relative;isolation:isolate}
+    #app>.wx-ui-scope .wx-main-tabbar>.tb{z-index:1}
+    @media(prefers-reduced-motion:no-preference){
+      #app>.wx-ui-scope button:not(:disabled),#app>.wx-ui-scope .nav .l,#app>.wx-ui-scope .nav .r,#app>.wx-ui-scope .row[onclick],#app>.wx-ui-scope .it[onclick],body[data-wechat-switches] #modal button,body[data-wechat-switches] #cfm button{transition:scale 190ms cubic-bezier(.2,.85,.25,1)}
+      #app>.wx-ui-scope button:not(:disabled):active,#app>.wx-ui-scope [data-wx-ui-pressed],body[data-wechat-switches] #modal button:active{scale:.955}
+      #app>.wx-ui-scope .wx-conversation-front>.row:active{scale:.985}
+      .wx-ui-scope .wx-tab-icon{transition:color 200ms ease}
+      .wx-ui-scope .wx-main-add>svg{transition:transform 250ms cubic-bezier(.2,.85,.25,1)}
+      .wx-ui-scope .wx-main-add[aria-expanded="true"]>svg{transform:rotate(45deg)}
+      .wx-ui-scope .chat-function-toggle>span{transform:rotate(0deg)}
+      .wx-ui-scope .chat-function-toggle[aria-expanded="true"]>span{transform:rotate(45deg)}
+    }
+    .wx-ui-scope .chat-tools-panel[data-wx-ui-closing]{display:block!important;pointer-events:none}
+    @media(prefers-reduced-motion:no-preference){
+      #callLayer>.cav[data-wx-call-waiting]{animation:wxCallWaitingRing 1500ms ease-out 2}
+      #callLayer .callbtns .cbtn{transition:scale 180ms cubic-bezier(.2,.85,.25,1)}
+      #callLayer .callbtns .cbtn:active{scale:.88}
+      @keyframes wxCallWaitingRing{0%{box-shadow:0 0 0 0 rgba(164,210,186,.05)}24%{box-shadow:0 0 0 9px rgba(164,210,186,.25)}100%{box-shadow:0 0 0 25px rgba(164,210,186,0)}}
+    }
+    #app>.wx-ui-scope button:focus-visible{outline:2px solid #07c160;outline-offset:3px}
+  `;document.head.appendChild(style);
+  const passive={capture:true,passive:true};
+  if(typeof PointerEvent!=='undefined'){document.addEventListener('pointerdown',wxUiPressStart,passive);document.addEventListener('pointermove',wxUiPressMove,passive);document.addEventListener('pointerup',wxUiPressEnd,passive);document.addEventListener('pointercancel',wxUiRelease,passive);}
+  else{document.addEventListener('touchstart',wxUiPressStart,passive);document.addEventListener('touchmove',wxUiPressMove,passive);document.addEventListener('touchend',wxUiPressEnd,passive);document.addEventListener('touchcancel',wxUiRelease,passive);}
+  document.addEventListener('scroll',wxUiRelease,passive);window.addEventListener('blur',wxUiClear);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)wxUiClear();});
+  if(typeof matchMedia==='function'){const pref=matchMedia('(prefers-reduced-motion: reduce)');if(pref.addEventListener)pref.addEventListener('change',()=>{if(pref.matches)wxUiClear();});}
+  document.addEventListener('click',e=>{if(!shellMotionAllowed())return;const el=wxUiTarget(e.target);if(!el)return;shellControlClick(el);if(e.detail!==0)return;const r=el.getBoundingClientRect();wxUiBloom(el,r.left+r.width/2,r.top+r.height/2);},passive);
+}
+function shellControlMount(c,app,plan){
+  const page=app.firstElementChild;if(!page)return;
+  const active=c.p!=='home'&&shellMotionProfile(c,page)!=='protected',old=_shellControlLast;
+  document.body.toggleAttribute('data-shell-control-scope',shellMotionProfile(c,page)!=='protected');
+  if(old&&(old.owner!==S||old.account!==actId()||old.key!==plan.key))wxUiClear();
+  _shellControlLast={key:plan.key,owner:S,account:actId()};page.classList.toggle('shell-ui-scope',active);
+  if(shellMotionProfile(c,page)!=='protected')wxInteractionStyle();
+  if(!shellMotionAllowed()){wxUiClear();_shellSwitchPending=null;return;}
+  if(_wxUiPress&&!_wxUiPress.el.isConnected)wxUiRelease();
+  _wxUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});
+  shellControlSwitchFinish();
+}
+function shellControlSwitchFinish(){
+  const p=_shellSwitchPending;if(!p)return;_shellSwitchPending=null;
+  if(p.owner!==S||p.account!==actId()||p.route!==shellMotionRoute(cur())||Date.now()-p.at>600||!shellMotionAllowed())return;
+  const matches=Array.from(document.querySelectorAll('#app>.shell-ui-scope .sw[onclick]')).filter(el=>el.getAttribute('onclick')===p.action),next=matches[p.index];
+  if(next&&next!==p.node&&next.classList.contains('on')!==p.on)next.setAttribute('data-shell-switch',next.classList.contains('on')?'on':'off');
+}
+function shellControlClick(el){
+  const owner=S,account=actId(),route=shellMotionRoute(cur()),page=el.closest('#app>.page');
+  const surface=el.closest('#modal.show,#cfm.show')||page,beforeView=shellViewSignature(surface,cur()),beforePanels=shellLocalPopupSnapshot(surface);
+  if(el.matches('.sw[onclick]')&&page){const action=el.getAttribute('onclick'),matches=Array.from(page.querySelectorAll('.sw[onclick]')).filter(n=>n.getAttribute('onclick')===action);_shellSwitchPending={owner:owner,account:account,route:route,action:action,index:matches.indexOf(el),node:el,on:el.classList.contains('on'),at:Date.now()};}
+  // 捕获监听后的微任务可能早于onclick；用下一绘制帧读业务结果，不调用或延迟业务。
+  requestAnimationFrame(()=>{
+    if(owner!==S||account!==actId()||route!==shellMotionRoute(cur())||!shellMotionAllowed())return;
+    shellControlSwitchFinish();
+    if(surface&&surface.isConnected&&(!surface.matches('#modal,#cfm')||surface.classList.contains('show')))shellPartialMotion(surface,cur(),beforeView,beforePanels);
+    if(!page||!page.isConnected)return;
+    const post=el.closest('.mpost,.wx-role-detail');
+    if(el.matches('.acts,[onclick*="momentMenu("]')&&post){const pop=post.querySelector('.moment-action-popover.show');if(pop)wxUiAnimate(pop,[{opacity:.6,transform:'translateX(9px) scale(.95)'},{opacity:1,transform:'none'}],260);}
+    if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes('momentCommentFocus(')&&post){const compose=post.querySelector('.moment-inline-compose.show,.wx-role-detail-compose');if(compose)wxUiAnimate(compose,[{opacity:.65},{opacity:1}],220);}
+    if(el.getAttribute('onclick')&&el.getAttribute('onclick').includes('toggleMomentLike(')&&post){const social=post.querySelector('.moment-social-slot');if(social)wxUiAnimate(social,[{opacity:.75},{opacity:1}],260);wxUiAnimate(el,[{scale:'.92'},{scale:'1.08',offset:.6},{scale:'1'}],320);}
+  });
+}
+function wxSocialPageMotion(c,page){
+  const relation=['relnet','reledit','relperson'].includes(c.p),moments=['wxmoment','roleMoments','roleMomentDetail'].includes(c.p);
+  if(!relation&&!moments)return false;
+  page.setAttribute('data-wx-social-motion',relation?'relationships':'moments');
+  return true;
+}
+// WECHAT_COMPOSER_MOTION_V2：面板高度真实展开/收起，不复制输入栏，也不等待动画再执行业务。
+function wxUiPanelMotion(panel,open){
+  if(!open)panel.setAttribute('data-wx-ui-closing','');
+  const prior=panel._wxUiMotion,current=prior?panel.getBoundingClientRect().height:0;
+  if(prior)prior.cancel();
+  if(!shellMotionAllowed()){panel.removeAttribute('data-wx-ui-closing');return;}
+  if(!open)panel.setAttribute('data-wx-ui-closing','');
+  const full=panel.getBoundingClientRect().height;
+  const from=prior?current:open?0:full,to=open?full:0;
+  let animation;const finish=()=>{if(panel._wxUiMotion===animation){panel._wxUiMotion=null;panel.removeAttribute('data-wx-ui-closing');_wxUiMovingPanels.delete(panel);}};
+  animation=wxUiAnimate(panel,[{height:from+'px',minHeight:'0px',opacity:open?.45:1},{height:to+'px',minHeight:'0px',opacity:open?1:0}],open?380:300,0,finish);
+  panel._wxUiMotion=animation;if(animation)_wxUiMovingPanels.add(panel);else{panel.removeAttribute('data-wx-ui-closing');_wxUiMovingPanels.delete(panel);}
+}
+function wxInteractionPanels(page,key){
+  _wxUiPanels.forEach(o=>o.disconnect());_wxUiPanels=[];
+  page.querySelectorAll('.chat-tools-panel').forEach(panel=>{
+    const id=panel.id||'panel';const update=()=>{if(!panel.isConnected||!_wxUiLast||_wxUiLast.key!==key||_wxUiLast.owner!==S||_wxUiLast.account!==actId())return;
+      const open=panel.classList.contains('show'),kind=panel.dataset.page||'fn',state=open?kind:'closed',old=_wxUiPanelStates[id];_wxUiPanelStates[id]=state;
+      const bar=page.querySelector('.chat-inputbar');if(bar){const more=bar.querySelector('.chat-function-toggle'),emoji=bar.querySelector('.chat-emoji-toggle');if(more)more.setAttribute('aria-expanded',String(open&&kind==='fn'));if(emoji)emoji.setAttribute('aria-expanded',String(open&&kind==='emoji'));}
+      if(old!==state&&old!==undefined){
+        if(open&&old==='closed'||!open)wxUiPanelMotion(panel,open);
+        const more=page.querySelector('.chat-function-toggle>span');
+        if(more){const start=getComputedStyle(more).transform;more.getAnimations().forEach(a=>a.cancel());const expanded=open&&kind==='fn';wxUiAnimate(more,[{transform:start},{transform:'rotate('+(expanded?53:-7)+'deg)',offset:.72},{transform:'rotate('+(expanded?45:0)+'deg)'}],420);}
+        if(open){const pane=panel.querySelector('.chat-panel-pane.on')||panel;wxUiAnimate(pane,[{opacity:.2,transform:'translateY(22px)'},{opacity:1,transform:'none'}],380);
+          if(kind==='fn')Array.from(pane.querySelectorAll('.chat-function-page:first-child>.it')).slice(0,8).forEach((item,i)=>wxUiAnimate(item,[{opacity:0,transform:'translateY(12px) scale(.94)'},{opacity:1,transform:'none'}],300,40+i*18));}
+      }
+    };
+    const observer=new MutationObserver(()=>{try{update();}catch(_){}});observer.observe(panel,{attributes:true,attributeFilter:['class','data-page']});_wxUiPanels.push(observer);update();
+  });
+}
+/* WECHAT_CALL_PAYMENT_MOTION_V1：只动画通话装饰/控制与支付呈现，不调用通话或支付动作。 */
+let _wxCallUiRecord=null;
+const _wxCallUiJobs=new Set();
+function wxCallUiClear(){_wxCallUiJobs.forEach(a=>{try{a.cancel();}catch(_){}});_wxCallUiJobs.clear();const layer=document.getElementById('callLayer');if(layer)layer.querySelectorAll('[data-wx-call-waiting]').forEach(el=>el.removeAttribute('data-wx-call-waiting'));}
+function wxCallUiAnimate(el,frames,duration,delay){
+  if(!el||!el.isConnected||!shellMotionAllowed())return;
+  try{const a=el.animate(frames,{duration:duration||460,delay:delay||0,easing:'cubic-bezier(.2,.85,.25,1)',fill:'backwards'});_wxCallUiJobs.add(a);const done=()=>_wxCallUiJobs.delete(a);a.onfinish=done;a.oncancel=done;}catch(_){}
+}
+function wxCallInteractionMount(layer){
+  const call=typeof _call==='undefined'?null:_call,visible=layer.classList.contains('show');
+  if(!call||!visible||call.cohab||call.accountId&&call.accountId!==actId()){wxCallUiClear();_wxCallUiRecord=null;return;}
+  wxInteractionStyle();
+  if(call._motionPreview&&typeof NORTH_PREVIEW!=='undefined'&&NORTH_PREVIEW)layer.querySelectorAll('.cbtn.red').forEach(button=>{button.onclick=wxInteractionPreviewCallEnd;});
+  const key=String(call.session||call.id)+':'+call.kind+':'+call.state+':'+(call.min?'mini':'full'),old=_wxCallUiRecord;
+  if(!shellMotionAllowed()){wxCallUiClear();_wxCallUiRecord={key:key,owner:S,account:actId()};return;}
+  _wxCallUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});
+  if(old&&old.key===key&&old.owner===S&&old.account===actId())return;
+  wxCallUiClear();_wxCallUiRecord={key:key,owner:S,account:actId()};
+  layer.setAttribute('data-wx-call-motion',call.min?'mini':call.state);
+  if(call.min){wxCallUiAnimate(layer.querySelector('.cav'),[{opacity:.2,scale:'.7'},{opacity:1,scale:'1'}],360);return;}
+  const avatar=layer.querySelector(':scope>.cav');
+  if(avatar){
+    // 不缩放承载角色视频的容器；等待光环只是无点击装饰，最多呼吸两轮。
+    if(!avatar.querySelector('video,canvas,iframe'))wxCallUiAnimate(avatar,[{opacity:.1,transform:'translateY(22px) scale(.84)'},{opacity:1,transform:'translateY(-3px) scale(1.025)',offset:.74},{opacity:1,transform:'none'}],560);
+    if(call.state!=='active')avatar.setAttribute('data-wx-call-waiting','true');
+  }
+  layer.querySelectorAll('.callbtns>.cbtncol,.call-camera-tools,.call-screen-tools').forEach((el,i)=>wxCallUiAnimate(el,[{opacity:0,transform:'translateY(36px) scale(.9)'},{opacity:1,transform:'none'}],480,100+Math.min(i,5)*45));
+}
+function wxPaymentInteractionMount(page,c){
+  if(!['tfSend','rpSend','transferDetail','groupTransferDetail'].includes(c.p))return;
+  page.setAttribute('data-wx-payment-motion','enter');
+  if(c.p==='tfSend')page.querySelectorAll('.wx-tfs-keys>button').forEach((key,i)=>wxUiAnimate(key,[{opacity:0,transform:'translateY(32px) scale(.94)'},{opacity:1,transform:'none'}],430,100+Math.floor(i/4)*50+(i%4)*14));
+}
+function wxInteractionPreviewCallEnd(){if(typeof NORTH_PREVIEW==='undefined'||!NORTH_PREVIEW||typeof _call==='undefined'||!_call||!_call._motionPreview)return false;_call=null;renderCall();return true;}
+function wxInteractionPreviewCall(){
+  if(typeof NORTH_PREVIEW==='undefined'||!NORTH_PREVIEW||!['localhost','127.0.0.1'].includes(location.hostname))return;
+  if(typeof _call==='undefined'||_call&&!_call._motionPreview)return;
+  const contact=getC('preview_1')||S.contacts[0];if(!contact)return;
+  _call={id:contact.id,accountId:actId(),kind:'voice',state:'outgoing',dir:'outgoing',opened:true,session:'wx-motion-preview',_motionPreview:true,sub:null};renderCall();
+}
+/* WECHAT_ROLE_SLIDE_ENTRY_V1: one coherent page enters from the right; the name shares its motion. */
+let _wxRoleEntry=null;
+function wxRoleEntryGhost(c,app,old){
+  if(c.p!=='chat'||!old||!['wechat','contactInfo'].includes(old.page))return null;
+  const page=app.firstElementChild;if(!page||page.querySelectorAll('*').length>650||page.querySelector('video,audio,iframe,canvas'))return null;
+  const ghost=page.cloneNode(true),original=[page,...page.querySelectorAll('*')],copies=[ghost,...ghost.querySelectorAll('*')],scrolls=[];
+  original.forEach((el,i)=>{if(copies[i]&&(el.scrollTop||el.scrollLeft))scrolls.push({node:copies[i],top:el.scrollTop,left:el.scrollLeft});});
+  Array.from(ghost.querySelectorAll('input,textarea,select,[contenteditable]')).forEach(el=>{const block=document.createElement('span');block.style.cssText='display:inline-block;min-height:1em;min-width:3em';el.replaceWith(block);});
+  [ghost,...ghost.querySelectorAll('*')].forEach(el=>{Array.from(el.attributes).forEach(a=>{if(['id','name','for','autofocus','data-wx-ui-pressed'].includes(a.name)||a.name.startsWith('on'))el.removeAttribute(a.name);});if(el.matches('button,a,[tabindex]'))el.setAttribute('tabindex','-1');});
+  ghost.querySelectorAll('script,style,link,object,embed').forEach(el=>el.remove());ghost.classList.add('shell-motion-ghost');ghost.setAttribute('inert','');ghost.setAttribute('aria-hidden','true');
+  return {node:ghost,scrolls};
+}
+function wxRoleEntryClear(){
+  const rec=_wxRoleEntry;if(!rec)return;_wxRoleEntry=null;clearTimeout(rec.timer);if(rec.page)rec.page.removeAttribute('data-wx-role-entry');
+  if(rec.animation)rec.animation.cancel();if(rec.ghostAnimation)rec.ghostAnimation.cancel();if(rec.ghost)rec.ghost.remove();
+}
+function wxRoleEntryMount(c,app,plan){
+  const page=app.firstElementChild,key=plan.key,now=performance.now();
+  if(!shellMotionAllowed()){wxRoleEntryClear();return false;}
+  let rec=_wxRoleEntry;
+  if(rec&&(rec.owner!==S||rec.account!==actId()||rec.key!==key)){wxRoleEntryClear();rec=null;}
+  if(!rec){
+    if(c.p!=='chat'||!plan.old||!['wechat','contactInfo'].includes(plan.old.page))return false;
+    rec={owner:S,account:actId(),key,start:now,duration:360,width:app.getBoundingClientRect().width,page:null,animation:null,ghost:plan.roleGhost&&plan.roleGhost.node,timer:0,ghostAnimation:null};_wxRoleEntry=rec;
+    if(rec.ghost){app.appendChild(rec.ghost);plan.roleGhost.scrolls.forEach(s=>{s.node.scrollTop=s.top;s.node.scrollLeft=s.left;});rec.ghostAnimation=rec.ghost.animate([{transform:'none',opacity:1},{transform:'translateX('+(-rec.width*.16)+'px)',opacity:.8}],{duration:rec.duration,easing:'cubic-bezier(.22,1,.36,1)',fill:'forwards'});}
+    rec.timer=setTimeout(()=>{if(_wxRoleEntry===rec)wxRoleEntryClear();},rec.duration+100);
+  }
+  if(now-rec.start>=rec.duration){wxRoleEntryClear();return false;}
+  if(rec.page!==page){
+    const prior=rec.animation;rec.animation=null;if(prior)prior.cancel();rec.page=page;page.setAttribute('data-wx-role-entry','slide-left');
+    const a=page.animate([{transform:'translateX('+rec.width+'px)'},{transform:'none'}],{duration:rec.duration,easing:'cubic-bezier(.22,1,.36,1)',fill:'backwards'});rec.animation=a;a.currentTime=Math.max(0,now-rec.start);a.onfinish=()=>{if(_wxRoleEntry===rec&&rec.animation===a)wxRoleEntryClear();};
+  }
+  return true;
+}
+function wxInteractionMount(c,app,plan){
+  const previous=_wxUiLast,page=app.firstElementChild,inside=wxInteractionPage(c);
+  const key=shellMotionRoute(c);
+  const same=previous&&previous.owner===S&&previous.account===actId(),changed=!!same&&(previous.key!==key||c.p==='wechat'&&previous.tab!==wxTab);
+  if(!inside||!page){if(previous)wxUiClear();_wxUiLast=null;_wxUiPanels.forEach(o=>o.disconnect());_wxUiPanels=[];_wxUiPanelStates={};return false;}
+  wxInteractionStyle();if(changed||!same){wxUiClear();_wxUiPanelStates={};}
+  if(!shellMotionAllowed())wxUiClear();
+  _wxUiJobs.forEach(a=>{if(!a.effect||!a.effect.target||!a.effect.target.isConnected)a.cancel();});if(_wxUiPress&&!_wxUiPress.el.isConnected)wxUiRelease();
+  page.classList.add('wx-ui-scope');_wxUiLast={key:key,page:c.p,tab:wxTab,quick:!!_wxQuickOpen,owner:S,account:actId(),depth:stack.length};
+  const tabs=['chats','contacts','moments','me'],tabbar=page.querySelector('.wx-main-tabbar'),tabIndex=tabs.indexOf(wxTab);
+  if(tabbar&&tabIndex>=0){
+    const marker=document.createElement('i');marker.className='wx-ui-tab-glide';marker.setAttribute('aria-hidden','true');marker.style.left='calc('+tabIndex*25+'% + 11px)';tabbar.appendChild(marker);
+    if(changed&&previous.page==='wechat'&&c.p==='wechat'){
+      const distance=(tabs.indexOf(previous.tab)-tabIndex)*tabbar.getBoundingClientRect().width/4;
+      wxUiAnimate(marker,[{transform:'translateX('+distance+'px)'},{transform:'translateX(0)'}],380);
+      wxUiAnimate(tabbar.querySelector('.tb.on .wx-tab-icon'),[{transform:'translateY(2px) scale(.88)'},{transform:'translateY(-2px) scale(1.09)',offset:.58},{transform:'none'}],360);
+    }
+  }
+  if(_wxQuickOpen&&c.p==='wechat'&&(!same||!previous.quick)){
+    const menu=page.querySelector('.wx-quick-menu');if(menu){menu.style.transformOrigin='calc(100% - 22px) 0';wxUiAnimate(menu,[{opacity:0,transform:'translateY(-7px) scale(.94)'},{opacity:1,transform:'none'}],270);}
+    wxUiAnimate(page.querySelector('.wx-quick-shade'),[{opacity:0},{opacity:1}],180);
+  }
+  if(same&&previous.page==='wechat'&&previous.tab==='chats'&&c.p==='wechat'&&wxTab==='chats'&&previous.quick!==!!_wxQuickOpen){
+    wxUiAnimate(page.querySelector('.wx-main-add>svg'),[{transform:'rotate('+(_wxQuickOpen?0:45)+'deg)'},{transform:'rotate('+(_wxQuickOpen?45:0)+'deg)'}],250);
+  }
+  wxInteractionPanels(page,key);
+  if(wxRoleEntryMount(c,app,plan)){page.setAttribute('data-wx-ui-navigation','push');return true;}
+  const owns=changed&&wxInteractionPage({p:previous.page})&&shellMotionProfile(c,page)==='standard';
+  if(!owns)return false;
+  wxPaymentInteractionMount(page,c);
+  if(wxSocialPageMotion(c,page)){shellContentMotion(page,c,plan);return true;}
+  const tabSwitch=previous.page==='wechat'&&c.p==='wechat',backward=stack.length<previous.depth;
+  page.setAttribute('data-wx-ui-navigation',tabSwitch?'tab':backward?'back':'push');
+  // Animate content branches while keeping the title and all its ancestors fixed.
+  shellContentMotion(page,c,plan);
+  return true;
+}
 function renderWeChat(){
   if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
   let body='';
@@ -382,7 +656,7 @@ function renderWeChat(){
   if(wxTab!=='chats')_wxQuickOpen=false;
   const previewStatus=NORTH_PREVIEW?`<div class="wx-preview-status"><span><b>${hm()}</b>${wxPawIcon()}</span><span class="wx-preview-radio"><i></i><i></i><i></i><i></i>${wxWifiIcon()}<em>17</em></span></div>`:'';
   const addIcon=wxTab==='contacts'?wxContactAddIcon():wxPlusIcon();
-  return `${previewStatus}<div class="nav wx-main-nav"><button class="l wx-main-exit" type="button" onclick="home()" aria-label="返回主屏"></button><span class="t wx-main-title"><b>${titles[wxTab]}</b></span><button class="r wx-main-add" type="button" onclick="${wxTab==='chats'?'toggleWxQuickMenu()':wxTab==='contacts'?'editContact()':''}" aria-label="${showAdd?'添加':''}">${showAdd?addIcon:''}</button></div>
+  return `${previewStatus}<div class="nav wx-main-nav"><button class="l wx-main-exit" type="button" onclick="home()" aria-label="返回主屏"></button><span class="t wx-main-title"><b>${titles[wxTab]}</b></span><button class="r wx-main-add" type="button" onclick="${wxTab==='chats'?'toggleWxQuickMenu()':wxTab==='contacts'?'editContact()':''}" aria-label="${showAdd?'添加':''}" aria-expanded="${wxTab==='chats'&&_wxQuickOpen?'true':'false'}">${showAdd?addIcon:''}</button></div>
     ${wxTab==='chats'&&_wxQuickOpen?wxQuickMenuHTML():''}
     ${wxTab==='contacts'?wxContactSearchHTML():''}
     <div class="scroll wx-main-scroll">${body}</div>
@@ -405,7 +679,7 @@ function wxTabIcon(k){const icons={
   contacts:`<path class="wx-tab-outline" d="M14.5 4.3c3.3 0 5.3 2.6 5.3 6.1 0 4-2.2 7-5.3 7s-5.3-3-5.3-7c0-3.5 2-6.1 5.3-6.1ZM4.4 28c.9-5.3 4.4-8.2 10.1-8.2s9.2 2.9 10.1 8.2H4.4Zm20.5-14.6h5.6m-5.6 4.3h5.6m-5.6 4.3h5.6"/><path class="wx-tab-solid" d="M14.5 3.2c3.8 0 6.1 2.9 6.1 6.9 0 4.4-2.5 7.6-6.1 7.6s-6.1-3.2-6.1-7.6c0-4 2.3-6.9 6.1-6.9ZM2.9 29c.8-6 5-9.4 11.6-9.4S25.3 23 26.1 29H2.9Zm23-16.9h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Z"/>`,
   moments:`<circle class="wx-tab-outline" cx="16" cy="16" r="12.5"/><path class="wx-tab-outline" d="m10.6 21.2 3-7.7 7.8-3-3 7.8-7.8 2.9Z"/><circle class="wx-tab-solid" cx="16" cy="16" r="14"/><path class="wx-tab-solid-cut" d="m10.2 21.8 3.3-8.3 8.3-3.3-3.3 8.3-8.3 3.3Z"/>`,
   me:`<path class="wx-tab-outline" d="M16 4.4c3.2 0 5.1 2.6 5.1 6.1 0 3.9-2 6.8-5.1 6.8s-5.1-2.9-5.1-6.8c0-3.5 1.9-6.1 5.1-6.1ZM5.2 28.1c.9-5.5 4.7-8.6 10.8-8.6s9.9 3.1 10.8 8.6H5.2Z"/><path class="wx-tab-solid" d="M16 3.4c3.8 0 6.1 3 6.1 7 0 4.5-2.4 7.7-6.1 7.7s-6.1-3.2-6.1-7.7c0-4 2.3-7 6.1-7ZM3.7 29.3c.9-6.3 5.3-9.9 12.3-9.9s11.4 3.6 12.3 9.9H3.7Z"/>`};return `<svg class="wx-tab-icon wx-tab-${k}" viewBox="0 0 32 32" aria-hidden="true">${icons[k]}</svg>`;}
-function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}"><div class="i">${i}${k==='chats'?wxUnreadBadge(wxUnreadTotal()):k==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}</div><span>${t}</span></button>`;}
+function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}" data-wx-tab="${k}" aria-pressed="${wxTab===k?'true':'false'}"><div class="i">${i}${k==='chats'?wxUnreadBadge(wxUnreadTotal()):k==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}</div><span>${t}</span></button>`;}
 function wxDiscoverIcon(kind){const icons={
   moments:'<path d="M16 4.5 19.4 11.6 15.5 12.8Z" stroke="#f2c94c"/><path d="M23.8 8.2 20.4 15.4 17.2 13Z" stroke="#f2994a"/><path d="M27.5 16 20.4 19.4 19.2 15.5Z" stroke="#eb5757"/><path d="M23.8 23.8 16.6 20.4 19 17.2Z" stroke="#bb6bd9"/><path d="M16 27.5 12.6 20.4 16.5 19.2Z" stroke="#2f80ed"/><path d="M8.2 23.8 11.6 16.6 14.8 19Z" stroke="#2d9cdb"/><path d="M4.5 16 11.6 12.6 12.8 16.5Z" stroke="#27ae60"/><path d="M8.2 8.2 15.4 11.6 13 14.8Z" stroke="#6fcf97"/>',
   channels:'<path d="M7 9.2c3.7-4.7 8.1-3.7 9 1.5.9-5.2 5.3-6.2 9-1.5 3.2 4.1 1.5 11.5-9 17-10.5-5.5-12.2-12.9-9-17Z"/>',
