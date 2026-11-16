@@ -1697,6 +1697,13 @@ PERMANENT_FIXES.push({
   file: 'services/phone-mcp-connect/handlers.mjs',
   marker: 'MCP_GMAIL_BROWSER_REDIRECT_V1',
   least: 1,
+}, {
+  release: 'Gmail MCP backend',
+  name: 'Google 应用凭据拒绝与授权码失效分别显示固定阶段，不暴露原始错误',
+  scope: 'web',
+  file: 'services/phone-mcp-connect/handlers.mjs',
+  marker: 'MCP_GMAIL_OAUTH_STAGE_V1',
+  least: 1,
 });
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

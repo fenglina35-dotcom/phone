@@ -35,6 +35,8 @@ wrangler.toml 只包含公开服务 URL、KV 标识、10ms 单请求 CPU 上限�
 
 /health 只显示配置是否齐全，不显示邮箱、凭据或原始错误。配置齐全不等于实际 Google 授权和工具调用已经通过。
 
+授权错误只显示固定阶段：GMAIL_CLIENT_CONFIG 为 Google 拒绝应用凭据，GMAIL_CODE_REJECTED 为授权码未被接受，GMAIL_TOKEN_UNAVAILABLE 为换取凭据暂未完成，GMAIL_AUTH_TRANSACTION 为浏览器授权事务未完成。绝不输出 Google 原始错误描述、授权码或密钥。测试状态必须把本人加入测试用户名单；未经公开验证提示与测试人员无权限是不同阶段。Google 外部测试应用的 Gmail 刷新令牌会在7天到期，之后需要重新授权，见 https://developers.google.com/identity/protocols/oauth2#expiration 。官方 Gmail MCP 还要求开发者预览资格；最终以真实工具目录验证为准，不把 OAuth 成功当成工具已可用。
+
 ## 检查与部署
 
 在此目录执行 npm ci --ignore-scripts、npm test。测试包含实际 workerd + 官方 OAuth 库；Google 网络由本地模拟服务代替，不请求真实邮箱或收费模型。部署兼容日期与测试读取同一配置。Workers 不支持 redirect: error，这里使用 manual 并拒绝跳转，保持不转发凭据的约束。

@@ -53,6 +53,12 @@ test('Google refresh rotates credentials; revoked grants are distinguished from 
  assert.equal(next.googleAccessToken,'new-token');assert.equal(next.googleRefreshToken,'new-refresh');
  for(const error of ['invalid_grant','server_error'])await assert.rejects(refreshGoogle(e,props,async()=>new Response(JSON.stringify({error,error_description:'fixture-secret'}),{status:400})),err=>err.code===(error==='invalid_grant'?'invalid_grant':'temporarily_unavailable')&&!err.message.includes('fixture-secret'));
 });
+test('Google client rejection is configuration failure, never a generic retry or leaked description',async()=>{
+ for(const error of ['invalid_client','unauthorized_client']){
+  let calls=0;await assert.rejects(googleTokens(env(),{grant_type:'authorization_code',code:'fixture-code'},async()=>{calls++;return new Response(JSON.stringify({error,error_description:'fixture-secret fixture-code'}),{status:401});}),e=>e.code==='google_client_configuration'&&!e.message.includes('fixture-secret')&&!e.message.includes('fixture-code'));
+  assert.equal(calls,1);
+ }
+});
 test('consent approval uses library-bound request and PKCE, without trusting form redirect fields',async()=>{
  const e=env(),original={clientId:'mcp-client',redirectUri:base+'/client-callback',scope:['mcp:read']};let approved=false,verifier='';
  e.OAUTH_PROVIDER={
@@ -87,12 +93,13 @@ test('callback page is private, escaped and has no external scripts or assets',a
 test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async()=>{
  const {build}=await import('esbuild'),{Miniflare,convertV4MiniflareOptions}=await import('miniflare'),{fileURLToPath}=await import('node:url');
  const output=await build({absWorkingDir:fileURLToPath(new URL('.',import.meta.url)),entryPoints:['worker.mjs'],bundle:true,write:false,platform:'browser',format:'esm',target:'es2022',external:['cloudflare:workers']});
- let renewals=0,reads=0;
+ let renewals=0,reads=0,tokenFailure='';
  const outbound=async request=>{
   const url=new URL(request.url);
   if(url.href===base+'/client-metadata.json')return Response.json(clientMetadata(env()));
   if(url.origin==='https://oauth2.googleapis.com'){
    const form=await request.formData();assert.equal(form.get('client_secret'),'fixture-secret');const renewal=form.get('grant_type')==='refresh_token';if(renewal)renewals++;
+   if(tokenFailure)return Response.json({error:tokenFailure,error_description:'fixture-secret google-fixture-code'},{status:400});
    return Response.json({access_token:renewal?'renewed-google-token':'initial-google-token',refresh_token:'google-refresh',expires_in:3600,token_type:'Bearer',scope:'openid email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose'});
   }
   if(url.origin==='https://openidconnect.googleapis.com')return Response.json({sub:'subject',email:'owner@fixture.invalid',email_verified:true});
@@ -121,5 +128,13 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
   const list=async value=>{const response=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:10,method:'tools/list'})});assert.equal(response.status,200,await response.clone().text());assert.deepEqual((await response.json()).result.tools.map(t=>t.name),['get_thread']);};
   await list(token.access_token);
   r=await send('/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:client.client_id,grant_type:'refresh_token',refresh_token:token.refresh_token,resource:base+'/mcp'}).toString()});assert.equal(r.status,200,await r.clone().text());const next=await r.json();assert.equal(renewals,1);await list(next.access_token);assert.equal(reads,2);
+  for(const [failure,status,marker] of [['invalid_client',502,'GMAIL_CLIENT_CONFIG'],['invalid_grant',400,'GMAIL_CODE_REJECTED'],['server_error',503,'GMAIL_TOKEN_UNAVAILABLE']]){
+   tokenFailure=failure;r=await send('/authorize?'+new URLSearchParams(query));remember(r);
+   const newHandle=(await r.text()).match(/name="handle" value="([^"]+)"/)[1];
+   r=await send('/authorize',{method:'POST',headers:{Cookie:cookies(),Origin:base,'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams([['handle',newHandle],['decision','approve'],['scope','mcp:read']]).toString()});assert.equal(r.status,302);remember(r);
+   const state=new URL(r.headers.get('Location')).searchParams.get('state');
+   r=await send('/oauth/google/callback?'+new URLSearchParams({code:'google-fixture-code',state}),{headers:{Cookie:cookies()}});
+   assert.equal(r.status,status);const errorPage=await r.text();assert(errorPage.includes(marker));assert(!errorPage.includes('fixture-secret'));assert(!errorPage.includes('google-fixture-code'));assert.equal(reads,2);
+  }
  }finally{await mf.dispose();}
 });

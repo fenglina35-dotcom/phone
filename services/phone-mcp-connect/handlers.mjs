@@ -29,6 +29,11 @@ export function html(body,headers=new Headers(),status=200,script='',googleRedir
 export function receiptPage(request){
  return html('<small>小手机 · 授权回执</small><h1>返回小手机完成连接</h1><p>复制本次完整回执，回到小手机选择“粘贴回执”。回执不代表工具目录已经验证成功。</p><input type="text" readonly id="receipt" value="'+esc(request.url)+'"><button id="copy">复制完整回执</button><p id="status">请勿分享此回执链接。</p>',new Headers(),200,"document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(document.getElementById('receipt').value);document.getElementById('status').textContent='已复制，返回小手机粘贴。';}catch(_){document.getElementById('receipt').select();document.getElementById('status').textContent='请手动复制选中的完整链接。';}})");
 }
+// MCP_GMAIL_OAUTH_STAGE_V1: expose fixed stages only, never Google error descriptions or credentials.
+export function oauthFailurePage(code){
+ const detail=code==='google_client_configuration'?['GMAIL_CLIENT_CONFIG','Google 应用凭据未通过','请核对后端的 Google Client ID 和 Client Secret 是否来自同一个客户端、密钥是否仍有效。不要把密钥发到聊天里。',502]:code==='invalid_grant'?['GMAIL_CODE_REJECTED','Google 未接受本次授权码','本次授权码可能已使用或失效，请重新开始授权。',400]:code==='temporarily_unavailable'?['GMAIL_TOKEN_UNAVAILABLE','Google 换取凭据未完成','Google 暂未完成换取凭据，请保留此提示供排查。',503]:['GMAIL_AUTH_TRANSACTION','授权事务未完成','请返回小手机重新开始，核对浏览器中的本次授权流程。',400];
+ return html('<small>'+detail[0]+'</small><h1>'+detail[1]+'</h1><p>'+detail[2]+'</p><p>没有自动重试工具请求。</p>',new Headers(),detail[3]);
+}
 export async function readLimited(body,limit=2*1024*1024){
  if(!body)return '';const reader=body.getReader(),decoder=new TextDecoder();let text='',size=0;
  try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit)throw new Error('response_too_large');text+=decoder.decode(value,{stream:true});}return text+decoder.decode();}
@@ -47,7 +52,7 @@ async function jsonFetch(url,init,fetchFn=fetch){
 }
 export async function googleTokens(env,fields,fetchFn=fetch){
  const {ok,data}=await jsonFetch(GOOGLE_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...fields,client_id:env.GOOGLE_CLIENT_ID,client_secret:env.GOOGLE_CLIENT_SECRET}).toString()},fetchFn);
- if(!ok||!data.access_token){const e=new Error(data.error==='invalid_grant'?'invalid_grant':'temporarily_unavailable');e.code=e.message;throw e;}
+ if(!ok||!data.access_token){const code=['invalid_client','unauthorized_client'].includes(data.error)?'google_client_configuration':data.error==='invalid_grant'?'invalid_grant':'temporarily_unavailable',e=new Error(code);e.code=code;throw e;}
  if(data.token_type && String(data.token_type).toLowerCase()!=='bearer')throw new Error('invalid_token_type');
  return{googleAccessToken:data.access_token,googleRefreshToken:data.refresh_token||fields.refresh_token,googleExpiresAt:Date.now()+Math.max(60,Number(data.expires_in)||3600)*1000,googleGrantedScopes:String(data.scope||'').split(/\s+/).filter(Boolean)};
 }
