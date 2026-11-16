@@ -19,16 +19,16 @@ wrangler.toml 只包含公开服务 URL、KV 标识、10ms 单请求 CPU 上限�
 - GOOGLE_CLIENT_ID
 - GOOGLE_CLIENT_SECRET
 - ALLOWED_EMAILS
-- SETUP_KEY：临时管理客户端注册，完成后删除即可关闭注册。
+- SETUP_KEY：仅供兼容旧客户端时临时注册，正常小手机连接无需配置。
 
 在 Google Cloud 的同一专用项目启用 Gmail API 与 Gmail MCP API。OAuth 同意屏幕给自己的账号添加测试用户，申请 openid、email、gmail.readonly；需要草稿时再申请 gmail.compose。OAuth Web 客户端选择「用于 AI 代理」，唯一 Google 回调为 PUBLIC_URL 加 /oauth/google/callback。服务条款、创建凭据和最终邮箱授权须由本人确认。
 
-管理者仅以 SETUP_KEY 调用 /register 一次，注册 token_endpoint_auth_method 为 none 的公共客户端，唯一回调为 PUBLIC_URL 加 /client-callback。记录返回的公开 Client ID，然后删除临时 SETUP_KEY；已有客户端仍可授权，不再允许注册新客户端。
+正常连接采用官方库支持的公开客户端描述（CIMD）：MCP 客户端 ID 固定为 PUBLIC_URL 加 /client-metadata.json，唯一回调为 /client-callback。描述文档没有密钥；PKCE 与 Google 账号校验继续生效。动态注册默认关闭，不需要把管理密钥交给网页。旧客户端确有需要时，管理者可临时设置 SETUP_KEY，在 /register 注册 none 公共客户端后删除此密钥。
 
 小手机连接设置：
 
 - 地址为 PUBLIC_URL 加 /mcp，授权方式 OAuth。
-- 选择「使用此服务自己的回执页」，填写上一步的公共 Client ID。
+- 选择「使用此服务自己的回执页」，MCP 客户端 ID 填 PUBLIC_URL 加 /client-metadata.json。
 - 授权范围：只读用 mcp:read offline_access；读信加草稿用 mcp:read mcp:write offline_access。
 - 从小手机发起 Google 登录，把服务回执页完整链接粘贴回小手机，再验证真实工具目录。
 - 角色权限在小手机内单独勾选，默认不会授权给全部角色。

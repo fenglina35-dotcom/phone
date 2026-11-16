@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {defaultHandler,gmailProxy,googleTokens,refreshGoogle,registrationPolicy,ownerAllowed,readRpc,UPSTREAM} from './handlers.mjs';
+import {defaultHandler,gmailProxy,googleTokens,refreshGoogle,registrationPolicy,ownerAllowed,readRpc,UPSTREAM,clientMetadata} from './handlers.mjs';
 const base='https://own-gmail.fixture.invalid';
 const env=()=>({PUBLIC_URL:base,GOOGLE_CLIENT_ID:'fixture-client',GOOGLE_CLIENT_SECRET:'fixture-secret',ALLOWED_EMAILS:'owner@fixture.invalid',SETUP_KEY:'fixture-setup',OAUTH_KV:{}});
 const context=()=>({props:{email:'owner@fixture.invalid',subject:'owner-subject',googleAccessToken:'fixture-google-token',googleRefreshToken:'fixture-google-refresh',googleExpiresAt:Date.now()+3600000},auth:{scope:['mcp:read','mcp:write']}});
@@ -90,6 +90,7 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
  let renewals=0,reads=0;
  const outbound=async request=>{
   const url=new URL(request.url);
+  if(url.href===base+'/client-metadata.json')return Response.json(clientMetadata(env()));
   if(url.origin==='https://oauth2.googleapis.com'){
    const form=await request.formData();assert.equal(form.get('client_secret'),'fixture-secret');const renewal=form.get('grant_type')==='refresh_token';if(renewal)renewals++;
    return Response.json({access_token:renewal?'renewed-google-token':'initial-google-token',refresh_token:'google-refresh',expires_in:3600,token_type:'Bearer',scope:'openid email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose'});
@@ -105,7 +106,7 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
   let r=await send('/.well-known/oauth-protected-resource/mcp');assert.equal(r.status,200,await r.clone().text());assert.equal((await r.json()).resource,base+'/mcp');
   const registration={client_name:'小手机测试',redirect_uris:[base+'/client-callback'],grant_types:['authorization_code','refresh_token'],response_types:['code'],token_endpoint_auth_method:'none'};
   r=await send('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(registration)});assert.equal(r.status,403);
-  r=await send('/register',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-setup'},body:JSON.stringify(registration)});assert.equal(r.status,201,await r.clone().text());const client=await r.json();assert(client.client_id);assert(!client.client_secret);
+  r=await send('/register',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture-setup'},body:JSON.stringify(registration)});assert.equal(r.status,201,await r.clone().text());const registered=await r.json();assert(registered.client_id);assert(!registered.client_secret);const client={client_id:base+'/client-metadata.json'};
   const verifier='client-verifier-'+ 'v'.repeat(50),digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier)),challenge=Buffer.from(digest).toString('base64url');
   const query={client_id:client.client_id,response_type:'code',redirect_uri:base+'/client-callback',scope:'mcp:read mcp:write offline_access',resource:base+'/mcp',state:'client-state',code_challenge:challenge,code_challenge_method:'S256'};
   const jar=new Map(),cookies=()=>[...jar].map(([k,v])=>k+'='+v).join('; ');

@@ -7,7 +7,7 @@ function provider(env){
   authorizeEndpoint:'/authorize',tokenEndpoint:'/oauth/token',clientRegistrationEndpoint:'/register',
   resourceMetadata:{resource:env.PUBLIC_URL+'/mcp',authorization_servers:[env.PUBLIC_URL]},
   scopesSupported:SCOPES,requiredScopes:['mcp:read'],accessTokenTTL:3300,refreshTokenTTL:30*86400,
-  clientIdMetadataDocumentEnabled:false,allowTokenExchangeGrant:false,
+  clientIdMetadataDocumentEnabled:true,allowTokenExchangeGrant:false,
   clientRegistrationCallback:args=>registrationPolicy(env,args),
   tokenExchangeCallback:async({grantType,props,env:runtime})=>{
    if(grantType!=='refresh_token')return;
@@ -28,7 +28,7 @@ export default {
   try{response=await provider(env).fetch(request,env,context);}
   catch(error){if(error instanceof AuthorizationError||error instanceof CimdFetchError||error.code==='invalid_grant'||error.code==='temporarily_unavailable')response=html('<h1>本次连接未完成</h1><p>请返回小手机重新开始。没有自动重试工具请求。</p>',new Headers(),error.code==='temporarily_unavailable'?503:400);else throw error;}
   const headers=new Headers(response.headers);
-  headers.set('Cache-Control','no-store');headers.set('Referrer-Policy','no-referrer');headers.set('X-Content-Type-Options','nosniff');
+  headers.set('Cache-Control',url.pathname==='/client-metadata.json'?'public, max-age=300':'no-store');headers.set('Referrer-Policy','no-referrer');headers.set('X-Content-Type-Options','nosniff');
   if(origin){headers.set('Access-Control-Allow-Origin',origin);headers.set('Vary','Origin');headers.set('Access-Control-Expose-Headers','Mcp-Session-Id, MCP-Protocol-Version, WWW-Authenticate');}
   return new Response(response.body,{status:response.status,headers});
  }

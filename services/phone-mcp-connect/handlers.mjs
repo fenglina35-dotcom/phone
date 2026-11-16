@@ -3,6 +3,12 @@ export function registrationPolicy(env,{clientMetadata,request}){
  if(!env.SETUP_KEY||request.headers.get('Authorization')!=='Bearer '+env.SETUP_KEY||clientMetadata.token_endpoint_auth_method!=='none'||!Array.isArray(urls)||urls.length!==1||urls[0]!==env.PUBLIC_URL+'/client-callback')return{code:'access_denied',description:'Client registration is restricted to the owner setup.',status:403};
 }
 // Gmail-only gateway. Google credentials stay in encrypted OAuth props on the Worker.
+// MCP_GMAIL_CIMD_V1: a public, pinned client descriptor avoids a registration setup secret.
+export const clientMetadata = env => ({
+ client_id:env.PUBLIC_URL+'/client-metadata.json',client_name:'小手机私人连接',
+ redirect_uris:[env.PUBLIC_URL+'/client-callback'],grant_types:['authorization_code','refresh_token'],
+ response_types:['code'],token_endpoint_auth_method:'none',token_endpoint_auth_methods_supported:['none']
+});
 export const UPSTREAM = 'https://gmailmcp.googleapis.com/mcp/v1';
 export const GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token';
 export const GOOGLE_SCOPES = ['openid','email','https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.compose'];
@@ -84,7 +90,8 @@ export async function gmailProxy(request,env,context,fetchFn=fetch){
 }
 export async function defaultHandler(request,env,fetchFn=fetch){
  const path=new URL(request.url).pathname,oauth=env.OAUTH_PROVIDER;
- if(path==='/health')return Response.json({service:'smallphone-gmail-mcp',ready:ready(env),tools:'search,read,drafts',billing:'free-plan-only'},{headers:{'Cache-Control':'no-store'}});
+ if(path==='/client-metadata.json'&&request.method==='GET')return Response.json(clientMetadata(env),{headers:{'Cache-Control':'public, max-age=300'}});
+ if(path==='/health')return Response.json({service:'smallphone-gmail-mcp',ready:ready(env),tools:'search,read,drafts',billing:'existing-included-quota-only'},{headers:{'Cache-Control':'no-store'}});
  if(path==='/client-callback'&&request.method==='GET')return receiptPage(request);
  if(!ready(env))return html('<h1>连接服务待配置</h1><p>请先完成 Google 应用配置，再从小手机重新发起登录。</p>',new Headers(),503);
  if(path==='/authorize'&&request.method==='GET'){
