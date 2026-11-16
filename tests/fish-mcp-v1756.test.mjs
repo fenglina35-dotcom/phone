@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
+import {read as readProject} from './_helpers.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const PRIVATE='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
@@ -108,4 +109,39 @@ test('member login (fishmcp) always gets the Fish expressive treatment, whatever
     assert.notEqual(V.performance('[轻笑]我才不信',{id:'r'},{provider:'fishmcp',base:'https://api.fish.audio',model:''},{}),null,file+': model field empty');
     assert.equal(V.performance('[轻笑]我才不信',{id:'r2'},{provider:'fish',base:'https://api.fish.audio',model:''},{}),null,file+': API Key mode still follows the model field');
   }
+});
+
+test('browser consent permits the Google redirect and blocks other form destinations',async()=>{
+ const {createRequire}=await import('node:module'),{chromium}=createRequire(import.meta.url)('playwright');
+ const {defaultHandler}=await import('data:text/javascript;base64,'+Buffer.from(readProject('services/phone-mcp-connect/handlers.mjs')).toString('base64'));
+ const base='https://own-gmail.fixture.invalid',fixture={PUBLIC_URL:base,GOOGLE_CLIENT_ID:'fixture-client',GOOGLE_CLIENT_SECRET:'fixture-secret',ALLOWED_EMAILS:'owner@fixture.invalid',OAUTH_KV:{}};fixture.OAUTH_PROVIDER={
+  parseAuthRequest:async()=>({clientId:'fixture',scope:['mcp:read'],redirectUri:base+'/client-callback'}),
+  lookupClient:async()=>({clientName:'SmallPhone fixture'}),
+  beginConsent:async()=>({handle:'fixture-consent',headers:new Headers()})
+ };
+ const response=await defaultHandler(new Request(base+'/authorize'),fixture),body=await response.text();
+ const browser=await chromium.launch({headless:true,args:['--mute-audio']});
+ try{
+  const page=await browser.newPage();let destination='https://accounts.google.com/o/oauth2/v2/auth?fixture=1',forbiddenRequests=0;
+  // Redirected navigations can bypass Playwright's original route handler. Block their
+  // network dispatch at Chromium itself; observe the attempted navigation, never Google.
+  const cdp=await page.context().newCDPSession(page);await cdp.send('Network.enable');
+  await cdp.send('Network.setBlockedURLs',{urls:['https://accounts.google.com/*','https://untrusted.fixture.invalid/*']});
+  const observed=[];page.on('requestfailed',r=>observed.push({url:r.url(),failure:r.failure()}));const policies=[];page.on('console',message=>{if(message.text().includes('form-action'))policies.push(message.text());});
+  await page.route('**/*',async route=>{
+   const request=route.request(),url=new URL(request.url());observed.push({method:request.method(),url:url.href});
+   if(url.origin===base)return route.fulfill(request.method()==='POST'?{status:302,headers:{Location:destination},body:''}:{status:200,headers:Object.fromEntries(response.headers),body});
+   if(url.origin==='https://accounts.google.com')return route.fulfill({status:200,contentType:'text/html',body:'<h1>Google consent fixture</h1>'});
+   forbiddenRequests++;return route.abort();
+  });
+  await page.goto(base+'/authorize');
+  const googleNavigation=page.waitForEvent('request',{predicate:request=>new URL(request.url()).origin==='https://accounts.google.com',timeout:5000});
+  await page.getByRole('button',{name:'前往 Google 授权'}).click({noWaitAfter:true});
+  try{assert.equal((await googleNavigation).url(),destination);}catch(error){assert.fail('Google redirect was not allowed: '+JSON.stringify({policies,observed,error:error.message}));}
+  assert.equal(policies.length,0);
+  destination='https://untrusted.fixture.invalid/steal';await page.goto(base+'/authorize');
+  const blocked=page.waitForEvent('console',{predicate:message=>message.text().includes('form-action'),timeout:5000});
+  await page.getByRole('button',{name:'前往 Google 授权'}).click({noWaitAfter:true});await blocked;
+  assert.equal(new URL(page.url()).origin,base);assert.equal(forbiddenRequests,0);assert(!observed.some(row=>row.url.startsWith('https://untrusted.fixture.invalid')));
+ }finally{await browser.close();}
 });

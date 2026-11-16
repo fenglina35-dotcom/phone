@@ -1690,6 +1690,15 @@ const PERMANENT_FIXES = [
   },
 ];
 
+PERMANENT_FIXES.push({
+  release: 'Gmail MCP backend',
+  name: 'Gmail 授权表单保留固定 Google 跳转，其他页面不扩大表单目标',
+  scope: 'web',
+  file: 'services/phone-mcp-connect/handlers.mjs',
+  marker: 'MCP_GMAIL_BROWSER_REDIRECT_V1',
+  least: 1,
+});
+
 const sources = { web: read(WEB), private: read(PRIVATE) };
 
 for (const fix of PERMANENT_FIXES) {

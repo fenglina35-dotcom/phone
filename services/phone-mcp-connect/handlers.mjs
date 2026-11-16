@@ -20,9 +20,10 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 export const toolKind = name => {const n=String(name).replace(/^gmail[._/]/,'');return READ.has(n)?'read':WRITE.has(n)?'write':null;};
 export const ready = env => !!(env.PUBLIC_URL && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.ALLOWED_EMAILS && env.OAUTH_KV);
 export const ownerAllowed = (env,email) => String(env.ALLOWED_EMAILS||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean).includes(String(email||'').toLowerCase());
-export function html(body,headers=new Headers(),status=200,script=''){
+export function html(body,headers=new Headers(),status=200,script='',googleRedirect=false){
  headers=new Headers(headers);headers.set('Content-Type','text/html;charset=utf-8');headers.set('Cache-Control','no-store');headers.set('Referrer-Policy','no-referrer');
- const nonce=crypto.randomUUID();headers.set('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+"'; form-action 'self'; frame-ancestors 'none'");headers.set('X-Frame-Options','DENY');
+ // MCP_GMAIL_BROWSER_REDIRECT_V1: Chromium applies form-action to the OAuth 302 destination too.
+ const nonce=crypto.randomUUID();headers.set('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+"'; form-action 'self'"+(googleRedirect?' https://accounts.google.com':'')+"; frame-ancestors 'none'");headers.set('X-Frame-Options','DENY');
  return new Response('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>小手机 · Gmail 连接</title><style>body{margin:0;background:#000;color:#f2f2f7;font:15px/1.7 -apple-system,sans-serif;padding:24px}main{max-width:440px;margin:8vh auto;background:#1c1c1e;border:1px solid #35353a;border-radius:24px;padding:25px}h1{font-size:23px}p,li{color:#afb0ba}button,input{font:inherit;border-radius:14px;padding:12px;border:1px solid #45454c;box-sizing:border-box}button{background:#0a84ff;color:#fff;cursor:pointer;margin:8px 8px 0 0}button[value=deny]{background:#303035}input[type=text]{width:100%;color:#eee;background:#27272d}small{color:#74b8ff}strong{color:#eee;overflow-wrap:anywhere}</style><main>'+body+'</main>'+(script?'<script nonce="'+nonce+'">'+script+'</script>':'')+'</html>',{status,headers});
 }
 export function receiptPage(request){
@@ -97,7 +98,7 @@ export async function defaultHandler(request,env,fetchFn=fetch){
  if(path==='/authorize'&&request.method==='GET'){
   const parsed=await oauth.parseAuthRequest(request),client=await oauth.lookupClient(parsed.clientId),consent=await oauth.beginConsent(parsed);
   const scopes=parsed.scope.filter(s=>SCOPES.includes(s));
-  return html('<small>小手机 · Gmail</small><h1>允许连接你的 Gmail？</h1><p>请求应用：<strong>'+esc(client?.clientName||client?.client_name||'小手机')+'</strong></p><p>授权回执将返回：<strong>'+esc(new URL(parsed.redirectUri).hostname)+'</strong></p><ul><li>搜索邮件、读取会话和标签</li>'+(scopes.includes('mcp:write')?'<li>创建邮件草稿</li>':'')+'<li>保持登录，凭据仅由此服务端处理</li></ul><p>本连接不开放发送邮件、删除邮件工具。</p><form method="post"><input type="hidden" name="handle" value="'+esc(consent.handle)+'">'+scopes.map(s=>'<input type="hidden" name="scope" value="'+esc(s)+'">').join('')+'<button name="decision" value="approve">前往 Google 授权</button><button name="decision" value="deny">取消</button></form>',consent.headers);
+  return html('<small>小手机 · Gmail</small><h1>允许连接你的 Gmail？</h1><p>请求应用：<strong>'+esc(client?.clientName||client?.client_name||'小手机')+'</strong></p><p>授权回执将返回：<strong>'+esc(new URL(parsed.redirectUri).hostname)+'</strong></p><ul><li>搜索邮件、读取会话和标签</li>'+(scopes.includes('mcp:write')?'<li>创建邮件草稿</li>':'')+'<li>保持登录，凭据仅由此服务端处理</li></ul><p>本连接不开放发送邮件、删除邮件工具。</p><form method="post"><input type="hidden" name="handle" value="'+esc(consent.handle)+'">'+scopes.map(s=>'<input type="hidden" name="scope" value="'+esc(s)+'">').join('')+'<button name="decision" value="approve">前往 Google 授权</button><button name="decision" value="deny">取消</button></form>',consent.headers,200,'',true);
  }
  if(path==='/authorize'&&request.method==='POST'){
   const form=await request.formData(),handle=String(form.get('handle')||'');

@@ -39,6 +39,8 @@ wrangler.toml 只包含公开服务 URL、KV 标识、10ms 单请求 CPU 上限�
 
 在此目录执行 npm ci --ignore-scripts、npm test。测试包含实际 workerd + 官方 OAuth 库；Google 网络由本地模拟服务代替，不请求真实邮箱或收费模型。部署兼容日期与测试读取同一配置。Workers 不支持 redirect: error，这里使用 manual 并拒绝跳转，保持不转发凭据的约束。
 
+浏览器还须验证真实表单的跨站跳转。Chromium 会把 form-action 检查应用到 302 目标；只写 self 会拦住 Google，随后重复提交则因一次性事务已消费而失败。仅授权页额外允许固定 https://accounts.google.com，回执和错误页仍只允许 self。复用根目录 tests/fish-mcp-v1756.test.mjs 的 browser consent 回归，通过 scripts/run_tests_mac.sh 运行；Google 测试请求在 Chromium 层阻断，只观察跳转意图，陌生目标仍必须由 CSP 拦截。FIX_TEST_OLD=1 对照旧实现必须失败。
+
 先执行 Wrangler 的 deploy --dry-run。仅从已提交的本服务源码部署，核对服务目录无未提交差异；小手机其他未提交候选的发布状态单独记录。实际部署后只读核验服务地址、CPU 上限与 KV 绑定，Google 登录和工具目录在本人完成授权后核验。
 
 Workers 用量与账号内其他项目共享，套餐内额度有限。不得为此升级套餐或新开订阅；现有包含额度不够时先停下说明，不自动购买。
