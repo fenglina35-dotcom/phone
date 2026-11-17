@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import vm from 'node:vm';
+import {read as readProject,fnSource} from './_helpers.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('app.js');
@@ -29,4 +31,9 @@ test('role and real-friend incoming messages share the MP3 without replacing cal
   assert.match(functionSource('audioMediaWake'),/messageToneElement\(\)/);
   assert.doesNotMatch(functionSource('incomingRingUrl'),/MESSAGE_NOTIFICATION_URL/);
   assert.match(bundledApp,/const MESSAGE_NOTIFICATION_URL='assets\/message-notification-user-v1\.mp3'/);
+});
+
+test('incoming notification mixes while music is playing and never starts a second media player',()=>{
+ let mixed=0,media=0,played=0;const c={S:{settings:{sound:true}},MCPTools:{hasOfficialMusic:()=>false},_ma:{paused:false},_mWantPlay:true,messageDingMix(){mixed++;return true;},messageToneElement(){media++;return{pause(){},play(){played++;return Promise.resolve();},src:'',currentTime:0};},playDing(){},volMul:()=>1,MESSAGE_NOTIFICATION_URL:'assets/message-notification-user-v1.mp3'};vm.createContext(c);vm.runInContext(fnSource(readProject('src/app/039-sleep.js'),'officialMusicPresent')+'\n'+fnSource(readProject('src/app/039-sleep.js'),'playMessageDing')+'\nthis.ding=playMessageDing;',c);
+ c.ding();assert.equal(mixed,1);assert.equal(media,0);assert.equal(played,0);assert.equal(c._ma.paused,false);c._ma.paused=true;c.ding();assert.equal(media,1);assert.equal(played,1);c.MCPTools.hasOfficialMusic=()=>true;c.ding();assert.equal(mixed,2);assert.equal(media,1);c.S.settings.sound=false;c.ding();assert.equal(mixed,2);assert.equal(played,1);
 });

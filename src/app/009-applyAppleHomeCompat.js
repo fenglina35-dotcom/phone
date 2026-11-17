@@ -289,7 +289,7 @@ function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
   return _wCard(svgIc('calendar',22,col),'距 '+esc(best.title),main,'openCouple()');}
 function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
-function wDisc(){const col=wcol(),songs=S.music&&Array.isArray(S.music.songs)?S.music.songs:[],wanted=_mCur||(S.music&&S.music.lastSongId),s=songs.find(x=>x.id===wanted)||songs[0]||null;
+function wDisc(){const col=wcol(),songs=S.music&&Array.isArray(S.music.songs)?S.music.songs.filter(s=>!s.mcpAccount||s.mcpAccount===String(actId())):[],wanted=_mCur||(S.music&&S.music.lastSongId),s=songs.find(x=>x.id===wanted)||songs[0]||null;
   const cover=s&&s.cover?`<i class="home-record-cover" style="background-image:url(${s.cover})"></i>`:`<i class="home-record-cover home-record-empty">${esc(Array.from((s&&s.title)||'音')[0]||'音')}</i>`;
   const disc=`<span class="home-record${s&&_mPlaying?' wdisc':''}" aria-hidden="true">${cover}</span>`;
   const main=s?'<b>'+esc(s.title)+'</b><span>'+esc(s.artist||'私人收藏')+'</span>':'<b>音乐</b><span>还没在听 · 去挑一首</span>';

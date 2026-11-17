@@ -97,6 +97,15 @@ assert.match(fields.testC.textContent, /接口错误/);
 
 console.log("chat model type guard tests passed");
 
+// A short connection probe must ask for a bounded answer, rather than invite an explanation.
+for(const [bundle,file] of BUNDLES){
+ const src=read(file),out={style:{}},fields={s_cbase:{value:'https://api.deepseek.com/v1'},s_ckey:{value:'fixture-only'},s_cmodel:{value:'deepseek-v4-pro'},s_cstream:{checked:false},s_reasoning_on:{checked:false},s_reasoning_effort:{value:'high'}};let requests=0;
+ const c=vm.createContext({URL,setTimeout,clearTimeout,S:{settings:{chat:{maxTokens:4096},chatRouteActive:0}},CHAT_ROUTE_NAMES:['路线一'],$:s=>fields[s.slice(1)]||out,chatModelTypeError:()=>'',apiCaughtCN:e=>e.message,uiConfirm:async()=>false,
+  fetchT:async(u,o)=>{requests++;const b=JSON.parse(o.body),bounded=b.messages.some(m=>/只输出一个汉字/.test(m.content)&&/不要解释/.test(m.content));return{ok:true,status:200,text:async()=>JSON.stringify({choices:[{finish_reason:bounded?'stop':'length',message:{content:bounded?'在':'这是一段超过短测预算的说明'}}]})};}});
+ for(const name of ['modelProbeText','modelProbeRead','modelProbeResponse','modelProbeModes','modelProbeBody','chatCompletionBody','testModel'])vm.runInContext(fnSource(src,name),c);
+ const before=JSON.stringify(c.S);await c.testModel('s_cbase','s_ckey','s_cmodel','testC','');assert.match(out.textContent,/✅/,bundle+' explicit short probe');assert.equal(requests,1);assert.equal(JSON.stringify(c.S),before);
+}
+
 // Execute shipped entrypoints, including the old implementation for the must-fail check.
 for(const [bundle,file] of BUNDLES){
  const src=read(file),out={style:{},textContent:''},inputs={s_cbase:{value:'https://fixture.invalid/v1'},s_ckey:{value:'fixture-key'},s_cmodel:{value:'text-model'},s_xbase:{value:''},s_xkey:{value:''},s_xmodel:{value:'aux-model'},s_sebase:{value:'https://fixture.invalid/v1'},s_sekey:{value:'fixture'},s_semodel:{value:'search-model'},s_reasoning_on:{checked:false},s_reasoning_effort:{value:'high'}};

@@ -81,6 +81,13 @@ async function runPage(label, entry) {
       visionTestImage = () => ({ dataURL: 'data:image/png;base64,iVBORw0KGgo=', code: 'AB12' });
       _setCategory = ''; go('settings');
     });
+    const eyeCheck=await page.evaluate(()=>{
+      settingsCategoryOpen('network');const before=JSON.stringify(S.settings),result=[];
+      for(const id of ['s_ckey','s_xkey','s_sekey','s_vkey','s_tkey','s_skey','s_ikey']){const input=document.getElementById(id),button=input.nextElementSibling,value=input.value;button.click();const shown=input.type==='text'&&input.value===value;button.click();result.push(shown&&input.type==='password'&&input.value===value&&document.getElementById(id)===input);}
+      let modal=true;for(const id of ['code_key','rsc_key','mcp-token','cl_key']){openModal('<div class="field"><label>测试密钥</label><input id="'+id+'" type="password" value="fixture-long-secret-only-012345678901234567890123456789"></div>');const input=document.getElementById(id),button=input.nextElementSibling;button.click();modal=modal&&input.type==='text';button.click();closeModal();}return{count:result.length,passed:result.every(Boolean),modal,unchanged:before===JSON.stringify(S.settings)};
+    });assert.deepEqual(eyeCheck,{count:7,passed:true,modal:true,unchanged:true});
+    for(const width of [320,390,430]){await page.setViewportSize({width,height:760});const fits=await page.evaluate(()=>Array.from(document.querySelectorAll('#app .north-secret-field>input')).filter(input=>input.getBoundingClientRect().width>0).every(input=>{const i=input.getBoundingClientRect(),b=input.nextElementSibling.getBoundingClientRect();return b.left>=i.left&&b.right<=i.right+1&&parseFloat(getComputedStyle(input).paddingRight)>=b.width+4;}));assert.equal(fits,true,label+' eyes fit at '+width);}
+    await page.setViewportSize({width:390,height:760});await page.evaluate(()=>settingsCategoryOpen(''));
     const row = page.locator('.ios-settings-row', { hasText: '一键体检' });
     await row.scrollIntoViewIfNeeded(); await row.click();
     await page.locator('.health-btns button', { hasText: '开始检查' }).click();

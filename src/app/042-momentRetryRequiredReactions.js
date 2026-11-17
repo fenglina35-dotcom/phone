@@ -36,6 +36,7 @@ function openModal(html){
   appSolidMark(m,p);
   $('#modalSheet').classList.toggle('north-offline-sheet',['off','offline','rp'].includes(p));
   $('#modalSheet').innerHTML=html;$('#modalSheet').classList.toggle('north-spec-sheet',!!m.querySelector('.north-spec-layout'));if(m.querySelector('.north-spec-layout'))$('#modalSheet').scrollTop=0;m.classList.toggle('north-travel-modal',p==='travel'||!!m.querySelector('.cth-dialog,.ctg-dialog,.ctf-dialog,.ctn-dialog,.ctt-dialog'));m.classList.add('show');
+  if(typeof secretFieldsMount==='function')secretFieldsMount($('#modalSheet'));
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
 }
 /* DY_SOLID_MODAL_V1（2026-10-18 她说：抖音所有的框框不要做透明的，纯黑底、灰色的框）：从抖音各页点开的框（发起群聊、私信谁、我的关注、全部功能、编辑资料、删除确认……）

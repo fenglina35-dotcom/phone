@@ -17,6 +17,11 @@ import vm from 'node:vm';
 
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const WEB = 'app.js';
+test('secret visibility and bounded model probes are retained in both builds',()=>{
+ for(const file of [WEB,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+  const source=read(file);assert.ok(source.includes('SECRET_FIELD_EYE_V1'),file);assert.ok(source.includes('MODEL_PROBE_SHORT_REPLY_V1'),file);
+ }
+});
 
 test('public North local view cannot overwrite a remote lock with cached UI state', () => {
   const publicDir = 'native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/';
@@ -2148,4 +2153,10 @@ test('only Android web home launch requests fullscreen while private and Apple d
 test('role singing stays owner-bound and plays recordings instead of regenerating lyrics as speech',()=>{
  for(const file of [WEB,PRIVATE]){const src=read(file);assert(src.includes('ROLE_SONG_READY_FIRST_V1'),file+' lost ready performance priority');assert(src.includes('ROLE_SONG_MANUAL_CONVERSION_V1'),file+' lost manual conversion boundary');assert(src.includes('ROLE_SONG_REQUEST_ACTION_V1'),file+' lost named song request action');assert(src.includes('ROLE_SONG_INTRO_V1'),file+' lost natural song introduction');}
  for(const file of [WEB,PRIVATE]){const src=read(file);for(const marker of ['ROLE_SONG_LIBRARY_V1','ROLE_SONG_VOICE_REQUEST_V1','ROLE_SONG_CLOUD_V1','function roleSongConvert(','function roleSongCloudRequest(','function musicRoleSongs(','function roleSongVoiceMessage(','function roleSongPlayCall(','if(m&&m.roleSong)return roleSongSpeakMessage(m,o)','if(m&&m.roleSong)return false','roleSongStopCall(\'call-ended\')','x.role===\'assistant\'&&!x.roleSong&&!x.action'])assert(src.includes(marker),file+' lost '+marker);}
+});
+
+// MCP_ROLE_TOOLS_V1: retain connection verification, scoped execution and the user's two modes.
+test('MCP role tools retain real dispatch, explicit grants, confirmation choice and no replay',()=>{
+ for(const file of [WEB,PRIVATE]){const s=read(file);for(const marker of ['MCP_ROLE_TOOLS_V1','MCP_ISOLATED_BUDGET_V1','MCP_RESULT_CARDS_V1','MCP_INLINE_MUSIC_V1','MCP_OFFICIAL_CARDS_V1','MCP_OFFICIAL_HOST_V1','MCP_DATA_CARDS_V1','MESSAGE_MUSIC_MIX_V1','MCP_SPOTIFY_GMAIL_V1','MCP_SERVICE_CALLBACK_V1','MCP_COMPACT_ROLES_V1','MCP_CHAT_TRACE_V1','MCPTools.chatTraceHTML(m,id)','mcp-dialog-actions',"traceStage(ctx,'awaiting')","else if(c.p==='mcp')html=MCPTools.render()",'MCPTools.roleReply(messages,opt)',"live.mode!=='auto'",'c.roles.includes(ctx.roleId)',"rpc(c,'tools/call'",'ctx.used.has(fingerprint)',"'执行结果待核对'",'if(e&&e.mcpNoRetry)throw e','.mcp-page{--mc-bg:#000;--mc-card:#1c1c1e',"MCPTools.icon('mcp')",'const brandAssets='])assert(s.includes(marker),file+': '+marker);}
+ assert(read('fish-oauth.html').includes("q.get('mcp')==='1'"));
 });

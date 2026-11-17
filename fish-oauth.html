@@ -14,10 +14,11 @@ button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--btn)
 .err{color:#d2493f}
 </style></head><body><div class="card" id="c"></div>
 <script>
-(function(){var q=new URLSearchParams(location.search),code=q.get('code')||'',err=q.get('error_description')||q.get('error')||'',c=document.getElementById('c');
+(function(){var receipt=location.href,q=new URLSearchParams(location.search),mcp=q.get('mcp')==='1',code=q.get('code')||'',err=q.get('error_description')||q.get('error')||'',c=document.getElementById('c');
 function esc(s){return String(s).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];});}
 try{history.replaceState(null,'',location.pathname);}catch(_){}
-if(err||!code){c.innerHTML='<h1>没有拿到授权码</h1><p class="err">'+esc(err||'这次登录没有完成')+'</p><p>回到小手机，重新点「登录 Fish」。</p>';return;}
+if(mcp&&code&&!err){document.title='MCP 授权回执';c.innerHTML='<h1>官网授权已返回</h1><p>复制完整回执链接，回到小手机：设置 → MCP 工具 → 这个连接 → 粘贴回执。验证成功后才会显示已连接。</p><div class="code" id="k">'+esc(receipt)+'</div><button id="b">复制完整回执链接</button><p>本链接只用于完成这次授权，请勿分享给他人。</p>';document.getElementById('b').onclick=function(){var b=this;function ok(){b.textContent='已复制，回小手机粘贴';}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(receipt).then(ok,function(){b.textContent='请长按上面的链接复制';});}else{var r=document.createRange();r.selectNodeContents(document.getElementById('k'));var sel=getSelection();sel.removeAllRanges();sel.addRange(r);try{document.execCommand('copy');ok();}catch(_){b.textContent='请长按上面的链接复制';}}};return;}
+if(err||!code){c.innerHTML='<h1>没有拿到授权码</h1><p class="err">'+esc(err||'这次登录没有完成')+'</p><p>'+ (mcp?'回到小手机，在 MCP 工具中重新点「官网授权」。':'回到小手机，重新点「登录 Fish」。')+'</p>';return;}
 c.innerHTML='<h1>Fish 登录成功</h1><p>复制下面的授权码，回到小手机：设置 → 声音与通话 → 「粘贴授权码」。</p><div class="code" id="k">'+esc(code)+'</div><button id="b">复制授权码</button><p>授权码只能用一次，30 分钟内有效。复制后可以关掉这个页面。</p>';
 document.getElementById('b').onclick=function(){var b=this;function ok(){b.textContent='已复制，回小手机粘贴';}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(ok,function(){sel();});}else sel();

@@ -18,7 +18,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.573 (573)"
+    private static let build = "1.0.574 (574)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -197,9 +197,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
     weak var webView: WKWebView? {
         didSet {
+            for card in officialCardViews.values { card.dispose() }
+            officialCardViews.removeAll()
             ScreenShareCoordinator.shared.attach(to: webView)
             CallPictureInPictureController.shared.attach(to: webView)
         }
+    }
+    func resetOfficialCards() {
+        for card in officialCardViews.values { card.dispose() }
+        officialCardViews.removeAll()
     }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
@@ -230,6 +236,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     // NATIVE_IMAGE_PICKER_V1: photos picked for the sticker store, kept until the web side has read them.
     private var pickedImages: (session: String, items: [(mime: String, data: Data)])?
     private var pickImagesDelegate: PickedImagesDelegate?
+    // MCP_OFFICIAL_NATIVE_V1: user-authorized views have no SmallPhone system bridge.
+    private var officialCardViews: [String: PrivateMCPCardView] = [:]
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
     func userContentController(
@@ -618,6 +626,59 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "call.audio.stop":
             CallPictureInPictureController.shared.stopAudio()
             reply(requestID: requestID, result: ["stopped": true])
+        case "mcp.card.sync":
+            guard message.frameInfo.isMainFrame, message.webView === webView,
+                  let arguments = payload["payload"] as? [String: Any],
+                  let views = arguments["views"] as? [[String: Any]], views.count <= 16,
+                  let host = webView, let parent = host.superview else {
+                reply(requestID: requestID, error: "invalid_card_container"); return
+            }
+            let ids = Set(views.compactMap { $0["id"] as? String })
+            for id in Array(officialCardViews.keys) where !ids.contains(id) {
+                officialCardViews.removeValue(forKey: id)?.dispose()
+            }
+            for item in views {
+                guard let id = item["id"] as? String, id.hasPrefix("mcpv"),
+                      id.count == 24, id.dropFirst(4).allSatisfy({ $0.isHexDigit }),
+                      let html = item["html"] as? String, html.utf8.count <= 24_000 else { continue }
+                let card: PrivateMCPCardView
+                if let existing = officialCardViews[id] { card = existing }
+                else {
+                    card = PrivateMCPCardView(id: id, host: host, html: html)
+                    officialCardViews[id] = card; parent.addSubview(card)
+                }
+                let visible = item["visible"] as? Bool ?? false
+                guard visible, let rect = item["rect"] as? [String: Double],
+                      let width = item["viewportWidth"] as? Double, width.isFinite, width > 0,
+                      ["x", "y", "width", "height"].allSatisfy({ rect[$0]?.isFinite == true }),
+                      (rect["width"] ?? 0) >= 280, (rect["height"] ?? 0) > 0 else {
+                    card.isHidden = true; continue
+                }
+                let scale = host.bounds.width / CGFloat(width)
+                func box(_ r: [String: Double]) -> CGRect {
+                    CGRect(x: CGFloat(r["x"] ?? 0) * scale, y: CGFloat(r["y"] ?? 0) * scale,
+                           width: CGFloat(r["width"] ?? 0) * scale, height: CGFloat(r["height"] ?? 0) * scale)
+                }
+                let full = box(rect)
+                let clip = (item["clip"] as? [String: Double]).map(box) ?? host.bounds
+                let crop = full.intersection(clip).intersection(host.bounds)
+                guard !crop.isNull, crop.width > 0, crop.height > 0 else { card.isHidden = true; continue }
+                card.frame = host.convert(crop, to: parent)
+                card.setContentFrame(CGRect(x: full.minX - crop.minX, y: full.minY - crop.minY,
+                                            width: full.width, height: full.height))
+                card.isHidden = false
+            }
+            reply(requestID: requestID, result: ["synced": true])
+        case "mcp.card.message":
+            guard message.frameInfo.isMainFrame, message.webView === webView,
+                  let arguments = payload["payload"] as? [String: Any],
+                  let id = arguments["id"] as? String,
+                  let data = arguments["data"] as? [String: Any],
+                  let card = officialCardViews[id] else {
+                reply(requestID: requestID, error: "card_not_available"); return
+            }
+            card.receive(data)
+            reply(requestID: requestID, result: ["delivered": true])
         case "music.audio.activate":
             do {
                 let session = AVAudioSession.sharedInstance()
@@ -3544,4 +3605,72 @@ private final class PrivateCodeGameController: UIViewController, WKNavigationDel
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
         decisionHandler(.deny)
     }
+}
+
+
+// External cards run in a separate ephemeral WebView. The only message channel is
+// protocol data routed back to the permission-checking MCP host; no system actions.
+@MainActor
+private final class PrivateMCPCardRelay: NSObject, WKScriptMessageHandler {
+    weak var owner: PrivateMCPCardView?
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.frameInfo.isMainFrame, let data = message.body as? [String: Any] else { return }
+        owner?.emit(data)
+    }
+}
+@MainActor
+private final class PrivateMCPCardView: UIView, WKNavigationDelegate, WKUIDelegate {
+    private let id: String
+    private weak var host: WKWebView?
+    private var browser: WKWebView!
+    init(id: String, host: WKWebView, html: String) {
+        self.id = id; self.host = host
+        super.init(frame: .zero)
+        clipsToBounds = true; isHidden = true
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        config.userContentController = WKUserContentController()
+        let relay = PrivateMCPCardRelay(); relay.owner = self
+        config.userContentController.add(relay, name: "mcpCard")
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = .all
+        browser = WKWebView(frame: .zero, configuration: config)
+        browser.navigationDelegate = self; browser.uiDelegate = self
+        browser.isOpaque = false; browser.backgroundColor = .clear
+        browser.scrollView.isScrollEnabled = false
+        addSubview(browser)
+        browser.loadHTMLString(html, baseURL: nil)
+    }
+    required init?(coder: NSCoder) { nil }
+    func setContentFrame(_ frame: CGRect) { browser.frame = frame }
+    func dispose() {
+        browser.configuration.userContentController.removeScriptMessageHandler(forName: "mcpCard")
+        browser.stopLoading(); browser.loadHTMLString("", baseURL: nil)
+        removeFromSuperview()
+    }
+    private func json(_ value: [String: Any]) -> String? {
+        guard JSONSerialization.isValidJSONObject(value),
+              let data = try? JSONSerialization.data(withJSONObject: value), data.count <= 1_048_576 else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+    func emit(_ data: [String: Any]) {
+        guard let encoded = json(["id": id, "data": data]) else { return }
+        host?.evaluateJavaScript("window.dispatchEvent(new CustomEvent('north:mcp-card-message',{detail:\(encoded)}));", completionHandler: nil)
+    }
+    func receive(_ data: [String: Any]) {
+        guard let encoded = json(data) else { return }
+        browser.evaluateJavaScript("window.__mcpCardReceive && window.__mcpCardReceive(\(encoded));", completionHandler: nil)
+    }
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = action.request.url else { decisionHandler(.cancel); return }
+        let remote = url.scheme == "https" && url.user == nil && url.password == nil && url.host == "open.spotify.com"
+        let local = ["about", "data"].contains(url.scheme ?? "")
+        decisionHandler(remote || local ? .allow : .cancel)
+    }
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? { nil }
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+                 initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
+                 decisionHandler: @escaping (WKPermissionDecision) -> Void) { decisionHandler(.deny) }
 }

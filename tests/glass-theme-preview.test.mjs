@@ -322,7 +322,8 @@ test('app enlargement changes the whole icon box rather than cropping internal a
 test('vinyl playback activates native iOS audio and every pack has a final record color',()=>{
   assert.match(app,/function musicNativeAudioActivate\(\)/);
   assert.match(app,/SmallPhoneNative\.request\('music\.audio\.activate'\)/);
-  assert.match(app,/async function musicToggle\(\)/);
+  assert.match(app,/async function musicToggle\((?:opt)?\)/);
+  assert.match(functionSource('musicToggle'),/await musicNativeAudioActivate\(\)/);
   assert.match(css,/north-pack-pink \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
   assert.match(css,/north-pack-blue \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
   assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
