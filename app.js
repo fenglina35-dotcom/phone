@@ -3403,7 +3403,6 @@ function render(){
     const active=document.activeElement;if(active&&active.id==='cinput')active.blur();
     app.innerHTML='<div class="'+_pageClass+'">'+html+'</div>';
   }
-  if(typeof secretFieldsMount==='function')secretFieldsMount(app);
   if(typeof MCPTools!=='undefined'&&typeof MCPTools.syncOfficial==='function')setTimeout(()=>MCPTools.syncOfficial(),0);
   // SETTINGS_STEADY_PAINT_V1：先筛选设置分类，再恢复滚动和播放动画，不露出其他分类一帧。
   if(c.p==='settings')settingsCategoryApply();
@@ -3416,6 +3415,7 @@ function render(){
      the freshly rebuilt page black until a later timer gets CPU time. */
   if(lazyStoredImagesOn())hydrateStoredImageNodes();
   if(lazyStoredImagesOn())hydrateRouteCriticalStoredImages();
+  if(typeof secretFieldsMount==='function')secretFieldsMount(app);
   chatRouteMount(c);
   if(['wxmoment','wxlive','wxnearby','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit'].includes(c.p)&&app.firstElementChild)app.firstElementChild.classList.add('wx-directory-page');
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
