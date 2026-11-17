@@ -170,6 +170,12 @@ actor MacPhoneAccount {
                 if let first = (result as? [[String: Any]])?.first { return ["ok": true, "found": true, "backup": first] }
             }
             return ["ok": true, "found": false]
+        case "account.sync":
+            let current = generation
+            let session = try await validSession()
+            let result = try await PrivateDeviceSyncHTTP.request(payload, platform: "macOS", bearer: session.access)
+            guard current == generation, try load()?.userID == session.userID else { throw failure("当前账号已变化") }
+            return result
         default:
             throw failure("Mac设备同步正在接入，现有手机备份已保留")
         }

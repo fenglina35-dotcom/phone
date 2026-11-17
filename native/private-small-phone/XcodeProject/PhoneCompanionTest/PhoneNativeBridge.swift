@@ -455,7 +455,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performLicenseRequest(requestID: requestID, arguments: arguments)
         case "account.status", "account.password.signup",
              "account.password.signin",
-             "account.signout", "account.backup.info",
+             "account.signout", "account.backup.info", "account.sync",
              "account.backup.upload", "account.backup.restore",
              "account.backup.file.begin", "account.backup.file.chunk",
              "account.backup.file.commit", "account.backup.file.progress",
@@ -2040,6 +2040,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         let phone: String
     }
 
+    private var privateAccountRenewal: Task<PrivateAccountSession, Error>?
+    private var privateAccountEpoch = 0
+
     private static let privateAccountBaseURL =
         "https://qvuahlqimcfgeoetosnl.supabase.co"
     private static let privateAccountAPIKey =
@@ -2097,6 +2100,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         return
                     }
                     let isSignup = action == "account.password.signup"
+                    self.privateAccountEpoch += 1
+                    let epoch = self.privateAccountEpoch
+                    self.privateAccountRenewal?.cancel()
+                    self.privateAccountRenewal = nil
                     let response = try await self.privateAccountJSONRequest(
                         path: isSignup
                             ? "/auth/v1/signup"
@@ -2121,23 +2128,37 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         self.reply(requestID: requestID, result: result)
                         return
                     }
+                    guard epoch == self.privateAccountEpoch else { throw NSError(domain: "PrivatePhoneAccount", code: 409) }
                     try self.savePrivateAccountSession(session)
                     var result = self.privateAccountStatus(session)
                     result["ok"] = true
                     self.reply(requestID: requestID, result: result)
                 case "account.signout":
-                    if let session = self.loadPrivateAccountSession() {
+                    let previous = self.loadPrivateAccountSession()
+                    self.privateAccountEpoch += 1
+                    self.privateAccountRenewal?.cancel()
+                    self.privateAccountRenewal = nil
+                    self.deletePrivateAccountSession()
+                    if let session = previous {
                         _ = try? await self.privateAccountJSONRequest(
-                            path: "/auth/v1/logout",
+                            path: "/auth/v1/logout?scope=local",
                             method: "POST",
                             bearer: session.accessToken
                         )
                     }
-                    self.deletePrivateAccountSession()
                     self.reply(
                         requestID: requestID,
-                        result: ["ok": true, "loggedIn": false]
+                        result: self.privateAccountStatus(self.loadPrivateAccountSession())
                     )
+                case "account.sync":
+                    let epoch = self.privateAccountEpoch
+                    let session = try await self.validPrivateAccountSession()
+                    let result = try await PrivateDeviceSyncHTTP.request(arguments, platform: "iOS", bearer: session.accessToken)
+                    guard epoch == self.privateAccountEpoch,
+                          self.loadPrivateAccountSession()?.userID == session.userID else {
+                        throw NSError(domain: "PrivatePhoneAccount", code: 409)
+                    }
+                    self.reply(requestID: requestID, result: result)
                 case "account.backup.info":
                     let session = try await self.validPrivateAccountSession()
                     if let fileRow = try await self.privateBackupFileMetadata(
@@ -2600,31 +2621,42 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         if current.expiresAt > Date().timeIntervalSince1970 + 120 {
             return current
         }
-        let response = try await privateAccountJSONRequest(
-            path: "/auth/v1/token?grant_type=refresh_token",
-            method: "POST",
-            body: ["refresh_token": current.refreshToken]
-        )
-        guard response.status >= 200, response.status < 300,
-              let refreshed = privateAccountSession(
-                from: response.body,
-                fallbackPhone: current.phone
-              ) else {
-            // A gateway outage can return a temporary 401 while the refresh
-            // token is still valid. Never destroy the only local recovery
-            // credential because a remote refresh attempt failed. Explicit
-            // sign-out remains the sole path that removes this Keychain item.
-            throw NSError(
-                domain: "PrivatePhoneAccount",
-                code: response.status,
-                userInfo: [
-                    NSLocalizedDescriptionKey:
-                        "云端暂时无法验证，手机号登录已保留，请稍后重试"
-                ]
+        if let privateAccountRenewal { return try await privateAccountRenewal.value }
+        let epoch = privateAccountEpoch
+        let task = Task { () throws -> PrivateAccountSession in
+            let response = try await self.privateAccountJSONRequest(
+                path: "/auth/v1/token?grant_type=refresh_token",
+                method: "POST",
+                body: ["refresh_token": current.refreshToken]
             )
+            guard response.status >= 200, response.status < 300,
+                  let refreshed = self.privateAccountSession(
+                    from: response.body,
+                    fallbackPhone: current.phone
+                  ) else {
+                // A gateway outage can return a temporary 401 while the refresh
+                // token is still valid. Never destroy the only local recovery
+                // credential because a remote refresh attempt failed. Explicit
+                // sign-out remains the sole path that removes this Keychain item.
+                throw NSError(
+                    domain: "PrivatePhoneAccount",
+                    code: response.status,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "云端暂时无法验证，手机号登录已保留，请稍后重试"
+                    ]
+                )
+            }
+            guard epoch == self.privateAccountEpoch,
+                  self.loadPrivateAccountSession()?.refreshToken == current.refreshToken else {
+                throw NSError(domain: "PrivatePhoneAccount", code: 409)
+            }
+            try self.savePrivateAccountSession(refreshed)
+            return refreshed
         }
-        try savePrivateAccountSession(refreshed)
-        return refreshed
+        privateAccountRenewal = task
+        defer { if epoch == privateAccountEpoch { privateAccountRenewal = nil } }
+        return try await task.value
     }
 
     private struct PrivateAccountHTTPResponse {
@@ -3821,6 +3853,55 @@ private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, 
     }
 }
 
+
+// PRIVATE_DEVICE_SYNC_V1: one fixed account endpoint, no generic network proxy.
+private final class PrivateDeviceSyncRedirectPolicy: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
+    }
+}
+
+enum PrivateDeviceSyncHTTP {
+    private static let network: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.httpShouldSetCookies = false
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 45
+        config.timeoutIntervalForResource = 50
+        return URLSession(configuration: config, delegate: PrivateDeviceSyncRedirectPolicy(), delegateQueue: nil)
+    }()
+
+    static func request(_ payload: [String: Any], platform: String, bearer: String) async throws -> [String: Any] {
+        let allowed = ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "media.put", "media.get"]
+        guard let action = payload["action"] as? String, allowed.contains(action),
+              !bearer.isEmpty, JSONSerialization.isValidJSONObject(payload) else {
+            throw NSError(domain: "PrivateDeviceSync", code: 400, userInfo: [NSLocalizedDescriptionKey: "同步请求格式有误"])
+        }
+        var body = payload
+        body["platform"] = platform
+        body.removeValue(forKey: "userId")
+        body.removeValue(forKey: "sessionId")
+        let bytes = try JSONSerialization.data(withJSONObject: body)
+        guard bytes.count <= 3_000_000 else {
+            throw NSError(domain: "PrivateDeviceSync", code: 413, userInfo: [NSLocalizedDescriptionKey: "同步批次过大，请分批发送"])
+        }
+        var request = URLRequest(url: URL(string: "https://qvuahlqimcfgeoetosnl.supabase.co/functions/v1/phone-device-sync")!)
+        request.httpMethod = "POST"
+        request.httpBody = bytes
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer " + bearer, forHTTPHeaderField: "Authorization")
+        request.setValue("sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0", forHTTPHeaderField: "apikey")
+        let (data, response) = try await network.data(for: request)
+        guard let http = response as? HTTPURLResponse,
+              (200...299).contains(http.statusCode) || (400...499).contains(http.statusCode),
+              data.count <= 2_000_000, let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              result["ok"] is Bool else {
+            throw NSError(domain: "PrivateDeviceSync", code: 503, userInfo: [NSLocalizedDescriptionKey: "设备同步暂时不可用，本机数据已保留"])
+        }
+        return result
+    }
+}
 
 #if os(macOS)
 @MainActor
