@@ -178,6 +178,33 @@ test('MCP screenshot: old leaked assistant protocol is excluded from planner his
 });
 
 // These new behavioral regressions read HEAD when FIX_TEST_OLD=1.
+test('MCP cost: repeated local reads stop instead of billing the same fragment again',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async rows=>{n++;const catalog=rows.find(x=>x.content.startsWith('<tool_catalog>')).content;const ref=catalog.match(/"instructionsRef":"([^"]+)"/)?.[1]||'r1';return JSON.stringify({mcp_read:{ref,offset:0,length:20}});};
+ const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert(n<=3,'same local fragment charged '+n+' model requests');assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+});
+test('MCP cost: changing read offsets still shares one eight-request task ceiling',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>JSON.stringify({mcp_read:{ref:'r1',offset:n++,length:1}});
+ const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert(n<=8,'task charged '+n+' model requests');assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+});
+test('MCP cost: a selected definition fitting the input budget arrives in one batch',async()=>{
+ const description='工具真实说明。'.repeat(200)+'完整签名必须保留 FINAL-SIGNATURE。';
+ const s=guideSandbox((u,i,b)=>b?.method==='tools/list'?reply({jsonrpc:'2.0',id:b.id,result:{tools:[{...readTool,description}]}}):null);await connected(s);const ctx=s.M.context('role-a');let n=0,seen=false;
+ s.ctx.chatAPI=async rows=>{n++;if(JSON.stringify(rows).includes('FINAL-SIGNATURE'))seen=true;return s.calls.some(x=>x.body?.method==='tools/call')?'已读取真实结果。':call(ctx.catalog[0].alias);};
+ assert.equal(await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx}),'已读取真实结果。');assert(seen);assert(n<=3,'definition caused '+n+' model requests');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+});
+test('MCP cost: per-task request identity and phases are visible without secrets or payloads',async()=>{
+ const s=guideSandbox();await connected(s);const message={role:'user',content:'查账号'},ctx=s.M.context('role-a',()=>true,message),seen=[];
+ s.ctx.chatAPI=async(rows,opt)=>{seen.push(opt);return seen.length===1?call(ctx.catalog[0].alias):'查询完毕。';};
+ await s.M.roleReply([{role:'user',content:message.content}],{mcpContext:ctx});assert.equal(message._mcpTrace.modelRequests,2);assert.equal(message._mcpTrace.modelRequestLimit,8);assert(seen[0].diagnosticOperationId);assert.equal(seen[0].diagnosticOperationId,seen[1].diagnosticOperationId);assert.equal(seen[1].diagnosticAttempt,2);assert(seen[1].roleInterceptStage.includes('整理'));assert(!JSON.stringify(message._mcpTrace).includes('fixture-secret-token'));
+});
+test('MCP cost: inherited continuations cannot escape the shared task counter',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let requests=0;
+ s.ctx.chatAPI=async(rows,opt)=>{assert.equal(typeof opt.mcpRequestGuard,'function');opt.mcpRequestGuard(opt);requests++;for(;;){opt.mcpRequestGuard(opt);requests++;}};
+ const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert.equal(requests,8);assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ const code=readProject('src/app/004-roleImageTimeRangeActive.js');for(const variant of ['web','private'])assert(forVariant(code,variant).includes("if(opt.mcpInternal&&typeof opt.mcpRequestGuard==='function')opt.mcpRequestGuard(opt)"));
+});
 function forVariant(raw,variant){let section='';return raw.split('\n').filter(line=>{const m=line.match(/^\/\/@@ (web|private|end)$/);if(m){section=m[1]==='end'?'':m[1];return false;}return !section||section===variant;}).join('\n');}
 function guideSandbox(handler,variant='web'){
  const raw=readProject('src/app/011-saveSettings.js'),filtered=forVariant(raw,variant),s=sandbox(handler,filtered.slice(filtered.indexOf('/* MCP_ROLE_TOOLS_V1')));s.modals=[];

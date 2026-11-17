@@ -93,6 +93,14 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    },process.env.NORTH_MCP_PROTOCOL==='1');
    await page.evaluate(()=>{window.mcpHold=true;window.mcpComposer=document.querySelector('#chatbg').parentElement;window.mcpTurn=aiReply(testId);});await page.waitForFunction(()=>typeof mcpRelease==='function');assert(await page.locator('.mcp-chat-trace[data-mcp-state=running]').isVisible());assert.equal(await page.locator('.mcp-approval').count(),0);assert(await page.evaluate(()=>mcpComposer===document.querySelector('#chatbg').parentElement));await page.evaluate(()=>{mcpHold=false;mcpRelease();});await page.evaluate(()=>mcpTurn);assert(await page.locator('.mcp-chat-trace[data-mcp-state=ok]').isVisible());assert(await page.locator('#chatbg').getByText('查到了，记录里写着雨天的花店。',{exact:true}).isVisible());
    assert.equal(await page.evaluate(()=>mcpRequests.filter(x=>x.method==='tools/call').length),1);assert.equal(await page.evaluate(()=>mcpModelCalls.length),process.env.NORTH_MCP_PROTOCOL==='1'?3:2);assert(await page.evaluate(()=>mcpModelCalls.at(-1).messages.at(-1).content.includes('工具真实夹具结果')));assert(!(await page.locator('#chatbg').innerText()).includes('mcp_call'));assert.equal(await page.locator('.mcp-approval').count(),0);
+   if(process.env.NORTH_MCP_COST==='1'){
+    const cost=await page.evaluate(async()=>{
+     const original=fetchT,saved=JSON.stringify(S.settings),before=mcpRequests.filter(x=>x.method==='tools/call').length;let requests=0;
+     fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return original(url,opt);const content=JSON.stringify({mcp_read:{ref:'r1',offset:requests++,length:1}});return{ok:true,json:async()=>({choices:[{message:{content},finish_reason:'stop'}]})};};
+     try{pushMsg(testId,{id:uid(),role:'user',type:'text',content:'核对本轮模型请求次数。',time:Date.now()});await aiReply(testId);const latest=NorthRequestDiagnostics.listAll().filter(r=>r.kind==='request'&&r.featureKey==='mcp_tools').slice(0,8);return{requests,externalCalls:mcpRequests.filter(x=>x.method==='tools/call').length-before,settingsUnchanged:JSON.stringify(S.settings)===saved,stopped:document.querySelector('#chatbg').innerText.includes('工具流程已停止'),sameTask:new Set(latest.map(r=>r.operationId)).size===1,attempts:latest.map(r=>r.attempt).sort((a,b)=>a-b),phases:latest.every(r=>!!r.stage)};}finally{fetchT=original;}
+    });
+    assert.equal(cost.requests,8);assert.equal(cost.externalCalls,0);assert(cost.settingsUnchanged&&cost.stopped&&cost.sameTask&&cost.phases);assert.deepEqual(cost.attempts,[1,2,3,4,5,6,7,8]);console.log(JSON.stringify({privateApp,mcpCost:cost}));
+   }
    if(process.env.NORTH_MCP_CARDS==='1'){
     // Both generated JS builds exercise the real browser host. Native dispatch is checked
     // separately below; this does not pretend Chromium is iOS WebKit.
