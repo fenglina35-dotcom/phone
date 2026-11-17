@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const app = read('app.js');
 const html = read('小手机.html');
 const sw = read('sw.js');
-const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+const project = iosProject(read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {

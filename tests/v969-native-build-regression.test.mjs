@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const app = read('app.js');
 const shell = read('sw.js');
 const bundleInfo = read('native/private-small-phone/Resources/PhoneWebBundleInfo.plist');
 const localWebView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
-const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+const project = iosProject(read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift');
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');

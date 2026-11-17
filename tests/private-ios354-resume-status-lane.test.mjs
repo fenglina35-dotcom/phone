@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=rel=>fs.readFileSync(path.join(root,rel),'utf8');
@@ -15,7 +15,7 @@ const diagnostics=read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 const sync=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift');
 const bridge=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
 const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
-const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+const project=iosProject(read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const publicApp=read('app.js');
 
 function pollHarness(){

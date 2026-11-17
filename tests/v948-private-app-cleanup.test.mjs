@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const read=path=>fs.readFileSync(new URL(path,import.meta.url),'utf8');
 const app=read('../app.js');
 const gate=read('../license-gate.js');
 const root=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift');
-const project=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+const project=iosProject(read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 const bundleInfo=read('../native/private-small-phone/Resources/PhoneWebBundleInfo.plist');
 

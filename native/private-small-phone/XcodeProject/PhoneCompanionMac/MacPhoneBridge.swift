@@ -8,11 +8,15 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
     private let transport = MacMCPTransport()
     private weak var webView: WKWebView?
     private var entry: URL?
+    private let userID: String
 
-    init(account: MacPhoneAccount) { self.account = account }
+    init(account: MacPhoneAccount, userID: String) { self.account = account; self.userID = userID }
 
     func makeWebView() -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        if let identity = UUID(uuidString: userID) {
+            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: identity)
+        }
         configuration.userContentController.add(self, name: "smallPhoneNative")
         configuration.userContentController.addUserScript(WKUserScript(source: Self.bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: .zero, configuration: configuration)

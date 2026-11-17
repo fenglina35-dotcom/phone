@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root = process.cwd();
 const bundle = path.join(
@@ -25,13 +25,13 @@ const source = path.join(
 );
 const webView = fs.readFileSync(path.join(source, 'LocalPhoneWebView.swift'), 'utf8');
 const bridge = fs.readFileSync(path.join(source, 'PhoneNativeBridge.swift'), 'utf8');
-const project = fs.readFileSync(
+const project = iosProject(fs.readFileSync(
   path.join(
     root,
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',
   ),
   'utf8',
-);
+));
 
 function functionSource(source, name) {
   const marker = `function ${name}(`;

@@ -22,6 +22,30 @@ export function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
 }
 
+// 原iPhone继承检查只计算iOS配置；Mac目标的版本由Mac专项独立核对。
+export function macProjectConfigurations(text) {
+  const result=[],pattern=/[A-F0-9]{24}(?:\s*\/\*[^*\r\n]*\*\/)?\s*=\s*\{\s*isa\s*=\s*XCBuildConfiguration;/g;
+  for (const match of String(text).matchAll(pattern)) {
+    let depth=0,quote=false,escaped=false,end=-1;
+    for(let i=text.indexOf('{',match.index);i<text.length;i++) {
+      const char=text[i];
+      if(quote){if(escaped)escaped=false;else if(char==='\\')escaped=true;else if(char==='"')quote=false;continue;}
+      if(char==='"'){quote=true;continue;}
+      if(char==='{')depth++;
+      if(char==='}'&&--depth===0){end=i+1;break;}
+    }
+    if(end<0)throw new Error('unterminated Xcode configuration');
+    const block=text.slice(match.index,end);
+    if(/\bSDKROOT\s*=\s*macosx\s*;/.test(block))result.push(block);
+  }
+  return result;
+}
+
+export function iosProject(text) {
+  for(const block of macProjectConfigurations(text))text=text.replace(block,'');
+  return text;
+}
+
 function appVer(text, file) {
   const m = String(text).match(/const APP_VER='v(\d+) · ([^']*)'/);
   if (!m) throw new Error('读不到 ' + file + ' 的 APP_VER');

@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
 const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf8');
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
+const project = iosProject(fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8'));
 
 test('v1184 web keeps private 1.0.315 compatibility', () => {
   assert.match(app, vre(String.raw`APP_VER='v{WEB} · {WEBLABEL}'`));

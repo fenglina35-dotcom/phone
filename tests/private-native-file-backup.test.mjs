@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
 const read=relative=>fs.readFileSync(path.join(root,relative),'utf8');
@@ -10,7 +10,7 @@ const prefix='native/private-small-phone/XcodeProject/';
 const bundle=prefix+'PhoneCompanionTest/PhoneWeb.bundle/';
 const bridge=read(prefix+'PhoneCompanionTest/PhoneNativeBridge.swift');
 const webView=read(prefix+'PhoneCompanionTest/LocalPhoneWebView.swift');
-const project=read(prefix+'PhoneCompanionTest.xcodeproj/project.pbxproj');
+const project=iosProject(read(prefix+'PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');

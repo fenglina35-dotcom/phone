@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root = process.cwd();
 const project = path.join(root, 'native/private-small-phone/XcodeProject');
@@ -15,7 +15,7 @@ const index = fs.readFileSync(path.join(bundle, 'index.html'), 'utf8');
 const alias = fs.readFileSync(path.join(bundle, '小手机.html'), 'utf8');
 const bridge = fs.readFileSync(path.join(source, 'PhoneNativeBridge.swift'), 'utf8');
 const webview = fs.readFileSync(path.join(source, 'LocalPhoneWebView.swift'), 'utf8');
-const pbx = fs.readFileSync(path.join(project, 'PhoneCompanionTest.xcodeproj/project.pbxproj'), 'utf8');
+const pbx = iosProject(fs.readFileSync(path.join(project, 'PhoneCompanionTest.xcodeproj/project.pbxproj'), 'utf8'));
 const publicApp = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const publicEntry = fs.readFileSync(path.join(root, '小手机.html'), 'utf8');
 

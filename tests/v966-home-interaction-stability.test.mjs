@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
@@ -11,7 +11,7 @@ const css=fs.readFileSync(path.join(root,'glass-theme.css'),'utf8');
 const html=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 const plist=fs.readFileSync(path.join(root,'native/private-small-phone/Resources/PhoneWebBundleInfo.plist'),'utf8');
-const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8');
+const project=iosProject(fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8'));
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{

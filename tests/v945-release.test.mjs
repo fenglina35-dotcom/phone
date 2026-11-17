@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const read=path=>fs.readFileSync(new URL(path,import.meta.url),'utf8');
 const app=read('../app.js');
@@ -10,7 +10,7 @@ const sw=read('../sw.js');
 const index=read('../index.html');
 const repair=read('../repair.html');
 const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundleInfo.plist');
-const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+const xcode=iosProject(read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{

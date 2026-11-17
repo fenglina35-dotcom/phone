@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const nativeRoot=path.join(root,'native','private-small-phone');
@@ -186,7 +186,7 @@ test('role air actions execute in order and only produce a reply after verified 
 test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
-  const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+  const project=iosProject(read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'));
   assert.match(privateApp,vre(String.raw`APP_VER='v{PRIV} · {PRIVLABEL}'`));
   assert.match(webView,vre(String.raw`1\.0\.{IOS} \({IOS}\)`));
   assert.equal((project.match(vre(String.raw`CURRENT_PROJECT_VERSION = {IOS};`, 'g'))||[]).length,12);

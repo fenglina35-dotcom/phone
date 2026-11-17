@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { REL, vre } from './_helpers.mjs';
+import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -18,10 +18,10 @@ const overlay = read(
 const css = read(privateBase + 'PhoneWeb.bundle/glass-theme.css');
 const index = read(privateBase + 'PhoneWeb.bundle/index.html');
 const alias = read(privateBase + 'PhoneWeb.bundle/小手机.html');
-const project = read(
+const project = iosProject(read(
   'native/private-small-phone/XcodeProject/' +
   'PhoneCompanionTest.xcodeproj/project.pbxproj'
-);
+));
 
 test('a six-second WebContent stall has a native recovery surface outside WKWebView', () => {
   assert.match(webView, /let onRecoveryNeeded: \(String\) -> Void/);

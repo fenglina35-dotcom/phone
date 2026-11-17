@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import cp from 'node:child_process';
-import {read} from './_helpers.mjs';
+import {read, REL, iosProject, macProjectConfigurations} from './_helpers.mjs';
 
 test('Mac account: native login, renewal and account races keep credentials isolated', {skip:process.platform!=='darwin'},()=>{
  const source=read('native/private-small-phone/XcodeProject/PhoneCompanionMac/MacPhoneBridge.swift');
@@ -112,4 +112,13 @@ dispatchMain()
 `;
  const output=cp.execFileSync('swift',['-'],{input:fixture+actor+run,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
  assert(output.includes('native-account-isolation-ok'));
+});
+
+
+test('Mac target has two coherent version configurations while original iOS targets retain twelve',()=>{
+ const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),mac=macProjectConfigurations(project);
+ assert.equal(mac.length,2);
+ for(const config of mac){assert(config.includes('CURRENT_PROJECT_VERSION = '+REL.ios+';'));assert(config.includes('MARKETING_VERSION = 1.0.'+REL.ios+';'));}
+ assert.equal((iosProject(project).match(/CURRENT_PROJECT_VERSION = /g)||[]).length,12);
+ assert.equal((project.match(/CURRENT_PROJECT_VERSION = /g)||[]).length,14);
 });
