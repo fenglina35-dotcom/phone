@@ -18,7 +18,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.574 (574)"
+    private static let build = "1.0.575 (575)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -197,6 +197,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
     weak var webView: WKWebView? {
         didSet {
+            for request in mcpNetworkRequests.values { request.cancel() }
+            mcpNetworkRequests.removeAll()
             for card in officialCardViews.values { card.dispose() }
             officialCardViews.removeAll()
             ScreenShareCoordinator.shared.attach(to: webView)
@@ -238,6 +240,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     private var pickImagesDelegate: PickedImagesDelegate?
     // MCP_OFFICIAL_NATIVE_V1: user-authorized views have no SmallPhone system bridge.
     private var officialCardViews: [String: PrivateMCPCardView] = [:]
+    private var mcpNetworkRequests: [String: PrivateMCPNetworkRequest] = [:]
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
     func userContentController(
@@ -626,6 +629,38 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "call.audio.stop":
             CallPictureInPictureController.shared.stopAudio()
             reply(requestID: requestID, result: ["stopped": true])
+        // MCP_NATIVE_HTTP_V1: separately authorized transport, never a general URL proxy.
+        case "mcp.http.request":
+            guard message.frameInfo.isMainFrame, message.webView === webView,
+                  webView?.url?.isFileURL == true,
+                  let arguments = payload["payload"] as? [String: Any],
+                  let id = arguments["id"] as? String, id.hasPrefix("mcpnet"), id.count <= 80,
+                  mcpNetworkRequests[id] == nil, mcpNetworkRequests.count < 4 else {
+                reply(requestID: requestID, error: "mcp_invalid_request"); return
+            }
+            let owner = message.webView
+            do {
+                let request = try PrivateMCPNetworkRequest(arguments: arguments) { [weak self, weak owner] result, error in
+                    Task { @MainActor [weak self, weak owner] in
+                        guard let self else { return }
+                        self.mcpNetworkRequests.removeValue(forKey: id)
+                        guard self.webView === owner else { return }
+                        if let result { self.reply(requestID: requestID, result: result) }
+                        else { self.reply(requestID: requestID, error: error ?? "mcp_network_failed") }
+                    }
+                }
+                mcpNetworkRequests[id] = request
+                request.start()
+            } catch { reply(requestID: requestID, error: "mcp_invalid_destination_or_payload") }
+        case "mcp.http.cancel":
+            guard message.frameInfo.isMainFrame, message.webView === webView,
+                  webView?.url?.isFileURL == true,
+                  let arguments = payload["payload"] as? [String: Any],
+                  let id = arguments["id"] as? String else {
+                reply(requestID: requestID, error: "mcp_invalid_request"); return
+            }
+            mcpNetworkRequests.removeValue(forKey: id)?.cancel()
+            reply(requestID: requestID, result: ["cancelled": true])
         case "mcp.card.sync":
             guard message.frameInfo.isMainFrame, message.webView === webView,
                   let arguments = payload["payload"] as? [String: Any],
@@ -3673,4 +3708,112 @@ private final class PrivateMCPCardView: UIView, WKNavigationDelegate, WKUIDelega
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin,
                  initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType,
                  decisionHandler: @escaping (WKPermissionDecision) -> Void) { decisionHandler(.deny) }
+}
+
+// MCP_NATIVE_HTTP_V1. Only curated MCP/OAuth hosts; ephemeral, bounded, nonredirecting.
+// This type uses Foundation only so the validation and streaming parser can be tested on macOS.
+private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, @unchecked Sendable {
+    static let hosts: Set<String> = [
+        "mcp.cloudflare.com", "docs.mcp.cloudflare.com", "mcp.notion.com", "mcp.linear.app",
+        "api.githubcopilot.com", "api.github.com", "github.com", "mcp.supabase.com",
+        "api.supabase.com", "accounts.supabase.com", "smallphone-gmail-mcp.fenglina35.workers.dev"
+    ]
+    static func destination(_ raw: String) -> URL? {
+        guard let u = URLComponents(string: raw), u.scheme?.lowercased() == "https",
+              let host = u.host?.lowercased(), hosts.contains(host),
+              u.port == nil || u.port == 443, u.user == nil, u.password == nil, u.fragment == nil,
+              !(u.queryItems ?? []).contains(where: { item in
+                  ["token", "key", "secret", "password", "authorization"].contains(where: { item.name.lowercased().contains($0) })
+              }) else { return nil }
+        return u.url
+    }
+    static func matchedEvent(_ text: String, id: String) -> Bool {
+        for block in text.replacingOccurrences(of: "\r\n", with: "\n").components(separatedBy: "\n\n") {
+            let payload = block.components(separatedBy: "\n").filter { $0.hasPrefix("data:") }
+                .map { String($0.dropFirst(5)).trimmingCharacters(in: .whitespaces) }.joined(separator: "\n")
+            guard let bytes = payload.data(using: .utf8),
+                  let value = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                  value["jsonrpc"] as? String == "2.0", String(describing: value["id"] ?? "") == id,
+                  value["result"] != nil || value["error"] != nil else { continue }
+            return true
+        }
+        return false
+    }
+    private let request: URLRequest
+    private let expectedID: String?
+    private let limit: Int
+    private let completed: @Sendable ([String: Any]?, String?) -> Void
+    private let queue: OperationQueue
+    private var session: URLSession?
+    private var task: URLSessionDataTask?
+    private var bytes = Data()
+    private var response: HTTPURLResponse?
+    private var finished = false
+    init(arguments: [String: Any], completed: @escaping @Sendable ([String: Any]?, String?) -> Void) throws {
+        guard let raw = arguments["url"] as? String, let url = Self.destination(raw),
+              let method = arguments["method"] as? String, ["GET", "POST"].contains(method),
+              let headers = arguments["headers"] as? [String: String], headers.count <= 8,
+              headers.allSatisfy({ name, value in
+                  ["accept", "content-type", "authorization", "mcp-protocol-version", "mcp-session-id"].contains(name.lowercased()) &&
+                  value.utf8.count <= 16_384 && !value.unicodeScalars.contains(where: { $0.value == 13 || $0.value == 10 })
+              }) else { throw URLError(.badURL) }
+        let body = arguments["body"] as? String ?? ""
+        guard body.utf8.count <= 131_072, method == "POST" || body.isEmpty else { throw URLError(.dataLengthExceedsMaximum) }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 45)
+        request.httpMethod = method
+        request.httpShouldHandleCookies = false
+        for (name, value) in headers { request.setValue(value, forHTTPHeaderField: name) }
+        if method == "POST" { request.httpBody = body.data(using: .utf8) }
+        self.request = request
+        self.expectedID = (arguments["responseId"] as? NSNumber)?.stringValue
+        self.limit = min(1_048_576, max(1, arguments["limit"] as? Int ?? 1_048_576))
+        self.completed = completed
+        self.queue = OperationQueue(); self.queue.maxConcurrentOperationCount = 1
+        super.init()
+    }
+    func start() {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil; config.urlCredentialStorage = nil; config.httpCookieStorage = nil
+        config.httpShouldSetCookies = false
+        config.timeoutIntervalForRequest = 45; config.timeoutIntervalForResource = 45
+        session = URLSession(configuration: config, delegate: self, delegateQueue: queue)
+        task = session?.dataTask(with: request); task?.resume()
+    }
+    func cancel() { queue.addOperation { [weak self] in self?.finish(error: "mcp_request_cancelled") } }
+    private func finish(error: String? = nil) {
+        guard !finished else { return }; finished = true
+        var result: [String: Any]?
+        if error == nil, let response, let text = String(data: bytes, encoding: .utf8) {
+            var headers: [String: String] = [:]
+            for name in ["Content-Type", "WWW-Authenticate", "Mcp-Session-Id", "Retry-After"] {
+                if let value = response.value(forHTTPHeaderField: name) { headers[name.lowercased()] = value }
+            }
+            result = ["status": response.statusCode, "headers": headers, "text": text]
+        }
+        bytes.removeAll(); task?.cancel(); session?.invalidateAndCancel(); task = nil; session = nil
+        completed(result, error ?? (result == nil ? "mcp_invalid_response" : nil))
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil) // Never forward credentials on any redirect.
+    }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        guard let http = response as? HTTPURLResponse, !finished else { completionHandler(.cancel); return }
+        self.response = http
+        if http.expectedContentLength > limit { completionHandler(.cancel); finish(error: "mcp_response_too_large"); return }
+        completionHandler(.allow)
+    }
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        guard !finished else { return }
+        guard data.count <= limit - bytes.count else { finish(error: "mcp_response_too_large"); return }
+        bytes.append(data)
+        if response?.mimeType == "text/event-stream", let expectedID,
+           let text = String(data: bytes, encoding: .utf8), Self.matchedEvent(text, id: expectedID) { finish() }
+    }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error as? URLError {
+            finish(error: error.code == .timedOut ? "mcp_network_timeout" : "mcp_network_unavailable")
+        } else { finish(error: error == nil ? nil : "mcp_network_unavailable") }
+    }
 }

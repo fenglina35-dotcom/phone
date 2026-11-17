@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
+import cp from 'node:child_process';
 import {BUNDLES,read as readProject,fnSource} from './_helpers.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
@@ -118,7 +119,7 @@ const source=settingsSource.slice(settingsSource.indexOf('/* MCP_ROLE_TOOLS_V1')
 const reply=(b,status=200,headers={})=>new Response(typeof b==='string'?b:JSON.stringify(b),{status,headers:{'Content-Type':'application/json',...headers}});
 const readTool={name:'read_note',description:'Read a note',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},annotations:{readOnlyHint:true}};
 const writeTool={name:'write_note',description:'Update note',inputSchema:{type:'object',properties:{text:{type:'string'}},required:['text']}};
-function sandbox(handler){
+function sandbox(handler,override){
  const storage=new Map(),nodes=new Map(),panels=[],role={id:'role-a',name:'角色甲'},state={me:{active:'main'},contacts:[role],settings:{unchanged:true}},calls=[];
  const ctx={S:state,actId:()=>state.me.active,getC:id=>state.contacts.find(c=>c.id===id),NorthLicense:{session:()=>({licenseId:'owner-a'})},
   localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},crypto:crypto.webcrypto,TextEncoder,TextDecoder,URL,URLSearchParams,Uint8Array,Uint32Array,AbortController,Response,
@@ -127,11 +128,92 @@ function sandbox(handler){
   document:{getElementById:id=>nodes.get(id)||null,createElement:()=>({setAttribute(){},querySelector:()=>({focus(){}}),remove(){nodes.delete(this.id);}}),head:{appendChild:n=>nodes.set(n.id,n)},body:{appendChild:n=>{nodes.set(n.id,n);panels.push(n);}}},
   fetch:async(url,init)=>{const body=init.body&&init.headers?.['Content-Type']==='application/json'?JSON.parse(init.body):null;calls.push({url,init,body});if(handler){const custom=await handler(url,init,body);if(custom)return custom;}if(body?.method==='initialize')return reply({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25',capabilities:{tools:{}}}},200);if(body?.method==='notifications/initialized')return reply('',202);if(body?.method==='tools/list')return reply({jsonrpc:'2.0',id:body.id,result:{tools:[readTool,writeTool]}});if(body?.method==='tools/call')return reply({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:'actual-server-result'}]}});throw Error('unexpected network '+url);},
   chatResultText:async(m,o,d)=>d.choices[0].message.content,toast(){},uiConfirm:async()=>true,cur:()=>({p:'chat'}),render(){},console};
- vm.createContext(ctx);vm.runInContext(source+'\nglobalThis.M=MCPTools;globalThis.pkce=mcpPkce;',ctx);
+ vm.createContext(ctx);vm.runInContext((override||source)+'\nglobalThis.M=MCPTools;globalThis.pkce=mcpPkce;',ctx);
  return{ctx,M:ctx.M,storage,panels,nodes,calls,state};
 }
 async function connected(s,mode='ask'){const c=s.M.add({name:'测试连接',url:'https://mcp.fixture.invalid/mcp',auth:'bearer',token:'fixture-secret-token'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode});return s.M.connection(c.id);}
 function call(alias,args={id:'1'}){return JSON.stringify({mcp_call:{tool:alias,arguments:args}});}
+
+// These new behavioral regressions read HEAD when FIX_TEST_OLD=1.
+function forVariant(raw,variant){let section='';return raw.split('\n').filter(line=>{const m=line.match(/^\/\/@@ (web|private|end)$/);if(m){section=m[1]==='end'?'':m[1];return false;}return !section||section===variant;}).join('\n');}
+function guideSandbox(handler,variant='web'){
+ const raw=readProject('src/app/011-saveSettings.js'),filtered=forVariant(raw,variant),s=sandbox(handler,filtered.slice(filtered.indexOf('/* MCP_ROLE_TOOLS_V1')));s.modals=[];
+ s.ctx.openModal=html=>{s.modals.push(html);const id=html.match(/id="mcp-setup" data-connection="([^"]+)"/);if(id)s.nodes.set('mcp-setup',{getAttribute:()=>id[1]});else s.nodes.delete('mcp-setup');};
+ return s;
+}
+test('MCP guide: plus opens official login steps without claiming connected or submitting requests',()=>{
+ const s=guideSandbox();s.M.start('cloudflare');const c=s.M.data().connections[0];assert(c);assert.equal(c.state,'saved');assert.equal(c.tools.length,0);assert.equal(c.roles.length,0);assert.equal(s.calls.length,0);const modal=s.modals.at(-1);assert(modal.includes('开始官网登录'));assert(modal.includes('https://dash.cloudflare.com/'));assert(modal.includes('验证工具'));assert(modal.includes('保存连接不代表已登录'));assert(s.M.render().includes('0 个已连接'));
+});
+test('MCP guide: existing incomplete connections resume guided setup without resetting credentials or role grants',()=>{
+ const s=guideSandbox(),c=s.M.add({provider:'cloudflare',url:'https://mcp.cloudflare.com/mcp',auth:'oauth',token:'fixture-existing'});s.M.configure(c.id,{roles:['role-a']});const before=JSON.stringify(s.M.connection(c.id));s.M.detail(c.id,true);assert(s.modals.at(-1).includes('开始官网登录'));assert.equal(JSON.stringify(s.M.connection(c.id)),before);assert.equal(s.calls.length,0);
+});
+test('MCP guide: OAuth discovery failure remains inline with retry and a real official entry',async()=>{
+ const s=guideSandbox(()=>{throw new TypeError('network fixture');});s.M.start('notion');const c=s.M.data().connections[0];await s.M.authorize(c.id);const html=s.modals.at(-1);assert(html.includes('role="alert"'));assert(html.includes('开始官网登录'));assert(html.includes('https://www.notion.so/'));assert(!html.includes('network fixture'));assert.notEqual(s.M.connection(c.id).state,'connected');
+});
+test('MCP guide: public preview and unhosted Spotify explain prerequisites without saving pretend connections',()=>{
+ const s=guideSandbox();s.M.start('spotify');assert.equal(s.M.data().connections.length,0);assert(s.modals.at(-1).includes('Premium'));s.M.start('gmail');assert.equal(s.M.data().connections.length,0);assert(s.modals.at(-1).includes('开发者预览'));
+});
+test('MCP guide: GitHub gives an official token entry and will not validate an empty credential',async()=>{
+ const s=guideSandbox();s.M.start('github');const c=s.M.data().connections[0];assert(s.modals.at(-1).includes('https://github.com/settings/personal-access-tokens/new'));await s.M.verifySetup(c.id);assert.equal(s.calls.length,0);assert(s.modals.at(-1).includes('请先从官方入口获取访问凭据'));
+});
+test('MCP guide: verified service offers a bounded role picker and natural chat examples',async()=>{
+ const s=guideSandbox();s.state.contacts=Array.from({length:80},(_,i)=>({id:'r'+i,name:'角色'+i}));s.M.start('cloudflare-docs');const c=s.M.data().connections[0];assert(s.modals.at(-1).includes('立即连接'));await s.M.verifySetup(c.id);assert.equal(s.M.connection(c.id).state,'connected');assert.equal(s.M.connection(c.id).roles.length,0);const html=s.modals.at(-1);assert(html.includes('已验证 · 2 个工具'));assert.equal((html.match(/data-mcp-role-id=/g)||[]).length,80);assert(html.includes('mcp-role-list'));assert(html.includes('Cloudflare Workers'));assert(html.includes('完成设置'));
+});
+test('MCP guide: tools/list failure stays failed and does not show successful role setup',async()=>{
+ const s=guideSandbox((u,i,b)=>b?.method==='tools/list'?reply({error:'unavailable'},503):null);s.M.start('cloudflare-docs');const c=s.M.data().connections[0];await s.M.verifySetup(c.id);assert.equal(s.M.connection(c.id).state,'failed');assert(s.modals.at(-1).includes('HTTP 503'));assert(!s.modals.at(-1).includes('已验证 ·'));
+});
+test('MCP guide: private Gmail uses the configured public client descriptor, callback and scopes without DCR',async()=>{
+ const s=guideSandbox((url)=>url.includes('oauth-protected-resource')?reply({resource:'https://smallphone-gmail-mcp.fenglina35.workers.dev/mcp',authorization_servers:['https://smallphone-gmail-mcp.fenglina35.workers.dev']}):url.includes('oauth-authorization-server')?reply({issuer:'https://smallphone-gmail-mcp.fenglina35.workers.dev',authorization_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/authorize',token_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/oauth/token',registration_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/register',code_challenge_methods_supported:['S256']}):null,'private');
+ s.M.start('gmail');const c=s.M.data().connections[0];assert.equal(c.auth,'oauth');assert.equal(c.serviceCallback,true);const url=new URL(await s.M.beginOAuth(c.id));assert.equal(url.searchParams.get('client_id'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-metadata.json');assert.equal(url.searchParams.get('redirect_uri'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-callback');assert.equal(url.searchParams.get('scope'),'mcp:read mcp:write offline_access');assert(!s.calls.some(x=>x.url.endsWith('/register')));
+});
+test('MCP OAuth: canonical resource is used for login, code exchange and refresh while read-only query stays on RPC',async()=>{
+ const host='https://resource.fixture.invalid',s=guideSandbox((url,init)=>url.includes('oauth-protected-resource')?reply({resource:host+'/mcp',authorization_servers:[host],scopes_supported:['read']}):url.includes('oauth-authorization-server')?reply({issuer:host,authorization_endpoint:host+'/authorize',token_endpoint:host+'/token',code_challenge_methods_supported:['S256']}):url===host+'/token'?reply({access_token:'fixture-token',refresh_token:'fixture-refresh',expires_in:3600}):null),c=s.M.add({url:host+'/mcp?read_only=true',auth:'oauth',clientId:'fixture-client'});
+ const url=new URL(await s.M.beginOAuth(c.id));assert.equal(url.searchParams.get('resource'),host+'/mcp');const pending=s.M.connection(c.id).pending,receipt=pending.redirect+'&code=fixture-code&state='+pending.state;await s.M.finishOAuth(c.id,receipt);s.M.configure(c.id,{exp:Date.now()-1});await s.M.connect(c.id);
+ const tokens=s.calls.filter(x=>x.url===host+'/token');assert.equal(tokens.length,2);for(const call of tokens)assert.equal(new URLSearchParams(call.init.body).get('resource'),host+'/mcp');assert(s.calls.filter(x=>x.body&&x.body.method).every(x=>x.url===host+'/mcp?read_only=true'));
+});
+test('MCP native HTTP: allowed requests use the bridge once, preserve headers and parse tools without fetch',async()=>{
+ const s=guideSandbox(null,'private'),calls=[];s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:true,SmallPhoneNative:{request:async(method,payload)=>{calls.push({method,payload});const b=JSON.parse(payload.body),result=b.method==='initialize'?{protocolVersion:'2025-11-25'}:b.method==='tools/list'?{tools:[readTool]}:{};return{status:200,headers:{'content-type':'application/json','mcp-session-id':'fixture-session'},text:JSON.stringify({jsonrpc:'2.0',id:b.id,result})};}}};
+ const c=s.M.add({provider:'cloudflare-docs',url:'https://docs.mcp.cloudflare.com/mcp',auth:'none'});await s.M.connect(c.id);assert.equal(calls.length,3);assert.equal(s.calls.length,0);assert.equal(s.M.connection(c.id).tools.length,1);assert(calls.every(x=>x.method==='mcp.http.request'));assert.equal(calls[2].payload.headers['Mcp-Session-Id'],'fixture-session');
+});
+test('MCP native HTTP: a bridge failure never retries through fetch or marks connected',async()=>{
+ const s=guideSandbox(null,'private'),calls=[];s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:true,SmallPhoneNative:{request:async(method,p)=>{calls.push(method);throw Error('mcp_network_unavailable');}}};const c=s.M.add({provider:'cloudflare-docs',url:'https://docs.mcp.cloudflare.com/mcp',auth:'none'});await assert.rejects(s.M.connect(c.id),/手机未能连接/);assert.deepEqual(calls,['mcp.http.request']);assert.equal(s.calls.length,0);assert.equal(s.M.connection(c.id).state,'failed');
+});
+test('MCP native HTTP: disabling native capability keeps the original web path',async()=>{
+ const s=guideSandbox();s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:false,SmallPhoneNative:{request:()=>{throw Error('unexpected bridge');}}};const c=s.M.add({url:'https://docs.mcp.cloudflare.com/mcp',auth:'none'});await s.M.connect(c.id);assert.equal(s.calls.length,3);
+});
+test('MCP guide: modal and underlying manager both update role search and selected counts',()=>{
+ const s=guideSandbox();s.M.start('cloudflare-docs');const c=s.M.data().connections[0];
+ function panel(){const input={},badge={},empty={},row={hidden:false,getAttribute:k=>k==='data-mcp-role-id'?'role-a':'角色甲',querySelector:()=>input};return{input,badge,row,querySelectorAll:()=>[row],querySelector:k=>k==='[data-mcp-role-count]'?badge:empty};}
+ const panels=[panel(),panel()];s.ctx.document.querySelectorAll=()=>panels;s.M.setRole(c.id,'role-a',true);for(const p of panels){assert.equal(p.input.checked,true);assert.equal(p.badge.textContent,'已选 1 / 1');}s.M.roleFilter(c.id,'找不到');for(const p of panels)assert.equal(p.row.hidden,true);s.M.roleFilter(c.id,'角色');for(const p of panels)assert.equal(p.row.hidden,false);
+});
+test('MCP native HTTP: cancellation before dispatch sends nothing; in-flight cancellation sends one cancel',async()=>{
+ const raw=readProject('src/app/011-saveSettings.js'),s=sandbox(null,raw.slice(raw.indexOf('/* MCP_ROLE_TOOLS_V1')).replace('return{catalog,','return{nativeHTTPRequest,catalog,')),calls=[];
+ s.ctx.window={SmallPhoneNative:{request:(method,payload)=>{calls.push(method);return method==='mcp.http.cancel'?Promise.resolve({}):new Promise(()=>{});}}};
+ const first=new AbortController();first.abort();await assert.rejects(s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},first.signal,100,null),e=>e.name==='AbortError');assert.equal(calls.length,0);
+ const second=new AbortController(),pending=s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},second.signal,100,null);second.abort();await assert.rejects(pending,e=>e.name==='AbortError');assert.deepEqual(calls,['mcp.http.request','mcp.http.cancel']);
+});
+if(process.env.NORTH_MCP_NATIVE_LIVE==='1')test('MCP native live: actual Foundation transport and private JS negotiate the public document tools',async()=>{
+ const s=guideSandbox(null,'private'),native=readProject('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),classSource=native.slice(native.indexOf('private final class PrivateMCPNetworkRequest:'));
+ const nativeRequest=async(method,payload)=>{assert.equal(method,'mcp.http.request');const json=Buffer.from(JSON.stringify(payload)).toString('base64');const main='\nlet group=DispatchGroup();group.enter()\nlet data=Data(base64Encoded:"'+json+'")!\nlet args=try! JSONSerialization.jsonObject(with:data) as! [String:Any]\nprivate let request=try! PrivateMCPNetworkRequest(arguments:args){result,error in let out:[String:Any]=["result":result ?? [:],"error":error ?? ""];print(String(data:try! JSONSerialization.data(withJSONObject:out),encoding:.utf8)!);group.leave()}\nrequest.start()\nif group.wait(timeout:.now()+50) == .timedOut {exit(1)}\n';const out=cp.execFileSync('swift',['-'],{input:'import Foundation\n'+classSource+main,encoding:'utf8',timeout:55000,maxBuffer:2e6}),result=JSON.parse(out);if(result.error)throw Error(result.error);return result.result;};
+ s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:true,SmallPhoneNative:{request:nativeRequest}};
+ const p=s.M.catalog.find(p=>p.id==='cloudflare-docs'),c=s.M.add({...p,provider:p.id});await s.M.connect(c.id);const actual=s.M.connection(c.id);assert.equal(actual.state,'connected');assert(actual.tools.length>0);assert.equal(s.calls.length,0);console.log('Actual Foundation + private JS document tools:',actual.tools.map(t=>t.name).join(', '));
+});
+test('MCP native HTTP: Foundation policy rejects local targets, redirects destinations, credentials and unsupported methods',()=>{
+ const text=readProject('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),marker=text.indexOf('private final class PrivateMCPNetworkRequest:');assert(marker>=0,'missing native MCP transport');
+ const swift='import Foundation\n'+text.slice(marker)+`
+func check(_ yes: Bool, line: Int = #line) { if !yes { print("MCP transport policy regression at line",line); exit(1) } }
+check(PrivateMCPNetworkRequest.destination("https://mcp.cloudflare.com/mcp") != nil)
+for u in ["http://mcp.cloudflare.com/mcp","https://127.0.0.1/mcp","https://localhost/mcp","https://mcp.cloudflare.com.evil.test/mcp","https://user:pass@mcp.cloudflare.com/mcp","https://mcp.cloudflare.com:4433/mcp","https://mcp.cloudflare.com/mcp?access_token=secret","https://mcp.cloudflare.com/mcp#fragment"] { check(PrivateMCPNetworkRequest.destination(u) == nil) }
+func valid(_ changes: [String:Any]) -> Bool { var p: [String:Any] = ["url":"https://mcp.cloudflare.com/mcp","method":"POST","headers":["Content-Type":"application/json"],"body":"{}"] ; p.merge(changes){_,new in new};return (try? PrivateMCPNetworkRequest(arguments:p){_,_ in}) != nil }
+check(valid([:]))
+for p: [String:Any] in [["method":"DELETE"],["method":"GET","body":"payload"],["headers":["Cookie":"secret"]],["headers":["Authorization":"Bearer bad\\r\\nInjected: value"]],["body":String(repeating:"字",count:50000)]] { if valid(p) { print("unexpected accepted policy fixture",p.keys.sorted()); exit(1) } }
+check(PrivateMCPNetworkRequest.matchedEvent(#"data: {"jsonrpc":"2.0","id":7,"result":{}}"#,id:"7"))
+check(!PrivateMCPNetworkRequest.matchedEvent(#"data: {"jsonrpc":"2.0","id":8,"result":{}}"#,id:"7"))
+check(!PrivateMCPNetworkRequest.matchedEvent(#"data: {"jsonrpc":"2.0","id":7,"result":"#,id:"7"))
+print("native MCP policy and parser passed")
+`;
+ if(process.platform==='darwin'){const out=cp.execFileSync('swift',['-'],{input:swift,encoding:'utf8',timeout:60000,maxBuffer:1e6});assert(out.includes('policy and parser passed'));}
+});
 
 test('official cards: Spotify track uses the provider player instead of custom music controls',async()=>{
  const s=sandbox((u,i,b)=>b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result:{structuredContent:{name:'歌曲',uri:'spotify:track:4uLU6hMCjMI75M1A2tKUQC'},content:[]}}):null);await connected(s);const message={role:'user'},ctx=s.M.context('role-a',()=>true,message);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});const html=s.M.chatTraceHTML(message,'role-a');assert(html.includes('data-mcp-official="spotify"'));assert(!html.includes('mcp-inline-play'));assert(!html.includes('class="mcp-result-card"'));
@@ -408,7 +490,7 @@ test('invalid endpoints and unrecognized tool envelopes do not dispatch anything
 });
 
 test('both bundles include real chat hook, optional context and Cloudflare catalog without native companion changes',()=>{
- for(const [name,file] of BUNDLES){const text=read(file);assert(text.includes(source),name);assert(text.includes('if(opt.mcpContext&&!opt.mcpInternal)return MCPTools.roleReply(messages,opt)'));assert(text.includes('if(!note)_md.mcpContext=MCPTools.context(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu)'));assert(text.includes("else if(c.p==='mcp')html=MCPTools.render()"));}
+ for(const [name,file] of BUNDLES){const text=read(file);assert(text.includes(forVariant(source,name)),name);assert(text.includes('if(opt.mcpContext&&!opt.mcpInternal)return MCPTools.roleReply(messages,opt)'));assert(text.includes('if(!note)_md.mcpContext=MCPTools.context(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu)'));assert(text.includes("else if(c.p==='mcp')html=MCPTools.render()"));}
  assert(source.includes('https://mcp.cloudflare.com/mcp'));assert(source.includes('https://docs.mcp.cloudflare.com/mcp'));
 });
 
