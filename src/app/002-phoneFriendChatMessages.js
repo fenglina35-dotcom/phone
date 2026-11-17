@@ -234,9 +234,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1930 · MCP 手机连接与登录向导';
+const APP_VER='v1931 · 修复MCP指令执行与授权入口';
 //@@ private
-const APP_VER='v1929 · MCP 手机连接与登录向导';
+const APP_VER='v1930 · 修复MCP指令执行与授权入口';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

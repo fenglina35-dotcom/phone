@@ -134,6 +134,49 @@ function sandbox(handler,override){
 async function connected(s,mode='ask'){const c=s.M.add({name:'测试连接',url:'https://mcp.fixture.invalid/mcp',auth:'bearer',token:'fixture-secret-token'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode});return s.M.connection(c.id);}
 function call(alias,args={id:'1'}){return JSON.stringify({mcp_call:{tool:alias,arguments:args}});}
 
+test('MCP screenshot: prose plus a tool instruction is repaired before a single dispatch, never sent as chat',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0,ordinary=0;
+ s.ctx.chatAPI=async(rows,opt)=>{n++;if(!opt.mcpBudget)ordinary++;return n===1?'好，先帮你查。我先看看账号信息。\n'+call(ctx.catalog[0].alias):n===2?call(ctx.catalog[0].alias):'已拿到账号信息，但没有额度字段。';};
+ const out=await s.M.roleReply([{role:'user',content:'查一下我的 Cloudflare 还剩多少额度'}],{mcpContext:ctx});
+ assert.equal(out,'已拿到账号信息，但没有额度字段。');assert.equal(ordinary,0);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);assert(!out.includes('mcp_call'));
+});
+test('MCP screenshot: repeated protocol violations stop safely without a raw JSON bubble or dispatch',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>{n++;return '正在查询。\n'+call(ctx.catalog[0].alias);};
+ const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});
+ assert(!out.includes('mcp_call'));assert(out.includes('没有提交'));assert(n<=4);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+});
+test('MCP screenshot: a skipped planner cannot leak a tool instruction from ordinary chat fallback',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>++n===1?'{"mcp_skip":true}':n===2?'我来查。\n'+call(ctx.catalog[0].alias):n===3?call(ctx.catalog[0].alias):'已取得工具结果。';
+ const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert.equal(out,'已取得工具结果。');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+});
+test('MCP screenshot: invalid protocol after a successful write repairs only the reply, never repeats the write',async()=>{
+ const s=guideSandbox();await connected(s,'auto');const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[1].alias,{text:'只写一次'}):n===2?'执行好了。\n'+call(ctx.catalog[1].alias,{text:'只写一次'}):'笔记已经写好了。';
+ const out=await s.M.roleReply([{role:'user',content:'写笔记'}],{mcpContext:ctx});assert.equal(out,'笔记已经写好了。');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+});
+test('MCP screenshot: retrying the same message without tools labels its previous trace as historical',async()=>{
+ const s=guideSandbox();await connected(s);const message={role:'user',content:'查账号'},ctx=s.M.context('role-a',()=>true,message);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});
+ const next=s.M.context('role-a',()=>true,message);s.ctx.chatAPI=async(rows,opt)=>opt.mcpBudget?'{"mcp_skip":true}':'需要先明确你要查哪个产品。';
+ await s.M.roleReply([{role:'user',content:message.content}],{mcpContext:next});assert(s.M.chatTraceHTML(message,'role-a').includes('上次调用'));
+});
+test('MCP screenshot: selected long tool instructions are read before dispatch and the real signature reaches the model',async()=>{
+ const description='执行工具的完整说明。'.repeat(45)+'唯一正确签名是 cloudflare.request({method,path})。';
+ const s=guideSandbox((u,i,b)=>b?.method==='tools/list'?reply({jsonrpc:'2.0',id:b.id,result:{tools:[{...readTool,description}]}}):null);await connected(s);const ctx=s.M.context('role-a');let seen=false;
+ s.ctx.chatAPI=async rows=>{if(JSON.stringify(rows).includes('唯一正确签名'))seen=true;return s.calls.some(x=>x.body?.method==='tools/call')?'已根据真实回执回复。':call(ctx.catalog[0].alias);};
+ await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert(seen);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+});
+test('MCP screenshot: a product clarification stays with the tool-aware role instead of a fallback denial',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>++n===1?'{"mcp_ask":"你想查 Workers 还是 R2，今天还是本月？"}':'我看不到你的后台。';
+ const out=await s.M.roleReply([{role:'user',content:'查一下云端额度'}],{mcpContext:ctx});assert.equal(out,'你想查 Workers 还是 R2，今天还是本月？');assert.equal(n,1);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+});
+test('MCP screenshot: old leaked assistant protocol is excluded from planner history without deleting messages',async()=>{
+ const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');const original=[{role:'assistant',content:'fixture-prior-leak '+call('old__execute')},{role:'user',content:'查今天用量'}];let n=0;
+ s.ctx.chatAPI=async rows=>{assert(!JSON.stringify(rows).includes('fixture-prior-leak'));return ++n===1?call(ctx.catalog[0].alias):'查到了。';};await s.M.roleReply(original,{mcpContext:ctx});assert(original[0].content.includes('fixture-prior-leak'));
+});
+
 // These new behavioral regressions read HEAD when FIX_TEST_OLD=1.
 function forVariant(raw,variant){let section='';return raw.split('\n').filter(line=>{const m=line.match(/^\/\/@@ (web|private|end)$/);if(m){section=m[1]==='end'?'':m[1];return false;}return !section||section===variant;}).join('\n');}
 function guideSandbox(handler,variant='web'){
@@ -141,14 +184,19 @@ function guideSandbox(handler,variant='web'){
  s.ctx.openModal=html=>{s.modals.push(html);const id=html.match(/id="mcp-setup" data-connection="([^"]+)"/);if(id)s.nodes.set('mcp-setup',{getAttribute:()=>id[1]});else s.nodes.delete('mcp-setup');};
  return s;
 }
-test('MCP guide: plus opens official login steps without claiming connected or submitting requests',()=>{
- const s=guideSandbox();s.M.start('cloudflare');const c=s.M.data().connections[0];assert(c);assert.equal(c.state,'saved');assert.equal(c.tools.length,0);assert.equal(c.roles.length,0);assert.equal(s.calls.length,0);const modal=s.modals.at(-1);assert(modal.includes('开始官网登录'));assert(modal.includes('https://dash.cloudflare.com/'));assert(modal.includes('验证工具'));assert(modal.includes('保存连接不代表已登录'));assert(s.M.render().includes('0 个已连接'));
+test('MCP OAuth entry: plus prepares the real provider authorization and reopening reuses it across page loads',async()=>{
+ const host='https://mcp.notion.com',s=guideSandbox(url=>url.includes('oauth-protected-resource')?reply({resource:host+'/mcp',authorization_servers:[host]}):url.includes('oauth-authorization-server')?reply({issuer:host,authorization_endpoint:host+'/authorize',token_endpoint:host+'/token',registration_endpoint:host+'/register',code_challenge_methods_supported:['S256']}):url===host+'/register'?reply({client_id:'fixture-public-client'},201):null);
+ await s.M.start('notion');const c=s.M.data().connections[0];assert.equal(c.state,'auth');assert(c.pending.url.startsWith(host+'/authorize?'));assert(s.modals.at(-1).includes('前往 Notion 授权'));assert(!s.modals.at(-1).includes('<a class="btn g" href="https://www.notion.so/'));
+ const next=guideSandbox(()=>{throw Error('reopening must not register a new client');});for(const [key,value] of s.storage)next.storage.set(key,value);await next.M.resume(c.id);assert.equal(next.calls.length,0);assert(next.modals.at(-1).includes('前往 Notion 授权'));assert.equal(next.M.connection(c.id).pending.state,c.pending.state);
 });
-test('MCP guide: existing incomplete connections resume guided setup without resetting credentials or role grants',()=>{
- const s=guideSandbox(),c=s.M.add({provider:'cloudflare',url:'https://mcp.cloudflare.com/mcp',auth:'oauth',token:'fixture-existing'});s.M.configure(c.id,{roles:['role-a']});const before=JSON.stringify(s.M.connection(c.id));s.M.detail(c.id,true);assert(s.modals.at(-1).includes('开始官网登录'));assert.equal(JSON.stringify(s.M.connection(c.id)),before);assert.equal(s.calls.length,0);
+test('MCP guide: plus opens official login steps without claiming connected or submitting requests',()=>{
+ const s=guideSandbox();s.M.start('cloudflare',false);const c=s.M.data().connections[0];assert(c);assert.equal(c.state,'saved');assert.equal(c.tools.length,0);assert.equal(c.roles.length,0);assert.equal(s.calls.length,0);const modal=s.modals.at(-1);assert(modal.includes('开始官网登录'));assert(modal.includes('https://dash.cloudflare.com/'));assert(modal.includes('验证工具'));assert(modal.includes('保存连接不代表已登录'));assert(s.M.render().includes('0 个已连接'));
+});
+test('MCP guide: existing incomplete connections resume verification without resetting credentials or role grants',async()=>{
+ const s=guideSandbox(),c=s.M.add({provider:'cloudflare',url:'https://mcp.cloudflare.com/mcp',auth:'oauth',token:'fixture-existing'});s.M.configure(c.id,{roles:['role-a']});const before=s.M.connection(c.id);await s.M.detail(c.id,true);const after=s.M.connection(c.id);assert(s.modals.at(-1).includes('已验证'));assert.equal(after.token,before.token);assert.deepEqual(Array.from(after.roles),Array.from(before.roles));assert.equal(after.rev,before.rev);assert.equal(after.state,'connected');
 });
 test('MCP guide: OAuth discovery failure remains inline with retry and a real official entry',async()=>{
- const s=guideSandbox(()=>{throw new TypeError('network fixture');});s.M.start('notion');const c=s.M.data().connections[0];await s.M.authorize(c.id);const html=s.modals.at(-1);assert(html.includes('role="alert"'));assert(html.includes('开始官网登录'));assert(html.includes('https://www.notion.so/'));assert(!html.includes('network fixture'));assert.notEqual(s.M.connection(c.id).state,'connected');
+ const s=guideSandbox(()=>{throw new TypeError('network fixture');});s.M.start('notion',false);const c=s.M.data().connections[0];await s.M.authorize(c.id);const html=s.modals.at(-1);assert(html.includes('role="alert"'));assert(html.includes('开始官网登录'));assert(html.includes('https://www.notion.so/'));assert(!html.includes('network fixture'));assert.notEqual(s.M.connection(c.id).state,'connected');
 });
 test('MCP guide: public preview and unhosted Spotify explain prerequisites without saving pretend connections',()=>{
  const s=guideSandbox();s.M.start('spotify');assert.equal(s.M.data().connections.length,0);assert(s.modals.at(-1).includes('Premium'));s.M.start('gmail');assert.equal(s.M.data().connections.length,0);assert(s.modals.at(-1).includes('开发者预览'));
@@ -164,12 +212,21 @@ test('MCP guide: tools/list failure stays failed and does not show successful ro
 });
 test('MCP guide: private Gmail uses the configured public client descriptor, callback and scopes without DCR',async()=>{
  const s=guideSandbox((url)=>url.includes('oauth-protected-resource')?reply({resource:'https://smallphone-gmail-mcp.fenglina35.workers.dev/mcp',authorization_servers:['https://smallphone-gmail-mcp.fenglina35.workers.dev']}):url.includes('oauth-authorization-server')?reply({issuer:'https://smallphone-gmail-mcp.fenglina35.workers.dev',authorization_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/authorize',token_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/oauth/token',registration_endpoint:'https://smallphone-gmail-mcp.fenglina35.workers.dev/register',code_challenge_methods_supported:['S256']}):null,'private');
- s.M.start('gmail');const c=s.M.data().connections[0];assert.equal(c.auth,'oauth');assert.equal(c.serviceCallback,true);const url=new URL(await s.M.beginOAuth(c.id));assert.equal(url.searchParams.get('client_id'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-metadata.json');assert.equal(url.searchParams.get('redirect_uri'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-callback');assert.equal(url.searchParams.get('scope'),'mcp:read mcp:write offline_access');assert(!s.calls.some(x=>x.url.endsWith('/register')));
+ s.M.start('gmail',false);const c=s.M.data().connections[0];assert.equal(c.auth,'oauth');assert.equal(c.serviceCallback,true);const url=new URL(await s.M.beginOAuth(c.id));assert.equal(url.searchParams.get('client_id'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-metadata.json');assert.equal(url.searchParams.get('redirect_uri'),'https://smallphone-gmail-mcp.fenglina35.workers.dev/client-callback');assert.equal(url.searchParams.get('scope'),'mcp:read mcp:write offline_access');assert(!s.calls.some(x=>x.url.endsWith('/register')));
 });
 test('MCP OAuth: canonical resource is used for login, code exchange and refresh while read-only query stays on RPC',async()=>{
  const host='https://resource.fixture.invalid',s=guideSandbox((url,init)=>url.includes('oauth-protected-resource')?reply({resource:host+'/mcp',authorization_servers:[host],scopes_supported:['read']}):url.includes('oauth-authorization-server')?reply({issuer:host,authorization_endpoint:host+'/authorize',token_endpoint:host+'/token',code_challenge_methods_supported:['S256']}):url===host+'/token'?reply({access_token:'fixture-token',refresh_token:'fixture-refresh',expires_in:3600}):null),c=s.M.add({url:host+'/mcp?read_only=true',auth:'oauth',clientId:'fixture-client'});
  const url=new URL(await s.M.beginOAuth(c.id));assert.equal(url.searchParams.get('resource'),host+'/mcp');const pending=s.M.connection(c.id).pending,receipt=pending.redirect+'&code=fixture-code&state='+pending.state;await s.M.finishOAuth(c.id,receipt);s.M.configure(c.id,{exp:Date.now()-1});await s.M.connect(c.id);
  const tokens=s.calls.filter(x=>x.url===host+'/token');assert.equal(tokens.length,2);for(const call of tokens)assert.equal(new URLSearchParams(call.init.body).get('resource'),host+'/mcp');assert(s.calls.filter(x=>x.body&&x.body.method).every(x=>x.url===host+'/mcp?read_only=true'));
+});
+for(const method of ['client_secret_basic','client_secret_post'])test('MCP OAuth: automatic registration supports '+method+' without manual credentials or leaks',async()=>{
+ const host='https://oauth.fixture.invalid',tokens=[];
+ const s=guideSandbox((url,init)=>url.includes('oauth-protected-resource')?reply({resource:host+'/mcp',authorization_servers:[host]}):url.includes('oauth-authorization-server')?reply({issuer:host,authorization_endpoint:host+'/authorize',token_endpoint:host+'/token',registration_endpoint:host+'/register',code_challenge_methods_supported:['S256'],token_endpoint_auth_methods_supported:[method]}):url===host+'/register'?reply({client_id:'fixture-dcr-client',client_secret:'fixture-dcr-secret'},201):url===host+'/token'?(tokens.push(init),reply({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_in:3600})):null);
+ const c=s.M.add({url:host+'/mcp',auth:'oauth'}),url=new URL(await s.M.beginOAuth(c.id));assert(url.searchParams.get('client_id'));assert.equal(s.M.connection(c.id).clientAuth,method);
+ const registration=s.calls.find(x=>x.url===host+'/register');assert.equal(JSON.parse(registration.init.body).token_endpoint_auth_method,method);
+ const callback=new URL(url.searchParams.get('redirect_uri'));callback.searchParams.set('state',url.searchParams.get('state'));callback.searchParams.set('code','fixture-code');await s.M.finishOAuth(c.id,callback.href);s.M.configure(c.id,{exp:Date.now()-1});await s.M.connect(c.id);assert.equal(tokens.length,2);
+ for(const request of tokens){const body=new URLSearchParams(request.body);if(method==='client_secret_basic'){assert.equal(request.headers.Authorization,'Basic '+Buffer.from('fixture-dcr-client:fixture-dcr-secret').toString('base64'));assert(!body.has('client_secret'));}else assert.equal(body.get('client_secret'),'fixture-dcr-secret');}
+ assert(!JSON.stringify(s.state).includes('fixture-dcr-secret'));assert(!JSON.stringify(s.M.data().receipts).includes('fixture-dcr-secret'));s.M.setup(c.id);assert(!s.modals.at(-1).includes('fixture-dcr-secret'));await s.M.disconnect(c.id);assert(!s.M.connection(c.id).clientSecret);
 });
 test('MCP native HTTP: allowed requests use the bridge once, preserve headers and parse tools without fetch',async()=>{
  const s=guideSandbox(null,'private'),calls=[];s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:true,SmallPhoneNative:{request:async(method,payload)=>{calls.push({method,payload});const b=JSON.parse(payload.body),result=b.method==='initialize'?{protocolVersion:'2025-11-25'}:b.method==='tools/list'?{tools:[readTool]}:{};return{status:200,headers:{'content-type':'application/json','mcp-session-id':'fixture-session'},text:JSON.stringify({jsonrpc:'2.0',id:b.id,result})};}}};
@@ -192,10 +249,29 @@ test('MCP native HTTP: cancellation before dispatch sends nothing; in-flight can
  const first=new AbortController();first.abort();await assert.rejects(s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},first.signal,100,null),e=>e.name==='AbortError');assert.equal(calls.length,0);
  const second=new AbortController(),pending=s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},second.signal,100,null);second.abort();await assert.rejects(pending,e=>e.name==='AbortError');assert.deepEqual(calls,['mcp.http.request','mcp.http.cancel']);
 });
-if(process.env.NORTH_MCP_NATIVE_LIVE==='1')test('MCP native live: actual Foundation transport and private JS negotiate the public document tools',async()=>{
+function foundationLiveSandbox(observe){
  const s=guideSandbox(null,'private'),native=readProject('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),classSource=native.slice(native.indexOf('private final class PrivateMCPNetworkRequest:'));
- const nativeRequest=async(method,payload)=>{assert.equal(method,'mcp.http.request');const json=Buffer.from(JSON.stringify(payload)).toString('base64');const main='\nlet group=DispatchGroup();group.enter()\nlet data=Data(base64Encoded:"'+json+'")!\nlet args=try! JSONSerialization.jsonObject(with:data) as! [String:Any]\nprivate let request=try! PrivateMCPNetworkRequest(arguments:args){result,error in let out:[String:Any]=["result":result ?? [:],"error":error ?? ""];print(String(data:try! JSONSerialization.data(withJSONObject:out),encoding:.utf8)!);group.leave()}\nrequest.start()\nif group.wait(timeout:.now()+50) == .timedOut {exit(1)}\n';const out=cp.execFileSync('swift',['-'],{input:'import Foundation\n'+classSource+main,encoding:'utf8',timeout:55000,maxBuffer:2e6}),result=JSON.parse(out);if(result.error)throw Error(result.error);return result.result;};
+ const nativeRequest=async(method,payload)=>{assert.equal(method,'mcp.http.request');const json=Buffer.from(JSON.stringify(payload)).toString('base64');const main='\nlet group=DispatchGroup();group.enter()\nlet data=Data(base64Encoded:"'+json+'")!\nlet args=try! JSONSerialization.jsonObject(with:data) as! [String:Any]\nprivate let request=try! PrivateMCPNetworkRequest(arguments:args){result,error in let out:[String:Any]=["result":result ?? [:],"error":error ?? ""];print(String(data:try! JSONSerialization.data(withJSONObject:out),encoding:.utf8)!);group.leave()}\nrequest.start()\nif group.wait(timeout:.now()+50) == .timedOut {exit(1)}\n';const out=cp.execFileSync('swift',['-'],{input:'import Foundation\n'+classSource+main,encoding:'utf8',timeout:55000,maxBuffer:2e6}),result=JSON.parse(out);if(result.error)throw Error(result.error);if(observe)observe(payload,result.result);return result.result;};
  s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MCP_HTTP__:true,SmallPhoneNative:{request:nativeRequest}};
+ return s;
+}
+if(process.env.NORTH_MCP_OAUTH_LIVE==='1')test('MCP OAuth live: prepare actual provider authorization links without account consent',async()=>{
+ const failures=[];for(const provider of ['notion','linear','supabase','gmail']){
+  const s=foundationLiveSandbox((request,response)=>{if(request.method!=='POST')return;let d;try{d=JSON.parse(response.text);}catch(_){return;}console.log(JSON.stringify({provider,registrationStatus:response.status,hasClientId:!!d.client_id,hasSecret:!!d.client_secret,authMethod:d.token_endpoint_auth_method||null}));}),p=s.M.catalog.find(p=>p.id===provider),c=s.M.add({...p,provider:p.id});
+  try{
+   const url=new URL(await s.M.beginOAuth(c.id));
+   assert(url.searchParams.get('client_id'));
+   assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+   assert(url.searchParams.get('state'));
+   console.log(JSON.stringify({provider,prepared:true,authorizationHost:url.hostname,authorizationPath:url.pathname}));
+  }catch(error){
+   console.log(JSON.stringify({provider,prepared:false,error:String(error.message)}));
+   failures.push(provider);
+  }
+ }assert.equal(failures.length,0,'provider preparation failed: '+failures.join(', '));
+});
+if(process.env.NORTH_MCP_NATIVE_LIVE==='1')test('MCP native live: actual Foundation transport and private JS negotiate the public document tools',async()=>{
+ const s=foundationLiveSandbox();
  const p=s.M.catalog.find(p=>p.id==='cloudflare-docs'),c=s.M.add({...p,provider:p.id});s.M.configure(c.id,{roles:['role-a'],mode:'auto'});await s.M.connect(c.id);const actual=s.M.connection(c.id);assert.equal(actual.state,'connected');assert(actual.tools.length>0);assert.equal(s.calls.length,0);console.log('Actual Foundation + private JS document tools:',actual.tools.map(t=>t.name).join(', '));const ctx=s.M.context('role-a'),item=ctx.catalog.find(x=>x.t.name==='search_cloudflare_documentation');assert(item&&item.t.inputSchema.properties.query);const result=await s.M.execute(ctx,item,{query:'Cloudflare Workers free plan limits'});assert.notEqual(result.isError,true);assert(JSON.stringify(result).length>100);assert.equal(s.calls.length,0);console.log('Actual Foundation document search succeeded; result bytes:',Buffer.byteLength(JSON.stringify(result)));
 });
 test('MCP native HTTP: Foundation policy rejects local targets, redirects destinations, credentials and unsupported methods',()=>{
@@ -381,7 +457,7 @@ test('MCP budget: large results remain readable to their last character without 
 
 test('MCP budget: explicit skip resumes the exact ordinary chat request and its original output limit',async()=>{
  const s=sandbox();await connected(s);const ctx=s.M.context('role-a'),messages=[{role:'system',content:'原始人设'},{role:'user',content:'晚安呀'}];let n=0;
- s.ctx.chatAPI=async(rows,opt)=>{if(++n===1)return '{"mcp_skip":true}';assert.equal(JSON.stringify(rows),JSON.stringify(messages));assert.equal(opt.max,25);assert.equal(opt.mcpContext,null);assert(!opt.mcpBudget);return '晚安，早点休息。';};
+ s.ctx.chatAPI=async(rows,opt)=>{if(++n===1)return '{"mcp_skip":true}';assert.equal(JSON.stringify(rows.slice(0,messages.length)),JSON.stringify(messages));assert(rows.at(-1).content.includes('授权'));assert(!rows.at(-1).content.includes('__read_note'));assert.equal(opt.max,25);assert.equal(opt.mcpContext,null);assert(!opt.mcpBudget);return '晚安，早点休息。';};
  assert.equal(await s.M.roleReply(messages,{mcpContext:ctx,max:25}),'晚安，早点休息。');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
 });
 
