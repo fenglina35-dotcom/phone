@@ -17,6 +17,8 @@
 		E73280F93024F9F5006DC874 /* Intents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280FB3024F9F5006DC874 /* Intents.framework */; };
 		E73280FA3024F9F5006DC874 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280FC3024F9F5006DC874 /* UserNotifications.framework */; };
 		F10000000000000000000001 /* PhoneScreenBroadcast.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* PhoneScreenBroadcast.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+F20000000000000000000001 /* PhoneWeb.bundle in Resources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000002; };
+F20000000000000000000003 /* PhoneNativeBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000004; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -97,6 +99,9 @@
 		E73280FC3024F9F5006DC874 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 		E74615C43022636300B3739D /* PhoneCompanionTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhoneCompanionTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000002 /* PhoneScreenBroadcast.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PhoneScreenBroadcast.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+F20000000000000000000002 /* PhoneWeb.bundle */ = {isa = PBXFileReference; lastKnownFileType = wrapper.cfbundle; path = PhoneCompanionTest/PhoneWeb.bundle; sourceTree = "<group>"; };
+F20000000000000000000004 /* PhoneNativeBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneCompanionTest/PhoneNativeBridge.swift; sourceTree = "<group>"; };
+F20000000000000000000005 /* SmallPhoneMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = SmallPhoneMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -193,6 +198,7 @@
 			path = PhoneScreenBroadcast;
 			sourceTree = "<group>";
 		};
+F20000000000000000000006 /* PhoneCompanionMac */ = {isa = PBXFileSystemSynchronizedRootGroup; path = PhoneCompanionMac; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -243,6 +249,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+F20000000000000000000013 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -261,6 +268,7 @@
 		E74615BB3022636200B3739D = {
 			isa = PBXGroup;
 			children = (
+ F20000000000000000000006 /* PhoneCompanionMac */,
 				E74615C63022636300B3739D /* PhoneCompanionTest */,
 				E73280A63022994F006DC874 /* PhoneCompanionReport */,
 				E73280C13022B538006DC874 /* PhoneCompanionMonitor */,
@@ -275,6 +283,7 @@
 		E74615C53022636300B3739D /* Products */ = {
 			isa = PBXGroup;
 			children = (
+ F20000000000000000000005 /* SmallPhoneMac.app */,
 				E74615C43022636300B3739D /* PhoneCompanionTest.app */,
 				E73280A53022994F006DC874 /* PhoneCompanionReport.appex */,
 				E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */,
@@ -427,6 +436,16 @@
 			productReference = F10000000000000000000002 /* PhoneScreenBroadcast.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+F20000000000000000000010 /* SmallPhoneMac */ = {
+ isa = PBXNativeTarget;
+ buildConfigurationList = F20000000000000000000011;
+ buildPhases = (F20000000000000000000012, F20000000000000000000013, F20000000000000000000014);
+ buildRules = (); dependencies = ();
+ fileSystemSynchronizedGroups = (F20000000000000000000006);
+ name = SmallPhoneMac; productName = SmallPhoneMac;
+ productReference = F20000000000000000000005;
+ productType = "com.apple.product-type.application";
+};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -476,6 +495,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+ F20000000000000000000010 /* SmallPhoneMac */,
 				E74615C33022636200B3739D /* PhoneCompanionTest */,
 				E73280A43022994F006DC874 /* PhoneCompanionReport */,
 				E73280BC3022B538006DC874 /* PhoneCompanionMonitor */,
@@ -529,6 +549,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+F20000000000000000000014 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (F20000000000000000000001); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -574,6 +595,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (F20000000000000000000003); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1088,6 +1110,28 @@
 			};
 			name = Release;
 		};
+F20000000000000000000015 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = PhoneCompanionMac.entitlements; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 32H9FL4NK7;
+				CURRENT_PROJECT_VERSION = 577;
+				MARKETING_VERSION = 1.0.577;
+ SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0;
+ INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+ PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.SmallPhoneMac; PRODUCT_NAME = "$(TARGET_NAME)";
+ GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "小手机 Mac";
+ INFOPLIST_KEY_NSCameraUsageDescription = "在您主动使用Mac视频通话时请求摄像头权限。";
+ INFOPLIST_KEY_NSMicrophoneUsageDescription = "在您主动使用Mac通话或语音输入时请求麦克风权限。";
+ SWIFT_VERSION = 5.0; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+ LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");}; name = Debug; };
+F20000000000000000000016 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = PhoneCompanionMac.entitlements; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 32H9FL4NK7;
+				CURRENT_PROJECT_VERSION = 577;
+				MARKETING_VERSION = 1.0.577;
+ SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0;
+ INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+ PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.SmallPhoneMac; PRODUCT_NAME = "$(TARGET_NAME)";
+ GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "小手机 Mac";
+ INFOPLIST_KEY_NSCameraUsageDescription = "在您主动使用Mac视频通话时请求摄像头权限。";
+ INFOPLIST_KEY_NSMicrophoneUsageDescription = "在您主动使用Mac通话或语音输入时请求麦克风权限。";
+ SWIFT_VERSION = 5.0; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+ LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");}; name = Release; };
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1154,6 +1198,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+F20000000000000000000011 = {isa = XCConfigurationList; buildConfigurations = (F20000000000000000000015, F20000000000000000000016); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 /* End XCConfigurationList section */
 	};
 	rootObject = E74615BC3022636200B3739D /* Project object */;

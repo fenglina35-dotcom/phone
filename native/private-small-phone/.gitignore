@@ -90,3 +90,8 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 # Private Sky role channel authorized 2026-10-20.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-sky-sync.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/role-video.js
+
+# Authorized native Mac client, sharing PhoneWeb resources.
+!XcodeProject/PhoneCompanionMac/
+!XcodeProject/PhoneCompanionMac/**
+!XcodeProject/PhoneCompanionMac.entitlements

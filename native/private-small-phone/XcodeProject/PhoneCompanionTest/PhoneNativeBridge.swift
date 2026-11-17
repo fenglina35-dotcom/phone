@@ -1,7 +1,8 @@
+import Foundation
+#if os(iOS)
 import AVFoundation
 import CoreLocation
 import CryptoKit
-import Foundation
 import Photos
 import PhotosUI
 import Security
@@ -3712,6 +3713,8 @@ private final class PrivateMCPCardView: UIView, WKNavigationDelegate, WKUIDelega
 
 // MCP_NATIVE_HTTP_V1. Only curated MCP/OAuth hosts; ephemeral, bounded, nonredirecting.
 // This type uses Foundation only so the validation and streaming parser can be tested on macOS.
+#endif
+
 private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     static let hosts: Set<String> = [
         "mcp.cloudflare.com", "docs.mcp.cloudflare.com", "mcp.notion.com", "mcp.linear.app",
@@ -3817,3 +3820,30 @@ private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, 
         } else { finish(error: error == nil ? nil : "mcp_network_unavailable") }
     }
 }
+
+
+#if os(macOS)
+@MainActor
+final class MacMCPTransport {
+    private var requests: [String: PrivateMCPNetworkRequest] = [:]
+
+    func cancel(_ id: String) {
+        requests.removeValue(forKey: id)?.cancel()
+    }
+
+    func request(_ arguments: [String: Any], completion: @escaping ([String: Any]?, String?) -> Void) throws {
+        guard let id = arguments["id"] as? String, !id.isEmpty, id.count <= 100,
+              requests[id] == nil, requests.count < 4 else {
+            throw NSError(domain: "MacMCP", code: 400)
+        }
+        let request = try PrivateMCPNetworkRequest(arguments: arguments) { [weak self] result, error in
+            DispatchQueue.main.async {
+                self?.requests.removeValue(forKey: id)
+                completion(result, error)
+            }
+        }
+        requests[id] = request
+        request.start()
+    }
+}
+#endif
