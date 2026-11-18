@@ -48,7 +48,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   const file=path.resolve(ROOT,decodeURIComponent(url.pathname).replace(/^\//,''));
   if(!file.startsWith(ROOT+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}
   res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp'}[path.extname(file)]||'application/octet-stream'));
-  res.end(fs.readFileSync(file));
+  res.end(file.endsWith('private-device-sync-client.js')?read(path.relative(ROOT,file)):fs.readFileSync(file));
  }catch(error){res.writeHead(500);res.end(String(error));}});
  try{
   await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${ownerA}'),('${ownerB}');`);
@@ -140,7 +140,11 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.evaluate(id=>MCPTools.setRole(id,'cloud-a',false),fixtureConnectionId);
   authOutage=true;modelMode='offline';await page.reload();
   await page.waitForFunction(()=>window.__northBootReady&&NorthPrivateDeviceSyncClient?.status().phase==='network'&&NorthPrivateDeviceSyncClient.gateAllowed(),null,{timeout:10000});
-  assert.equal(await page.locator('#privateSyncConnectionNotice').isVisible(),true);
+  assert.equal(await page.locator('#privateSyncConnectionNotice').count(),0,'background account failures never create a global banner');
+  await page.evaluate(()=>{S.me.locked=false;renderLockScreen();openSettings('data');});
+  await page.waitForFunction(()=>document.querySelector('#privateSyncAccountStatus')?.textContent.includes('超时'));
+  assert(await page.locator('#set_private_account').isVisible(),'connection details are readable inside authorization and data');
+  await page.evaluate(()=>go('home'));assert.equal(await page.locator('#privateSyncAccountStatus').count(),0,'leaving settings removes the status from view');
   assert.equal(await page.locator('#privatePhoneNumber').count(),0,'a timeout does not replace the account view with login');
   await page.evaluate(()=>privatePhoneAccountBindOpen());await page.locator('#privatePhoneNumber').fill('13800000001');await page.locator('#privatePhonePassword').fill('fixture-password');
   await page.evaluate(()=>privatePhoneAccountPasswordLogin());await page.waitForTimeout(1300);

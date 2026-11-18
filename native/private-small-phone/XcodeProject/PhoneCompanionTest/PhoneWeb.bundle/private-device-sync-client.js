@@ -303,21 +303,11 @@
  }
  function removeGate(){const gate=document.getElementById('gate');if(gate)gate.remove();}
  function reveal(user,count){if(client?.status().owner!==user)return;removeGate();scheduleAccountImages();if(typeof scheduleVisibleStoredImages==='function')scheduleVisibleStoredImages(true);scheduleMedia(100);if(overlay){overlay.remove();overlay=null;}notify('ready','ready',count);}
- let connectionNotice=null;
- function showConnectionNotice(status){
-  const needed=status.ready&&status.phase==='network'&&status.error;
-  if(!needed){connectionNotice?.remove();connectionNotice=null;return;}
-  if(!connectionNotice){
-   connectionNotice=document.createElement('aside');connectionNotice.id='privateSyncConnectionNotice';connectionNotice.setAttribute('role','status');
-   connectionNotice.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 12px);left:16px;right:16px;z-index:2147483500;max-width:440px;margin:auto;padding:12px 14px;border:1px solid #47536a;border-radius:16px;background:#172032;color:#e5eafa;font:13px/1.6 system-ui;display:flex;align-items:center;gap:12px';
-   const note=document.createElement('span');note.style.flex='1';note.dataset.connectionNote='1';
-   const retry=document.createElement('button');retry.textContent='重连';retry.style.cssText='border:0;border-radius:10px;background:#31527c;color:white;padding:8px 12px;white-space:nowrap';retry.addEventListener('click',()=>client.syncNow());
-   connectionNotice.append(note,retry);document.body.appendChild(connectionNotice);
-  }
-  connectionNotice.querySelector('[data-connection-note]').textContent=String(status.error).slice(0,220);
- }
+ // PRIVATE_ACCOUNT_STATUS_SETTINGS_ONLY_V1: background connection failures
+ // are visible only inside the account section of authorization and data.
+ function accountStatusText(status){return (labels[status.phase]||'正在连接账号')+(status.phase==='network'&&status.error?' · '+status.error:'')+(status.conflicts?' · '+status.conflicts+' 项不同修改已安全保留':'');}
  function showStatus(status){
-  showConnectionNotice(status);
+  const accountStatus=document.getElementById('privateSyncAccountStatus');if(accountStatus)accountStatus.textContent=accountStatusText(status);
   const counter=document.getElementById('privateSyncConflictCount');if(counter){counter.hidden=!status.conflicts;counter.style.display=status.conflicts?'':'none';counter.textContent='查看 '+status.conflicts+' 项不同修改';}
   if(status.ready){scheduleAccountImages();if(overlay){overlay.remove();overlay=null;}if(status.phase==='ready')notify('ready','ready',client.context()?.codec.dump().length||1);return;}
   notify(status.phase==='network'?'error':'progress',status.phase);
@@ -450,8 +440,8 @@
  };
  // Reuse the existing account settings surface; backups remain an optional recovery tool.
  const backupSection=root.privatePhoneAccountSection;
- root.privatePhoneAccountSection=function(){if(!privatePhoneAccountAvailable())return '';const a=_privatePhoneAccount,status=client.status(),label=labels[status.phase]||'正在连接账号',conflicts=status.conflicts?' · '+status.conflicts+' 项不同修改已安全保留':'';
-  const main='<div class="section" id="set_private_account"><div class="it"><span><b style="color:#bfeaff">私人小手机账号</b><small style="display:block;color:#8f9eb3;margin-top:5px;line-height:1.6">'+esc(label+conflicts)+'</small></span><span class="v">'+esc(a.loggedIn?a.maskedPhone||'已登录':'尚未登录')+'</span></div><div class="hint">同一个手机号登录后，角色、聊天和设置自动同步；系统权限按设备单独授权。</div><button class="btn g" id="privateSyncConflictCount" style="margin:8px 14px;width:calc(100% - 28px);color:#9bcaff;'+(status.conflicts?'':'display:none;')+'" '+(status.conflicts?'':'hidden')+' onclick="privatePhoneSyncConflictsOpen()">查看 '+status.conflicts+' 项不同修改</button><div class="btns" style="padding:10px 14px 14px;gap:10px">'+(a.loggedIn?'<button class="btn p" onclick="NorthPrivateDeviceSyncClient.syncNow()">立即同步</button><button class="btn g" onclick="privatePhoneSyncDevicesOpen()">登录设备</button><button class="btn g" onclick="privatePhoneAccountSignOut()">退出此设备</button>':'<button class="btn p" onclick="privatePhoneAccountBindOpen()">创建或登录账号</button>')+'</div></div>';
+ root.privatePhoneAccountSection=function(){if(!privatePhoneAccountAvailable())return '';const a=_privatePhoneAccount,status=client.status();
+  const main='<div class="section" id="set_private_account"><div class="it"><span><b style="color:#bfeaff">私人小手机账号</b><small id="privateSyncAccountStatus" style="display:block;color:#8f9eb3;margin-top:5px;line-height:1.6">'+esc(accountStatusText(status))+'</small></span><span class="v">'+esc(a.loggedIn?a.maskedPhone||'已登录':'尚未登录')+'</span></div><div class="hint">同一个手机号登录后，角色、聊天和设置自动同步；系统权限按设备单独授权。</div><button class="btn g" id="privateSyncConflictCount" style="margin:8px 14px;width:calc(100% - 28px);color:#9bcaff;'+(status.conflicts?'':'display:none;')+'" '+(status.conflicts?'':'hidden')+' onclick="privatePhoneSyncConflictsOpen()">查看 '+status.conflicts+' 项不同修改</button><div class="btns" style="padding:10px 14px 14px;gap:10px">'+(a.loggedIn?'<button class="btn p" onclick="NorthPrivateDeviceSyncClient.syncNow()">立即同步</button><button class="btn g" onclick="privatePhoneSyncDevicesOpen()">登录设备</button><button class="btn g" onclick="privatePhoneAccountSignOut()">退出此设备</button>':'<button class="btn p" onclick="privatePhoneAccountBindOpen()">创建或登录账号</button>')+'</div></div>';
   const extra=typeof backupSection==='function'?backupSection.apply(this,arguments).replace(/id="set_private_account"/g,'id="privateAccountRecovery"'):'';
   return main+(extra?'<details class="section" style="padding:14px"><summary style="cursor:pointer;color:#999">额外备份与恢复</summary><div style="margin-top:14px">'+extra+'</div></details>':'');
  };
