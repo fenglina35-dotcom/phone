@@ -3,6 +3,34 @@ import assert from 'node:assert/strict';
 import cp from 'node:child_process';
 import {read} from './_helpers.mjs';
 
+test('rollback followed by upgrade never silently picks a stale parallel owner directory', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+ const namespace=source.slice(source.indexOf('struct PrivateNativeStorageScope:'),source.indexOf('\nenum SmallPhoneDiagnosticsStore'));
+ const program=`import Foundation\nimport CryptoKit\n${namespace}\n`+String.raw`
+let f=FileManager.default,support=f.temporaryDirectory.appendingPathComponent("smallphone-source-collision-"+UUID().uuidString)
+defer{try? f.removeItem(at:support)}
+let owner="10000000-0000-0000-0000-000000000001",scope=PrivateNativeStorageScope(owner:owner,epoch:0)!
+let legacy=support.appendingPathComponent("SmallPhonePrivateStore"),accounts=support.appendingPathComponent("SmallPhonePrivateAccounts"),parallel=accounts.appendingPathComponent(owner)
+try f.createDirectory(at:legacy,withIntermediateDirectories:true);try f.createDirectory(at:parallel,withIntermediateDirectories:true)
+try Data(owner.utf8).write(to:accounts.appendingPathComponent("legacy-owner.v1"))
+let fresh=Data("restored-new-state".utf8),stale=Data("stale-candidate-state".utf8)
+try fresh.write(to:legacy.appendingPathComponent("__core_state.json"));try stale.write(to:parallel.appendingPathComponent("__core_state.json"))
+var blocked=false
+do{_ = try PrivateNativeStorageNamespace.directory(support:support,scope:scope,legacyOwner:owner)}catch{blocked=true}
+precondition(try! Data(contentsOf:legacy.appendingPathComponent("__core_state.json"))==fresh)
+precondition(try! Data(contentsOf:parallel.appendingPathComponent("__core_state.json"))==stale)
+print(blocked ? "ambiguous-boot-blocked":"silently-picked-parallel-state")
+let approval:[String:Any] = ["version":2,"owner":owner,"source":"legacy","approvedCoreSHA256":String(repeating:"a",count:64)]
+try JSONSerialization.data(withJSONObject:approval).write(to:accounts.appendingPathComponent("sync-source.v2.json"))
+let selected=try PrivateNativeStorageNamespace.directory(support:support,scope:scope,legacyOwner:owner)
+precondition(selected.path==legacy.path,"a reviewed pin selects the current 577 directory without moving either source")
+precondition(try! Data(contentsOf:parallel.appendingPathComponent("__core_state.json"))==stale)
+precondition(PrivateNativeStorageNamespace.approvedCoreDigest(support:support,scope:scope)==String(repeating:"a",count:64))
+`;
+ const output=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
+ assert(output.includes('ambiguous-boot-blocked'),'two surviving core directories must require explicit source resolution before boot or writes');
+});
+
 test('native account stores isolate files, atomically preserve legacy data and reject stale transfers', {skip:process.platform!=='darwin'},()=>{
  const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
  if(!source.includes('struct PrivateNativeStorageScope:')){
@@ -12,6 +40,7 @@ test('native account stores isolate files, atomically preserve legacy data and r
    .replace(/FileManager\.default\.urls\([\s\S]*?\)\.first/,'[support].first');
   const program=String.raw`
 import Foundation
+import CryptoKit
 let support=FileManager.default.temporaryDirectory.appendingPathComponent("smallphone-native-old-"+UUID().uuidString,isDirectory:true)
 defer{try? FileManager.default.removeItem(at:support)}
 final class LegacyStore {
@@ -33,6 +62,7 @@ print(first==second ? "cross-account-paths-collide":"account-storage-isolated")
  const allowed=source.slice(source.indexOf('    private func nativeStorageReplyAllowed('),source.indexOf('    private var pendingSpeechEvents:'));
  const fixture=String.raw`
 import Foundation
+import CryptoKit
 `+namespace+String.raw`
 final class StorageFixture:@unchecked Sendable {
  struct Answer {let result:[String:Any]?;let error:String?}
@@ -112,6 +142,10 @@ precondition(!files.fileExists(atPath:support.appendingPathComponent("SmallPhone
 let bState=String(data:try JSONSerialization.data(withJSONObject:["settings":[:],"text":"B-only","_deviceSyncOwner":b]),encoding:.utf8)!
 precondition(fixture.call("storage.put",["key":"__core_state","ver":1,"savedAt":20,"stateJSON":bState]).result?["saved"] as? Bool==true)
 precondition(try! Data(contentsOf:aFile)==original,"B writes do not change A")
+let bHead=fixture.call("storage.get",["key":"__core_state","primaryOnly":true]).result!["contentSHA256"] as! String
+let committed=fixture.call("storage.put",["key":"__core_state","ver":1,"savedAt":21,"stateJSON":bState,"expectedSHA256":bHead])
+precondition(committed.result?["saved"] as? Bool==true && committed.result?["parentSHA256"] as? String==bHead)
+precondition(fixture.call("storage.put",["key":"__core_state","ver":1,"savedAt":40,"stateJSON":bState,"expectedSHA256":bHead]).error=="storage_revision_changed","a later timestamp cannot replace a committed different parent")
 precondition(fixture.call("storage.delete",["key":"__core_state"]).result?["deleted"] as? Bool==true)
 precondition(try! Data(contentsOf:aFile)==original,"B deletion does not remove A recovery data")
 precondition(fixture.call("storage.get",["key":"../outside"]).error=="invalid_storage_key")
@@ -135,6 +169,19 @@ _ = try PrivateNativeStorageNamespace.directory(support:existingSupport,scope:b1
 precondition(try! String(contentsOf:existingA.appendingPathComponent("__core_state.json"),encoding:.utf8)=="newer-owner-file")
 precondition(try! Data(contentsOf:existingOld.appendingPathComponent("__core_state.json"))==original,"existing target never overwrites unique legacy evidence")
 precondition(PrivateNativeStorageNamespace.recordedLegacyOwner(support:existingSupport)==a)
+// Pin only the actual restored file; this cannot silently approve future contents.
+try files.createDirectory(at:old,withIntermediateDirectories:true)
+let restoredCore=record("verified-restored-current"),restoredDigest=SHA256.hash(data:restoredCore).map{String(format:"%02x",$0)}.joined()
+try restoredCore.write(to:old.appendingPathComponent("__core_state.json"))
+let sourcePin:[String:Any]=["version":2,"owner":a,"source":"legacy","approvedCoreSHA256":restoredDigest]
+try JSONSerialization.data(withJSONObject:sourcePin).write(to:support.appendingPathComponent("SmallPhonePrivateAccounts/sync-source.v2.json"))
+fixture.switchScope(a2)
+let pinned=fixture.call("storage.get",["key":"__core_state","primaryOnly":true])
+precondition(pinned.result?["sourceApproval"] as? String==restoredDigest)
+let aState=String(data:try JSONSerialization.data(withJSONObject:["settings":[:],"_deviceSyncOwner":a,"text":"next-committed-state"]),encoding:.utf8)!
+precondition(fixture.call("storage.put",["key":"__core_state","ver":1,"savedAt":50,"stateJSON":aState,"expectedSHA256":restoredDigest]).result?["saved"] as? Bool==true)
+precondition(fixture.call("storage.get",["key":"__core_state","primaryOnly":true]).result?["sourceApproval"]==nil,"approval applies to one immutable content, not arbitrary later snapshots")
+precondition(try! Data(contentsOf:aFile)==original,"pin and approved write preserve the other source directory")
 print("native-owner-storage-isolation-ok")
 `;
  const output=cp.execFileSync('swift',['-'],{input:fixture,encoding:'utf8',timeout:60000,maxBuffer:2*1024*1024});
@@ -154,6 +201,7 @@ test('legacy owner capture retries failed storage without rebinding data to a la
   .replaceAll('FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first','[support].first');
  const fixture=String.raw`
 import Foundation
+import CryptoKit
 `+namespace+String.raw`
 final class CaptureFixture {
  let support:URL
@@ -189,6 +237,7 @@ test('native installation identity is stable, device-only and never reads the re
   .replaceAll('SecItemCopyMatching(','fixtureCopy(').replaceAll('SecItemAdd(','fixtureAdd(');
  const fixture=String.raw`
 import Foundation
+import CryptoKit
 import Security
 enum Fixture {
  static let lock=NSLock();static var stored:Data?;static var adds=0;static var deny=false

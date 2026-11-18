@@ -23,13 +23,14 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   sourceA:{userID:ownerA,sessionID:'20000000-0000-0000-0000-000000000001'},
   sourceB:{userID:ownerB,sessionID:'20000000-0000-0000-0000-000000000002'},
   browserA:{userID:ownerA,sessionID:'20000000-0000-0000-0000-000000000003'},
-  browserB:{userID:ownerB,sessionID:'20000000-0000-0000-0000-000000000004'}
+  browserB:{userID:ownerB,sessionID:'20000000-0000-0000-0000-000000000004'},
+  spareA:{userID:ownerA,sessionID:'20000000-0000-0000-0000-000000000005'}
  };
  const nativeCalls=[],modelCalls=[],toolCalls=[],errors=[],sources=[],objects=new Map();let modelMode='ordinary',fixtureConnectionId='',browser,holdResolve=false,resolveSignal,resolveRelease;
  const store={async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return(await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
   async rpc(name,args){return(await db.query('select public.'+name+'('+Object.keys(args).map((k,i)=>k+'=>$'+(i+1)).join(',')+') value',Object.values(args).map(x=>Array.isArray(x)?JSON.stringify(x):x))).rows[0].value;},async putBlob(key,value){objects.set(key,value);},async getBlob(key){return objects.get(key);}};
- const backend=createSyncHandler({store,authenticate:async token=>identity[token],masterKey:'b'.repeat(43),cryptoAPI:webcrypto});
- async function transport(token,body){return(await backend(new Request('https://fixture.invalid/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)}))).json();}
+ const backend=createSyncHandler({store,authenticate:async token=>identity[token],verifyPassword:async(_,password)=>password==='fixture-correct-password',masterKey:'b'.repeat(43),cryptoAPI:webcrypto});
+ async function transport(token,body){return(await backend(new Request('https://fixture.invalid/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({protocolVersion:2,...body})}))).json();}
  async function bodyOf(req){let text='';for await(const part of req)text+=part;return JSON.parse(text);}
  const server=http.createServer(async(req,res)=>{try{
   const url=new URL(req.url,'http://localhost');
@@ -51,13 +52,14 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
  try{
   await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${ownerA}'),('${ownerB}');`);
   await db.exec(read('supabase/migrations/202611170001_private_phone_device_sync.sql'));
+  await db.exec(read('supabase/migrations/202611170003_private_phone_primary_device.sql'));
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
   browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
   // Use a real default state/role as the schema baseline, without enabling sync.
   const probe=await browser.newPage();await probe.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   await probe.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture_unsupported'})};});
   await probe.goto(origin+'/'+PRIV_DIR+'index.html?northPreview=black-home');await probe.waitForFunction(()=>window.__northBootReady);
-  const baseline=await probe.evaluate(()=>({state:defState(),role:S.contacts[0]}));await probe.close();
+  const baseline=await probe.evaluate(()=>({state:defState(),role:S.contacts[0],storageKey:KEY}));await probe.close();
   assert(baseline.role,'the browser schema fixture includes a real role');
   function fixture(owner,name){const state=structuredClone(baseline.state),role=structuredClone(baseline.role);role.id=owner===ownerA?'cloud-a':'cloud-b';role.name=name;role.remark='';role.persona='你是受控账号同步测试角色，用中文简短回复。';role.proactive={enabled:true};role.spy={granted:false};
    state.contacts=[role];state.messages={[role.id]:[{id:'history-'+role.id,role:'assistant',type:'text',content:name+'的云端历史消息',time:Date.now()-60000}]};state.me.name='测试本人';state.me.locked=false;state.me.active='main';state.settings.chat={base:'https://model-fixture.invalid/v1',key:'fixture-only',model:'fixture',maxTokens:4096,temp:.7};state.settings.chatRoutes=[];state.settings.replyDelay=0;state.settings.sound=false;state.settings.manualReply=true;state.settings.timeAware=false;state.settings.memoryFreq=0;return state;}
@@ -87,7 +89,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
    return route.abort();
   });
   await page.goto(origin+'/'+PRIV_DIR+'index.html');
-  await page.waitForFunction(()=>window.__northBootReady&&window.NorthPrivateDeviceSyncClient?.status().ready&&S.contacts.some(x=>x.id==='cloud-a'),{timeout:30000});
+  try{await page.waitForFunction(()=>window.__northBootReady&&window.NorthPrivateDeviceSyncClient?.status().ready&&S.contacts.some(x=>x.id==='cloud-a'),null,{timeout:15000});}catch(error){console.log('initial sync diagnostic',JSON.stringify({errors,native:nativeCalls.slice(-12).map(x=>({action:x.action,sync:x.body.action})),state:await page.evaluate(()=>({boot:window.__northBootReady,finished:_appBootFinished,status:window.NorthPrivateDeviceSyncClient?.status(),roles:S.contacts.map(x=>x.id),ref:_coreBootRef&&{savedAt:_coreBootRef.savedAt,discover:_coreBootRef.discover,accountSwitch:_coreBootRef.accountSwitch},screen:document.body.innerText.slice(0,700)}))}));throw error;}
   assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['cloud-a'],'only the cloud roles are shown, with no default fixture roles');
   assert(await page.evaluate(()=>NorthPrivateDeviceSyncClient.status().secondary));
   await page.evaluate(()=>{S.me.locked=false;renderLockScreen();});
@@ -136,12 +138,45 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   try{await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar')&&NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song')?.parts.length===2,null,{timeout:15000});}catch(error){console.log('media diagnostic',JSON.stringify({calls:nativeCalls.filter(x=>x.action==='account.sync'&&x.body.action.startsWith('media.')).map(x=>({action:x.body.action,bytes:x.body.base64?.length,result:x.result})),state:await page.evaluate(()=>({status:NorthPrivateDeviceSyncClient.status(),keys:NorthPrivateDeviceSyncClient.context()?.codec.dump().filter(x=>x.value?.kind==='media').map(x=>x.value.localKey),image:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar'),audio:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song'),busy:replyGenerationStore()}))}));throw error;}
   const restoredMedia=await page.evaluate(async()=>{await new Promise(async(resolve,reject)=>{const db=await imgDB(),tx=db.transaction('img','readwrite');tx.objectStore('img').delete('fixture-sync-avatar');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});await mDelIDB('fixture-sync-song');const image=await imgGet('fixture-sync-avatar'),audio=await mGet('fixture-sync-song'),bytes=new Uint8Array(await audio.arrayBuffer());return{image:image===fixtureImage,size:bytes.length,bytes:bytes.every((b,i)=>b===i%251)};});
   assert.deepEqual(restoredMedia,{image:true,size:1200000,bytes:true});assert(objects.size>=3,'image and both audio parts are stored as encrypted account objects');
+  await page.evaluate(async()=>{const key='__role_call_loop_v1_fixture';await imgPutIDBWithRetry(key,new Blob([Uint8Array.from([1,2,3,4])],{type:'video/mp4'}));S.contacts.find(x=>x.id==='cloud-a').callLoopVideo={key,name:'既有通话视频',type:'video/mp4',size:4};save();await NorthPrivateDeviceSyncClient.syncNow();});
+  await page.waitForFunction(()=>!!NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('__role_call_loop_v1_fixture'));
+  const loopRestored=await page.evaluate(async()=>{await imgDel('__role_call_loop_v1_fixture');const blob=await imgGet('__role_call_loop_v1_fixture');return Array.from(new Uint8Array(await blob.arrayBuffer()));});assert.deepEqual(loopRestored,[1,2,3,4],'an existing raw-key call video also synchronizes without a new upload action');
+  // Exercise the actual device-management UI, including server-side password and authority gates.
+  const spare=(await transport('spareA',{action:'register',platform:'macOS',label:'待移除的电脑'})).device.id;
+  await page.evaluate(()=>privatePhoneSyncDevicesOpen());const devicePanel=page.locator('#privateSyncDevicesOverlay');
+  await devicePanel.getByText(/本机是副设备/).waitFor();assert.equal(await devicePanel.getByRole('button',{name:'移除',exact:true}).count(),0);
+  await devicePanel.getByRole('button',{name:'将本机设为主设备',exact:true}).click();await devicePanel.getByLabel('小手机账号密码').fill('fixture-wrong-password');await devicePanel.getByRole('button',{name:'验证密码并设为主设备',exact:true}).click();await devicePanel.getByText('密码没有通过验证，请重新输入。',{exact:true}).waitFor();
+  await devicePanel.getByLabel('小手机账号密码').fill('fixture-correct-password');await devicePanel.getByRole('button',{name:'验证密码并设为主设备',exact:true}).click();await devicePanel.getByText(/本机是主设备/).waitFor();
+  const sourceAuthority=await source.journal.inspect();assert.equal(sourceAuthority.isPrimary,false);assert.equal(sourceAuthority.seed.sourceDeviceId,source.journal.state().deviceId,'changing primary never resets the initial data source');
+  await assert.rejects(source.journal.request({action:'revoke',targetId:spare}),/primary_required/);
+  await page.evaluate(()=>{window.fixtureOriginalConfirm=uiConfirm;window.uiConfirm=async()=>true;});
+  await devicePanel.locator('div').filter({has:page.getByText('待移除的电脑',{exact:true}),has:page.getByRole('button',{name:'移除',exact:true})}).last().getByRole('button',{name:'移除',exact:true}).click();
+  await page.waitForFunction(()=>!document.getElementById('privateSyncDevicesOverlay').textContent.includes('待移除的电脑'));
+  assert.equal((await transport('spareA',{action:'inspect',deviceId:spare})).error,'device_revoked_or_unknown');
+  await devicePanel.getByRole('button',{name:'关闭',exact:true}).click();await page.evaluate(()=>{window.uiConfirm=fixtureOriginalConfirm;delete window.fixtureOriginalConfirm;});
   await page.evaluate(async({owner})=>{await NorthPrivateDeviceSyncClient.prepareAccountSwitch();fixtureToken='browserB';__SMALL_PHONE_NATIVE_ACCOUNT__={loggedIn:true,userId:owner};NorthPrivateDeviceSyncClient.accountChanged();}, {owner:ownerB});
   await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.status().owner==='10000000-0000-0000-0000-000000000002'&&NorthPrivateDeviceSyncClient.status().ready&&S.contacts.some(x=>x.id==='cloud-b'),{timeout:30000});
   assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['cloud-b']);assert(!(await page.evaluate(()=>JSON.stringify(S))).includes('云端角色甲的云端历史消息'));
   assert.equal(await page.evaluate(()=>MCPTools.data().connections.length),0,'the next private account cannot see A connections');
   await page.evaluate(()=>openChat('cloud-b'));await page.locator('#chatbg').getByText('云端角色乙的云端历史消息',{exact:true}).waitFor();
   assert(!nativeCalls.some(x=>x.token==='browserB'&&x.action==='account.sync'&&x.body.action==='push'&&JSON.stringify(x.body).includes('cloud-a')),'A data is never uploaded into B');
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:3,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,accountSwitchIsolated:true}));
+  // A reviewed native source is a one-content approval. Preserve the displaced
+  // IDB core before alignment, then prove the next boot needs no approval bypass.
+  const phoneProbe=await browser.newPage();phoneProbe.on('pageerror',error=>errors.push(error.message));
+  await phoneProbe.route('**/*',route=>{const url=new URL(route.request().url());if(url.pathname.endsWith('/private-device-sync-client.js'))return route.fulfill({contentType:'text/javascript',body:''});return url.origin===origin?route.continue():route.abort();});
+  await phoneProbe.goto(origin+'/__empty-source-fixture');
+  const approvedState=fixture(ownerA,'当前手机角色'),oldState=fixture(ownerA,'应保留的旧副本');approvedState.settings.chat.model='current-source-model';approvedState._persistedAt=200;oldState.settings.chat.model='stale-idb-model';oldState._persistedAt=100;
+  await phoneProbe.evaluate(async({key,state})=>{localStorage.setItem(key,JSON.stringify({settings:{},__coreIdb:{ver:1,savedAt:300}}));await new Promise((resolve,reject)=>{const open=indexedDB.open('yibeiImg',2);open.onupgradeneeded=()=>open.result.createObjectStore('img');open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result,tx=db.transaction('img','readwrite');tx.objectStore('img').put({ver:1,savedAt:100,json:JSON.stringify(state)},'__core_state');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);};});},{key:baseline.storageKey,state:oldState});
+  await phoneProbe.addInitScript(({owner,state})=>{
+   window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_ACCOUNT_SYNC__=true;window.__SMALL_PHONE_NATIVE_ACCOUNT__={userId:owner,storageReady:true};window.__SMALL_PHONE_LEGACY_OWNER__=owner;
+   let record=JSON.parse(localStorage.getItem('__fixture_native_current')||'null')||{ver:1,savedAt:state._persistedAt,json:JSON.stringify(state),contentSHA256:'1'.repeat(64)},approved=!localStorage.getItem('__fixture_native_saved');
+   const hash=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,'0')).join('');
+   window.SmallPhoneNative={async request(action,body={}){if(action==='storage.get')return body.key==='__core_state'?{found:true,primaryOnly:true,...record,stateSHA256:await hash(record.json),stateJSON:record.json,...(approved?{sourceApproval:'1'.repeat(64)}:{})}:{found:false,primaryOnly:true};if(action==='storage.put'){if(body.key==='__core_state'){if(body.expectedSHA256!==record.contentSHA256)throw new Error('storage_revision_changed');const next={ver:body.ver,savedAt:body.savedAt,json:body.stateJSON,parentSHA256:record.contentSHA256};record={...next,contentSHA256:await hash(JSON.stringify(next)),stateSHA256:await hash(next.json)};approved=false;localStorage.setItem('__fixture_native_current',JSON.stringify(record));localStorage.setItem('__fixture_native_saved','1');return {saved:true,contentSHA256:record.contentSHA256,stateSHA256:record.stateSHA256,parentSHA256:record.parentSHA256};}return {saved:true};}if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};return {ok:false,error:'fixture_unsupported'};}};
+  },{owner:ownerA,state:approvedState});
+  await phoneProbe.goto(origin+'/'+PRIV_DIR+'index.html');await phoneProbe.waitForFunction(()=>window.__northBootReady,null,{timeout:10000});
+  assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');
+  const archivedModel=await phoneProbe.evaluate(async owner=>new Promise((resolve,reject)=>{const open=indexedDB.open('smallphone-account-sync-v2-'+owner,1);open.onsuccess=()=>{const db=open.result,tx=db.transaction('state','readonly'),get=tx.objectStore('state').get('__device_sync_v2_'+owner+'_bootstrap_before');let result;get.onsuccess=()=>{result=get.result;};tx.oncomplete=()=>{db.close();resolve(JSON.parse(result.previousCore.json).settings.chat.model);};tx.onerror=()=>reject(tx.error);};}),ownerA);assert.equal(archivedModel,'stale-idb-model','the unique old IDB core survives alignment');
+  await phoneProbe.evaluate(async()=>{await saveNowAsync();const head=await SmallPhoneNative.request('storage.get',{key:'__core_state',owner:privateAccountDataIdentity(),primaryOnly:true}),state=JSON.parse(head.stateJSON);state.settings.hist=99;state._persistedAt=Date.now()+1;await SmallPhoneNative.request('storage.put',{key:'__core_state',owner:privateAccountDataIdentity(),ver:1,savedAt:state._persistedAt,stateJSON:JSON.stringify(state),expectedSHA256:head.contentSHA256});});await phoneProbe.reload();await phoneProbe.waitForFunction(()=>window.__northBootReady,null,{timeout:10000});assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');assert.equal(await phoneProbe.evaluate(()=>S.settings.hist),99,'a committed native successor survives interruption before the IDB mirror');await phoneProbe.close();
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:3,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
  }finally{resolveRelease?.();for(const journal of sources)journal.close();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await db.close();}
 });

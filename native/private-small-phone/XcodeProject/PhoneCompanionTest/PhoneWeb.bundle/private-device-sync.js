@@ -17,7 +17,7 @@
   const ensure=token=>{if(closed||token!==epoch||getOwner()!==owner)throw stopped();};
   const run=fn=>{const token=epoch;const task=chain.then(async()=>{ensure(token);return fn(token);});chain=task.catch(()=>{});return task;};
   async function persist(next,token){ensure(token);await storage.write(owner,clone(next));ensure(token);state=next;}
-  async function call(body,token){ensure(token);const result=await transport(clone(body));ensure(token);if(!result||result.ok!==true)throw new Error(String(result&&result.error||'设备同步未完成'));return result;}
+  async function call(body,token){ensure(token);const result=await transport({...clone(body),protocolVersion:2});ensure(token);if(!result||result.ok!==true)throw new Error(String(result&&result.error||'设备同步未完成'));return result;}
   async function init(token){
    if(state){await recover(token);await recoverResolutions(token);return;}
    const previous=await storage.read(owner);ensure(token);
@@ -280,7 +280,13 @@
   }
   function accept(rows){for(const row of rows){safeKey(row.key);if(row.deleted){const old=records.get(row.key);if(old?.kind==='media')media.delete(old.localKey);records.delete(row.key);}else{const value=clone(row.value);records.set(row.key,value);if(value?.kind==='media')media.set(value.localKey,value);}}}
   return Object.freeze({project,materialize,accept,
-   setLocalProjection(values){accept(Object.entries(values).map(([key,value])=>({key,value,deleted:false})));},
+   // PRIVATE_SYNC_LOCAL_DELETION_V2: a full local projection replaces its previous
+   // logical keys. Keep not-yet-visible remote pages and content-addressed parts.
+   setLocalProjection(values,previous){
+    const prior=previous?Object.keys(previous):Array.from(records.keys());
+    for(const key of prior)if(key.startsWith('state/')&&!key.startsWith('state/media/')&&!Object.hasOwn(values,key))records.delete(key);
+    accept(Object.entries(values).map(([key,value])=>({key,value,deleted:false})));
+   },
    mediaManifest:localKey=>media.has(localKey)?clone(media.get(localKey)):null,
    mediaRecords:()=>Object.fromEntries(Array.from(records).filter(([key])=>key.startsWith('state/media/')).map(([key,value])=>[key,clone(value)])),
    async addMediaManifest(meta){

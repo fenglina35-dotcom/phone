@@ -237,9 +237,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1933 · 私人账号多端自动同步';
+const APP_VER='v1934 · 多设备同步保护与主设备管理';
 //@@ private
-const APP_VER='v1932 · 私人账号多端自动同步';
+const APP_VER='v1933 · 多设备同步保护与主设备管理';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
@@ -302,17 +302,37 @@ function normalizeLoadedState(){try{S.me=S.me||{};S.me.uiMaterial='glass';if(!['
 normalizeLoadedState();
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
 //@@ private
-function privateAccountDataIdentity(){let active='';try{if(typeof _privatePhoneAccount!=='undefined'&&_privatePhoneAccount.loaded)active=_privatePhoneAccount.loggedIn?String(_privatePhoneAccount.userId||''):'guest';if(!active){const account=window.__SMALL_PHONE_NATIVE_ACCOUNT__||window.__SMALL_PHONE_ACCOUNT__||window.__SMALL_PHONE_MAC_ACCOUNT__;active=String(account&&account.userId||'guest');}}catch(_){}return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(active)?active:'guest';}
+// PRIVATE_ACCOUNT_BOOT_IDENTITY_V2: load() runs before the later account UI let.
+// A TDZ exception must not skip the immutable native bootstrap identity.
+function privateAccountDataIdentity(){
+  let active='';
+  try{if(typeof _privatePhoneAccount!=='undefined'&&_privatePhoneAccount.loaded)active=_privatePhoneAccount.loggedIn?String(_privatePhoneAccount.userId||''):'guest';}catch(_){}
+  if(!active){const account=window.__SMALL_PHONE_NATIVE_ACCOUNT__||window.__SMALL_PHONE_ACCOUNT__||window.__SMALL_PHONE_MAC_ACCOUNT__;active=String(account&&account.userId||'guest');}
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(active)?active.toLowerCase():'guest';
+}
 function privateAccountLegacyIdentity(){const value=window.__SMALL_PHONE_LEGACY_OWNER__;return typeof value==='string'?value:value&&value.userId||'guest';}
 function privateAccountStateIdentity(){try{if(S&&S._deviceSyncOwner)return String(S._deviceSyncOwner);}catch(_){}return privateAccountDataIdentity();}
 function privateAccountAutonomyAllowed(){return window.__SMALL_PHONE_ACCOUNT_SYNC__!==true||!!(window.NorthPrivateDeviceSyncClient&&NorthPrivateDeviceSyncClient.backgroundAllowed());}
+function privateAccountStorageReady(){return !window.__SMALL_PHONE_NATIVE_ACCOUNT__||window.__SMALL_PHONE_NATIVE_ACCOUNT__.storageReady!==false;}
 function privateAccountShellMatches(data){if(window.__SMALL_PHONE_ACCOUNT_SYNC__!==true||window.__SMALL_PHONE_MAC__===true)return true;const active=privateAccountDataIdentity(),stored=String(data&&data._deviceSyncOwner||'');return stored?stored===active:privateAccountLegacyIdentity()===active;}
 //@@ end
-function load(){if(NORTH_PREVIEW){const s=previewSeed(NORTH_PREVIEW_PARAMS);if(String(NORTH_PREVIEW_PARAMS).includes('restrictedapps')){s.couple=s.couple||{};s.couple.locks={moments:{preview:true},douyin:{preview:true},music:{preview:true},cinema:{preview:true},browser:{preview:true},games:{preview:true}};}return s;}let raw=null;try{raw=localStorage.getItem(KEY);if(!raw){if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}const v=JSON.parse(raw);
+function load(){
+//@@ private
+if(!privateAccountStorageReady()){_coreBootRef={ver:1,savedAt:0,sourceBlocked:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}
+//@@ end
+if(NORTH_PREVIEW){const s=previewSeed(NORTH_PREVIEW_PARAMS);if(String(NORTH_PREVIEW_PARAMS).includes('restrictedapps')){s.couple=s.couple||{};s.couple.locks={moments:{preview:true},douyin:{preview:true},music:{preview:true},cinema:{preview:true},browser:{preview:true},games:{preview:true}};}return s;}let raw=null;try{raw=localStorage.getItem(KEY);if(!raw){
+//@@ private
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true){_coreBootRef={ver:1,savedAt:0,discover:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}
+//@@ end
+if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}const v=JSON.parse(raw);
 //@@ private
 if(!privateAccountShellMatches(v)){_coreBootRef={ver:1,savedAt:0,accountSwitch:true};_coreOverflowMode=true;const initial=mergeStateData(coreBootShell(0));initial._deviceSyncOwner=privateAccountDataIdentity();return initial;}
 //@@ end
-if(v&&v.settings){if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}
+if(v&&v.settings){
+//@@ private
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&!v.__coreIdb){_coreBootRef={ver:1,savedAt:+v._persistedAt||0,inlineJSON:raw};_coreOverflowMode=true;}
+//@@ end
+if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}
 let _bootImagesPromise=null;
 let _saveTimer=null,_saveIdleHandle=0,_savePending=false,_saveLast=0,_saveOkLast=0;
 const PRIVATE_NATIVE_SAVE_GAP_MS=15000;
@@ -380,22 +400,34 @@ function privateImageDatabaseName(owner){return privateScopedDatabaseName('yibei
 function imgDB(owner){return new Promise((res,rej)=>{let settled=false;const r=indexedDB.open(privateImageDatabaseName(owner),IMG_DB_VERSION),fail=()=>{if(settled)return;settled=true;rej(r.error||new Error('IndexedDB unavailable'));};r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('img'))db.createObjectStore('img');};r.onsuccess=e=>{if(settled){try{e.target.result.close();}catch(_){}return;}settled=true;const db=e.target.result;db.onversionchange=()=>{try{db.close();}catch(_){}};res(db);};r.onerror=fail;r.onblocked=fail;});}
 //@@ end
 function privateNativeCoreStorageKey(k){return (k===CORE_IDB_KEY||k===RECOVERY_IDB_KEY||k===RECOVERY_HISTORY_IDB_KEY)&&typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.__SMALL_PHONE_MAC__!==true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
+//@@ private
+let _privateCoreVerifiedOwner='';
+const _privateNativeCoreHeads=new Map();
+//@@ end
 async function privateNativeCorePut(k,v){v=v&&typeof v==='object'?v:{};const args={key:k,ver:+v.ver||1,savedAt:+v.savedAt||Date.now(),stateJSON:String(v.json||'')};if(v.stats&&typeof v.stats==='object')args.stats=v.stats;
 //@@ private
   let capturedOwner=String(v.owner||'');if(!capturedOwner&&typeof v.json==='string')try{capturedOwner=String(JSON.parse(v.json)._deviceSyncOwner||'');}catch(_){}args.owner=capturedOwner||privateAccountLegacyIdentity();
+  const headKey=args.owner+'|'+k;
+  if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY){if(!_privateNativeCoreHeads.has(headKey))await privateNativeCoreGet(k,{primaryOnly:true});if(!_privateNativeCoreHeads.has(headKey))throw new Error('本机主存档缺少可核实的保存版本');args.expectedSHA256=_privateNativeCoreHeads.get(headKey);}
 //@@ end
-  let last;for(let attempt=0;attempt<3;attempt++){try{const r=await window.SmallPhoneNative.request('storage.put',args);if(!r||r.saved!==true)throw new Error('Native storage write failed');return;}catch(e){last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}}throw last||new Error('Native storage write failed after retry');}
+  let last;for(let attempt=0;attempt<3;attempt++){try{const r=await window.SmallPhoneNative.request('storage.put',args);if(!r||r.saved!==true)throw new Error('Native storage write failed');
+//@@ private
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&r.skippedOlderWrite===true){const error=new Error('本机存档版本已变化，本次写入未确认，原有数据保留');error.code='CORE_REVISION_CHANGED';throw error;}
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY){if(!/^[a-f0-9]{64}$/.test(r.contentSHA256||'')||!/^[a-f0-9]{64}$/.test(r.stateSHA256||''))throw new Error('本机存档保存回执缺少指纹');_privateNativeCoreHeads.set(headKey,r.contentSHA256);return {contentSHA256:r.contentSHA256,stateSHA256:r.stateSHA256,parentSHA256:r.parentSHA256};}
+//@@ end
+return;}catch(e){
+//@@ private
+if(/storage_revision_changed|storage_account_changed/.test(String(e&&e.message||e)))throw e;
+//@@ end
+last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}}throw last||new Error('Native storage write failed after retry');}
 //@@ web
 async function privateNativeCoreGet(k){const r=await window.SmallPhoneNative.request('storage.get',{key:k});if(!r||!r.found)return null;let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
 function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k}).then(()=>{});}
-//@@ private
-async function privateNativeCoreGet(k,opt){opt=opt||{};const owner=privateAccountStateIdentity(),r=await window.SmallPhoneNative.request('storage.get',{key:k,owner,backup:opt.backup===true,primaryOnly:opt.primaryOnly===true});if(!r||!r.found)return null;if(opt.backup===true&&r.backup!==true)throw new Error('Native storage bridge does not support backup-only reads');if(opt.primaryOnly===true&&r.primaryOnly!==true)throw new Error('Native storage bridge does not support primary-only reads');let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,owner,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,owner,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
-function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k,owner:privateAccountStateIdentity()}).then(()=>{});}
-//@@ end
-//@@ web
 function imgPutIDB(k,v){return imgDB().then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
 async function imgPutIDBWithRetry(k,v){if(String(k).indexOf('__audio_')===0)_audioPutAt.set(String(k),Date.now());let last;for(let attempt=0;attempt<3;attempt++){try{await imgPutIDB(k,v);return;}catch(e){last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));}}throw last||new Error('IndexedDB write failed after retry');}
 //@@ private
+async function privateNativeCoreGet(k,opt){opt=opt||{};const owner=privateAccountStateIdentity(),r=await window.SmallPhoneNative.request('storage.get',{key:k,owner,backup:opt.backup===true,primaryOnly:opt.primaryOnly===true});if(r&&r.unreadable===true)throw new Error('本机存档文件存在但无法核实，已停止自动读取');if(!r||typeof r.found!=='boolean')throw new Error('本机存档读取未确认');if(!r.found){if(opt.backup!==true)_privateNativeCoreHeads.set(owner+'|'+k,'absent');return null;}if(opt.backup===true&&r.backup!==true)throw new Error('Native storage bridge does not support backup-only reads');if(opt.primaryOnly===true&&r.primaryOnly!==true)throw new Error('Native storage bridge does not support primary-only reads');let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,owner,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,owner,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(/^[a-f0-9]{64}$/.test(r.sourceApproval||''))v.sourceApproval=r.sourceApproval;if(/^[a-f0-9]{64}$/.test(r.contentSHA256||'')){v.contentSHA256=r.contentSHA256;if(opt.backup!==true)_privateNativeCoreHeads.set(owner+'|'+k,r.contentSHA256);}if(/^[a-f0-9]{64}$/.test(r.stateSHA256||''))v.stateSHA256=r.stateSHA256;if(r.parentSHA256)v.parentSHA256=r.parentSHA256;if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
+function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k,owner:privateAccountStateIdentity()}).then(()=>{});}
 function imgPutIDB(k,v,owner){return imgDB(owner).then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
 async function imgPutIDBWithRetry(k,v,owner){
   owner=owner||privateAccountStateIdentity();
@@ -407,117 +439,63 @@ function imgPut(k,v){if(privateNativeCoreStorageKey(k))return privateNativeCoreP
 function imgGetIDBOnce(k){return imgDB().then(db=>new Promise(res=>{let value=null,tx;try{tx=db.transaction('img','readonly');const q=tx.objectStore('img').get(k);q.onsuccess=()=>{value=q.result;};q.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(null);return;}const done=()=>{try{db.close();}catch(_){}res(value);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>null);}
 async function imgGetIDB(k){_idbOpenFailure='';let value=await imgGetIDBOnce(k);if(value!=null||!_idbOpenFailure)return value;await new Promise(resolve=>setTimeout(resolve,240));_idbOpenFailure='';value=await imgGetIDBOnce(k);return value;}
 //@@ private
-function imgPut(k,v){const owner=v&&typeof v==='object'&&v.owner||privateAccountStateIdentity();if(privateNativeCoreStorageKey(k))return privateNativeCorePut(k,v).catch(error=>{if(/storage_account|account.*changed|账号.*变化/i.test(String(error&&error.message||error)))throw error;return imgPutIDBWithRetry(k,v,owner);});return imgPutIDBWithRetry(k,v,owner);}
+function imgPut(k,v){const owner=v&&typeof v==='object'&&v.owner||privateAccountStateIdentity();if(privateNativeCoreStorageKey(k))return privateNativeCorePut(k,v).then(meta=>window.__SMALL_PHONE_ACCOUNT_SYNC__===true?imgPutIDBWithRetry(k,Object.assign({},v,meta||{}),owner):undefined).catch(error=>{if(error&&error.code==='CORE_REVISION_CHANGED'||/storage_revision_changed|storage_account|account.*changed|账号.*变化/i.test(String(error&&error.message||error)))throw error;return imgPutIDBWithRetry(k,v,owner);});return imgPutIDBWithRetry(k,v,owner);}
 function imgGetIDB(k){return imgDB().then(db=>new Promise(res=>{let value=null,tx;try{tx=db.transaction('img','readonly');const q=tx.objectStore('img').get(k);q.onsuccess=()=>{value=q.result;};q.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(null);return;}const done=()=>{try{db.close();}catch(_){}res(value);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>null);}
+// PRIVATE_CORE_SOURCE_GUARD_V1: timestamps are write times, not proof of data ancestry.
+async function privateAlignApprovedCore(record){
+  if(!record||!/^[a-f0-9]{64}$/.test(record.sourceApproval||''))throw new Error('恢复来源尚未确认');
+  const owner=privateAccountDataIdentity(),key='__device_sync_v2_'+owner+'_bootstrap_before';
+  const check=()=>{if(privateAccountDataIdentity()!==owner)throw new Error('账号已变化，已停止迁移');};
+  const current=await imgGetIDB(CORE_IDB_KEY);check();
+  if(JSON.stringify(current||null)!==JSON.stringify(record.approvedBefore||null))throw new Error('核对期间备用存档发生变化，已停止迁移');
+  const saved={version:2,owner,sourceSHA256:record.sourceApproval,previousCore:current||null,previousInline:_coreBootRef&&_coreBootRef.inlineJSON||null};
+  let archivedExpected=saved;
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('smallphone-account-sync-v2-'+owner,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('state'))request.result.createObjectStore('state');};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+  try{
+    await new Promise((resolve,reject)=>{const tx=db.transaction('state','readwrite'),store=tx.objectStore('state'),request=store.get(key);let failure=null;request.onsuccess=()=>{const prior=request.result;if(prior&&prior.sourceSHA256!==record.sourceApproval){failure=new Error('另一份迁移前存档已保留，不能覆盖');tx.abort();}else if(!prior)store.put(saved,key);else archivedExpected=prior;};tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(failure||tx.error||new Error('迁移前存档未保存'));});
+    const verified=await new Promise((resolve,reject)=>{const tx=db.transaction('state','readonly'),request=tx.objectStore('state').get(key);let value;request.onsuccess=()=>{value=request.result;};tx.oncomplete=()=>resolve(value);tx.onerror=tx.onabort=()=>reject(tx.error);});check();
+    if(!verified||verified.owner!==owner||verified.sourceSHA256!==record.sourceApproval||JSON.stringify(verified)!==JSON.stringify(archivedExpected))throw new Error('迁移前存档读回核验失败');
+  }finally{db.close();}
+  check();await privateRepairCoreMirror(record);check();
+  const aligned=await imgGetIDB(CORE_IDB_KEY);check();if(!aligned||aligned.json!==record.json)throw new Error('备用存档核验未通过，原始来源保留');
+}
+async function privateRepairCoreMirror(record){
+  const owner=privateAccountDataIdentity(),value={ver:record.ver,savedAt:record.savedAt,json:record.json,owner};
+  for(const key of ['contentSHA256','stateSHA256','parentSHA256'])if(record[key])value[key]=record[key];
+  await imgPutIDBWithRetry(CORE_IDB_KEY,value,owner);
+  if(privateAccountDataIdentity()!==owner)throw new Error('账号已变化，已停止迁移');
+  const verified=await imgGetIDB(CORE_IDB_KEY);if(!verified||verified.json!==record.json||verified.contentSHA256!==value.contentSHA256)throw new Error('本机备用存档保存未核实');
+}
+async function privateVerifyCoreMirror(record){
+  if(!record||!record.stateSHA256)return record;
+  const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(record.json));
+  const digest=Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');
+  if(digest!==record.stateSHA256)throw new Error('备用存档指纹与内容不符，已停止自动读取');
+  return Object.assign({},record,{stateHashVerified:true});
+}
+function privateSelectStoredCore(a,b){
+  const parse=record=>{if(!record)return null;let state;try{state=JSON.parse(record.json);}catch(_){throw new Error('本机核心存档无法完整核对，已停止自动读取');}if(!state||!state.settings||!privateAccountShellMatches(state))throw new Error('本机存档账号归属不符，已停止自动读取');const content=Object.assign({},state);delete content._persistedAt;delete content._deviceSyncOwner;delete content.__coreIdb;return JSON.stringify(content);};
+  const left=parse(a),right=parse(b);
+  if(a&&/^[a-f0-9]{64}$/.test(a.sourceApproval||'')){const before=b?Object.assign({},b):null;if(before)delete before.stateHashVerified;return Object.assign({},a,{approvedBefore:before});}
+  // PRIVATE_CORE_LINEAGE_V1: only a verified predecessor permits crash repair.
+  if(a&&b&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(b.contentSHA256||'')&&a.parentSHA256===b.contentSHA256)return Object.assign({},a,{repairMirror:true});
+  if(a&&b&&left!==right)throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');
+  return a&&b?((+b.savedAt||0)>(+a.savedAt||0)?b:a):a||b||null;
+}
 //@@ end
-function newestStoredCore(a,b){if(!a)return b||null;if(!b)return a;return (+b.savedAt||0)>(+a.savedAt||0)?b:a;}
+function newestStoredCore(a,b){
+//@@ private
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true)return privateSelectStoredCore(a,b);
+//@@ end
+if(!a)return b||null;if(!b)return a;return (+b.savedAt||0)>(+a.savedAt||0)?b:a;}
+//@@ web
 function imgGet(k){if(privateNativeCoreStorageKey(k))return Promise.all([privateNativeCoreGet(k).catch(()=>null),imgGetIDB(k)]).then(rows=>newestStoredCore(rows[0],rows[1]));return imgGetIDB(k);}
+//@@ private
+function imgGet(k){if(privateNativeCoreStorageKey(k))return Promise.all([window.__SMALL_PHONE_ACCOUNT_SYNC__===true?privateNativeCoreGet(k,{primaryOnly:true}):privateNativeCoreGet(k).catch(()=>null),imgGetIDB(k)]).then(async rows=>{if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true){rows[0]=await privateVerifyCoreMirror(rows[0]);rows[1]=await privateVerifyCoreMirror(rows[1]);}return newestStoredCore(rows[0],rows[1]);});return imgGetIDB(k);}
+//@@ end
 function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){if(String(c.key).indexOf('__')!==0)out[c.key]=c.value;c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
 function imgKeys(){return imgDB().then(db=>new Promise(res=>{const out=[];let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openKeyCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){out.push(String(c.key));c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>[]);}
 function imageRefKeys(root){const keys=new Set(),seen=typeof WeakSet!=='undefined'?new WeakSet():null;(function walk(o){if(!o||typeof o!=='object')return;if(seen){if(seen.has(o))return;seen.add(o);}for(const k in o){const v=o[k];if(typeof v==='string'&&v.indexOf('idb:')===0)keys.add(v.slice(4));else if(v&&typeof v==='object')walk(v);}})(root);return [...keys].filter(Boolean);}
 function privateTrimImageMemoryCache(extraKeys){if(!lazyStoredImagesOn())return 0;const rows=Object.entries(_imgCache||{}),sizeOf=v=>typeof v==='string'?v.length:0,limit=NORTH_IOS_WEBKIT&&!privateNativeAppOn()?IOS_WEB_IMAGE_CACHE_CHAR_LIMIT:NORTH_ANDROID&&!privateNativeAppOn()?24*1024*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT;let total=rows.reduce((n,x)=>n+sizeOf(x[1]),0);if(total<=limit)return 0;const keep=new Set([...(extraKeys||[]),...privateBootImageKeys(),...(typeof routeCriticalStoredImageKeys==='function'?routeCriticalStoredImageKeys():[]),...(typeof visibleStoredImageKeys==='function'?visibleStoredImageKeys():[])]);let removed=0;for(const [key,value] of rows){if(total<=limit)break;if(keep.has(key)||String(key).indexOf('__')===0)continue;delete _imgCache[key];if(value)_imgRev.delete(value);total-=sizeOf(value);removed++;}return removed;}
 function imgManyChunk(keys){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const store=tx.objectStore('img');keys.forEach(k=>{const q=store.get(k);q.onsuccess=()=>{if(q.result!=null)out[k]=q.result;};q.onerror=()=>{};});}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
 async function imgMany(keys){keys=[...new Set((keys||[]).filter(Boolean))];const out={};for(let i=0;i<keys.length;i+=48){const part=keys.slice(i,i+48),found=await imgManyChunk(part);Object.assign(out,found);const missing=part.filter(k=>out[k]==null);for(let j=0;j<missing.length;j+=12)Object.assign(out,await imgManyChunk(missing.slice(j,j+12)));}return out;}
-function imgDelIDB(k){return imgDB().then(db=>new Promise(res=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').delete(k);}catch(_){try{db.close();}catch(__){}res();return;}const done=()=>{try{db.close();}catch(_){}res();};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>{});}
-function imgDel(k){if(privateNativeCoreStorageKey(k))return privateNativeCoreDelete(k).catch(()=>{}).then(()=>imgDelIDB(k));return imgDelIDB(k);}
-function isBigImg(v){return typeof v==='string'&&v.length>2000&&v.indexOf('data:image')===0;}
-async function primeImageForSave(v){if(!isBigImg(v))return;let key=_imgRev.get(v);if(!key){key='i'+(_imgSeq++)+Date.now().toString(36);_imgRev.set(v,key);_imgCache[key]=v;}await imgPut(key,v);_imgReady.add(key);}
-//@@ web
-function stateBigImages(root){const rows=[],images=new Set(),seen=typeof WeakSet!=='undefined'?new WeakSet():null;(function walk(value){if(!value||typeof value!=='object')return;if(seen){if(seen.has(value))return;seen.add(value);}for(const key in value){const item=value[key];if(isBigImg(item)){if(!images.has(item)){images.add(item);rows.push(item);}}else if(item&&typeof item==='object')walk(item);}})(root);return rows;}
-async function primeStateImagesForSave(root){const rows=stateBigImages(root);for(let i=0;i<rows.length;i+=2){await Promise.all(rows.slice(i,i+2).map(primeImageForSave));if(i+2<rows.length)await new Promise(resolve=>setTimeout(resolve,0));}return rows.length;}
-function compactReadyStateImages(root){let changed=0;const seen=typeof WeakSet!=='undefined'?new WeakSet():null;(function walk(value){if(!value||typeof value!=='object')return;if(seen){if(seen.has(value))return;seen.add(value);}for(const key in value){const item=value[key];if(isBigImg(item)){const imageKey=_imgRev.get(item);if(imageKey&&_imgReady.has(imageKey)){value[key]='idb:'+imageKey;changed++;}}else if(item&&typeof item==='object')walk(item);}})(root);return changed;}
-//@@ end
-function imageReferenceCompactSoon(){if(_imageReferenceCompactTimer||NORTH_PREVIEW)return;_imageReferenceCompactTimer=setTimeout(()=>{_imageReferenceCompactTimer=0;if(_appBootFinished)save(0);},240);}
-// 存档时：已确认写进 IndexedDB 的大图→换成短引用 idb:key；新图先照旧存、并异步写进库，下次保存才精简（确保绝不丢图）
-function pfMsgStoreKey(){try{return '__pf_messages_'+((S&&S.me&&S.me.phoneFriend&&S.me.phoneFriend.id)||'main');}catch(_){return '__pf_messages_main';}}
-function pfGroupMsgStoreKey(){try{return '__pf_group_messages_'+((S&&S.me&&S.me.phoneFriend&&S.me.phoneFriend.id)||'main');}catch(_){return '__pf_group_messages_main';}}
-function messageArchiveStamp(store){if(!store||typeof store!=='object')return'0:0:0';const keys=Object.keys(store).filter(k=>Array.isArray(store[k])).sort();let count=0,hash=2166136261>>>0;const mix=value=>{const s=String(value==null?'':value);for(let i=0;i<s.length;i++){hash^=s.charCodeAt(i);hash=Math.imul(hash,16777619)>>>0;}},row=m=>{if(!m||typeof m!=='object'){mix('null');return;}const body=String(m.content!=null?m.content:m.text!=null?m.text:m.body!=null?m.body:''),media=String(m.audio||m.img||m.src||'');mix(m.id);mix(m.time||m.ts||m.created_at);mix(m.role);mix(m.type);mix(body.length);mix(body.slice(0,18));mix(body.slice(-18));mix(media.length);mix(media.slice(-18));mix(m.recalled);mix(m.received);mix(m.receivedBy);mix(m.declined);mix(m.refunded);mix(m.payState);mix(m.receivedAt);mix(m.refundedAt);mix(m._transferReceipt);mix(m.receiptOf);mix(m.receiptAction);mix(m._walletSettled);mix(m._walletRefunded);mix(m.read);mix(m.seenAt);mix(m.readAt);mix(m.liked);mix(m.visionState);mix(m._roleReplyStatus);};for(const key of keys){const rows=store[key],n=rows.length;mix(key);mix(n);count+=n;if(n)row(rows[0]);if(n>2)row(rows[n-2]);if(n>1)row(rows[n-1]);}return keys.length+':'+count+':'+hash;}
-//@@ web
-function writeMessageArchive(blob,stamp){if((typeof _msgArchiveLost!=='undefined'&&_msgArchiveLost))return Promise.resolve();blob=String(blob||'{}');_heavy.messages=blob;_heavyReady.delete('messages');_messageArchiveWrite=_messageArchiveWrite.catch(()=>{}).then(()=>imgPut('__messages',blob)).then(()=>{if(_heavy.messages===blob){_heavyStamp.messages=stamp||messageArchiveStamp(S.messages);_heavyReady.add('messages');delete _heavy.messages;}});return _messageArchiveWrite;}
-function writeHeavyMessageArchive(rk,key,blob,stamp){_heavy[rk]=blob;_heavyReady.delete(rk);return imgPut(key,blob).then(()=>{if(_heavy[rk]===blob){_heavyStamp[rk]=stamp;_heavyReady.add(rk);delete _heavy[rk];save(0);}}).catch(()=>{});}
-//@@ private
-function writeMessageArchive(blob,stamp){if((typeof _msgArchiveLost!=='undefined'&&_msgArchiveLost))return Promise.resolve();blob=String(blob||'{}');_heavy.messages=blob;_heavyReady.delete('messages');_messageArchiveWrite=_messageArchiveWrite.catch(()=>{}).then(()=>imgPut('__messages',blob)).then(()=>{if(_heavy.messages===blob){_heavyStamp.messages=stamp||messageArchiveStamp(S.messages);_heavyReady.add('messages');}});return _messageArchiveWrite;}
-function writeHeavyMessageArchive(rk,key,blob,stamp){_heavy[rk]=blob;_heavyReady.delete(rk);imgPut(key,blob).then(()=>{if(_heavy[rk]===blob){_heavyStamp[rk]=stamp;_heavyReady.add(rk);save(0);}}).catch(()=>{});}
-//@@ end
-/* MSG_ARCHIVE_NO_WIPE_V1（2026-10-18 事故：私人 App 打开时长聊天库 __messages 读了 3 分钟没读出来，
-   以前把「读不到」当成「没有聊天」，角色 22:00 发来新消息一保存，看聊天只剩几条，就把整个长聊天库删了，
-   16:30 之后的聊天全没了）。现在：存档里写着聊天在长库里、却读不出来时，记下「长库暂时读不到」，
-   这期间不删、不覆盖长库，存档里继续留着「去长库找」的记号，新消息照常存进存档；后台每 20 秒再读一次，读到了就合并回来。 */
-let _msgArchiveLost=false,_msgArchiveRetryTimer=0,_msgArchiveRetries=0;
-async function msgArchiveBootRead(){for(let i=0;i<3;i++){const b=await imgGetIDB('__messages');if(b)return b;await new Promise(r=>setTimeout(r,1200));}return null;}
-function msgArchiveMarkLost(){_msgArchiveLost=true;delete _heavy.messages;delete _heavyStamp.messages;_heavyReady.delete('messages');if(typeof toast==='function')try{toast('聊天记录库这次没读出来，已保护不删，正在自动重试');}catch(_){}msgArchiveRetryLater();}
-function msgArchiveRetryLater(){if(_msgArchiveRetryTimer||!_msgArchiveLost||_msgArchiveRetries>=30)return;_msgArchiveRetryTimer=setTimeout(async()=>{_msgArchiveRetryTimer=0;_msgArchiveRetries++;let b=null;try{b=await imgGetIDB('__messages');}catch(_){b=null;}
-  if(b&&_msgArchiveLost){try{const restored=JSON.parse(b);if(restored&&typeof restored==='object'){const live={};for(const k of Object.keys(S.messages||{}))if(Array.isArray(S.messages[k]))live[k]=S.messages[k];S.messages=mergeBootMessages(restored,live);_msgArchiveLost=false;save(0);try{if(typeof render==='function')render();}catch(_){}return;}}catch(_){}}
-  msgArchiveRetryLater();},20000);}
-function deleteMessageArchive(){if((typeof _msgArchiveLost!=='undefined'&&_msgArchiveLost))return _messageArchiveWrite;delete _heavy.messages;delete _heavyStamp.messages;_heavyReady.delete('messages');_messageArchiveWrite=_messageArchiveWrite.catch(()=>{}).then(()=>imgDel('__messages'));return _messageArchiveWrite;}
-//@@ web
-async function persistWechatMessagesNow(){let blob;try{blob=JSON.stringify(S.messages||{});}catch(_){blob='{}';}if(blob.length>20000)await writeMessageArchive(blob,messageArchiveStamp(S.messages));else await deleteMessageArchive();return saveNowAsync();}
-async function primeImportedMessageStore(value,key,rk){let blob;try{blob=JSON.stringify(value||{});}catch(e){throw new Error('导入的聊天记录无法安全整理：'+String(e&&e.message||e));}if(blob.length<=20000){delete _heavy[rk];delete _heavyStamp[rk];_heavyReady.delete(rk);await imgDel(key);return false;}const stamp=messageArchiveStamp(value);_heavy[rk]=blob;_heavyReady.delete(rk);await imgPut(key,blob);if(_heavy[rk]!==blob)throw new Error('导入期间聊天记录又发生了变化，请重试');_heavyStamp[rk]=stamp;_heavyReady.add(rk);delete _heavy[rk];return true;}
-//@@ private
-let _persistWechatRequested=0,_persistWechatCompleted=0,_persistWechatRunning=false,_persistWechatWaiters=[];
-function persistWechatClock(){return typeof performance!=='undefined'&&performance.now?performance.now():Date.now();}
-function persistWechatTrace(stage,fields){try{if(typeof window.__smallPhoneWechatPersistTrace==='function')window.__smallPhoneWechatPersistTrace(Object.assign({stage},fields||{}));}catch(_){}}
-function persistWechatSettle(upto,value,error){const keep=[];for(const row of _persistWechatWaiters){if(row.target<=upto){if(error)row.reject(error);else row.resolve(value);}else keep.push(row);}_persistWechatWaiters=keep;}
-function persistWechatDrain(){if(_persistWechatRunning)return;_persistWechatRunning=true;const started=persistWechatClock();let passes=0,coalesced=0,observed=_persistWechatCompleted,maxBlobChars=0,archiveMs=0,coreMs=0;persistWechatTrace('begin',{queued:Math.max(1,_persistWechatRequested-_persistWechatCompleted)});(async()=>{try{while(_persistWechatCompleted<_persistWechatRequested){const target=_persistWechatRequested;coalesced+=Math.max(0,target-observed-1);observed=target;passes++;let blob;try{blob=JSON.stringify(S.messages||{});}catch(_){blob='{}';}maxBlobChars=Math.max(maxBlobChars,blob.length);const stamp=messageArchiveStamp(S.messages),archiveStarted=persistWechatClock();if(blob.length>20000){if(!(_heavyReady.has('messages')&&_heavyStamp.messages===stamp&&_heavy.messages===blob))await writeMessageArchive(blob,stamp);}else await deleteMessageArchive();archiveMs+=Math.max(0,Math.round(persistWechatClock()-archiveStarted));if(target!==_persistWechatRequested)continue;const coreStarted=persistWechatClock(),saved=await saveNowAsync();coreMs+=Math.max(0,Math.round(persistWechatClock()-coreStarted));if(target!==_persistWechatRequested)continue;_persistWechatCompleted=target;persistWechatSettle(target,!!saved,null);}}catch(error){const failedThrough=_persistWechatRequested;_persistWechatCompleted=failedThrough;persistWechatSettle(failedThrough,false,error);persistWechatTrace('error',{passes,coalesced,blobChars:maxBlobChars,ms:Math.round(persistWechatClock()-started),error:String(error&&error.name||'Error')});}finally{_persistWechatRunning=false;persistWechatTrace('end',{passes,coalesced,blobChars:maxBlobChars,archiveMs,coreMs,ms:Math.round(persistWechatClock()-started)});if(_persistWechatCompleted<_persistWechatRequested)persistWechatDrain();}})();}
-function persistWechatMessagesNow(){const target=++_persistWechatRequested,promise=new Promise((resolve,reject)=>_persistWechatWaiters.push({target,resolve,reject}));if(_persistWechatRunning)persistWechatTrace('coalesced',{queued:Math.max(1,_persistWechatRequested-_persistWechatCompleted)});else persistWechatDrain();return promise;}
-async function primeImportedMessageStore(value,key,rk){let blob;try{blob=JSON.stringify(value||{});}catch(e){throw new Error('导入的聊天记录无法安全整理：'+String(e&&e.message||e));}if(blob.length<=20000){delete _heavy[rk];delete _heavyStamp[rk];_heavyReady.delete(rk);await imgDel(key);return false;}const stamp=messageArchiveStamp(value);_heavy[rk]=blob;_heavyReady.delete(rk);await imgPut(key,blob);if(_heavy[rk]!==blob)throw new Error('导入期间聊天记录又发生了变化，请重试');_heavyStamp[rk]=stamp;_heavyReady.add(rk);return true;}
-//@@ end
-async function compactImportedImages(root){
-  const images=new Map(),seen=new WeakSet(),stack=[root];let scanned=0,count=0;
-  while(stack.length){const value=stack.pop();if(!value||typeof value!=='object'||seen.has(value))continue;seen.add(value);
-    for(const key of Object.keys(value)){const item=value[key];if(isBigImg(item)){let refs=images.get(item);if(!refs){refs=[];images.set(item,refs);}refs.push([value,key]);}else if(item&&typeof item==='object')stack.push(item);}
-    if(++scanned%128===0)await new Promise(resolve=>setTimeout(resolve,0));
-  }
-  const lazy=lazyStoredImagesOn();
-  for(const [image,refs] of images){const oldKey=_imgRev.get(image),cached=oldKey&&_imgCache[oldKey]===image;
-    await primeImageForSave(image);const key=_imgRev.get(image);
-    if(!key||!_imgReady.has(key))throw new Error('备份图片未能安全写入，请检查存储空间');
-    for(const [parent,field] of refs)if(parent[field]===image)parent[field]='idb:'+key;
-    images.delete(image);count++;
-    // Only release newly imported cache entries; persisted image data and active-page caches stay intact.
-    if(lazy&&!cached){delete _imgCache[key];_imgRev.delete(image);}
-    if(count%2===0)await new Promise(resolve=>setTimeout(resolve,0));
-  }
-  return count;
-}
-async function prepareImportedStateForSave(){await compactImportedImages(S);if(lazyStoredImagesOn())privateTrimImageMemoryCache();await primeImportedMessageStore(S.messages||{},'__messages','messages');const pf=S.me&&S.me.phoneFriend;if(pf){const messageKey=pfMsgStoreKey(),groupKey=pfGroupMsgStoreKey();await primeImportedMessageStore(pf.messages||{},messageKey,'pfMessages:'+messageKey);await primeImportedMessageStore(pf.groupMessages||{},groupKey,'pfGroupMessages:'+groupKey);}return true;}
-function wechatTailSafeRow(m){if(!m||typeof m!=='object')return null;let x;try{x=JSON.parse(JSON.stringify(m));}catch(_){return null;}['audio','src','img'].forEach(k=>{const v=x[k];if(typeof v==='string'&&v.length>1800&&/^(?:data:|blob:)/i.test(v)){delete x[k];if(k==='audio')x._audioExpired=true;}});return x;}
-function wechatTailJournalWrite(id,aid){try{const key=accountMessageKey(id,aid||actId()),arr=S.messages&&S.messages[key];if(!Array.isArray(arr)||!arr.length)return false;const rows=arr.slice(-18).map(wechatTailSafeRow).filter(Boolean);if(!rows.length)return false;const at=Math.max(Date.now(),(+S._persistedAt||0)+1);localStorage.setItem(WECHAT_TAIL_KEY,JSON.stringify({ver:1,at,key,rows}));return true;}catch(_){return false;}}
-function wechatTailJournalMerge(){try{const raw=localStorage.getItem(WECHAT_TAIL_KEY);if(!raw)return false;const j=JSON.parse(raw),persisted=+S._persistedAt||0;if(!j||j.ver!==1||!j.key||!Array.isArray(j.rows)||(+j.at||0)<=persisted)return false;S.messages=S.messages&&typeof S.messages==='object'?S.messages:{};const dst=Array.isArray(S.messages[j.key])?S.messages[j.key]:(S.messages[j.key]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));let added=false;for(const m of j.rows){if(!m||!m.id||seen.has(m.id))continue;dst.push(m);seen.add(m.id);added=true;}if(added)dst.sort((a,b)=>(+a.time||0)-(+b.time||0));return added;}catch(_){return false;}}
-//@@ web
-function socialDailyDate(ts){try{const d=new Date(+ts||0);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}catch(_){return'';}}
-function socialDailySafeRow(row){let x;try{x=JSON.parse(JSON.stringify(row));}catch(_){return null;}if(Array.isArray(x.images)){const total=x.images.length;x.images=x.images.filter(v=>typeof v==='string'&&!/^(?:data:|blob:)/i.test(v)).slice(0,4);if(total>x.images.length)x._journalImageCount=total;}return x;}
-function socialDailyPayload(){const date=todayStr(),moments=(S.moments||[]).filter(p=>p&&p.id&&socialDailyDate(p.time)===date).slice(0,60),tweets=(S.x&&S.x.tweets||[]).filter(t=>t&&t.id&&t.who!=='net'&&socialDailyDate(t.time)===date).slice(0,60),stamp=[date,moments.map(p=>[p.id,p.time,p.text,p.regeneratedAt,(p.likes||[]).length,(p.comments||[]).length].join(':')).join('|'),tweets.map(t=>[t.id,t.time,t.text,t.regeneratedAt,(t.likes||[]).length,(t.comments||[]).length].join(':')).join('|')].join('~');return{date,stamp,moments:moments.map(socialDailySafeRow).filter(Boolean),tweets:tweets.map(socialDailySafeRow).filter(Boolean)};}
-function socialDailyJournalWrite(){try{if((_coreBootRef||_androidOrphanCoreProbe)&&!_appBootFinished)return true;const p=socialDailyPayload();if(p.stamp===_socialDailyJournalStamp)return true;const at=Math.max(Date.now(),(+S._persistedAt||0)+1);localStorage.setItem(SOCIAL_DAILY_JOURNAL_KEY,JSON.stringify({ver:1,at,...p}));_socialDailyJournalStamp=p.stamp;return true;}catch(_){return false;}}
-function socialDailyJournalMerge(){try{const raw=localStorage.getItem(SOCIAL_DAILY_JOURNAL_KEY),j=raw&&JSON.parse(raw),persisted=+S._persistedAt||0;if(!j||j.ver!==1||j.date!==todayStr()||(+j.at||0)<=persisted||!Array.isArray(j.moments)||!Array.isArray(j.tweets))return false;const day=j.date,oldMoments=Array.isArray(S.moments)?S.moments:[],oldTweets=S.x&&Array.isArray(S.x.tweets)?S.x.tweets:[],momentById=new Map(oldMoments.map(p=>[p&&p.id,p])),tweetById=new Map(oldTweets.map(t=>[t&&t.id,t])),hydrate=(row,old)=>{const x=JSON.parse(JSON.stringify(row));if(x._journalImageCount){if(old&&Array.isArray(old.images)&&old.images.length)x.images=old.images;delete x._journalImageCount;}return x;};S.moments=[...j.moments.map(p=>hydrate(p,momentById.get(p.id))),...oldMoments.filter(p=>!p||socialDailyDate(p.time)!==day)];S.x=S.x||{};S.x.tweets=[...j.tweets.map(t=>hydrate(t,tweetById.get(t.id))),...oldTweets.filter(t=>t&&t.who==='net'||!t||socialDailyDate(t.time)!==day)];_socialDailyJournalStamp=j.stamp||'';return true;}catch(_){return false;}}
-//@@ end
-function _imgReplacer(k,v){
-//@@ web
-  if(typeof _webRecoveryInlineSave!=='undefined'&&_webRecoveryInlineSave&&(k==='messages'||k==='groupMessages')&&v&&typeof v==='object')return v;
-//@@ private
-  const pf=S&&S.me&&S.me.phoneFriend;
-  if(_recoveryInlineSave&&((k==='messages'&&v&&typeof v==='object'&&(v===S.messages||pf&&v===pf.messages))||(k==='groupMessages'&&pf&&v===pf.groupMessages)))return v;
-//@@ end
-  // 重量级文字(聊天记录)也搬进大空间：只有确认入库后才在存档里换成占位，绝不丢消息
-  if((typeof _msgArchiveLost!=='undefined'&&_msgArchiveLost)&&k==='messages'&&v&&typeof v==='object'&&v===S.messages)return Object.assign({__idb:'messages'},v);
-  if(k==='messages'&&v&&typeof v==='object'&&v===S.messages){const stamp=messageArchiveStamp(v);if(_heavyReady.has('messages')&&_heavyStamp.messages===stamp)return {__idb:'messages'};let blob;try{blob=JSON.stringify(v);}catch(_){blob=null;}
-//@@ web
-    if(blob&&blob.length>20000){if(_heavy.messages!==blob){writeMessageArchive(blob,stamp).then(()=>{if(_heavyReady.has('messages')&&_heavyStamp.messages===stamp)save(0);}).catch(()=>{});}
-//@@ private
-    if(blob&&blob.length>20000){if(_heavy.messages!==blob){writeMessageArchive(blob,stamp).then(()=>{if(_heavy.messages===blob)save(0);}).catch(()=>{});}
-//@@ end
-      if(_heavyReady.has('messages')&&_heavyStamp.messages===stamp)return {__idb:'messages'};}}
-//@@ web
-  const pf=S&&S.me&&S.me.phoneFriend;
-//@@ end
-  if(k==='messages'&&pf&&v&&typeof v==='object'&&v===pf.messages){const key=pfMsgStoreKey(),rk='pfMessages:'+key,stamp=messageArchiveStamp(v);if(_heavyReady.has(rk)&&_heavyStamp[rk]===stamp)return {__idb:'phoneFriendMessages',id:pf.id};let blob;try{blob=JSON.stringify(v);}catch(_){blob=null;}
-    if(blob&&blob.length>20000){if(_heavy[rk]!==blob)writeHeavyMessageArchive(rk,key,blob,stamp);
-      if(_heavyReady.has(rk)&&_heavyStamp[rk]===stamp)return {__idb:'phoneFriendMessages',id:pf.id};}}
-  if(k==='groupMessages'&&pf&&v&&typeof v==='object'&&v===pf.groupMessages){const key=pfGroupMsgStoreKey(),rk='pfGroupMessages:'+key,stamp=messageArchiveStamp(v);if(_heavyReady.has(rk)&&_heavyStamp[rk]===stamp)return {__idb:'phoneFriendGroupMessages',id:pf.id};let blob;try{blob=JSON.stringify(v);}catch(_){blob=null;}
-    if(blob&&blob.length>20000){if(_heavy[rk]!==blob)writeHeavyMessageArchive(rk,key,blob,stamp);
-      if(_heavyReady.has(rk)&&_heavyStamp[rk]===stamp)return {__idb:'phoneFriendGroupMessages',id:pf.id};}}
-  if(isBigImg(v)){let key=_imgRev.get(v);
-    if(!key){key='i'+(_imgSeq++)+Date.now().toString(36);_imgRev.set(v,key);_imgCache[key]=v;imgPut(key,v).then(()=>{_imgReady.add(key);imageReferenceCompactSoon();}).catch(()=>{});}
-    if(_imgReady.has(key))return 'idb:'+key;}
-  return v;}
-// 读档时：桌面网页仍完整回填；私人 App、安卓与 iOS 网页保留短引用并按当前页面懒加载，避免大存档启动时把历史照片全部复制进 JS 内存。

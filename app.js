@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1933'){
+if(window.__NORTH_SHELL_BUILD__!=='1934'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1933 · 私人账号多端自动同步';
+const APP_VER='v1934 · 多设备同步保护与主设备管理';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -678,8 +678,11 @@ function normalizeLoadedState(){try{S.me=S.me||{};S.me.uiMaterial='glass';if(!['
   try{if(S.settings&&!S.settings.imgModelV3){if(!S.settings.imgModel||S.settings.imgModel==='gpt-4o-image')S.settings.imgModel='gpt-image-2';S.settings.imgModelV3=1;}}catch(_){}}
 normalizeLoadedState();
 function mergeStateData(d,opt){const n=Object.assign(defState(),d||{});if(opt&&opt.keepPhoneFriend){const old=S&&S.me&&S.me.phoneFriend,has=d&&d.me&&d.me.phoneFriend&&d.me.phoneFriend.id;if(old&&!has){n.me=n.me||{};n.me.phoneFriend=old;}if(n.messages&&n.messages.__idb==='messages'&&S.messages&&!S.messages.__idb)n.messages=S.messages;}return n;}
-function load(){if(NORTH_PREVIEW){const s=previewSeed(NORTH_PREVIEW_PARAMS);if(String(NORTH_PREVIEW_PARAMS).includes('restrictedapps')){s.couple=s.couple||{};s.couple.locks={moments:{preview:true},douyin:{preview:true},music:{preview:true},cinema:{preview:true},browser:{preview:true},games:{preview:true}};}return s;}let raw=null;try{raw=localStorage.getItem(KEY);if(!raw){if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}const v=JSON.parse(raw);
-if(v&&v.settings){if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}
+function load(){
+if(NORTH_PREVIEW){const s=previewSeed(NORTH_PREVIEW_PARAMS);if(String(NORTH_PREVIEW_PARAMS).includes('restrictedapps')){s.couple=s.couple||{};s.couple.locks={moments:{preview:true},douyin:{preview:true},music:{preview:true},cinema:{preview:true},browser:{preview:true},games:{preview:true}};}return s;}let raw=null;try{raw=localStorage.getItem(KEY);if(!raw){
+if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}const v=JSON.parse(raw);
+if(v&&v.settings){
+if(v.__coreIdb){_coreBootRef=v.__coreIdb;_coreOverflowMode=true;}return mergeStateData(v);}}catch(e){}if(raw){_coreBootRef={ver:1,savedAt:0,recovery:true};_coreOverflowMode=true;return mergeStateData(coreBootShell(0));}if(NORTH_ANDROID)_androidOrphanCoreProbe=true;return seed();}
 let _bootImagesPromise=null;
 let _saveTimer=null,_saveIdleHandle=0,_savePending=false,_saveLast=0,_saveOkLast=0;
 const PRIVATE_NATIVE_SAVE_GAP_MS=15000;
@@ -716,7 +719,9 @@ const IMG_DB_VERSION=2;
 function imgDB(){return new Promise((res,rej)=>{let settled=false,r=null,timer=0;const fail=err=>{if(settled)return;settled=true;clearTimeout(timer);const e=err||r&&r.error||new Error('IndexedDB unavailable');_idbOpenFailure=String(e&&e.message||e||'IndexedDB unavailable').slice(0,160);rej(e);};try{r=indexedDB.open('yibeiImg',IMG_DB_VERSION);}catch(e){fail(e);return;}timer=setTimeout(()=>fail(new Error('IndexedDB open timeout')),7000);r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('img'))db.createObjectStore('img');};r.onsuccess=e=>{if(settled){try{e.target.result.close();}catch(_){}return;}settled=true;clearTimeout(timer);_idbOpenFailure='';const db=e.target.result;db.onversionchange=()=>{try{db.close();}catch(_){}};res(db);};r.onerror=()=>fail(r.error||new Error('IndexedDB open failed'));r.onblocked=()=>fail(new Error('IndexedDB open blocked'));});}
 function privateNativeCoreStorageKey(k){return (k===CORE_IDB_KEY||k===RECOVERY_IDB_KEY||k===RECOVERY_HISTORY_IDB_KEY)&&typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.__SMALL_PHONE_MAC__!==true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
 async function privateNativeCorePut(k,v){v=v&&typeof v==='object'?v:{};const args={key:k,ver:+v.ver||1,savedAt:+v.savedAt||Date.now(),stateJSON:String(v.json||'')};if(v.stats&&typeof v.stats==='object')args.stats=v.stats;
-  let last;for(let attempt=0;attempt<3;attempt++){try{const r=await window.SmallPhoneNative.request('storage.put',args);if(!r||r.saved!==true)throw new Error('Native storage write failed');return;}catch(e){last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}}throw last||new Error('Native storage write failed after retry');}
+  let last;for(let attempt=0;attempt<3;attempt++){try{const r=await window.SmallPhoneNative.request('storage.put',args);if(!r||r.saved!==true)throw new Error('Native storage write failed');
+return;}catch(e){
+last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}}throw last||new Error('Native storage write failed after retry');}
 async function privateNativeCoreGet(k){const r=await window.SmallPhoneNative.request('storage.get',{key:k});if(!r||!r.found)return null;let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
 function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k}).then(()=>{});}
 function imgPutIDB(k,v){return imgDB().then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
@@ -725,7 +730,8 @@ const _audioPutAt=new Map();
 function imgPut(k,v){if(privateNativeCoreStorageKey(k))return privateNativeCorePut(k,v).catch(()=>imgPutIDBWithRetry(k,v));return imgPutIDBWithRetry(k,v);}
 function imgGetIDBOnce(k){return imgDB().then(db=>new Promise(res=>{let value=null,tx;try{tx=db.transaction('img','readonly');const q=tx.objectStore('img').get(k);q.onsuccess=()=>{value=q.result;};q.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(null);return;}const done=()=>{try{db.close();}catch(_){}res(value);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>null);}
 async function imgGetIDB(k){_idbOpenFailure='';let value=await imgGetIDBOnce(k);if(value!=null||!_idbOpenFailure)return value;await new Promise(resolve=>setTimeout(resolve,240));_idbOpenFailure='';value=await imgGetIDBOnce(k);return value;}
-function newestStoredCore(a,b){if(!a)return b||null;if(!b)return a;return (+b.savedAt||0)>(+a.savedAt||0)?b:a;}
+function newestStoredCore(a,b){
+if(!a)return b||null;if(!b)return a;return (+b.savedAt||0)>(+a.savedAt||0)?b:a;}
 function imgGet(k){if(privateNativeCoreStorageKey(k))return Promise.all([privateNativeCoreGet(k).catch(()=>null),imgGetIDB(k)]).then(rows=>newestStoredCore(rows[0],rows[1]));return imgGetIDB(k);}
 function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){if(String(c.key).indexOf('__')!==0)out[c.key]=c.value;c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
 function imgKeys(){return imgDB().then(db=>new Promise(res=>{const out=[];let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openKeyCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){out.push(String(c.key));c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>[]);}
@@ -2344,7 +2350,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1933&r=v1933-owner-todo-report-1';
+  const url='sw.js?v=1934&r=v1934-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14868,7 +14874,6 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     life=3400;}
   stage.appendChild(box);
   setTimeout(()=>{if(box.parentNode)box.remove();},life);}
-
 function phSmsBgMap(){const p=phState();if(!p.smsBg||typeof p.smsBg!=='object')p.smsBg={};return p.smsBg;}
 function phSmsBg(num){return phSmsBgMap()[phNorm(phDigits(num))]||'';}
 function phSmsBgSet(num,src){phSmsBgMap()[phNorm(phDigits(num))]=src;save();}

@@ -5,7 +5,8 @@ const revision = /^(0|[1-9][0-9]{0,18})$/;
 const LIMIT = Object.freeze({body: 3_000_000, record: 240_000, changes: 64});
 const knownErrors = new Set(['device_revoked','device_revoked_or_unknown','device_not_found','invalid_device',
   'mutation_payload_changed','conflict_not_found','duplicate_key','invalid_batch','invalid_change','invalid_cursor',
-  'invalid_seed','empty_seed','seed_requires_phone','seed_in_progress','seed_not_ready','invalid_turn','turn_lease_lost']);
+  'invalid_seed','empty_seed','seed_requires_phone','seed_in_progress','seed_not_ready','invalid_turn','turn_lease_lost',
+  'primary_required','primary_changed','cannot_revoke_primary']);
 class SyncError extends Error {
   constructor(code, status = 400) { super(code); this.status = status; }
 }
@@ -58,6 +59,8 @@ function keyName(key) {
     && utf8.encode(key).length <= 512 && !key.split('/').some(k=>['__proto__','constructor','prototype'].includes(k)), 'invalid_record_key');
   return key;
 }
+function generationKey(key){return keyName(key.replace(/^(state|blob)\//,'$1/sync2/'));}
+function logicalKey(key){ensure(/^(state|blob)\/sync2\//.test(key),'sync_generation_mismatch',409);return key.replace(/^(state|blob)\/sync2\//,'$1/');}
 function cursor(value = '0') {
   ensure(typeof value === 'string' && revision.test(value) && BigInt(value) <= 9223372036854775807n, 'invalid_cursor');
   return value;
@@ -97,11 +100,11 @@ export function createAccountCipher({store, masterKey, cryptoAPI = globalThis.cr
   }
   return {accountKeys,seal,open};
 }
-export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = globalThis.crypto}) {
+export function createSyncHandler({store, authenticate, verifyPassword, masterKey, cryptoAPI = globalThis.crypto}) {
   const {accountKeys,seal,open}=createAccountCipher({store,masterKey,cryptoAPI});
   async function unpack(owner, aes, row) {
     const {ciphertext, ...safe} = row;
-    return {...safe, ...(row.deleted ? {} : {value: JSON.parse(await open(aes,ciphertext,'private-phone-sync/record/'+owner+'/'+keyName(row.key)))})};
+    return {...safe,key:logicalKey(row.key), ...(row.deleted ? {} : {value: JSON.parse(await open(aes,ciphertext,'private-phone-sync/record/'+owner+'/'+keyName(row.key)))})};
   }
   return async function handle(request) {
     try {
@@ -114,6 +117,7 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
       ensure(identity && uuid.test(identity.userID) && uuid.test(identity.sessionID), 'authentication_required', 401);
       const body = await boundedJSON(request);
       ensure(body && !Array.isArray(body) && typeof body === 'object');
+      ensure(body.protocolVersion===2,'sync_upgrade_required',409);
       const {userID:owner,sessionID:session} = identity;
       if (body.action === 'register') {
         ensure(['iOS','macOS'].includes(body.platform) && typeof body.label === 'string'
@@ -126,11 +130,23 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
       const scope = {p_user:owner,p_session:session,p_device:body.deviceId};
       // Recheck even read-only key access; final transactional RPC checks again after encryption.
       await store.rpc('private_phone_sync_assert_device',scope);
+      if (body.action === 'primary') {
+        const expected=cursor(body.primaryRevision);
+        ensure(typeof body.password==='string'&&body.password.length>=8&&body.password.length<=72,'password_verification_failed',403);
+        ensure(typeof verifyPassword==='function','password_verification_unavailable',503);
+        ensure(await verifyPassword(identity,body.password)===true,'password_verification_failed',403);
+        // Rechecks the device and authority under the account lock after password I/O.
+        return respond(await store.rpc('private_phone_sync_promote',{...scope,p_expected:expected}));
+      }
       if (body.action === 'revoke') {
         ensure(uuid.test(body.targetId || ''), 'invalid_device');
         return respond(await store.rpc('private_phone_sync_revoke',{...scope,p_target:body.targetId}));
       }
-      if (body.action === 'inspect') return respond({ok:true,...await store.rpc('private_phone_sync_inspect',scope)});
+      if (body.action === 'inspect') {
+        const info=await store.rpc('private_phone_sync_inspect',scope);
+        return respond({ok:true,...info,conflicts:(info.conflicts||[]).filter(row=>/^(state|blob)\/sync2\//.test(row.key)).map(row=>({...row,key:logicalKey(row.key)})),
+          seed:await store.rpc('private_phone_sync_v2_status',scope),...await store.rpc('private_phone_sync_authority',scope)});
+      }
       if (['turn.acquire','turn.renew','turn.finish'].includes(body.action)) {
         ensure(typeof body.threadKey==='string' && body.threadKey.length>0 && body.threadKey.length<=160
           && typeof body.turnKey==='string' && body.turnKey.length>0 && body.turnKey.length<=240 && uuid.test(body.leaseToken||''),'invalid_turn');
@@ -139,7 +155,7 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
       }
       if (body.action === 'seed') {
         ensure(typeof body.finish === 'boolean','invalid_seed');
-        return respond({ok:true,seed:await store.rpc('private_phone_sync_seed',{...scope,p_finish:body.finish})});
+        return respond({ok:true,seed:await store.rpc('private_phone_sync_v2_seed',{...scope,p_finish:body.finish})});
       }
       ensure(['push','pull','conflict','resolve','media.put','media.get'].includes(body.action), 'unsupported_action');
       // Validate all plain data before obtaining/encrypting account keys.
@@ -149,7 +165,7 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
         const ids = new Set(), keys = new Set();
         changes = body.changes.map(item=>{
           ensure(item && typeof item === 'object' && !Array.isArray(item), 'invalid_change');
-          const key = keyName(item.key), base = cursor(item.baseRevision);
+          const key = generationKey(keyName(item.key)), base = cursor(item.baseRevision);
           ensure(uuid.test(item.mutationId || '') && !ids.has(item.mutationId) && !keys.has(key), 'duplicate_change');
           ids.add(item.mutationId); keys.add(key);
           ensure(typeof item.deleted === 'boolean', 'invalid_change');
@@ -196,16 +212,18 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
         return respond({ok:true,hash:body.hash,base64:base64(bytes),bytes:bytes.length});
       }
       if (changes) {
+        ensure(await store.rpc('private_phone_sync_v2_status',scope),'seed_not_ready',409);
         const encrypted = [];
         for (const item of changes) {
           const digest = base64(new Uint8Array(await cryptoAPI.subtle.sign('HMAC',mac,utf8.encode(canonical(item)))));
           const {data,...meta} = item;
           encrypted.push({...meta,digest,ciphertext:item.deleted ? null : await seal(aes,data,'private-phone-sync/record/'+owner+'/'+item.key)});
         }
-        return respond({ok:true,...await store.rpc('private_phone_sync_apply',{...scope,p_changes:encrypted})});
+        const result=await store.rpc('private_phone_sync_apply',{...scope,p_changes:encrypted});
+        return respond({ok:true,...result,outcomes:result.outcomes.map(row=>({...row,key:logicalKey(row.key)}))});
       }
       if (body.action === 'pull') {
-        const result = await store.rpc('private_phone_sync_pull',{...scope,p_after:cursor(body.cursor)});
+        const result = await store.rpc('private_phone_sync_v2_pull',{...scope,p_after:cursor(body.cursor)});
         const records = [];
         for (const row of result.records) records.push(await unpack(owner,aes,row));
         return respond({ok:true,records,cursor:result.cursor,more:result.more,seed:result.seed});
@@ -220,7 +238,25 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
         detail = await store.rpc('private_phone_sync_inspect',{...scope,p_conflict:body.conflictId});
         return respond({...outcome,conflict:await unpack(owner,aes,detail.conflict),current:await unpack(owner,aes,detail.current)});
       }
-      return respond({ok:true,conflict:await unpack(owner,aes,detail.conflict),current:await unpack(owner,aes,detail.current)});
+      let conflict=await unpack(owner,aes,detail.conflict),current=await unpack(owner,aes,detail.current);
+      // PRIVATE_SYNC_IDENTICAL_CONFLICT_V1: ciphertexts are randomized, so only
+      // decrypted, canonical exact equality can reconcile a duplicate mutation.
+      // A changed current revision remains a conflict; never guess which differs.
+      if(!conflict.resolvedAt&&conflict.key===current.key&&conflict.deleted===current.deleted
+          &&canonical(conflict.deleted?null:conflict.value)===canonical(current.deleted?null:current.value)){
+        const mutationId=cryptoAPI.randomUUID(),baseRevision=cursor(current.revision);
+        const digest=base64(new Uint8Array(await cryptoAPI.subtle.sign('HMAC',mac,utf8.encode(canonical({
+          conflictId:body.conflictId,choice:'server',baseRevision,mutationId
+        })))));
+        let concurrentResolution;
+        try{await store.rpc('private_phone_sync_resolve',{...scope,p_conflict:body.conflictId,
+          p_choice:'server',p_revision:baseRevision,p_mutation:mutationId,p_digest:digest});}
+        catch(error){if(error?.message!=='mutation_payload_changed')throw error;concurrentResolution=error;}
+        detail=await store.rpc('private_phone_sync_inspect',{...scope,p_conflict:body.conflictId});
+        conflict=await unpack(owner,aes,detail.conflict);current=await unpack(owner,aes,detail.current);
+        if(concurrentResolution&&!conflict.resolvedAt)throw concurrentResolution;
+      }
+      return respond({ok:true,conflict,current});
     } catch (error) {
       const safe = error instanceof SyncError ? error : new SyncError(knownErrors.has(error?.message) ? error.message : 'sync_service_unavailable',503);
       return respond({ok:false,error:safe.message},safe.status);
@@ -289,8 +325,24 @@ export function createSupabaseSync({url, serviceKey, masterKey, fetchAPI = globa
       try { claims = JSON.parse(new TextDecoder().decode(unbase64(token.split('.')[1]))); }
       catch { throw new SyncError('authentication_required',401); }
       ensure(user?.id === claims.sub && claims.role === 'authenticated' && Number(claims.exp)>Date.now()/1000, 'authentication_required',401);
-      return {userID:user.id,sessionID:claims.session_id};
+      return {userID:user.id,sessionID:claims.session_id,email:user.email};
     }
-    return createSyncHandler({store,authenticate,masterKey})(request);
+    async function verifyPassword(identity,password) {
+      ensure(typeof identity.email==='string'&&identity.email.length<=320,'password_verification_unavailable',503);
+      let temporary;
+      try {
+        temporary=await json('/auth/v1/token?grant_type=password',{method:'POST',body:{email:identity.email,password}});
+        ensure(temporary?.user?.id===identity.userID&&typeof temporary?.access_token==='string','password_verification_failed',403);
+        return true;
+      } catch(error) {
+        if(error?.message==='authentication_required')throw new SyncError('password_verification_failed',403);
+        throw error;
+      } finally {
+        // Do not replace the device session or retain the verification-only session.
+        if(typeof temporary?.access_token==='string')await json('/auth/v1/logout?scope=local',{
+          method:'POST',bearer:temporary.access_token}).catch(()=>{});
+      }
+    }
+    return createSyncHandler({store,authenticate,verifyPassword,masterKey})(request);
   };
 }

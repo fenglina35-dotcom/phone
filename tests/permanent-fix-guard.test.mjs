@@ -45,6 +45,13 @@ test('private account sync retains automatic content hydration, scoped native st
  for(const marker of ['account.sync','account.mcp','installationId','PrivateNativeStorageScope'])assert(native.includes(marker),marker);
  assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('PRIVATE_MCP_ACCOUNT_V1'));
  assert(read('supabase/migrations/202611170001_private_phone_device_sync.sql').includes('retired_sessions'));
+ for(const marker of ['PRIVATE_ACCOUNT_BOOT_IDENTITY_V2','PRIVATE_CORE_SOURCE_GUARD_V1','PRIVATE_CORE_LINEAGE_V1'])assert(read(PRIVATE).includes(marker),marker);
+ assert(core.includes('PRIVATE_SYNC_LOCAL_DELETION_V2'));
+ assert(client.includes('PRIVATE_DEVICE_REVOKED_GATE_V1')&&client.includes('privatePhoneSyncDevicesOpen'));
+ assert(native.includes('PRIVATE_STORAGE_SOURCE_COLLISION_V1'));
+ assert(native.includes('PRIVATE_NATIVE_CORE_CAS_V1'));
+ assert(read('supabase/migrations/202611170003_private_phone_primary_device.sql').includes('PRIVATE_PRIMARY_DEVICE_V1'));
+ for(const marker of ['PRIVATE_SYNC_GENERATION_V2','PRIVATE_REVOKED_BACKUP_SESSION_V1'])assert(read('supabase/migrations/202611170003_private_phone_primary_device.sql').includes(marker));
 });
 test('private Sky role channel retains scoped pairing, hidden metadata and both entry points',()=>{
  const source=read(PRIVATE_DIR+'private-sky-sync.js');

@@ -35,6 +35,17 @@ struct PrivateNativeStorageScope: Equatable, Sendable {
 enum PrivateNativeStorageNamespace {
     private static let lock = NSLock()
 
+    static func approvedCoreDigest(support: URL, scope: PrivateNativeStorageScope) -> String? {
+        let path = support.appendingPathComponent("SmallPhonePrivateAccounts/sync-source.v2.json")
+        guard let data = try? Data(contentsOf: path),
+              let selection = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              selection["version"] as? Int == 2, selection["source"] as? String == "legacy",
+              let owner = scope.owner, selection["owner"] as? String == owner,
+              let digest = selection["approvedCoreSHA256"] as? String,
+              digest.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else { return nil }
+        return digest
+    }
+
     static func recordedLegacyOwner(support: URL) -> String? {
         lock.lock()
         defer { lock.unlock() }
@@ -62,6 +73,22 @@ enum PrivateNativeStorageNamespace {
         }
         let old = support.appendingPathComponent("SmallPhonePrivateStore", isDirectory: true)
         let firstOwner = root.appendingPathComponent(recorded, isDirectory: true)
+        // A reviewed installer may pin the still-active 577 directory. The pin
+        // never moves/replaces either source and never redirects another account.
+        let selection = root.appendingPathComponent("sync-source.v2.json")
+        if scope.folder == recorded, files.fileExists(atPath: selection.path) {
+            guard approvedCoreDigest(support: support, scope: scope) != nil, files.fileExists(atPath: old.path) else {
+                throw NSError(domain: "PrivateNativeStorage", code: 409)
+            }
+            return old
+        }
+        // PRIVATE_STORAGE_SOURCE_COLLISION_V1: a rollback may recreate the legacy
+        // path while a previous candidate still owns a different account directory.
+        // Neither mtime nor a later autosave proves which contents are authoritative.
+        if scope.folder == recorded, files.fileExists(atPath: old.path), files.fileExists(atPath: firstOwner.path) {
+            throw NSError(domain: "PrivateNativeStorage", code: 409,
+                userInfo: [NSLocalizedDescriptionKey: "发现两份并存的本机存档，已停止自动迁移以保护数据，请先核实恢复来源"])
+        }
         // A whole-directory rename is atomic on the same app volume. Never replace an existing owner store.
         if files.fileExists(atPath: old.path), !files.fileExists(atPath: firstOwner.path) {
             try files.moveItem(at: old, to: firstOwner)
@@ -93,7 +120,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.578 (578)"
+    private static let build = "1.0.579 (579)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -353,7 +380,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         captureLegacyStorageOwnerIfNeeded()
         let owner = (loadPrivateAccountSession()?.userID).flatMap { UUID(uuidString: $0)?.uuidString.lowercased() } ?? ""
         let legacy = legacyStorageOwner.flatMap { UUID(uuidString: $0)?.uuidString.lowercased() } ?? "guest"
-        let identity: [String: Any] = ["userId": owner, "legacyOwner": legacy, "platform": "iOS"]
+        let identity: [String: Any] = ["userId": owner, "legacyOwner": legacy, "platform": "iOS", "storageReady": legacyStorageNamespaceReady]
         guard let data = try? JSONSerialization.data(withJSONObject: identity),
               let json = String(data: data, encoding: .utf8) else { return "" }
         return """
@@ -1436,6 +1463,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         let chunkOffset = (arguments["offset"] as? NSNumber)?.intValue ?? 0
         let readBackup = arguments["backup"] as? Bool ?? false
         let readPrimaryOnly = arguments["primaryOnly"] as? Bool ?? false
+        let expectedSHA256 = arguments["expectedSHA256"] as? String
 
         storageQueue.async { [weak self] in
             guard let self else { return }
@@ -1461,11 +1489,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     }
                     guard let stored,
                           let record = self.nativeStorageRecord(
-                              from: stored.data
+                              from: stored.data, expectedScope: scope, legacyOwner: legacyOwner
                           ), let stateJSON = record["json"] as? String else {
                         self.replyScopedStorage(scope,
                             requestID: requestID,
-                            result: ["found": false]
+                            result: ["found": false, "unreadable": FileManager.default.fileExists(atPath: (readBackup ? self.nativeStorageBackupURL(for: url) : url).path)]
                         )
                         return
                     }
@@ -1478,6 +1506,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         "backup": readBackup,
                         "primaryOnly": readPrimaryOnly
                     ]
+                    result["contentSHA256"] = SHA256.hash(data: stored.data).map { String(format: "%02x", $0) }.joined()
+                    result["stateSHA256"] = SHA256.hash(data: stateData).map { String(format: "%02x", $0) }.joined()
+                    if let parent = record["parentSHA256"] as? String { result["parentSHA256"] = parent }
+                    if key == "__core_state", readPrimaryOnly,
+                       url.deletingLastPathComponent().lastPathComponent == "SmallPhonePrivateStore",
+                       let approved = PrivateNativeStorageNamespace.approvedCoreDigest(support: url.deletingLastPathComponent().deletingLastPathComponent(), scope: scope),
+                       SHA256.hash(data: stored.data).map({ String(format: "%02x", $0) }).joined() == approved {
+                        result["sourceApproval"] = approved
+                    }
                     if let stats = record["stats"],
                        JSONSerialization.isValidJSONObject(stats) {
                         result["stats"] = stats
@@ -1568,6 +1605,17 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                        JSONSerialization.isValidJSONObject(stats) {
                         record["stats"] = stats
                     }
+                    let currentData = try? Data(contentsOf: url)
+                    // PRIVATE_NATIVE_CORE_CAS_V1: a late writer cannot acquire a
+                    // newer timestamp and replace a different committed parent.
+                    if let expected = expectedSHA256 {
+                        let actual = currentData.map { SHA256.hash(data: $0).map { String(format: "%02x", $0) }.joined() } ?? "absent"
+                        guard expected == actual else {
+                            self.replyScopedStorage(scope, requestID: requestID, error: "storage_revision_changed")
+                            return
+                        }
+                        record["parentSHA256"] = expected
+                    }
                     let data = try JSONSerialization.data(withJSONObject: record)
                     guard self.nativeStorageRecord(from: data, expectedScope: scope, legacyOwner: legacyOwner) != nil else {
                         self.replyScopedStorage(scope,
@@ -1576,7 +1624,6 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         )
                         return
                     }
-                    let currentData = try? Data(contentsOf: url)
                     if let currentData,
                        let current = self.nativeStorageRecord(from: currentData),
                        self.nativeStorageSavedAt(in: current) > putSavedAt {
@@ -1612,7 +1659,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     try self.applyNativeStorageProtection(to: url)
                     self.replyScopedStorage(scope,
                         requestID: requestID,
-                        result: ["saved": true, "bytes": data.count]
+                        result: ["saved": true, "bytes": data.count,
+                            "contentSHA256": SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined(),
+                            "stateSHA256": SHA256.hash(data: Data(stateJSON.utf8)).map { String(format: "%02x", $0) }.joined(),
+                            "parentSHA256": expectedSHA256 ?? ""]
                     )
                 case "storage.delete":
                     if FileManager.default.fileExists(atPath: url.path) {
@@ -4104,13 +4154,14 @@ enum PrivateDeviceSyncHTTP {
 
     static func request(_ payload: [String: Any], platform: String, bearer: String, kind: Kind = .sync) async throws -> [String: Any] {
         let allowed = kind == .sync
-            ? ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "media.put", "media.get", "turn.acquire", "turn.renew", "turn.finish"]
+            ? ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "primary", "media.put", "media.get", "turn.acquire", "turn.renew", "turn.finish"]
             : ["list", "put", "remove", "rpc"]
         guard let action = payload["action"] as? String, allowed.contains(action),
               !bearer.isEmpty, JSONSerialization.isValidJSONObject(payload) else {
             throw NSError(domain: "PrivateDeviceSync", code: 400, userInfo: [NSLocalizedDescriptionKey: "同步请求格式有误"])
         }
         var body = payload
+        if kind == .sync { body["protocolVersion"] = 2 }
         if kind == .sync && action == "register" {
             body["installationId"] = try PrivateAccountInstallationID.value()
         }
