@@ -210,15 +210,17 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
         for (const row of result.records) records.push(await unpack(owner,aes,row));
         return respond({ok:true,records,cursor:result.cursor,more:result.more,seed:result.seed});
       }
-      const {conflict} = await store.rpc('private_phone_sync_inspect',{...scope,p_conflict:body.conflictId});
+      let detail = await store.rpc('private_phone_sync_inspect',{...scope,p_conflict:body.conflictId});
       if (body.action === 'resolve') {
         const digest = base64(new Uint8Array(await cryptoAPI.subtle.sign('HMAC',mac,utf8.encode(canonical({
           conflictId:body.conflictId,choice:body.choice,baseRevision:cursor(body.baseRevision),mutationId:body.mutationId
         })))));
-        return respond(await store.rpc('private_phone_sync_resolve',{...scope,p_conflict:body.conflictId,
-          p_choice:body.choice,p_revision:cursor(body.baseRevision),p_mutation:body.mutationId,p_digest:digest}));
+        const outcome = await store.rpc('private_phone_sync_resolve',{...scope,p_conflict:body.conflictId,
+          p_choice:body.choice,p_revision:cursor(body.baseRevision),p_mutation:body.mutationId,p_digest:digest});
+        detail = await store.rpc('private_phone_sync_inspect',{...scope,p_conflict:body.conflictId});
+        return respond({...outcome,conflict:await unpack(owner,aes,detail.conflict),current:await unpack(owner,aes,detail.current)});
       }
-      return respond({ok:true,conflict:await unpack(owner,aes,conflict)});
+      return respond({ok:true,conflict:await unpack(owner,aes,detail.conflict),current:await unpack(owner,aes,detail.current)});
     } catch (error) {
       const safe = error instanceof SyncError ? error : new SyncError(knownErrors.has(error?.message) ? error.message : 'sync_service_unavailable',503);
       return respond({ok:false,error:safe.message},safe.status);

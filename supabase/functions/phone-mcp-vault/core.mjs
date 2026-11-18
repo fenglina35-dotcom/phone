@@ -11,6 +11,9 @@ const tokenHosts={
 };
 const protocols=new Set(['2025-03-26','2025-06-18','2025-11-25','2026-07-28']);
 const methods=new Set(['initialize','server/discover','notifications/initialized','tools/list','tools/call','resources/read']);
+// A valid 1 MiB JSON/SSE reply can double when embedded as outcome.text, then
+// expands by another 4/3 under AES-GCM/base64. Connection limits stay separate.
+const outcomeEnvelopeLimit=4000000;
 const errors=new Set(['device_revoked','device_revoked_or_unknown','connection_changed','connection_missing','connection_busy','migration_changed','mutation_payload_changed','credential_changed','refresh_result_unknown','operation_lease_expired']);
 class VaultError extends Error {constructor(code,status=400){super(code);this.status=status;}}
 function check(ok,code='invalid_request',status=400){if(!ok)throw new VaultError(code,status);}
@@ -129,7 +132,7 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    for(let n=0;n<20;n++){claim=await store.rpc('private_phone_mcp_claim',{...scope,p_id:connId,p_revision:row.revision,p_operation:operation,p_digest:fingerprint,p_lease:lease});if(claim.state!=='busy')break;await pause(250);}
    check(claim?.state!=='busy','connection_busy',409);
    const outcomeAAD='private-phone-mcp/outcome/'+scope.p_user+'/'+scope.p_account+'/'+connId+'/'+operation;
-   if(claim.state==='complete')return reply(JSON.parse(await open(keys.aes,claim.ciphertext,outcomeAAD,1800000)));
+   if(claim.state==='complete')return reply(JSON.parse(await open(keys.aes,claim.ciphertext,outcomeAAD,outcomeEnvelopeLimit)));
    check(claim.state==='claimed','operation_result_unknown',409);
    c=JSON.parse(await open(keys.aes,claim.ciphertext,aad(connId),1800000));
    const progress=(phase,ciphertext=null)=>store.rpc('private_phone_mcp_progress',{...scope,p_id:connId,p_operation:operation,p_lease:lease,p_phase:phase,p_ciphertext:ciphertext});
@@ -173,7 +176,7 @@ export function createSupabaseVault({url,serviceKey,masterKey,fetchAPI=globalThi
   const signal=AbortSignal.timeout(45000);
   async function json(path,{method='GET',body,bearer=serviceKey,prefer}={}){
    const headers={apikey:serviceKey,Authorization:'Bearer '+bearer,'Content-Type':'application/json'};if(prefer)headers.Prefer=prefer;
-   const response=await fetchAPI(new URL(path,base),{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal}),text=await response.text();check(text.length<=2000000,'vault_service_unavailable',503);let data;try{data=text?JSON.parse(text):null;}catch{throw new VaultError('vault_service_unavailable',503);}
+   const response=await fetchAPI(new URL(path,base),{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal}),text=await response.text();check(text.length<=4100000,'vault_service_unavailable',503);let data;try{data=text?JSON.parse(text):null;}catch{throw new VaultError('vault_service_unavailable',503);}
    if(!response.ok)throw new VaultError(errors.has(data?.message)?data.message:path.startsWith('/auth/')?'authentication_required':'vault_service_unavailable',path.startsWith('/auth/')?401:409);return data;
   }
   const store={rpc:(name,args)=>json('/rest/v1/rpc/'+name,{method:'POST',body:args}),async key(owner,candidate){

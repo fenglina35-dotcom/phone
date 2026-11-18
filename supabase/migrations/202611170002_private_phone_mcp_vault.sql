@@ -32,10 +32,12 @@ create table if not exists public.private_phone_mcp_operations (
  id uuid not null,
  digest text not null,
  state text not null check(state in ('claimed','submitted','complete','unknown')),
- ciphertext text check(length(ciphertext)<=1800000),
+ ciphertext text check(length(ciphertext)<=4000000),
  created_at timestamptz not null default now(),
  primary key(user_id,account_id,connection_id,id)
 );
+alter table public.private_phone_mcp_operations drop constraint if exists private_phone_mcp_operations_ciphertext_check;
+alter table public.private_phone_mcp_operations add constraint private_phone_mcp_operations_ciphertext_check check(length(ciphertext)<=4000000);
 alter table public.private_phone_mcp_connections enable row level security;
 alter table public.private_phone_mcp_operations enable row level security;
 revoke all on public.private_phone_mcp_connections,public.private_phone_mcp_operations from public,anon,authenticated;

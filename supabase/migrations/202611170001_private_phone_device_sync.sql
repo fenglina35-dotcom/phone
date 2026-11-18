@@ -319,16 +319,24 @@ end $$;
 create or replace function public.private_phone_sync_inspect(
   p_user uuid,p_session uuid,p_device uuid,p_conflict uuid default null
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
-declare devices jsonb; conflicts jsonb; candidate jsonb;
+declare devices jsonb; conflicts jsonb; candidate jsonb; current_record jsonb;
 begin
   perform public.private_phone_sync_assert_device(p_user,p_session,p_device);
   if p_conflict is not null then
     select jsonb_build_object('id',id,'key',record_key,'baseRevision',base_revision::text,
-      'revision',server_revision::text,'deleted',deleted,'ciphertext',ciphertext)
+      'revision',server_revision::text,'deleted',deleted,'ciphertext',ciphertext,
+      'resolvedAt',resolved_at,'choice',resolution->'outcome'->>'choice')
       into candidate from public.private_phone_sync_conflicts
       where user_id=p_user and id=p_conflict;
     if candidate is null then raise exception 'conflict_not_found'; end if;
-    return jsonb_build_object('conflict',candidate);
+    select jsonb_build_object('key',record_key,'revision',revision::text,
+      'seq',seq::text,'ciphertext',ciphertext,'deleted',deleted)
+      into current_record from public.private_phone_sync_records
+      where user_id=p_user and record_key=candidate->>'key';
+    if current_record is null then
+      current_record := jsonb_build_object('key',candidate->>'key','revision','0','deleted',true);
+    end if;
+    return jsonb_build_object('conflict',candidate,'current',current_record);
   end if;
   select coalesce(jsonb_agg(jsonb_build_object('id',id,'platform',platform,'label',label,
     'revokedAt',revoked_at,'lastSeenAt',last_seen_at) order by created_at),'[]'::jsonb)
@@ -348,7 +356,7 @@ create or replace function public.private_phone_sync_resolve(
   p_user uuid,p_session uuid,p_device uuid,p_conflict uuid,p_choice text,
   p_revision bigint,p_mutation uuid,p_digest text
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
-declare candidate public.private_phone_sync_conflicts%rowtype; result jsonb;
+declare candidate public.private_phone_sync_conflicts%rowtype; result jsonb; current_revision bigint;
 begin
   perform pg_advisory_xact_lock(hashtextextended('sync/'||p_user::text,2));
   perform public.private_phone_sync_assert_device(p_user,p_session,p_device);
@@ -361,6 +369,11 @@ begin
   if candidate.resolved_at is not null then
     if candidate.resolution->>'digest'<>p_digest then raise exception 'mutation_payload_changed'; end if;
     return candidate.resolution->'outcome';
+  end if;
+  select revision into current_revision from public.private_phone_sync_records
+    where user_id=p_user and record_key=candidate.record_key;
+  if coalesce(current_revision,0)<>p_revision then
+    return jsonb_build_object('ok',true,'resolved',false,'reason','revision_changed');
   end if;
   if p_choice='server' then
     result := jsonb_build_object('ok',true,'resolved',true,'choice','server');
