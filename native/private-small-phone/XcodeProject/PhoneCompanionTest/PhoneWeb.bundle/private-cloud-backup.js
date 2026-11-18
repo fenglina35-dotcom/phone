@@ -50,6 +50,7 @@
   finally{busy=false;_privatePhoneCloudBusy=false;_privatePhoneAccount.loaded=false;repaint();try{await privatePhoneAccountRefresh(false);}catch(_){} }
  }
  async function tick(){
+  if(root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&(!root.NorthPrivateDeviceSyncClient||!root.NorthPrivateDeviceSyncClient.backgroundAllowed()))return false;
   if(busy||document.hidden||Date.now()<retryAt||Date.now()-_privatePhoneLastInteractionAt<90000||northNativeMaintenancePaused())return false;
   if(typeof replyGenerationStore==='function'&&Object.keys(replyGenerationStore()).length)return false;
   if(!_privatePhoneAccount.loaded)await privatePhoneAccountRefresh(false);

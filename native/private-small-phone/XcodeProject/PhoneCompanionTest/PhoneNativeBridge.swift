@@ -1,16 +1,90 @@
 import Foundation
+import Security
 #if os(iOS)
 import AVFoundation
 import CoreLocation
 import CryptoKit
 import Photos
 import PhotosUI
-import Security
 import Speech
 import UIKit
 import UniformTypeIdentifiers
 import UserNotifications
 import WebKit
+
+// PRIVATE_NATIVE_ACCOUNT_STORAGE_V1: account namespaces keep local recovery files inside their owner boundary.
+struct PrivateNativeStorageScope: Equatable, Sendable {
+    let owner: String?
+    let epoch: Int
+
+    init?(owner: String?, epoch: Int) {
+        if let owner {
+            guard let identity = UUID(uuidString: owner) else { return nil }
+            self.owner = identity.uuidString.lowercased()
+        } else { self.owner = nil }
+        self.epoch = epoch
+    }
+
+    var folder: String { owner ?? "Guest" }
+
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.owner == rhs.owner && lhs.epoch == rhs.epoch
+    }
+}
+
+enum PrivateNativeStorageNamespace {
+    private static let lock = NSLock()
+
+    static func recordedLegacyOwner(support: URL) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        let marker = support.appendingPathComponent("SmallPhonePrivateAccounts/legacy-owner.v1")
+        guard FileManager.default.fileExists(atPath: marker.path) else { return nil }
+        guard let recorded = try? String(contentsOf: marker, encoding: .utf8),
+              recorded == "Guest" || UUID(uuidString: recorded) != nil else { return "Guest" }
+        return recorded
+    }
+
+    static func directory(support: URL, scope: PrivateNativeStorageScope, legacyOwner: String?) throws -> URL {
+        lock.lock()
+        defer { lock.unlock() }
+        let files = FileManager.default
+        let root = support.appendingPathComponent("SmallPhonePrivateAccounts", isDirectory: true)
+        try files.createDirectory(at: root, withIntermediateDirectories: true)
+        let marker = root.appendingPathComponent("legacy-owner.v1")
+        if !files.fileExists(atPath: marker.path) {
+            let owner = legacyOwner.flatMap(UUID.init(uuidString:))?.uuidString.lowercased() ?? "Guest"
+            try Data(owner.utf8).write(to: marker, options: .atomic)
+        }
+        let recorded = try String(contentsOf: marker, encoding: .utf8)
+        guard recorded == "Guest" || UUID(uuidString: recorded) != nil else {
+            throw NSError(domain: "PrivateNativeStorage", code: 422)
+        }
+        let old = support.appendingPathComponent("SmallPhonePrivateStore", isDirectory: true)
+        let firstOwner = root.appendingPathComponent(recorded, isDirectory: true)
+        // A whole-directory rename is atomic on the same app volume. Never replace an existing owner store.
+        if files.fileExists(atPath: old.path), !files.fileExists(atPath: firstOwner.path) {
+            try files.moveItem(at: old, to: firstOwner)
+        }
+        let own = root.appendingPathComponent(scope.folder, isDirectory: true)
+        try files.createDirectory(at: own, withIntermediateDirectories: true)
+        return own
+    }
+}
+
+// PRIVATE_ACCOUNT_WEBSTORE_V1: the original owner retains default WebKit data; other identities never share it.
+enum PrivateNativeWebsiteStoreIdentity {
+    static func identifier(owner: String?, legacyOwner: String?) -> UUID? {
+        let current = owner.flatMap(UUID.init(uuidString:))
+        let legacy = legacyOwner.flatMap(UUID.init(uuidString:))
+        if current == legacy { return nil }
+        return current ?? UUID(uuidString: "fa6b94ed-d839-4b99-a924-7cf6b41cac33")!
+    }
+}
+
+extension Notification.Name {
+    static let smallPhoneAccountDocumentChanged = Notification.Name("SmallPhoneAccountDocumentChanged")
+}
 
 enum SmallPhoneDiagnosticsStore {
     private static let queue = DispatchQueue(
@@ -19,7 +93,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.577 (577)"
+    private static let build = "1.0.578 (578)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -229,12 +303,71 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     private struct NativeStorageReadSession {
         let data: Data
         let expiresAt: TimeInterval
+        let scope: PrivateNativeStorageScope
     }
     // Access is serialized exclusively by storageQueue. Keeping this outside
     // MainActor prevents a multi-megabyte restored core from bouncing through
     // the UI actor between bounded bridge chunks.
     nonisolated(unsafe) private var storageReadSessions:
         [String: NativeStorageReadSession] = [:]
+    private var legacyStorageOwnerCaptured = false
+    private var legacyStorageOwner: String?
+    private var legacyStorageNamespaceReady = false
+
+    override init() {
+        super.init()
+        captureLegacyStorageOwnerIfNeeded()
+    }
+
+    private func captureLegacyStorageOwnerIfNeeded() {
+        guard !legacyStorageNamespaceReady else { return }
+        if !legacyStorageOwnerCaptured {
+            legacyStorageOwnerCaptured = true
+            if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+               let recorded = PrivateNativeStorageNamespace.recordedLegacyOwner(support: support) {
+                legacyStorageOwner = recorded == "Guest" ? nil : recorded
+            } else { legacyStorageOwner = loadPrivateAccountSession()?.userID }
+        }
+        // Persist the first identity before a later login can recreate the bridge with another account.
+        if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first,
+           let scope = PrivateNativeStorageScope(owner: legacyStorageOwner, epoch: 0) {
+            do {
+                _ = try PrivateNativeStorageNamespace.directory(support: support, scope: scope, legacyOwner: legacyStorageOwner)
+                legacyStorageNamespaceReady = true
+            } catch { legacyStorageNamespaceReady = false }
+        }
+    }
+
+    func accountWebsiteDataStore() -> WKWebsiteDataStore {
+        captureLegacyStorageOwnerIfNeeded()
+        guard legacyStorageNamespaceReady else { return .nonPersistent() }
+        guard let identifier = PrivateNativeWebsiteStoreIdentity.identifier(
+            owner: loadPrivateAccountSession()?.userID, legacyOwner: legacyStorageOwner
+        ) else { return .default() }
+        if #available(iOS 17.0, *) { return WKWebsiteDataStore(forIdentifier: identifier) }
+        // Older unsupported systems must never fall back to another account's default store.
+        return .nonPersistent()
+    }
+
+    func publicAccountBootstrapScript() -> String {
+        captureLegacyStorageOwnerIfNeeded()
+        let owner = (loadPrivateAccountSession()?.userID).flatMap { UUID(uuidString: $0)?.uuidString.lowercased() } ?? ""
+        let legacy = legacyStorageOwner.flatMap { UUID(uuidString: $0)?.uuidString.lowercased() } ?? "guest"
+        let identity: [String: Any] = ["userId": owner, "legacyOwner": legacy, "platform": "iOS"]
+        guard let data = try? JSONSerialization.data(withJSONObject: identity),
+              let json = String(data: data, encoding: .utf8) else { return "" }
+        return """
+        (()=>{const identity=Object.freeze(\(json));Object.defineProperty(window,'__SMALL_PHONE_NATIVE_ACCOUNT__',{value:identity,writable:false,configurable:false});Object.defineProperty(window,'__SMALL_PHONE_LEGACY_OWNER__',{value:identity.legacyOwner,writable:false,configurable:false});})();
+        """
+    }
+
+    private func currentNativeStorageScope() -> PrivateNativeStorageScope? {
+        PrivateNativeStorageScope(owner: loadPrivateAccountSession()?.userID, epoch: privateAccountEpoch)
+    }
+
+    private func nativeStorageReplyAllowed(_ scope: PrivateNativeStorageScope?) -> Bool {
+        scope == nil || scope == currentNativeStorageScope()
+    }
     private var pendingSpeechEvents: [[String: Any]] = []
     // NATIVE_IMAGE_PICKER_V1: photos picked for the sticker store, kept until the web side has read them.
     private var pickedImages: (session: String, items: [(mime: String, data: Data)])?
@@ -455,7 +588,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performLicenseRequest(requestID: requestID, arguments: arguments)
         case "account.status", "account.password.signup",
              "account.password.signin",
-             "account.signout", "account.backup.info", "account.sync",
+             "account.signout", "account.backup.info", "account.sync", "account.mcp",
              "account.backup.upload", "account.backup.restore",
              "account.backup.file.begin", "account.backup.file.chunk",
              "account.backup.file.commit", "account.backup.file.progress",
@@ -740,6 +873,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performClearTemp(requestID: requestID, olderThan: olderThan)
         case "storage.get", "storage.get.chunk", "storage.get.release",
              "storage.put", "storage.delete":
+            guard message.frameInfo.isMainFrame, message.webView === webView,
+                  webView?.url?.isFileURL == true else {
+                reply(requestID: requestID, error: "invalid_storage_document")
+                return
+            }
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performStorageAction(
                 requestID: requestID,
@@ -1264,11 +1402,24 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         action: String,
         arguments: [String: Any]
     ) {
-        guard let key = arguments["key"] as? String,
-              let url = nativeStorageURL(for: key) else {
+        guard let scope = currentNativeStorageScope(),
+              let key = arguments["key"] as? String,
+              let url = nativeStorageURL(for: key, scope: scope) else {
             reply(requestID: requestID, error: "invalid_storage_key")
             return
         }
+        let requestedOwner = arguments["owner"] as? String
+        let validOwner: Bool
+        if let owner = scope.owner {
+            validOwner = requestedOwner.flatMap { UUID(uuidString: $0)?.uuidString.lowercased() } == owner
+        } else {
+            validOwner = requestedOwner == nil || requestedOwner?.lowercased() == "guest"
+        }
+        guard validOwner else {
+            reply(requestID: requestID, error: "storage_account_changed")
+            return
+        }
+        let legacyOwner = legacyStorageOwner
 
         let legacyValue = arguments["value"] as? [String: Any]
         let putVersion = (arguments["ver"] as? NSNumber)?.intValue
@@ -1312,7 +1463,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                           let record = self.nativeStorageRecord(
                               from: stored.data
                           ), let stateJSON = record["json"] as? String else {
-                        self.replyStorage(
+                        self.replyScopedStorage(scope,
                             requestID: requestID,
                             result: ["found": false]
                         )
@@ -1336,7 +1487,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         self.storageReadSessions[token] =
                             NativeStorageReadSession(
                                 data: stateData,
-                                expiresAt: now + 90
+                                expiresAt: now + 90,
+                                scope: scope
                             )
                         result["chunked"] = true
                         result["transferToken"] = token
@@ -1345,13 +1497,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     } else {
                         result["stateJSON"] = stateJSON
                     }
-                    self.replyStorage(requestID: requestID, result: result)
+                    self.replyScopedStorage(scope, requestID: requestID, result: result)
                 case "storage.get.chunk":
                     guard !transferToken.isEmpty,
                           let session = self.storageReadSessions[transferToken],
+                          session.scope == scope,
                           chunkOffset >= 0,
                           chunkOffset < session.data.count else {
-                        self.replyStorage(
+                        self.replyScopedStorage(scope,
                             requestID: requestID,
                             error: "invalid_storage_transfer"
                         )
@@ -1368,10 +1521,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         self.storageReadSessions[transferToken] =
                             NativeStorageReadSession(
                                 data: session.data,
-                                expiresAt: now + 90
+                                expiresAt: now + 90,
+                                scope: scope
                             )
                     }
-                    self.replyStorage(
+                    self.replyScopedStorage(scope,
                         requestID: requestID,
                         result: [
                             "chunkBase64": chunk.base64EncodedString(),
@@ -1382,11 +1536,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     )
                 case "storage.get.release":
                     if !transferToken.isEmpty {
+                        if let session = self.storageReadSessions[transferToken], session.scope != scope {
+                            self.replyScopedStorage(scope, requestID: requestID, error: "invalid_storage_transfer")
+                            return
+                        }
                         self.storageReadSessions.removeValue(
                             forKey: transferToken
                         )
                     }
-                    self.replyStorage(
+                    self.replyScopedStorage(scope,
                         requestID: requestID,
                         result: ["released": true]
                     )
@@ -1395,7 +1553,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                           putSavedAt > 0,
                           let stateJSON = putStateJSON,
                           !stateJSON.isEmpty else {
-                        self.replyStorage(
+                        self.replyScopedStorage(scope,
                             requestID: requestID,
                             error: "invalid_storage_value"
                         )
@@ -1411,10 +1569,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         record["stats"] = stats
                     }
                     let data = try JSONSerialization.data(withJSONObject: record)
-                    guard self.nativeStorageRecord(from: data) != nil else {
-                        self.replyStorage(
+                    guard self.nativeStorageRecord(from: data, expectedScope: scope, legacyOwner: legacyOwner) != nil else {
+                        self.replyScopedStorage(scope,
                             requestID: requestID,
-                            error: "invalid_storage_record"
+                            error: "storage_account_changed"
                         )
                         return
                     }
@@ -1422,7 +1580,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     if let currentData,
                        let current = self.nativeStorageRecord(from: currentData),
                        self.nativeStorageSavedAt(in: current) > putSavedAt {
-                        self.replyStorage(
+                        self.replyScopedStorage(scope,
                             requestID: requestID,
                             result: [
                                 "saved": true,
@@ -1452,7 +1610,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     }
                     try data.write(to: url, options: .atomic)
                     try self.applyNativeStorageProtection(to: url)
-                    self.replyStorage(
+                    self.replyScopedStorage(scope,
                         requestID: requestID,
                         result: ["saved": true, "bytes": data.count]
                     )
@@ -1464,18 +1622,18 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     if FileManager.default.fileExists(atPath: backupURL.path) {
                         try FileManager.default.removeItem(at: backupURL)
                     }
-                    self.replyStorage(
+                    self.replyScopedStorage(scope,
                         requestID: requestID,
                         result: ["deleted": true]
                     )
                 default:
-                    self.replyStorage(
+                    self.replyScopedStorage(scope,
                         requestID: requestID,
                         error: "unsupported_storage_action"
                     )
                 }
             } catch {
-                self.replyStorage(
+                self.replyScopedStorage(scope,
                     requestID: requestID,
                     error: "native_storage_failed"
                 )
@@ -1483,10 +1641,20 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
     }
 
-    nonisolated private func replyStorage(
+    nonisolated private func replyScopedStorage(
+        _ scope: PrivateNativeStorageScope,
         requestID: String,
         result: [String: Any]? = nil,
         error: String? = nil
+    ) {
+        replyStorage(requestID: requestID, result: result, error: error, scope: scope)
+    }
+
+    nonisolated private func replyStorage(
+        requestID: String,
+        result: [String: Any]? = nil,
+        error: String? = nil,
+        scope: PrivateNativeStorageScope? = nil
     ) {
         // Chunk replies remain bounded even when the stored core is huge. Use
         // WebKit arguments so each chunk is data, never JavaScript source.
@@ -1496,7 +1664,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             let totalBytes = (result["totalBytes"] as? NSNumber)?.intValue ?? 0
             let done = (result["done"] as? Bool) ?? false
             Task { @MainActor [weak self] in
-                guard let webView = self?.webView else { return }
+                guard let self, let webView = self.webView else { return }
+                guard self.nativeStorageReplyAllowed(scope) else {
+                    self.reply(requestID: requestID, error: "storage_account_changed")
+                    return
+                }
                 webView.callAsyncJavaScript(
                     """
                     if (window.__smallPhoneNativeReply) {
@@ -1543,7 +1715,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 statsJSON = ""
             }
             Task { @MainActor [weak self] in
-                guard let webView = self?.webView else { return }
+                guard let self, let webView = self.webView else { return }
+                guard self.nativeStorageReplyAllowed(scope) else {
+                    self.reply(requestID: requestID, error: "storage_account_changed")
+                    return
+                }
                 webView.callAsyncJavaScript(
                     """
                     const restored = {
@@ -1591,14 +1767,20 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             return
         }
         Task { @MainActor [weak self] in
-            self?.webView?.evaluateJavaScript(
+            guard let self else { return }
+            guard self.nativeStorageReplyAllowed(scope) else {
+                self.reply(requestID: requestID, error: "storage_account_changed")
+                return
+            }
+            self.webView?.evaluateJavaScript(
                 "window.__smallPhoneNativeReply && window.__smallPhoneNativeReply(\(json));"
             )
         }
     }
 
     private func performStorageStatus(requestID: String) {
-        guard let directory = nativeStorageDirectory() else {
+        guard let scope = currentNativeStorageScope(),
+              let directory = nativeStorageDirectory(scope: scope) else {
             reply(requestID: requestID, error: "native_storage_unavailable")
             return
         }
@@ -1621,7 +1803,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         )
         let availableBytes = values?.volumeAvailableCapacityForImportantUsage ?? 0
         let totalBytes = Int64(values?.volumeTotalCapacity ?? 0)
-        reply(
+        replyScopedStorage(scope,
             requestID: requestID,
             result: [
                 "kind": "native-application-support",
@@ -1766,7 +1948,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
 
     nonisolated private func nativeStorageRecord(
-        from data: Data
+        from data: Data,
+        expectedScope: PrivateNativeStorageScope? = nil,
+        legacyOwner: String? = nil
     ) -> [String: Any]? {
         guard let object = try? JSONSerialization.jsonObject(with: data),
               let record = object as? [String: Any],
@@ -1779,6 +1963,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
               let state = stateObject as? [String: Any],
               state["settings"] != nil else {
             return nil
+        }
+        if let expectedScope {
+            if let marker = state["_deviceSyncOwner"] {
+                guard let value = marker as? String,
+                      let identity = UUID(uuidString: value),
+                      identity.uuidString.lowercased() == expectedScope.owner else { return nil }
+            } else if let owner = expectedScope.owner {
+                guard legacyOwner.flatMap({ UUID(uuidString: $0)?.uuidString.lowercased() }) == owner else { return nil }
+            }
         }
         return record
     }
@@ -1810,36 +2003,28 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         )
     }
 
-    nonisolated private func nativeStorageDirectory() -> URL? {
+    private func nativeStorageDirectory(scope: PrivateNativeStorageScope) -> URL? {
         guard let support = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first else {
             return nil
         }
-        let directory = support.appendingPathComponent(
-            "SmallPhonePrivateStore",
-            isDirectory: true
-        )
         do {
-            try FileManager.default.createDirectory(
-                at: directory,
-                withIntermediateDirectories: true
-            )
-            return directory
+            return try PrivateNativeStorageNamespace.directory(support: support, scope: scope, legacyOwner: legacyStorageOwner)
         } catch {
             return nil
         }
     }
 
-    nonisolated private func nativeStorageURL(for key: String) -> URL? {
+    private func nativeStorageURL(for key: String, scope: PrivateNativeStorageScope) -> URL? {
         let allowed = CharacterSet.alphanumerics.union(
             CharacterSet(charactersIn: "._-")
         )
         guard !key.isEmpty,
               key.count <= 80,
               key.unicodeScalars.allSatisfy({ allowed.contains($0) }),
-              let directory = nativeStorageDirectory() else {
+              let directory = nativeStorageDirectory(scope: scope) else {
             return nil
         }
         return directory.appendingPathComponent(key + ".json")
@@ -2073,6 +2258,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             do {
                 switch action {
                 case "account.password.signup", "account.password.signin":
+                    self.captureLegacyStorageOwnerIfNeeded()
+                    guard self.legacyStorageNamespaceReady else {
+                        throw NSError(domain: "PrivateNativeStorage", code: 503,
+                            userInfo: [NSLocalizedDescriptionKey: "本机账号存储尚未就绪，请检查可用空间后重试；原数据已保留"])
+                    }
                     let phone = self.normalizedPrivatePhone(
                         arguments["phone"] as? String ?? ""
                     )
@@ -2133,12 +2323,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     var result = self.privateAccountStatus(session)
                     result["ok"] = true
                     self.reply(requestID: requestID, result: result)
+                    NotificationCenter.default.post(name: .smallPhoneAccountDocumentChanged, object: nil)
                 case "account.signout":
                     let previous = self.loadPrivateAccountSession()
                     self.privateAccountEpoch += 1
                     self.privateAccountRenewal?.cancel()
                     self.privateAccountRenewal = nil
                     self.deletePrivateAccountSession()
+                    NotificationCenter.default.post(name: .smallPhoneAccountDocumentChanged, object: nil)
                     if let session = previous {
                         _ = try? await self.privateAccountJSONRequest(
                             path: "/auth/v1/logout?scope=local",
@@ -2150,10 +2342,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         requestID: requestID,
                         result: self.privateAccountStatus(self.loadPrivateAccountSession())
                     )
-                case "account.sync":
+                case "account.sync", "account.mcp":
                     let epoch = self.privateAccountEpoch
                     let session = try await self.validPrivateAccountSession()
-                    let result = try await PrivateDeviceSyncHTTP.request(arguments, platform: "iOS", bearer: session.accessToken)
+                    let result = try await PrivateDeviceSyncHTTP.request(arguments, platform: "iOS", bearer: session.accessToken,
+                        kind: action == "account.mcp" ? .mcp : .sync)
                     guard epoch == self.privateAccountEpoch,
                           self.loadPrivateAccountSession()?.userID == session.userID else {
                         throw NSError(domain: "PrivatePhoneAccount", code: 409)
@@ -3855,6 +4048,42 @@ private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, 
 
 
 // PRIVATE_DEVICE_SYNC_V1: one fixed account endpoint, no generic network proxy.
+// PRIVATE_ACCOUNT_INSTALLATION_V1: local device identity, never supplied by JavaScript.
+enum PrivateAccountInstallationID {
+    private static let lock = NSLock()
+    private static let service = "com.qianyi.smallphone.account.installation.v1"
+    static func value() throws -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service, kSecAttrAccount as String: "installation"]
+        func read() throws -> String? {
+            var lookup = query
+            lookup[kSecReturnData as String] = true
+            lookup[kSecMatchLimit as String] = kSecMatchLimitOne
+            var result: CFTypeRef?
+            let status = SecItemCopyMatching(lookup as CFDictionary, &result)
+            if status == errSecItemNotFound { return nil }
+            guard status == errSecSuccess, let data = result as? Data,
+                  let text = String(data: data, encoding: .utf8), let uuid = UUID(uuidString: text) else {
+                throw NSError(domain: "PrivateAccountInstallation", code: Int(status),
+                    userInfo: [NSLocalizedDescriptionKey: "无法读取本机设备标识，请解锁设备后重试"])
+            }
+            return uuid.uuidString.lowercased()
+        }
+        if let stored = try read() { return stored }
+        let created = UUID().uuidString.lowercased()
+        var item = query
+        item[kSecValueData as String] = Data(created.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecSuccess { return created }
+        if status == errSecDuplicateItem, let stored = try read() { return stored }
+        throw NSError(domain: "PrivateAccountInstallation", code: Int(status),
+            userInfo: [NSLocalizedDescriptionKey: "无法保存本机设备标识，请解锁设备后重试"])
+    }
+}
+
 private final class PrivateDeviceSyncRedirectPolicy: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
@@ -3863,6 +4092,7 @@ private final class PrivateDeviceSyncRedirectPolicy: NSObject, URLSessionTaskDel
 }
 
 enum PrivateDeviceSyncHTTP {
+    enum Kind { case sync, mcp }
     private static let network: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.httpShouldSetCookies = false
@@ -3872,13 +4102,18 @@ enum PrivateDeviceSyncHTTP {
         return URLSession(configuration: config, delegate: PrivateDeviceSyncRedirectPolicy(), delegateQueue: nil)
     }()
 
-    static func request(_ payload: [String: Any], platform: String, bearer: String) async throws -> [String: Any] {
-        let allowed = ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "media.put", "media.get"]
+    static func request(_ payload: [String: Any], platform: String, bearer: String, kind: Kind = .sync) async throws -> [String: Any] {
+        let allowed = kind == .sync
+            ? ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "media.put", "media.get", "turn.acquire", "turn.renew", "turn.finish"]
+            : ["list", "put", "remove", "rpc"]
         guard let action = payload["action"] as? String, allowed.contains(action),
               !bearer.isEmpty, JSONSerialization.isValidJSONObject(payload) else {
             throw NSError(domain: "PrivateDeviceSync", code: 400, userInfo: [NSLocalizedDescriptionKey: "同步请求格式有误"])
         }
         var body = payload
+        if kind == .sync && action == "register" {
+            body["installationId"] = try PrivateAccountInstallationID.value()
+        }
         body["platform"] = platform
         body.removeValue(forKey: "userId")
         body.removeValue(forKey: "sessionId")
@@ -3886,7 +4121,8 @@ enum PrivateDeviceSyncHTTP {
         guard bytes.count <= 3_000_000 else {
             throw NSError(domain: "PrivateDeviceSync", code: 413, userInfo: [NSLocalizedDescriptionKey: "同步批次过大，请分批发送"])
         }
-        var request = URLRequest(url: URL(string: "https://qvuahlqimcfgeoetosnl.supabase.co/functions/v1/phone-device-sync")!)
+        let endpoint = kind == .sync ? "phone-device-sync" : "phone-mcp-vault"
+        var request = URLRequest(url: URL(string: "https://qvuahlqimcfgeoetosnl.supabase.co/functions/v1/" + endpoint)!)
         request.httpMethod = "POST"
         request.httpBody = bytes
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -3895,7 +4131,7 @@ enum PrivateDeviceSyncHTTP {
         let (data, response) = try await network.data(for: request)
         guard let http = response as? HTTPURLResponse,
               (200...299).contains(http.statusCode) || (400...499).contains(http.statusCode),
-              data.count <= 2_000_000, let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              data.count <= (kind == .mcp ? 3_000_000 : 2_000_000), let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               result["ok"] is Bool else {
             throw NSError(domain: "PrivateDeviceSync", code: 503, userInfo: [NSLocalizedDescriptionKey: "设备同步暂时不可用，本机数据已保留"])
         }

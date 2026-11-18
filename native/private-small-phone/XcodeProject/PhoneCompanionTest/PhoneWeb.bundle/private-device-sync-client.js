@@ -1,0 +1,332 @@
+/* PRIVATE_ACCOUNT_CLOUD_SYNC_V1: app adapter, isolated from the pure journal and provider credentials. */
+(function(root){
+ 'use strict';
+ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+ const copy=x=>JSON.parse(JSON.stringify(x));
+ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ function createClient(host){
+  const core=host.core;let context=null,owner='',epoch=0,busy=false,wakeTimer=0,stopped=false,error='',phase='authentication';
+  const permits=new Map();let account=host.account||{loggedIn:false,userId:''};
+  const current=ctx=>!stopped&&context===ctx&&ctx.epoch===epoch&&owner===ctx.owner;
+  function check(ctx){if(!current(ctx))throw new Error('账号已变化，本轮同步已停止');}
+  function stateKey(user,kind){return '__device_sync_v1_'+user+'_'+kind;}
+  async function read(ctx,kind){check(ctx);const value=await host.read(stateKey(ctx.owner,kind));check(ctx);return value;}
+  async function write(ctx,kind,value){check(ctx);await host.write(stateKey(ctx.owner,kind),value);check(ctx);}
+  function announce(next,detail){phase=next;error=detail||'';host.status?.({phase,error,owner,ready:!!context?.ready,conflicts:context?.conflicts||0});}
+  async function native(ctx,body){check(ctx);const value=await host.native('account.sync',body);check(ctx);if(value?.ok!==true)throw new Error(value?.error||value?.message||'账号同步暂时不可用');if(body.action==='pull'){ctx.observedSeed=value.seed;ctx.pullMore=value.more===true;}return value;}
+  function schedule(ms){if(stopped)return;clearTimeout(wakeTimer);wakeTimer=setTimeout(()=>{wakeTimer=0;tick().catch(()=>{});},Math.max(0,ms));}
+  function invalidate(){permits.clear();context?.journal?.close();context=null;epoch++;host.cancelReplies?.();}
+  async function saveCodec(ctx,pendingView){await write(ctx,'codec',{version:1,records:ctx.codec.dump(),pendingView:!!pendingView});}
+  async function visible(ctx,retainLocal){
+   check(ctx);if(!ctx.viewPending||host.isBusy())return false;
+   const unpacked=await ctx.codec.materialize();check(ctx);if(!unpacked.complete)return false;
+   if(ctx.observedSeed?.phase!=='ready'&&ctx.seed?.phase!=='ready')return false;
+   if(ctx.pullMore)return false;
+   let incoming=unpacked.state;
+   // Local edits made while an HTTP request was in flight are overlaid as records, never lost to a full S replacement.
+   if(ctx.hasBase&&ctx.visibleRecords){
+    const local=await host.snapshot();check(ctx);const projected=await ctx.codec.project(local),delta=[];
+    for(const key of new Set([...Object.keys(ctx.visibleRecords),...Object.keys(projected)])){
+     if(core.canonical(projected[key])===core.canonical(ctx.visibleRecords[key]))continue;
+     delta.push(projected[key]===undefined?{key,deleted:true}:{key,value:projected[key],deleted:false});
+    }
+    if(delta.length){if(retainLocal)await retainLocal(delta);else if(ctx.seeding&&ctx.journal?.queue)await ctx.journal.queue(delta);else throw new Error('本机内容正在变化，请稍后同步');ctx.codec.accept(delta);await saveCodec(ctx,true);const merged=await ctx.codec.materialize();if(!merged.complete)throw new Error('本机新内容尚未完成整理');incoming=merged.state;ctx.dirtySeq++;}
+   }
+   const preserved=ctx.codec.preserveDeviceState(incoming,host.getState());
+   await host.replaceState(preserved,()=>check(ctx));check(ctx);
+   ctx.visibleRecords=await ctx.codec.project(await host.snapshot());check(ctx);
+   await write(ctx,'local',{version:1,owner:ctx.owner,state:await host.snapshot()});
+   ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.canPublish=true;
+   host.reveal?.(ctx.owner,Math.max(1,ctx.codec.dump().filter(x=>x.key.startsWith('state/')).length));
+   return true;
+  }
+  async function capture(ctx){
+   check(ctx);if(ctx.dirtySeq===ctx.capturedSeq)return null;
+   const stamp=ctx.dirtySeq,snapshot=await host.snapshot();check(ctx);
+   const projected=await ctx.codec.project(snapshot);check(ctx);
+   if(typeof ctx.codec.setLocalProjection==='function')ctx.codec.setLocalProjection(projected);
+   else ctx.codec.accept(Object.entries(projected).map(([key,value])=>({key,value,deleted:false})));
+   await saveCodec(ctx,false);await write(ctx,'local',{version:1,owner:ctx.owner,state:snapshot});
+   ctx.visibleRecords=projected;ctx.capturedSeq=stamp;
+   return Object.assign(projected,ctx.codec.mediaRecords?.()||{});
+  }
+  async function build(status){
+   const user=String(status.userId||'');if(!UUID.test(user))throw new Error('账号身份没有完整读取');
+   if(owner!==user){invalidate();owner=user;}
+   const ctx={owner:user,epoch,codec:core.createStateCodec(),ready:false,hasBase:false,canPublish:false,seed:null,observedSeed:null,pullMore:false,viewPending:false,dirtySeq:1,capturedSeq:0,visibleRecords:null,conflicts:0,conflictItems:[]};context=ctx;
+   const bound=host.boundOwner(),marker=host.stateOwner?host.stateOwner():bound;ctx.legacySource=!bound&&host.legacyOwner?.()===user&&host.nativeOwner?.()===user;
+   if(bound&&(bound!==user||!marker)){
+    const previous=await host.snapshot();if(marker===bound||!marker&&host.legacyOwner?.()===bound&&host.meaningful(previous))await host.write(stateKey(bound,'local'),{version:1,owner:bound,state:previous});check(ctx);
+    const local=await read(ctx,'local');await host.replaceState(local?.owner===user&&local.state?local.state:host.emptyState(),()=>check(ctx));check(ctx);
+   }else if(!bound){
+    const local=await read(ctx,'local');if(local?.owner===user&&local.state&&!host.meaningful(host.getState()))await host.replaceState(local.state,()=>check(ctx));
+   }
+   await host.bindOwner(user);check(ctx);
+   const cached=await read(ctx,'codec');if(cached?.version===1){ctx.codec.load(cached.records);ctx.viewPending=!!cached.pendingView;}
+   let previous=await read(ctx,'journal');if(previous?.initialized&&(!cached?.records?.length||!cached.records.some(row=>row.key==='state/schema'))){previous={...previous,cursor:0,initialized:false,known:{},inbox:null};await write(ctx,'journal',previous);}ctx.seed=previous?.seed||null;ctx.observedSeed=ctx.seed;ctx.pullMore=previous?.initialized!==true;
+   const locallyOwned=host.boundOwner()===user&&(host.meaningful(host.getState())||previous?.initialized===true&&previous.seed?.phase==='ready'&&cached?.records?.length);
+   ctx.hasBase=!!locallyOwned;ctx.ready=!!locallyOwned;
+   if(ctx.hasBase){ctx.visibleRecords=await ctx.codec.project(await host.snapshot());host.reveal?.(ctx.owner,Math.max(1,cached?.records?.filter(x=>x.key.startsWith('state/')).length||Object.keys(ctx.visibleRecords).length));}
+   ctx.journal=core.createJournal({owner:user,platform:host.platform,label:host.label,getOwner:()=>owner,
+    canPublish:()=>current(ctx)&&ctx.canPublish,
+    transport:body=>native(ctx,body),
+    storage:{read:()=>read(ctx,'journal'),write:(_,value)=>write(ctx,'journal',value)},
+    snapshot:()=>capture(ctx),
+    async apply(rows,guard,retainLocal){check(ctx);guard();if(host.isBusy()){const error=new Error('等待本机当前回复保存后继续同步');error.deviceSyncBusy=true;throw error;}ctx.codec.accept(rows);ctx.viewPending=true;await saveCodec(ctx,true);check(ctx);guard();await visible(ctx,retainLocal);}
+   });
+   return ctx;
+  }
+  async function sync(ctx){
+   check(ctx);if(host.isBusy()){schedule(1500);return;}
+   if(ctx.viewPending)await visible(ctx);
+   const info=await ctx.journal.inspect();check(ctx);ctx.seed=info.seed||null;ctx.observedSeed=ctx.seed;ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;
+   host.syncConnections?.();
+   const device=ctx.journal.state()?.deviceId;
+   if(!ctx.seed){
+    if(host.platform==='iOS'){
+     let allowed=host.meaningful(host.getState());
+     if(!allowed){const old=await host.native('account.backup.info',{});check(ctx);allowed=old?.ok===true&&old.found===false;}
+     if(allowed){announce('saving');ctx.seed=await ctx.journal.seed(false);ctx.observedSeed=ctx.seed;ctx.hasBase=true;ctx.canPublish=true;ctx.visibleRecords=await ctx.codec.project(await host.snapshot());}
+    }
+    if(!ctx.seed){announce('waiting');await ctx.journal.cycle();return;}
+   }
+   if(ctx.seed.phase==='pending'){
+    if(ctx.seed.sourceDeviceId!==device){announce('waiting');await ctx.journal.cycle();return;}
+    ctx.canPublish=true;ctx.seeding=true;announce('saving');
+    // Each call is bounded; persist and yield between batches so a large first login can resume safely.
+    const more=await ctx.journal.flush(4);check(ctx);
+    if(more||Object.keys(ctx.journal.state()?.pending||{}).length){schedule(40);return;}
+    ctx.seed=await ctx.journal.seed(true);ctx.observedSeed=ctx.seed;ctx.viewPending=true;ctx.pullMore=false;await visible(ctx);ctx.seeding=false;
+   }else{
+    ctx.canPublish=ctx.hasBase;announce('pulling');const result=await ctx.journal.cycle();check(ctx);
+    if(result.more||result.pushed&&result.pending>0){schedule(40);return;}
+    if(ctx.viewPending)await visible(ctx);
+   }
+   check(ctx);ctx.conflicts=new Set([...ctx.conflictItems.map(x=>x.id),...Object.values(ctx.journal.state()?.pending||{}).map(x=>x.blocked).filter(Boolean)]).size;
+   announce(ctx.ready?'ready':'waiting');
+  }
+  async function tick(){
+   if(stopped||busy)return;busy=true;
+   try{
+    if(!host.isVisible()){schedule(60000);return;}
+    const status=await host.native('account.status',{});if(stopped)return;
+    account=status||{loggedIn:false};await host.onAccount?.(account);
+    if(!account.loggedIn||!UUID.test(String(account.userId||''))){if(owner){invalidate();owner='';}announce('authentication');return;}
+    let ctx=context;if(!ctx||owner!==String(account.userId))ctx=await build(account);
+    await sync(ctx);
+   }catch(e){if(context&&!context.journal)context=null;if(!stopped){const message=String(e?.message||'连接暂时中断');announce(/账号|authentication|device_revoked/.test(message)?'authentication':'network',message);}}
+   finally{busy=false;if(!wakeTimer&&!stopped)schedule(host.isVisible()?20000:60000);}
+  }
+  function manualKey(id,aid){return String(aid||'main')+'|'+String(id);}
+  const api={
+   start:()=>{stopped=false;schedule(0);},
+   retry(){if(context){context.journal?.close();context=null;epoch++;}host.accountReset?.();error='';schedule(0);},
+   syncNow:()=>tick(),
+   async waitForIdle(){const activeOwner=owner;while(busy&&!stopped&&owner===activeOwner)await wait(20);if(stopped||owner!==activeOwner)throw new Error('账号已变化');},
+   async prepareAccountSwitch(){if(!context||!owner)return;const ctx=context,state=await host.snapshot();check(ctx);await write(ctx,'local',{version:1,owner:ctx.owner,state});if(host.persistCurrent&&!await host.persistCurrent())throw new Error('当前账号内容尚未保存');},
+   accountChanged(){invalidate();schedule(0);},
+   stop(){stopped=true;clearTimeout(wakeTimer);invalidate();owner='';},
+   markDirty(){if(host.applying())return;if(context){context.dirtySeq++;schedule(1000);}},
+   status:()=>({owner,phase,error,ready:!!context?.ready,secondary:!api.backgroundAllowed(),conflicts:context?.conflicts||0}),
+   gateAllowed:()=>!!(owner&&context?.ready&&host.boundOwner()===owner),
+   legacySourceOwned:user=>!!(context?.legacySource&&owner===user&&host.boundOwner()===user&&host.legacyOwner?.()===user&&host.nativeOwner?.()===user),
+   backgroundAllowed:()=>!!(context?.ready&&context.seed?.phase==='ready'&&context.seed.sourceDeviceId===context.journal?.state()?.deviceId&&host.platform==='iOS'),
+   authorizeReply(id,aid,token){if(!context?.ready)return '';const key=manualKey(id,aid),permit={token:root.crypto.randomUUID(),epoch:token,expires:Date.now()+15*60000,owner};permits.set(key,permit);return permit.token;},
+   revokeReply(id,aid){permits.delete(manualKey(id,aid));},
+   replyPermit(id,aid,token,manual){const permit=permits.get(manualKey(id,aid));return manual&&permit&&permit.owner===owner&&permit.epoch===token&&permit.expires>Date.now()?permit.token:'';},
+   modelAllowed(options){if(api.backgroundAllowed())return true;return !!context?.ready&&Array.from(permits.values()).some(x=>x.token===options?.deviceSyncManual&&x.owner===owner&&x.expires>Date.now());},
+   async request(body){if(!context)throw new Error('请先登录账号');return context.journal.request(body);},
+   async conflicts(){await api.waitForIdle();const ctx=context;if(!ctx?.ready)throw new Error('账号内容仍在同步，请稍后查看');check(ctx);const info=await ctx.journal.inspect();check(ctx);ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;announce(phase);return copy(ctx.conflictItems);},
+   async conflict(id){await api.waitForIdle();const ctx=context;if(!ctx?.ready||!UUID.test(String(id)))throw new Error('这项修改已变化，请刷新列表');const result=await ctx.journal.request({action:'conflict',conflictId:id});check(ctx);return result;},
+   async resolveConflict(id,choice,revision){await api.waitForIdle();const ctx=context;if(!ctx?.ready||host.isBusy())throw new Error('请等当前回复或保存完成后再处理');if(!UUID.test(String(id))||!['server','candidate'].includes(choice)||!/^\d+$/.test(String(revision)))throw new Error('修改信息已变化，请重新查看');check(ctx);if(typeof ctx.journal.resolve!=='function')throw new Error('同步服务仍在更新，请稍后重试');const result=await ctx.journal.resolve(id,choice,String(revision));check(ctx);if(result?.ok!==true)throw new Error('此次选择尚未确认，两份修改仍然保留');const info=await ctx.journal.inspect();check(ctx);ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;announce(phase);schedule(0);return result;},
+
+   context:()=>context,
+   flush:async()=>{if(!context)return false;const more=await context.journal.flush();await visible(context);return !more;}
+  };
+  return Object.freeze(api);
+ }
+ root.NorthPrivateDeviceSyncRuntime=Object.freeze({createClient});
+ if(root.__SMALL_PHONE_PRIVATE__!==true||root.__SMALL_PHONE_ACCOUNT_SYNC__!==true||!root.SmallPhoneNative||!root.NorthPrivateDeviceSyncCore)return;
+ const platform=root.__SMALL_PHONE_MAC__===true?'macOS':'iOS';let applying=false,client,overlay=null,activeModels=0,waitingReplies=0,finishingReplies=0;
+ const BOUND='north-private-device-owner-v1';
+ const labels={authentication:'登录小手机账号',waiting:'正在等待账号数据',saving:'正在同步本机已有数据',pulling:'正在读取账号内容',ready:'账号数据已同步',network:'同步暂时中断'};
+ async function native(action,body){return root.SmallPhoneNative.request(action,body||{});}
+ async function syncStore(key,value,put){
+  const match=String(key).match(/^__device_sync_v1_([0-9a-f-]{36})_/i);if(!match||!UUID.test(match[1]))throw new Error('账号同步缓存标识有误');
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('smallphone-account-sync-'+match[1],1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains('state'))request.result.createObjectStore('state');};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+  return new Promise((resolve,reject)=>{const transaction=db.transaction('state',put?'readwrite':'readonly'),store=transaction.objectStore('state');let result=null;
+   const request=put?store.put(value,key):store.get(key);request.onsuccess=()=>{result=request.result;};transaction.oncomplete=()=>{db.close();resolve(put?true:result||null);};transaction.onerror=transaction.onabort=()=>{db.close();reject(transaction.error||new Error('账号缓存未保存'));};});
+ }
+ async function ownerImage(key,user){const db=await imgDB(user);return new Promise((resolve,reject)=>{let result=null;const transaction=db.transaction('img','readonly'),request=transaction.objectStore('img').get(key);request.onsuccess=()=>{result=request.result;};transaction.oncomplete=()=>{db.close();resolve(result);};transaction.onerror=()=>{db.close();reject(transaction.error);};});}
+ async function snapshot(){
+  if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise)await _bootImagesPromise;
+  const old=typeof _recoveryInlineSave==='undefined'?false:_recoveryInlineSave;
+  let state;try{if(typeof _recoveryInlineSave!=='undefined')_recoveryInlineSave=true;state=JSON.parse(JSON.stringify(S,typeof _imgReplacer==='function'?_imgReplacer:undefined));}finally{if(typeof _recoveryInlineSave!=='undefined')_recoveryInlineSave=old;}
+  const stores=[[state,'messages','__messages'],[state.me?.phoneFriend,'messages','__pf_messages_'+(state.me?.phoneFriend?.id||'main')],[state.me?.phoneFriend,'groupMessages','__pf_group_messages_'+(state.me?.phoneFriend?.id||'main')]];
+  for(const [object,key,id] of stores)if(object?.[key]?.__idb){const raw=await ownerImage(id,String(S._deviceSyncOwner||privateAccountLegacyIdentity()));if(typeof raw!=='string')throw new Error('本机聊天仍在读取，请稍后继续');object[key]=JSON.parse(raw);}
+  await compactImages(state,String(S._deviceSyncOwner||privateAccountDataIdentity()));queueMediaRefs(state);return state;
+ }
+ // Media bytes use account-scoped object storage. Text hydration never waits for an album or a video.
+ const mediaPending=new Map(),mediaDownloads=new Map();let mediaTimer=0,mediaRunning=false,mediaSequence=0;
+ const mediaOriginal={imgGet:root.imgGet,imgPut:root.imgPut,mGet:root.mGet,mPut:root.mPut,cinGet:root.cinGet,cinPut:root.cinPut};
+ const mediaDigest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+ function mediaBase64(bytes){let text='';for(let i=0;i<bytes.length;i+=32768)text+=String.fromCharCode(...bytes.subarray(i,i+32768));return btoa(text).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+ function mediaDecode(text){const raw=atob(String(text).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(raw,x=>x.charCodeAt(0));}
+ function mediaTarget(key){return key.startsWith('music:')?{store:'music',key:key.slice(6)}:key.startsWith('cinema:')?{store:'cinema',key:key.slice(7)}:{store:'img',key};}
+ function mediaAllowed(key){if(typeof key!=='string'||!key||key.length>512)return false;const local=mediaTarget(key).key;return !!local&&!/^__(?:core|recovery|private|device|messages|pf_messages|pf_group_messages|music_manifest)/i.test(local);}
+ function queueMedia(key,force){if(!mediaAllowed(key))return;const user=String(S._deviceSyncOwner||privateAccountDataIdentity());if(!UUID.test(user))return;const id=user+'|'+key,old=mediaPending.get(id);if(old&&!force)return;mediaPending.set(id,{user,key,force:!!force||!!old?.force,priority:force?++mediaSequence:old?.priority||0});scheduleMedia(300);}
+ function queueMediaRefs(state){const walk=value=>{if(typeof value==='string'){if(value.startsWith('idb:'))queueMedia(value.slice(4));else if(value.startsWith('album:'))queueMedia(value.slice(6));else if(value.startsWith('idb-audio:'))queueMedia('__audio_'+value.slice(10));else value.replace(/idb-audio:([^"'\\\s\[\]]+)/g,(_,id)=>{queueMedia('__audio_'+id);return _;});}else if(value&&typeof value==='object')for(const child of Object.values(value))walk(child);};walk(state);
+  for(const song of state.music?.songs||[])if(song?.src?.t==='idb'&&song.id)queueMedia('music:'+song.id);
+  for(const item of state.cinema?.library||[])if(item?.source==='idb'&&item.mediaKey)queueMedia('cinema:'+(item.storeKey||cinemaStoreKey(item.kind,item.mediaKey)));
+ }
+ async function compactImages(state,user){async function walk(object){if(!object||typeof object!=='object')return;for(const key of Object.keys(object)){const value=object[key];if(typeof value==='string'&&/^data:image\//i.test(value)&&value.length>2048){const id='sync-img-'+await mediaDigest(new TextEncoder().encode(value));await imgPutIDBWithRetry(id,value,user);object[key]='idb:'+id;}else if(value&&typeof value==='object')await walk(value);}}await walk(state);}
+ async function mediaRead(key,user){const target=mediaTarget(key);if(target.store==='img')return ownerImage(target.key,user);return target.store==='music'?mediaOriginal.mGet(target.key,user):mediaOriginal.cinGet(target.key,user);}
+ async function mediaWrite(key,value,user){const target=mediaTarget(key);if(target.store==='img')return imgPutIDBWithRetry(target.key,value,user);return target.store==='music'?mediaOriginal.mPut(target.key,value,user):mediaOriginal.cinPut(target.key,value,user);}
+ function scheduleMedia(ms){if(mediaTimer||document.hidden)return;mediaTimer=setTimeout(()=>{mediaTimer=0;pumpMedia().catch(()=>{});},ms||500);}
+ async function pumpMedia(){
+  const ctx=client?.context();if(mediaRunning||!ctx?.ready||!ctx.canPublish||document.hidden||isBusy()){scheduleMedia(5000);return;}mediaRunning=true;
+  try{for(const [id,item] of Array.from(mediaPending).sort((a,b)=>(b[1].priority||0)-(a[1].priority||0))){if(client.context()!==ctx)break;if(item.user!==ctx.owner){mediaPending.delete(id);continue;}if(!item.force&&ctx.codec.mediaManifest(item.key)){mediaPending.delete(id);continue;}
+   const value=await mediaRead(item.key,item.user);if(client.context()!==ctx)break;if(value==null){mediaPending.delete(id);continue;}
+   const type=value instanceof Blob?'blob':typeof value==='string'?'string':'json',bytes=type==='blob'?new Uint8Array(await value.arrayBuffer()):new TextEncoder().encode(type==='string'?value:JSON.stringify(value)),hash=await mediaDigest(bytes),existing=ctx.codec.mediaManifest(item.key);
+   if(existing?.hash===hash){mediaPending.delete(id);continue;}const parts=[];
+   for(let offset=0;offset<bytes.length;offset+=1048576){if(client.context()!==ctx)throw new Error('账号已变化');const part=bytes.subarray(offset,Math.min(offset+1048576,bytes.length)),partHash=await mediaDigest(part);await client.request({action:'media.put',hash:partHash,base64:mediaBase64(part)});parts.push(partHash);await wait(0);}
+   if(client.context()!==ctx)break;const row=await ctx.codec.addMediaManifest({localKey:item.key,type,mime:type==='blob'?value.type||'application/octet-stream':undefined,bytes:bytes.length,hash,parts});
+   await syncStore('__device_sync_v1_'+ctx.owner+'_codec',{version:1,records:ctx.codec.dump(),pendingView:ctx.viewPending},true);await ctx.journal.queue([row]);await ctx.journal.flush(1);if(mediaPending.get(id)===item)mediaPending.delete(id);
+   // One file per idle turn keeps chat and foreground synchronization responsive.
+   break;
+  }}catch(_){scheduleMedia(30000);}finally{mediaRunning=false;if(mediaPending.size)scheduleMedia(700);}
+ }
+ async function fetchMedia(key){
+  const ctx=client?.context(),manifest=ctx?.codec.mediaManifest(key);if(!ctx?.ready||!manifest||!mediaAllowed(key))return null;
+  const id=ctx.owner+'|'+key;if(mediaDownloads.has(id))return mediaDownloads.get(id);
+  const task=(async()=>{const parts=[];let totalBytes=0;for(const hash of manifest.parts){if(client.context()!==ctx)throw new Error('账号已变化');const row=await client.request({action:'media.get',hash}),bytes=mediaDecode(row.base64);if(await mediaDigest(bytes)!==hash)throw new Error('媒体分块校验未通过');parts.push(bytes);totalBytes+=bytes.length;}if(totalBytes!==manifest.bytes)throw new Error('媒体文件尚未完整同步');const bytes=new Uint8Array(totalBytes);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}if(await mediaDigest(bytes)!==manifest.hash)throw new Error('媒体文件校验未通过');if(client.context()!==ctx)throw new Error('账号已变化');const text=manifest.type==='blob'?null:new TextDecoder().decode(bytes),value=manifest.type==='blob'?new Blob([bytes],{type:manifest.mime||'application/octet-stream'}):manifest.type==='json'?JSON.parse(text):text;await mediaWrite(key,value,ctx.owner);if(client.context()!==ctx)throw new Error('账号已变化');return value;})().finally(()=>mediaDownloads.delete(id));mediaDownloads.set(id,task);return task;
+ }
+ function installMediaHooks(){for(const [getName,putName,prefix] of [['imgGet','imgPut',''],['mGet','mPut','music:'],['cinGet','cinPut','cinema:']]){const originalGet=mediaOriginal[getName],originalPut=mediaOriginal[putName];if(typeof originalGet==='function')root[getName]=async function(key,owner){const active=String(S._deviceSyncOwner||privateAccountDataIdentity()),value=await originalGet.apply(this,arguments);if(value!=null||owner&&owner!==active||!mediaAllowed(prefix+key))return value;try{return await fetchMedia(prefix+key);}catch(_){return null;}};if(typeof originalPut==='function')root[putName]=async function(key,value,owner){const captured=String(owner||value?.owner||S._deviceSyncOwner||privateAccountDataIdentity()),result=await originalPut.apply(this,arguments);if(captured===String(S._deviceSyncOwner||privateAccountDataIdentity()))queueMedia(prefix+key,true);return result;};}}
+ function isBusy(){return !!(activeModels||typeof replyGenerationStore==='function'&&Object.keys(replyGenerationStore()).length>waitingReplies+finishingReplies||typeof _fullBackupImportBusy!=='undefined'&&_fullBackupImportBusy||typeof _off!=='undefined'&&_off?.busy||typeof _call!=='undefined'&&_call||typeof _momentReplyBusy!=='undefined'&&_momentReplyBusy.size);}
+ async function replaceState(next,guard){
+  guard();const previous=S;applying=true;
+  try{
+   const user=client.status().owner;if(String(previous._deviceSyncOwner||'')!==user){_imgCache={};_imgRev=new Map();_imgReady=new Set();_heavy={};_heavyStamp={};_heavyReady=new Set();}
+   S=mergeStateData(next);S._deviceSyncOwner=user;normalizeLoadedState();guard();if(!await saveNowAsync())throw new Error('账号内容保存未完成');guard();if(typeof phoneFriendState==='function')phoneFriendState();
+   if(typeof cur==='function'&&cur().p==='chat'&&typeof refreshChatMessages==='function')refreshChatMessages(cur().id);
+   else if(!document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"]')&&typeof render==='function')render();
+  }
+  catch(e){S=previous;throw e;}finally{applying=false;}
+ }
+ function cancelReplies(){closeConflictPanel();try{const aids=(S.me?.accounts||[]).map(x=>x.id);if(!aids.length)aids.push('main');for(const contact of S.contacts||[])for(const aid of aids)if(typeof replyTouch==='function')replyTouch(contact.id,aid);}catch(_){} }
+ async function onAccount(status){
+  const previous=typeof _privatePhoneAccount!=='undefined'?String(_privatePhoneAccount.userId||''):'';
+  if(previous&&previous!==String(status.userId||'')){cancelReplies();if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();for(const task of [typeof _coreMirrorWrite==='undefined'?null:_coreMirrorWrite,typeof _messageArchiveWrite==='undefined'?null:_messageArchiveWrite])if(task)await Promise.resolve(task).catch(()=>{});}
+  if(typeof _privatePhoneAccount!=='undefined')Object.assign(_privatePhoneAccount,{loaded:true,loggedIn:!!status.loggedIn,userId:status.userId||'',maskedPhone:status.maskedPhone||'',error:''});
+  if(!status.loggedIn)return;
+  if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise)try{await _bootImagesPromise;}catch(error){
+   const different=String(S._deviceSyncOwner||privateAccountLegacyIdentity())!==String(status.userId)||!!(_coreBootRef?.accountSwitch||_coreBootRef?.recovery&&privateAccountLegacyIdentity()!==String(status.userId));
+   if(!different)throw error;
+   _coreBootRef=null;_coreOverflowMode=false;_coreQueuedSave=null;_coreMirrorWrite=Promise.resolve(true);S=defState();S._deviceSyncOwner=status.userId;_bootImagesPromise=Promise.resolve();_appBootFinished=false;finishAppBoot();
+  }
+ }
+ function notify(stage,phase,recordCount){if(platform!=='macOS')return;const state=client?.status();native('account.sync.ui',{stage,phase,owner:state?.owner||'',hydrated:stage==='ready',recordCount:recordCount||0}).catch(()=>{});}
+ function removeGate(){const gate=document.getElementById('gate');if(gate)gate.remove();}
+ function reveal(user,count){if(client?.status().owner!==user)return;removeGate();if(typeof scheduleVisibleStoredImages==='function')scheduleVisibleStoredImages(true);scheduleMedia(100);if(overlay){overlay.remove();overlay=null;}notify('ready','ready',count);}
+ function showStatus(status){
+  const counter=document.getElementById('privateSyncConflictCount');if(counter){counter.hidden=!status.conflicts;counter.style.display=status.conflicts?'':'none';counter.textContent='查看 '+status.conflicts+' 项不同修改';}
+  if(status.ready){if(overlay){overlay.remove();overlay=null;}if(status.phase==='ready')notify('ready','ready',client.context()?.codec.dump().length||1);return;}
+  notify(status.phase==='network'?'error':'progress',status.phase);
+  if(platform==='macOS')return;
+  if(!overlay){overlay=document.createElement('section');overlay.id='privateAccountSyncOverlay';overlay.style.cssText='position:fixed;inset:0;z-index:2147483600;background:#000;color:#f5f5f7;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:system-ui';document.body.appendChild(overlay);}
+  const login=status.phase==='authentication';
+  if(overlay.dataset.mode===(login?'login':'sync')){const text=overlay.querySelector('[data-sync-note]');if(text)text.textContent=labels[status.phase]||'正在连接账号';return;}
+  overlay.dataset.mode=login?'login':'sync';overlay.innerHTML='<div style="width:min(100%,340px);display:grid;gap:16px"><div style="font-size:26px;font-weight:700">'+(login?'登录小手机':'账号云同步')+'</div><p data-sync-note style="margin:0;color:#999;line-height:1.65">'+(labels[status.phase]||'正在连接账号')+'</p>'+(login?'<input data-phone inputmode="tel" autocomplete="tel" placeholder="手机号" style="padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><div style="display:flex;gap:8px"><input data-password type="password" autocomplete="current-password" placeholder="账号密码" style="min-width:0;flex:1;padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><button data-eye aria-label="显示密码" style="width:48px;border-radius:16px;border:1px solid #38383a;background:#1c1c1e;color:#fff">◉</button></div><button data-login style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">登录并同步</button>':'<button data-retry style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">重新连接</button>')+'<small style="color:#777;line-height:1.7">登录后自动显示此账号的角色、聊天和设置。手机系统权限由本机单独授权。</small></div>';
+  overlay.querySelector('[data-eye]')?.addEventListener('click',()=>{const input=overlay.querySelector('[data-password]');input.type=input.type==='password'?'text':'password';});
+  overlay.querySelector('[data-retry]')?.addEventListener('click',()=>client.retry());
+  overlay.querySelector('[data-login]')?.addEventListener('click',async()=>{const button=overlay.querySelector('[data-login]'),phone=overlay.querySelector('[data-phone]').value,password=overlay.querySelector('[data-password]').value;button.disabled=true;const note=overlay.querySelector('[data-sync-note]');note.textContent='正在连接账号…';try{const result=await native('account.password.signin',{phone,password});if(result?.ok!==true)throw new Error(result?.message||'请核对手机号和密码');overlay.querySelector('[data-password]').value='';client.accountChanged();}catch(e){note.textContent=String(e?.message||'登录没有完成');}finally{button.disabled=false;}});
+ }
+ client=createClient({core:root.NorthPrivateDeviceSyncCore,platform,label:platform==='macOS'?'小手机 Mac':'小手机 iPhone',native,
+  read:key=>syncStore(key,null,false),write:(key,value)=>syncStore(key,value,true),snapshot,getState:()=>S,replaceState,
+  emptyState:()=>defState(),meaningful:state=>recoveryStateMeaningful(recoveryStateStats(state)),
+  stateOwner:()=>String(S._deviceSyncOwner||''),boundOwner:()=>String(S._deviceSyncOwner||localStorage.getItem(BOUND)||''),legacyOwner:()=>privateAccountLegacyIdentity(),nativeOwner:()=>String((root.__SMALL_PHONE_NATIVE_ACCOUNT__||root.__SMALL_PHONE_ACCOUNT__||{}).userId||''),
+  async bindOwner(user){const previous=S._deviceSyncOwner;applying=true;try{S._deviceSyncOwner=user;if(!await saveNowAsync())throw new Error('账号归属保存未完成');localStorage.setItem(BOUND,user);}catch(e){if(previous===undefined)delete S._deviceSyncOwner;else S._deviceSyncOwner=previous;throw e;}finally{applying=false;}},
+  applying:()=>applying,isBusy,isVisible:()=>!document.hidden,onAccount,status:showStatus,reveal,cancelReplies,persistCurrent:()=>saveNowAsync(),
+  accountReset:()=>{if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();},syncConnections:()=>{if(typeof MCPTools!=='undefined')Promise.resolve(MCPTools.accountSync?.()).catch(()=>{});}});
+ root.NorthPrivateDeviceSyncClient=client;installMediaHooks();
+ const originalMany=root.imgMany;if(typeof originalMany==='function')root.imgMany=async function(keys){const user=client.status().owner,found=await originalMany.apply(this,arguments);if(!client.context()?.ready)return found;for(const key of (keys||[]).filter(key=>found[key]==null&&mediaAllowed(key)).slice(0,4)){if(client.status().owner!==user)break;try{const value=await fetchMedia(key);if(value!=null)found[key]=value;}catch(_){}}return found;};
+ const originalChatAPI=root.chatAPI;
+ if(typeof originalChatAPI==='function')root.chatAPI=async function(){await client.waitForIdle();activeModels++;try{return await originalChatAPI.apply(this,arguments);}finally{activeModels--;}};
+ const originalReply=root.aiReply;
+ if(typeof originalReply==='function')root.aiReply=async function(id,note,token,aid,intent,options){
+  aid=aid||actId();waitingReplies++;
+  try{await client.waitForIdle();}finally{waitingReplies--;}
+  const ctx=client.context();if(!ctx?.ready)return false;
+  const manualToken=client.replyPermit(id,aid,token,!note||!!options?.reopenCompleted);
+  if(!client.backgroundAllowed()&&!manualToken)return false;
+  const generation=ctx.epoch,threadKey=await root.NorthPrivateDeviceSyncCore.hash([aid,id]);
+  const rows=msgsForAccount(id,aid),lastUser=[...rows].reverse().find(x=>x?.role==='user'&&x.type!=='sys');
+  const turnKey=String(note&&options?.reopenCompleted?'continue:'+crypto.randomUUID():!note&&lastUser?.id?lastUser.id:'event:'+crypto.randomUUID()).slice(0,240),leaseToken=crypto.randomUUID();
+  let lease=false,lost=false,renewing=false,renewTimer=0,result=false;
+  const assert=()=>{if(client.context()!==ctx||ctx.epoch!==generation||client.status().owner!==ctx.owner)throw new Error('账号已变化');};
+  const direct=async body=>{assert();const response=await native('account.sync',Object.assign({deviceId:ctx.journal.state()?.deviceId,threadKey,turnKey,leaseToken},body));assert();if(response?.ok!==true)throw new Error('当前回复的设备授权已失效');return response;};
+  try{
+   const acquired=await direct({action:'turn.acquire'});if(acquired.acquired!==true){if(manualToken&&typeof toast==='function')toast(acquired.completed?'这条消息已在另一台设备完成回复':'另一台设备正在回复，请稍候');return false;}lease=true;
+   renewTimer=setInterval(async()=>{if(renewing||lost)return;renewing=true;try{const response=await direct({action:'turn.renew'});if(response.renewed!==true&&response.acquired!==true)throw new Error('lease lost');}catch(_){lost=true;permitsForLostTurn();}finally{renewing=false;}},60000);
+   function permitsForLostTurn(){client.revokeReply(id,aid);try{replyTouch(id,aid);}catch(_){} }
+   result=!!(await originalReply.call(this,id,note,token,aid,intent,options));
+   assert();if(lost)return false;
+   finishingReplies++;try{client.markDirty();const saved=await saveNowAsync();if(!saved)throw new Error('回复尚未保存');const syncConfirmed=await client.flush();await direct({action:'turn.finish',completed:result&&syncConfirmed});lease=false;}finally{finishingReplies--;}
+   return result;
+  }catch(error){if(!lost&&client.context()===ctx&&manualToken&&typeof toast==='function')toast('本轮回复暂未完成，请稍后重试');return false;}
+  finally{clearInterval(renewTimer);if(lease)try{await direct({action:'turn.finish',completed:false});}catch(_){} }
+ };
+ // PRIVATE_SYNC_CONFLICT_UI_V1: bounded review, explicit field-level choice, no raw keys or credentials.
+ let conflictPanel=null,conflictPanelContext=null,conflictOperation=false;
+ const conflictFields={hist:'上下文长度',histUnit:'上下文单位',chat:'聊天模型',chatRoutes:'模型路线',chatRouteActive:'当前模型路线',aux:'辅助模型',tts:'语音设置',name:'名字',remark:'备注',persona:'人设',signature:'签名',avatar:'头像',model:'模型选择',maxTokens:'回复长度',memory:'记忆',summaries:'聊天总结',worldbook:'世界书',worldbookCategories:'世界书分类',music:'音乐',cinema:'放映室',calendar:'日历',tasks:'任务',moments:'朋友圈',proactive:'主动消息设置',spy:'授权设置',voice:'声音',chatBg:'聊天背景',homeBg:'主屏幕背景',homeDashboard:'主屏幕组件',wxTheme:'微信外观',accounts:'微信账号',active:'当前微信账号',sound:'提示音',timeAware:'时间感知',timeZone:'时区',manualReply:'手动回复',initiative:'主动消息',replyDelay:'回复间隔',settings:'设置',me:'个人资料',couple:'共同生活',offline:'约会存档',roleplay:'角色扮演',appIcons:'应用图标'};
+ function conflictType(node,key){if(node?.kind==='message')return '聊天消息';if(node?.kind==='thread')return '聊天会话';if(node?.kind==='media')return '媒体文件';if(node?.kind==='contact')return '角色资料';if(node?.kind==='contactField'){const role=(S.contacts||[]).find(x=>x.id===node.id),label=conflictFields[node.field]||'资料';return (role?.remark||role?.name||'角色')+' · '+label;}if(node?.kind==='field'){const path=node.path||[],label=conflictFields[path.at(-1)]||'应用内容';return path[0]==='settings'?'设置 · '+label:path[0]==='me'?'个人资料 · '+label:label;}return String(key||'').startsWith('state/contact')?'角色资料':String(key||'').startsWith('state/message')?'聊天消息':'应用内容';}
+ function conflictSummary(row){if(!row||row.deleted)return '此项已删除';const node=row.value;if(!node)return '此项目前为空';if(node.kind==='parts')return '较长内容（'+Math.ceil((node.bytes||0)/1024)+' KB），原始内容已安全保留';if(node.kind==='media')return '媒体文件（'+Math.ceil((node.bytes||0)/1024)+' KB）';const path=node.kind==='field'?node.path||[]:[node.field||''];if(path.some(x=>/key|token|secret|password|credential|authorization/i.test(String(x))))return '凭据内容已隐藏';let value=node.kind==='message'?node.value?.content:node.kind==='contact'?node.value?.name||'角色基本资料':node.value;
+  const short=v=>{if(v==null)return '未设置';if(typeof v==='boolean')return v?'已开启':'已关闭';if(typeof v==='number')return String(v);if(typeof v==='string'){if(/^(?:data:|idb:|album:|blob:)/i.test(v))return '图片或媒体内容';return v.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,150)||'空白内容';}if(Array.isArray(v))return '共 '+v.length+' 项';if(typeof v==='object'){if(v.model||v.base||v.key)return '模型：'+String(v.model||'未设置').slice(0,80)+(v.key?' · 已配置密钥':'');for(const key of ['title','name','text','content'])if(typeof v[key]==='string')return short(v[key]);return '包含 '+Object.keys(v).length+' 项内容';}return '应用内容';};return short(value);
+ }
+ function closeConflictPanel(){if(conflictPanel)conflictPanel.remove();conflictPanel=null;conflictPanelContext=null;conflictOperation=false;}
+ function conflictCurrent(ctx){return !!conflictPanel?.isConnected&&conflictPanelContext===ctx&&client.context()===ctx&&client.status().owner===ctx.owner;}
+ function conflictNote(text){const note=conflictPanel?.querySelector('[data-conflict-note]');if(note)note.textContent=text;}
+ function conflictButton(text,kind){const button=document.createElement('button');button.type='button';button.className='btn '+(kind||'g');button.textContent=text;button.style.cssText='min-height:44px;border-radius:15px;white-space:normal;line-height:1.4';return button;}
+ async function loadConflicts(ctx){
+  const panel=conflictPanel,isCurrent=()=>panel===conflictPanel&&conflictCurrent(ctx);
+  if(!isCurrent())return;conflictNote('正在读取保留的修改…');const list=conflictPanel.querySelector('[data-conflict-list]');list.replaceChildren();
+  try{const rows=await client.conflicts();if(!isCurrent())return;conflictNote(rows.length?'同一项在多台设备改动时，两份都会保留。展开后选择要采用的内容。':'不同修改已处理完成，账号内容将继续自动同步。');
+   for(const item of rows){if(!UUID.test(String(item.id)))continue;const card=document.createElement('article');card.style.cssText='border:1px solid #36363a;background:#1c1c1e;border-radius:18px;padding:14px;display:grid;gap:12px';card.dataset.conflictId=item.id;
+    const open=conflictButton(conflictType(null,item.key)+' · 查看不同修改','g');open.style.textAlign='left';card.appendChild(open);list.appendChild(card);let detail=null;
+    open.addEventListener('click',async()=>{if(!isCurrent()||conflictOperation)return;if(detail){detail.hidden=!detail.hidden;detail.style.display=detail.hidden?'none':'grid';open.textContent=detail.hidden?'展开查看不同修改':'收起详情';return;}if(isBusy()){conflictNote('当前回复或保存尚未完成，请稍后查看。');return;}open.disabled=true;
+     try{const result=await client.conflict(item.id);if(!isCurrent())return;const candidate=result.conflict,current=result.current;if(!candidate||candidate.resolvedAt){await loadConflicts(ctx);return;}
+      const local=item.deviceId===ctx.journal.state()?.deviceId,candidateLabel=local?'本机修改':'另一设备修改';open.textContent=conflictType(candidate.value||current?.value,item.key)+' · 收起详情';
+      detail=document.createElement('div');detail.style.cssText='display:grid;gap:12px';const text=document.createElement('div');text.style.cssText='display:grid;gap:12px;font-size:14px;line-height:1.65;overflow-wrap:anywhere';
+      for(const [label,row] of [[candidateLabel,candidate],['云端当前内容',current]]){const section=document.createElement('div'),title=document.createElement('b'),summary=document.createElement('p');title.textContent=label;title.style.color='#a8ceff';summary.textContent=conflictSummary(row);summary.style.cssText='margin:4px 0 0;color:#d0d0d6;white-space:pre-wrap';section.append(title,summary);text.appendChild(section);}detail.appendChild(text);
+      const actions=document.createElement('div');actions.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px';detail.appendChild(actions);const confirmation=document.createElement('div');confirmation.hidden=true;detail.appendChild(confirmation);
+      for(const [choice,label] of [['candidate',local?'保留本机修改':'保留这份修改'],['server','采用云端内容']]){const button=conflictButton(label,choice==='candidate'?'p':'g');actions.appendChild(button);button.addEventListener('click',()=>{if(!isCurrent()||conflictOperation)return;confirmation.replaceChildren();confirmation.hidden=false;confirmation.style.cssText='border-top:1px solid #37373c;padding-top:12px;display:grid;gap:10px';const prompt=document.createElement('p');prompt.textContent='确认'+label+'？仅处理上面这一项，结果将同步到同账号的其他设备。';prompt.style.cssText='margin:0;color:#b4b4bd;line-height:1.6';const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px';const cancel=conflictButton('返回','g'),confirm=conflictButton('确认采用','p');buttons.append(cancel,confirm);confirmation.append(prompt,buttons);cancel.addEventListener('click',()=>{confirmation.hidden=true;confirmation.style.display='none';});confirm.addEventListener('click',async()=>{
+       if(!isCurrent()||conflictOperation)return;if(isBusy()){conflictNote('请等当前回复或保存完成后再确认。');return;}conflictOperation=true;conflictPanel.querySelectorAll('button:not([data-conflict-close])').forEach(x=>x.disabled=true);conflictNote('正在保存你的选择…');
+       try{const result=await client.resolveConflict(item.id,choice,String(current?.revision||'0'));if(!isCurrent())return;await loadConflicts(ctx);if(!result.resolved&&isCurrent())conflictNote('另一设备又修改了这项内容，两份仍然保留。请重新展开核对。');}catch(_){if(isCurrent())conflictNote('此次选择尚未完成，两份修改仍然保留。可以稍后重试。');}finally{if(panel===conflictPanel&&conflictPanelContext===ctx){conflictOperation=false;if(isCurrent())conflictPanel.querySelectorAll('button').forEach(x=>x.disabled=false);}}
+      });});}
+      card.appendChild(detail);
+     }catch(_){if(isCurrent())conflictNote('暂时无法读取详情，原有两份修改仍然保留。请稍后重试。');}finally{if(isCurrent())open.disabled=false;}
+    });
+   }
+  }catch(_){if(isCurrent())conflictNote('暂时无法读取修改列表，本机内容仍然保留。请稍后重试。');}
+ }
+ root.privatePhoneSyncConflictsOpen=async function(){const ctx=client.context();if(!ctx?.ready){if(typeof toast==='function')toast('账号内容仍在同步，请稍后查看');return;}closeConflictPanel();conflictPanelContext=ctx;conflictPanel=document.createElement('section');conflictPanel.id='privateSyncConflictOverlay';conflictPanel.style.cssText='position:fixed;inset:0;z-index:2147483610;background:rgba(0,0,0,.7);padding:24px 16px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-family:system-ui;color:#f5f5f7';
+  const frame=document.createElement('div');frame.style.cssText='width:min(100%,440px);max-height:78vh;max-height:78dvh;display:flex;flex-direction:column;gap:14px;border:1px solid #38383c;border-radius:24px;background:#111113;padding:18px;box-sizing:border-box';const header=document.createElement('div');header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px';const title=document.createElement('b');title.textContent='查看不同修改';title.style.fontSize='19px';const close=conflictButton('关闭','g');close.dataset.conflictClose='1';close.style.width='72px';close.addEventListener('click',closeConflictPanel);header.append(title,close);const note=document.createElement('p');note.dataset.conflictNote='1';note.style.cssText='margin:0;color:#999aa4;font-size:13px;line-height:1.65';const list=document.createElement('div');list.dataset.conflictList='1';list.style.cssText='overflow:auto;overscroll-behavior:contain;min-height:0;max-height:55vh;display:grid;gap:12px;padding:1px 2px';frame.append(header,note,list);conflictPanel.appendChild(frame);document.body.appendChild(conflictPanel);await loadConflicts(ctx);
+ };
+ // Reuse the existing account settings surface; backups remain an optional recovery tool.
+ const backupSection=root.privatePhoneAccountSection;
+ root.privatePhoneAccountSection=function(){if(!privatePhoneAccountAvailable())return '';const a=_privatePhoneAccount,status=client.status(),label=labels[status.phase]||'正在连接账号',conflicts=status.conflicts?' · '+status.conflicts+' 项不同修改已安全保留':'';
+  const main='<div class="section" id="set_private_account"><div class="it"><span><b style="color:#bfeaff">私人小手机账号</b><small style="display:block;color:#8f9eb3;margin-top:5px;line-height:1.6">'+esc(label+conflicts)+'</small></span><span class="v">'+esc(a.loggedIn?a.maskedPhone||'已登录':'尚未登录')+'</span></div><div class="hint">同一个手机号登录后，角色、聊天和设置自动同步；系统权限按设备单独授权。</div><button class="btn g" id="privateSyncConflictCount" style="margin:8px 14px;width:calc(100% - 28px);color:#9bcaff;'+(status.conflicts?'':'display:none;')+'" '+(status.conflicts?'':'hidden')+' onclick="privatePhoneSyncConflictsOpen()">查看 '+status.conflicts+' 项不同修改</button><div class="btns" style="padding:10px 14px 14px;gap:10px">'+(a.loggedIn?'<button class="btn p" onclick="NorthPrivateDeviceSyncClient.syncNow()">立即同步</button><button class="btn g" onclick="privatePhoneAccountSignOut()">退出此设备</button>':'<button class="btn p" onclick="privatePhoneAccountBindOpen()">创建或登录账号</button>')+'</div></div>';
+  const extra=typeof backupSection==='function'?backupSection.apply(this,arguments).replace(/id="set_private_account"/g,'id="privateAccountRecovery"'):'';
+  return main+(extra?'<details class="section" style="padding:14px"><summary style="cursor:pointer;color:#999">额外备份与恢复</summary><div style="margin-top:14px">'+extra+'</div></details>':'');
+ };
+ root.privatePhoneAccountBindOpen=function(){openModal('<h3>登录小手机账号</h3><div class="hint">使用同一手机号和密码，自动显示此账号的角色、聊天和设置。</div><div class="field"><input id="privatePhoneNumber" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="中国大陆手机号"></div><div class="field"><input id="privatePhonePassword" type="password" autocomplete="current-password" maxlength="72" placeholder="账号密码（至少 8 位）"></div><div class="btns" style="gap:10px"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="privatePhoneAccountPasswordLogin()">登录并同步</button></div><button class="btn g" style="margin-top:10px" onclick="privatePhoneAccountPasswordSignup()">创建新账号</button>');};
+ const automaticBackup=root.privatePhoneCloudAutoBackup;if(typeof automaticBackup==='function')root.privatePhoneCloudAutoBackup=function(){if(!client.backgroundAllowed())return Promise.resolve(false);return automaticBackup.apply(this,arguments);};
+ // Hooks execute only in this private entry; the public build keeps its original account/backup flow.
+ root.privatePhoneAccountAfterLogin=async()=>{client.accountChanged();};
+ root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged();}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};
+ const originalSignOut=root.privatePhoneAccountSignOut;
+ if(typeof originalSignOut==='function')root.privatePhoneAccountSignOut=async function(){await client.flush().catch(()=>{});const result=await originalSignOut.apply(this,arguments);client.accountChanged();return result;};
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){client.syncNow();scheduleMedia(100);}});
+ root.addEventListener('pageshow',()=>client.syncNow());
+ client.start();
+})(typeof window==='undefined'?globalThis:window);

@@ -13,7 +13,8 @@ for (const [label, path] of files) {
     assert.match(gc, /try\{scan\(JSON\.stringify\(S\)\);\}catch\(_\)\{return \{n:0,failed:true\};\}/, 'gives up if the live data cannot be read');
     assert.match(gc, /\/\^__\(\?:messages\|pf_messages\|pf_group_messages\)\/\.test\(k\)\)\)\{try\{scan\(await imgGetIDB\(k\)\);\}catch\(_\)\{return \{n:0,failed:true\};\}\}/, 'long chat archives are scanned too');
     assert.match(gc, /if\(at&&now-at<600000\)continue;/, 'audio written in the last 10 minutes is kept');
-    assert.match(app, /function imgPutIDBWithRetry\(k,v\)\{if\(String\(k\)\.indexOf\('__audio_'\)===0\)_audioPutAt\.set\(String\(k\),Date\.now\(\)\);/);
+    if(label==='private')assert.match(app, /function imgPutIDBWithRetry\(k,v,owner\)\{\s*owner=owner\|\|privateAccountStateIdentity\(\);\s*if\(String\(k\)\.indexOf\('__audio_'\)===0\)_audioPutAt\.set\(String\(k\),Date\.now\(\)\);/, 'private audio protection preserves the captured account owner');
+    else assert.match(app, /function imgPutIDBWithRetry\(k,v\)\{if\(String\(k\)\.indexOf\('__audio_'\)===0\)_audioPutAt\.set\(String\(k\),Date\.now\(\)\);/);
     assert.match(app, /let orphan=\{n:0\};try\{orphan=await audioOrphanGC\(\);\}catch\(_\)\{\}/, 'runs from the manual cleanup only');
   });
   test(label + ': temp files are cleaned after launch and by a button', () => {

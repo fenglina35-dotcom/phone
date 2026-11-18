@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 import cp from 'node:child_process';
-import {BUNDLES,read as readProject,fnSource} from './_helpers.mjs';
+import {BUNDLES,read as readProject,readAppSource,fnSource} from './_helpers.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const PRIVATE='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
@@ -114,7 +114,7 @@ test('member login (fishmcp) always gets the Fish expressive treatment, whatever
 
 // 通用 MCP 工具中心的执行与隔离检查，沿用这份既有 MCP 回归文件。
 {
-const settingsSource=read('src/app/011-saveSettings.js');
+const settingsSource=readAppSource().slice(0,readAppSource().indexOf('function spyAddGrudge('));
 const source=settingsSource.slice(settingsSource.indexOf('/* MCP_ROLE_TOOLS_V1'));
 const reply=(b,status=200,headers={})=>new Response(typeof b==='string'?b:JSON.stringify(b),{status,headers:{'Content-Type':'application/json',...headers}});
 const readTool={name:'read_note',description:'Read a note',inputSchema:{type:'object',properties:{id:{type:'string'}},required:['id']},annotations:{readOnlyHint:true}};
@@ -128,7 +128,7 @@ function sandbox(handler,override){
   document:{getElementById:id=>nodes.get(id)||null,createElement:()=>({setAttribute(){},querySelector:()=>({focus(){}}),remove(){nodes.delete(this.id);}}),head:{appendChild:n=>nodes.set(n.id,n)},body:{appendChild:n=>{nodes.set(n.id,n);panels.push(n);}}},
   fetch:async(url,init)=>{const body=init.body&&init.headers?.['Content-Type']==='application/json'?JSON.parse(init.body):null;calls.push({url,init,body});if(handler){const custom=await handler(url,init,body);if(custom)return custom;}if(body?.method==='initialize')return reply({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25',capabilities:{tools:{}}}},200);if(body?.method==='notifications/initialized')return reply('',202);if(body?.method==='tools/list')return reply({jsonrpc:'2.0',id:body.id,result:{tools:[readTool,writeTool]}});if(body?.method==='tools/call')return reply({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:'actual-server-result'}]}});throw Error('unexpected network '+url);},
   chatResultText:async(m,o,d)=>d.choices[0].message.content,toast(){},uiConfirm:async()=>true,cur:()=>({p:'chat'}),render(){},console};
- vm.createContext(ctx);vm.runInContext((override||source)+'\nglobalThis.M=MCPTools;globalThis.pkce=mcpPkce;',ctx);
+ vm.createContext(ctx);vm.runInContext((override||forVariant(source,'web'))+'\nglobalThis.M=MCPTools;globalThis.pkce=mcpPkce;',ctx);
  return{ctx,M:ctx.M,storage,panels,nodes,calls,state};
 }
 async function connected(s,mode='ask'){const c=s.M.add({name:'测试连接',url:'https://mcp.fixture.invalid/mcp',auth:'bearer',token:'fixture-secret-token'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode});return s.M.connection(c.id);}
@@ -203,11 +203,11 @@ test('MCP cost: inherited continuations cannot escape the shared task counter',a
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let requests=0;
  s.ctx.chatAPI=async(rows,opt)=>{assert.equal(typeof opt.mcpRequestGuard,'function');opt.mcpRequestGuard(opt);requests++;for(;;){opt.mcpRequestGuard(opt);requests++;}};
  const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert.equal(requests,8);assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
- const code=readProject('src/app/004-roleImageTimeRangeActive.js');for(const variant of ['web','private'])assert(forVariant(code,variant).includes("if(opt.mcpInternal&&typeof opt.mcpRequestGuard==='function')opt.mcpRequestGuard(opt)"));
+ const code=readAppSource();for(const variant of ['web','private'])assert(forVariant(code,variant).includes("if(opt.mcpInternal&&typeof opt.mcpRequestGuard==='function')opt.mcpRequestGuard(opt)"));
 });
 function forVariant(raw,variant){let section='';return raw.split('\n').filter(line=>{const m=line.match(/^\/\/@@ (web|private|end)$/);if(m){section=m[1]==='end'?'':m[1];return false;}return !section||section===variant;}).join('\n');}
 function guideSandbox(handler,variant='web'){
- const raw=readProject('src/app/011-saveSettings.js'),filtered=forVariant(raw,variant),s=sandbox(handler,filtered.slice(filtered.indexOf('/* MCP_ROLE_TOOLS_V1')));s.modals=[];
+ const raw=settingsSource,filtered=forVariant(raw,variant),s=sandbox(handler,filtered.slice(filtered.indexOf('/* MCP_ROLE_TOOLS_V1')));s.modals=[];
  s.ctx.openModal=html=>{s.modals.push(html);const id=html.match(/id="mcp-setup" data-connection="([^"]+)"/);if(id)s.nodes.set('mcp-setup',{getAttribute:()=>id[1]});else s.nodes.delete('mcp-setup');};
  return s;
 }
@@ -271,7 +271,7 @@ test('MCP guide: modal and underlying manager both update role search and select
  const panels=[panel(),panel()];s.ctx.document.querySelectorAll=()=>panels;s.M.setRole(c.id,'role-a',true);for(const p of panels){assert.equal(p.input.checked,true);assert.equal(p.badge.textContent,'已选 1 / 1');}s.M.roleFilter(c.id,'找不到');for(const p of panels)assert.equal(p.row.hidden,true);s.M.roleFilter(c.id,'角色');for(const p of panels)assert.equal(p.row.hidden,false);
 });
 test('MCP native HTTP: cancellation before dispatch sends nothing; in-flight cancellation sends one cancel',async()=>{
- const raw=readProject('src/app/011-saveSettings.js'),s=sandbox(null,raw.slice(raw.indexOf('/* MCP_ROLE_TOOLS_V1')).replace('return{catalog,','return{nativeHTTPRequest,catalog,')),calls=[];
+ const raw=forVariant(settingsSource,'private'),s=sandbox(null,raw.slice(raw.indexOf('/* MCP_ROLE_TOOLS_V1')).replace('return api;', 'api.nativeHTTPRequest=nativeHTTPRequest;return api;')),calls=[];
  s.ctx.window={SmallPhoneNative:{request:(method,payload)=>{calls.push(method);return method==='mcp.http.cancel'?Promise.resolve({}):new Promise(()=>{});}}};
  const first=new AbortController();first.abort();await assert.rejects(s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},first.signal,100,null),e=>e.name==='AbortError');assert.equal(calls.length,0);
  const second=new AbortController(),pending=s.M.nativeHTTPRequest('https://docs.mcp.cloudflare.com/mcp',{},second.signal,100,null);second.abort();await assert.rejects(pending,e=>e.name==='AbortError');assert.deepEqual(calls,['mcp.http.request','mcp.http.cancel']);
@@ -495,12 +495,12 @@ test('MCP budget: exhausted final model capacity keeps a successful write single
 });
 
 test('MCP budget: even valid JSON with a length finish reason is rejected before execution',async()=>{
- const ctx=vm.createContext({Error});vm.runInContext(fnSource(readProject('src/app/004-roleImageTimeRangeActive.js'),'chatResultText')+'\nthis.check=chatResultText;',ctx);
+ const ctx=vm.createContext({Error});vm.runInContext(fnSource(readAppSource(),'chatResultText')+'\nthis.check=chatResultText;',ctx);
  for(const finish of ['length','max_tokens'])await assert.rejects(ctx.check([],{mcpBudget:true},{choices:[{message:{content:call('valid',{text:'完整但未确认结束'})},finish_reason:finish}]}),e=>e.mcpCapacity==='output');
 });
 
 test('MCP budget: Claude thought preview cannot inject ordinary thinking budget into a tool request',()=>{
- const ctx=vm.createContext({roleThinkingOn:()=>true,roleThinkingBudget:()=>32768});vm.runInContext(fnSource(readProject('src/app/004-roleImageTimeRangeActive.js'),'roleThinkingRequest')+'\nthis.request=roleThinkingRequest;',ctx);const rows=[{role:'user',content:'查笔记'}],opt={reasoningCapture:{rows:[]},allowWechatThought:true,max:16},cfg={base:'https://fixture.invalid',model:'claude-fixture',key:'fixture'};
+ const ctx=vm.createContext({roleThinkingOn:()=>true,roleThinkingBudget:()=>32768});vm.runInContext(fnSource(readAppSource(),'roleThinkingRequest')+'\nthis.request=roleThinkingRequest;',ctx);const rows=[{role:'user',content:'查笔记'}],opt={reasoningCapture:{rows:[]},allowWechatThought:true,max:16},cfg={base:'https://fixture.invalid',model:'claude-fixture',key:'fixture'};
  const tool=ctx.request(rows,{...opt,mcpBudget:true,max:4096},cfg);assert.equal(tool.url,'https://fixture.invalid/messages');assert.equal(tool.body.max_tokens,4096);assert.equal(tool.body.thinking,undefined);assert.equal(ctx.request(rows,opt,cfg).body.max_tokens,32784);
 });
 

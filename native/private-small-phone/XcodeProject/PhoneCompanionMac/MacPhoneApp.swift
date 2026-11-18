@@ -12,18 +12,32 @@ struct MacPhoneApp: App {
                 if !model.accountLoaded {
                     ProgressView("正在检查本机账号…")
                 } else if let userID = model.userID {
-                    if model.hasSyncedData {
+                    ZStack {
                         MacPhoneWebView(model: model, userID: userID).id(userID)
-                    } else {
-                        VStack(spacing: 18) {
-                            Image(systemName: "checkmark.circle.fill").font(.system(size: 42)).foregroundStyle(.blue)
-                            Text("账号已连接").font(.title2.bold())
-                            Text(model.accountLabel).foregroundStyle(.secondary)
-                            Text("设备同步尚未启用，手机上的聊天和设置已保留。")
-                                .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                            Button("更换账号") { model.showsAccount = true }
-                            Button("退出本机账号") { Task { await model.signOut() } }.disabled(model.accountBusy)
-                        }.padding(32).frame(maxWidth: 350)
+                            .opacity(model.hasSyncedData ? 1 : 0)
+                            .allowsHitTesting(model.hasSyncedData)
+                            .accessibilityHidden(!model.hasSyncedData)
+                        if !model.hasSyncedData {
+                            VStack(spacing: 18) {
+                                if model.syncError.isEmpty {
+                                    ProgressView().controlSize(.large)
+                                } else {
+                                    Image(systemName: "icloud.slash").font(.system(size: 38)).foregroundStyle(.secondary)
+                                }
+                                Text(model.syncError.isEmpty ? "正在同步小手机" : "同步暂未完成").font(.title2.bold())
+                                Text(model.accountLabel).foregroundStyle(.secondary)
+                                Text(model.syncError.isEmpty ? model.syncDetail : model.syncError)
+                                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                                if model.syncTotal > 0 {
+                                    ProgressView(value: Double(model.syncCompleted), total: Double(model.syncTotal))
+                                        .frame(maxWidth: 260)
+                                }
+                                if !model.syncError.isEmpty {
+                                    Button("重新连接") { model.retrySync() }.buttonStyle(.borderedProminent)
+                                }
+                                Button("账号设置") { model.showsAccount = true }
+                            }.padding(32).frame(maxWidth: 360)
+                        }
                     }
                 } else {
                     MacAccountSheet(model: model, embedded: true)
@@ -60,6 +74,10 @@ final class MacPhoneModel: ObservableObject {
     @Published var accountLoaded = false
     @Published var userID: String?
     @Published var hasSyncedData = false
+    @Published var syncDetail = "正在连接账号云数据…"
+    @Published var syncError = ""
+    @Published var syncCompleted = 0
+    @Published var syncTotal = 0
     let account = MacPhoneAccount()
     var bridge: MacPhoneBridge?
 
@@ -72,7 +90,7 @@ final class MacPhoneModel: ObservableObject {
 
     private func applyStatus(_ result: [String: Any]) {
         if result["loggedIn"] as? Bool == true, let id = result["userId"] as? String, UUID(uuidString: id) != nil {
-            if userID != id { hasSyncedData = false }
+            if userID != id { resetSyncPresentation() }
             userID = id
             accountLabel = result["maskedPhone"] as? String ?? "账号已连接"
         } else {
@@ -80,6 +98,39 @@ final class MacPhoneModel: ObservableObject {
             userID = nil
             accountLabel = "连接小手机账号"
         }
+    }
+
+    private func resetSyncPresentation() {
+        hasSyncedData = false
+        syncDetail = "正在连接账号云数据…"
+        syncError = ""
+        syncCompleted = 0
+        syncTotal = 0
+    }
+
+    func receiveAccount(_ result: [String: Any]) {
+        applyStatus(result)
+    }
+
+    func receiveSync(_ event: MacPhoneSyncEvent, owner: String) {
+        guard userID == owner else { return }
+        syncDetail = event.detail
+        syncCompleted = event.completed
+        syncTotal = event.total
+        if event.stage == .ready {
+            syncError = ""
+            hasSyncedData = true
+        } else if event.stage == .error {
+            syncError = event.detail
+        } else {
+            syncError = ""
+        }
+    }
+
+    func retrySync() {
+        syncError = ""
+        syncDetail = "正在重新连接账号云数据…"
+        bridge?.retrySync()
     }
 
     func signOut() async {
@@ -135,7 +186,7 @@ private struct MacAccountSheet: View {
             if !model.accountError.isEmpty {
                 Text(model.accountError).foregroundStyle(.red).font(.callout)
             }
-            Text("设备同步正在接入，登录后保留现有手机备份。")
+            Text("登录后自动同步这个账号的角色、聊天和设置。")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button(embedded ? "退出" : "稍后") {
@@ -162,12 +213,29 @@ struct MacPhoneWebView: NSViewRepresentable {
     @ObservedObject var model: MacPhoneModel
     let userID: String
 
+    final class Coordinator {
+        var bridge: MacPhoneBridge?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeNSView(context: Context) -> WKWebView {
-        let bridge = MacPhoneBridge(account: model.account, userID: userID)
+        let owner = userID
+        let bridge = MacPhoneBridge(account: model.account, userID: owner, onAccount: { [weak model] result in
+            model?.receiveAccount(result)
+        }) { [weak model] event in
+            model?.receiveSync(event, owner: owner)
+        }
         let view = bridge.makeWebView()
+        context.coordinator.bridge = bridge
         model.bridge = bridge
         return view
     }
 
     func updateNSView(_ view: WKWebView, context: Context) {}
+
+    static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) {
+        coordinator.bridge?.invalidate()
+        coordinator.bridge = nil
+    }
 }

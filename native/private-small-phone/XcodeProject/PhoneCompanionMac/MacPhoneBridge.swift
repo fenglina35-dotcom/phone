@@ -2,6 +2,41 @@ import AppKit
 import Security
 import WebKit
 
+// MAC_ACCOUNT_CONTENT_V1: only a hydrated account dataset can reveal the shared app surface.
+struct MacPhoneSyncEvent {
+    enum Stage: String { case progress, ready, error }
+    let stage: Stage
+    let detail: String
+    let completed: Int
+    let total: Int
+
+    static func decode(action: String, payload: [String: Any], owner: String, cloudReady: Bool) -> MacPhoneSyncEvent? {
+        let suppliedOwner = payload["owner"] as? String ?? payload["userId"] as? String
+        guard suppliedOwner == owner, UUID(uuidString: owner) != nil else { return nil }
+        let rawStage = action == "account.sync.ui" ? payload["stage"] as? String : action.components(separatedBy: ".").last
+        guard let rawStage, let stage = Stage(rawValue: rawStage) else { return nil }
+        if stage == .ready {
+            guard cloudReady, payload["hydrated"] as? Bool == true,
+                  let count = payload["recordCount"] as? Int, count > 0 else { return nil }
+        }
+        let phase = payload["phase"] as? String ?? ""
+        let detail: String
+        switch phase {
+        case "waiting", "seed", "waiting-for-phone": detail = "正在等待账号的首批数据同步…"
+        case "pulling", "download": detail = "正在同步角色、聊天和设置…"
+        case "saving", "hydrating": detail = "正在整理本机数据，完成后自动打开…"
+        case "authentication": detail = "账号验证暂未完成，请检查网络或重新登录。"
+        case "storage": detail = "本机存储暂时无法保存同步数据，请检查可用空间后重试。"
+        case "network": detail = "暂时连不上同步服务，已有数据仍保留。"
+        case "page": detail = "小手机页面载入中断，请重新连接。"
+        default: detail = stage == .ready ? "账号数据已同步" : stage == .error ? "同步暂未完成，请检查网络后重试。" : "正在连接账号云数据…"
+        }
+        let total = max(0, min(1_000_000_000, payload["total"] as? Int ?? 0))
+        let completed = max(0, min(total, payload["completed"] as? Int ?? 0))
+        return MacPhoneSyncEvent(stage: stage, detail: detail, completed: completed, total: total)
+    }
+}
+
 @MainActor
 final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
     private let account: MacPhoneAccount
@@ -9,8 +44,20 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
     private weak var webView: WKWebView?
     private var entry: URL?
     private let userID: String
+    private let onSync: (MacPhoneSyncEvent) -> Void
+    private let onAccount: ([String: Any]) -> Void
+    private var cloudReady = false
+    private var active = true
+    private var mcpRequestIDs: Set<String> = []
 
-    init(account: MacPhoneAccount, userID: String) { self.account = account; self.userID = userID }
+    private var readyKey: String { "smallPhone.mac.accountHydrated.v1." + userID }
+
+    init(account: MacPhoneAccount, userID: String, onAccount: @escaping ([String: Any]) -> Void = { _ in }, onSync: @escaping (MacPhoneSyncEvent) -> Void = { _ in }) {
+        self.account = account
+        self.userID = userID
+        self.onSync = onSync
+        self.onAccount = onAccount
+    }
 
     func makeWebView() -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -18,7 +65,7 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
             configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: identity)
         }
         configuration.userContentController.add(self, name: "smallPhoneNative")
-        configuration.userContentController.addUserScript(WKUserScript(source: Self.bootstrap, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        configuration.userContentController.addUserScript(WKUserScript(source: Self.bootstrap(userID: userID), injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = self
         view.uiDelegate = self
@@ -33,29 +80,81 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
     }
 
     func refreshAccount() {
-        webView?.evaluateJavaScript("if(typeof privatePhoneAccountRefresh==='function')privatePhoneAccountRefresh(false)")
+        webView?.evaluateJavaScript("(async()=>{if(typeof privatePhoneAccountRefresh==='function')await privatePhoneAccountRefresh(false);if(window.NorthPrivateDeviceSyncClient&&typeof NorthPrivateDeviceSyncClient.retry==='function')await NorthPrivateDeviceSyncClient.retry();})().catch(()=>{})")
+    }
+
+    func retrySync() {
+        guard active else { return }
+        webView?.evaluateJavaScript("if(window.NorthPrivateDeviceSyncClient&&typeof NorthPrivateDeviceSyncClient.retry==='function'){NorthPrivateDeviceSyncClient.retry();true}else{false}") { [weak self] value, _ in
+            guard let self, self.active else { return }
+            if value as? Bool != true { self.webView?.reload() }
+        }
+    }
+
+    func invalidate() {
+        active = false
+        for id in mcpRequestIDs { transport.cancel(id) }
+        mcpRequestIDs.removeAll()
+        webView?.stopLoading()
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "smallPhoneNative")
+        webView = nil
     }
 
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.frameInfo.isMainFrame, message.webView === webView,
+        guard active, message.frameInfo.isMainFrame, message.webView === webView,
               mainDocument(message.frameInfo.request.url),
               let body = message.body as? [String: Any],
               let id = body["requestId"] as? String, id.count <= 160,
               let action = body["action"] as? String,
               let payload = body["payload"] as? [String: Any] else { return }
         if action == "mcp.http.cancel" {
-            transport.cancel(payload["id"] as? String ?? "")
+            let requestID = payload["id"] as? String ?? ""
+            mcpRequestIDs.remove(requestID)
+            transport.cancel(requestID)
             reply(id, result: ["ok": true])
         } else if action == "mcp.http.request" {
+            let requestID = payload["id"] as? String ?? ""
+            guard !mcpRequestIDs.contains(requestID) else { reply(id, error: "mcp_duplicate_request"); return }
             do {
+                mcpRequestIDs.insert(requestID)
                 try transport.request(payload) { [weak self] result, error in
+                    self?.mcpRequestIDs.remove(requestID)
                     self?.reply(id, result: result, error: error)
                 }
-            } catch { reply(id, error: "mcp_invalid_destination_or_payload") }
+            } catch {
+                mcpRequestIDs.remove(requestID)
+                reply(id, error: "mcp_invalid_destination_or_payload")
+            }
+        } else if action == "account.sync.ui" || ["account.sync.ui.progress", "account.sync.ui.ready", "account.sync.ui.error"].contains(action) {
+            Task { [weak self] in
+                guard let self, self.active else { return }
+                let status = try? await self.account.handle("account.status", [:])
+                guard self.active, status?["loggedIn"] as? Bool == true,
+                      status?["userId"] as? String == self.userID,
+                      let event = MacPhoneSyncEvent.decode(action: action, payload: payload, owner: self.userID,
+                        cloudReady: self.cloudReady || UserDefaults.standard.bool(forKey: self.readyKey)) else {
+                    self.reply(id, error: "sync_ui_state_not_verified")
+                    return
+                }
+                if event.stage == .ready { UserDefaults.standard.set(true, forKey: self.readyKey) }
+                self.onSync(event)
+                self.reply(id, result: ["ok": true])
+            }
         } else if action.hasPrefix("account.") {
-            Task {
-                do { reply(id, result: try await account.handle(action, payload)) }
-                catch { reply(id, error: error.localizedDescription) }
+            Task { [weak self] in
+                guard let self, self.active else { return }
+                do {
+                    let result = try await self.account.handle(action, payload)
+                    guard self.active else { return }
+                    if ["account.status", "account.password.signin", "account.signout"].contains(action), result["ok"] as? Bool == true {
+                        self.onAccount(result)
+                    }
+                    if action == "account.sync", payload["action"] as? String == "pull",
+                       result["ok"] as? Bool == true,
+                       (result["seed"] as? [String: Any])?["phase"] as? String == "ready" { self.cloudReady = true }
+                    self.reply(id, result: result)
+                }
+                catch { self.reply(id, error: error.localizedDescription) }
             }
         } else if action == "native.info" {
             reply(id, result: ["ok": true, "platform": "macOS", "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""])
@@ -65,6 +164,7 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
     }
 
     private func reply(_ id: String, result: [String: Any]? = nil, error: String? = nil) {
+        guard active else { return }
         var payload: [String: Any] = ["requestId": id]
         if let error { payload["error"] = error } else { payload["result"] = result ?? [:] }
         webView?.callAsyncJavaScript("window.__smallPhoneNativeReply(payload)", arguments: ["payload": payload], in: nil, in: .page, completionHandler: { _ in })
@@ -96,16 +196,33 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
         }
     }
 
-    private static let bootstrap = """
+    private static func bootstrap(userID: String) -> String {
+        // UUID validation in the native model makes this a fixed, non-script identity literal.
+        guard let identity = UUID(uuidString: userID) else { return "" }
+        return """
     (()=>{
       window.__SMALL_PHONE_PRIVATE__=true;
       window.__SMALL_PHONE_MAC__=true;
+      window.__SMALL_PHONE_ACCOUNT_SYNC__=true;
       window.__SMALL_PHONE_MCP_HTTP__=true;
+      const account=Object.freeze({userId:'\(identity.uuidString.lowercased())',platform:'macOS'});
+      Object.defineProperty(window,'__SMALL_PHONE_ACCOUNT__',{value:account,writable:false,configurable:false});
+      Object.defineProperty(window,'__SMALL_PHONE_MAC_ACCOUNT__',{value:account,writable:false,configurable:false});
       let serial=0;const waiting=new Map();
       window.__smallPhoneNativeReply=p=>{const item=waiting.get(p.requestId);if(!item)return;waiting.delete(p.requestId);clearTimeout(item.timer);p.error?item.reject(new Error(p.error)):item.resolve(p.result);};
       window.SmallPhoneNative=Object.freeze({request(action,payload={}){return new Promise((resolve,reject)=>{const requestId='mac-'+Date.now()+'-'+(++serial),timer=setTimeout(()=>{waiting.delete(requestId);reject(new Error('Mac设备请求超时'));},60000);waiting.set(requestId,{resolve,reject,timer});window.webkit.messageHandlers.smallPhoneNative.postMessage({requestId,action,payload});});}});
     })();
     """
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { pageFailed() }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { pageFailed() }
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) { pageFailed() }
+
+    private func pageFailed() {
+        guard active else { return }
+        onSync(MacPhoneSyncEvent(stage: .error, detail: "小手机页面载入中断，请重新连接。", completed: 0, total: 0))
+    }
 }
 
 private final class MacAccountRedirectPolicy: NSObject, URLSessionTaskDelegate {
@@ -170,10 +287,10 @@ actor MacPhoneAccount {
                 if let first = (result as? [[String: Any]])?.first { return ["ok": true, "found": true, "backup": first] }
             }
             return ["ok": true, "found": false]
-        case "account.sync":
+        case "account.sync", "account.mcp":
             let current = generation
             let session = try await validSession()
-            let result = try await PrivateDeviceSyncHTTP.request(payload, platform: "macOS", bearer: session.access)
+            let result = try await PrivateDeviceSyncHTTP.request(payload, platform: "macOS", bearer: session.access, kind: action == "account.mcp" ? .mcp : .sync)
             guard current == generation, try load()?.userID == session.userID else { throw failure("当前账号已变化") }
             return result
         default:

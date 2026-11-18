@@ -284,6 +284,7 @@ private struct SmallPhoneNativeRecoveryOverlay: View {
 struct SmallPhonePrivateRootView: View {
     @State private var showsDeviceManagement = false
     @State private var webViewGeneration = 0
+    @State private var accountDocumentEpoch = 0
     @State private var recoveryReason: String?
     @State private var recoveryRestartPending = false
     // Start with the persisted theme so first-page rendering does not need an
@@ -324,7 +325,7 @@ struct SmallPhonePrivateRootView: View {
                     recoveryReason = nil
                 }
             )
-            .id(webViewGeneration)
+            .id("\(webViewGeneration):\(accountDocumentEpoch)")
 
             // Keep the report host structurally stable and let its UIKit child
             // mount the system report only for a real read. The former 12-second
@@ -363,6 +364,11 @@ struct SmallPhonePrivateRootView: View {
         // the focused composer from the real chat bottom. SwiftUI must not
         // resize the same page on a second keyboard animation timeline.
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: .smallPhoneAccountDocumentChanged)) { _ in
+            recoveryRestartPending = false
+            recoveryReason = nil
+            accountDocumentEpoch += 1
+        }
         .onReceive(
             NotificationCenter.default.publisher(
                 for: .smallPhoneStatusBarThemeChanged

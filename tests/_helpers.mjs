@@ -22,6 +22,12 @@ export function read(file) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8');
 }
 
+// Version bumps may split the generated source at different function boundaries.
+// Source-sensitive tests read the manifest rather than a historical chunk filename.
+export function readAppSource() {
+  return JSON.parse(read('src/app/manifest.json')).files.map(file=>read('src/app/'+file)).join('');
+}
+
 // 原iPhone继承检查只计算iOS配置；Mac目标的版本由Mac专项独立核对。
 export function macProjectConfigurations(text) {
   const result=[],pattern=/[A-F0-9]{24}(?:\s*\/\*[^*\r\n]*\*\/)?\s*=\s*\{\s*isa\s*=\s*XCBuildConfiguration;/g;

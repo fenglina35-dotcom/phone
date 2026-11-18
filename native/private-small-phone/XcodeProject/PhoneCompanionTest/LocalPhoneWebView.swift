@@ -912,12 +912,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.setURLSchemeHandler(CozyHomeSchemeHandler(), forURLScheme: "cozy-home")
-        configuration.websiteDataStore = .default()
+        configuration.websiteDataStore = context.coordinator.bridge.accountWebsiteDataStore()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
         configuration.userContentController.add(
             context.coordinator.bridge,
             name: PhoneNativeBridge.handlerName
+        )
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: context.coordinator.bridge.publicAccountBootstrapScript(),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
         )
         configuration.userContentController.addUserScript(
             WKUserScript(
@@ -968,6 +975,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         webView.configuration.userContentController.removeScriptMessageHandler(
             forName: PhoneNativeBridge.handlerName
         )
+        webView.stopLoading()
         coordinator.bridge.webView = nil
         coordinator.bridge.openDeviceManagement = nil
         webView.navigationDelegate = nil
@@ -1054,7 +1062,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
       window.__SMALL_PHONE_PRIVATE__ = true;
       window.__SMALL_PHONE_MCP_CARDS__ = true;
       window.__SMALL_PHONE_MCP_HTTP__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.577 (577)';
+      window.__SMALL_PHONE_ACCOUNT_SYNC__ = true;
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.578 (578)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = false;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1086,7 +1095,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.577 (577)', autoBackupPaused: false },
+        { build: '1.0.578 (578)', autoBackupPaused: false },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

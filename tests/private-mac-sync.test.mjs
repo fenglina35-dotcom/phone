@@ -9,10 +9,118 @@ import {createSyncHandler, createSupabaseSync} from '../supabase/functions/phone
 import {webcrypto} from 'node:crypto';
 import vm from 'node:vm';
 
+function syncCodecFixture(){
+ const ctx=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),ctx);
+ return ctx.NorthPrivateDeviceSyncCore.createStateCodec();
+}
+
+test('actual account client: automatic first migration, fresh login, two-way messages, interrupted pages and account switch',async()=>{
+ const require=createRequire(import.meta.url),{PGlite}=require(path.join(os.homedir(),'AppData/Local/CodexHardwareTests/robot-voice-sql-runtime/node_modules/@electric-sql/pglite/dist/index.cjs'));
+ const db=new PGlite(),user='10000000-0000-0000-0000-000000000001',second='10000000-0000-0000-0000-000000000002';
+ let timer=0;const ctx=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,setTimeout:()=>++timer,clearTimeout:()=>{}});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),ctx);
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js'),ctx);
+ const copy=x=>JSON.parse(JSON.stringify(x)),empty=()=>({settings:{hist:12},me:{name:'本人'},contacts:[],messages:{}}),devices=[];
+ try{
+  await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${user}'),('${second}');`);
+  await db.exec(read('supabase/migrations/202611170001_private_phone_device_sync.sql'));
+  const identities={phone:{userID:user,sessionID:'20000000-0000-0000-0000-000000000001'},mac:{userID:user,sessionID:'20000000-0000-0000-0000-000000000002'},other:{userID:second,sessionID:'20000000-0000-0000-0000-000000000003'}};
+  const store={async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return (await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
+   async rpc(name,args){return (await db.query('select public.'+name+'('+Object.keys(args).map((k,i)=>k+'=>$'+(i+1)).join(',')+') value',Object.values(args).map(x=>Array.isArray(x)?JSON.stringify(x):x))).rows[0].value;}};
+  const server=createSyncHandler({store,authenticate:async token=>identities[token],masterKey:'d'.repeat(43),cryptoAPI:webcrypto});
+  function make(token,initial,platform){
+   let state=copy(initial),bound='',offline=false,pushes=0,cutAt=Infinity,onPull=null,reveals=0;const disk=new Map(),calls=[];
+   const host={core:ctx.NorthPrivateDeviceSyncCore,platform,label:platform,read:async key=>disk.has(key)?copy(disk.get(key)):null,write:async(key,value)=>disk.set(key,copy(value)),snapshot:async()=>copy(state),getState:()=>state,
+    stateOwner:()=>state._deviceSyncOwner||'',boundOwner:()=>state._deviceSyncOwner||bound,async bindOwner(owner){state._deviceSyncOwner=owner;bound=owner;},emptyState:empty,
+    meaningful:s=>s.contacts.length>0||Object.values(s.messages).some(x=>Array.isArray(x)&&x.length>0),isBusy:()=>false,isVisible:()=>true,applying:()=>false,
+    async replaceState(next,guard){guard();state=copy(next);state._deviceSyncOwner=identities[token].userID;},reveal:()=>{reveals++;},cancelReplies:()=>{},onAccount:()=>{},status:()=>{},
+    async native(action,body){calls.push({action,body:copy(body||{})});if(action==='account.status')return {ok:true,loggedIn:true,userId:identities[token].userID};
+     if(action==='account.backup.info')return {ok:true,found:true};
+     assert.equal(action,'account.sync','sync never sends any model request');if(offline)throw new Error('fixture network offline');
+     if(body.action==='push'&&++pushes>cutAt)throw new Error('fixture network interrupted');
+     const response=await server(new Request('https://fixture.test/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)}));
+     const result=await response.json();if(body.action==='pull'&&onPull){const callback=onPull;onPull=null;await callback();}return result;}
+   };
+   let client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);devices.push(()=>client.stop());
+   return {get state(){return state;},get client(){return client;},get reveals(){return reveals;},disk,calls,
+    cutAfter(n){cutAt=n;},resume(){cutAt=Infinity;offline=false;},offline(){offline=true;},onPull(fn){onPull=fn;},
+    reopen(){client.stop();client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);},switchAccount(){token='other';client.accountChanged();}};
+  }
+  const original=empty();original.settings.hist=32;original.contacts=[{id:'a',name:'角色甲',persona:'原有人设'},{id:'b',name:'角色乙',persona:'另一人设'}];
+  original.messages.a=Array.from({length:420},(_,i)=>({id:'m'+i,role:i%2?'assistant':'user',content:'消息'+i,time:i+1}));
+  const phone=make('phone',original,'iOS'),mac=make('mac',empty(),'macOS');
+  phone.cutAfter(1);await phone.client.syncNow();assert.equal(phone.state.messages.a.length,420,'partial source upload never replaces original S');
+  assert.equal((await db.query('select phase from private_phone_sync_state')).rows[0].phase,'pending');
+  await mac.client.syncNow();assert.equal(mac.reveals,0,'secondary never reveals a partial first page');assert.equal(mac.state.contacts.length,0);
+  phone.resume();for(let n=0;n<10;n++){await phone.client.syncNow();if((await db.query('select phase from private_phone_sync_state')).rows[0].phase==='ready')break;}
+  assert.equal((await db.query('select phase from private_phone_sync_state')).rows[0].phase,'ready');assert.equal(phone.state.messages.a.length,420);
+  await mac.client.syncNow();assert.equal(mac.client.status().ready,true);assert.equal(mac.state.contacts.length,2);assert.equal(mac.state.messages.a.length,420);assert.equal(mac.state.settings.hist,32);
+  mac.state.messages.a.push({id:'mac-new',role:'user',content:'Mac追加',time:500});mac.client.markDirty();await mac.client.syncNow();await phone.client.syncNow();
+  assert.equal(phone.state.messages.a.filter(x=>x.id==='mac-new').length,1);
+  phone.state.messages.a.push({id:'phone-new',role:'user',content:'手机追加',time:501});phone.client.markDirty();await phone.client.syncNow();await mac.client.syncNow();
+  assert.equal(mac.state.messages.a.filter(x=>x.id==='phone-new').length,1);
+  // A local edit during a remote pull must retain its old base, not silently overwrite the remote edit.
+  mac.state.settings.hist=48;mac.client.markDirty();await mac.client.syncNow();
+  phone.onPull(()=>{phone.state.settings.hist=40;phone.client.markDirty();});await phone.client.syncNow();await phone.client.syncNow();
+  assert.equal(phone.state.settings.hist,40);assert.equal(mac.state.settings.hist,48);
+  assert((await db.query('select count(*) as n from private_phone_sync_conflicts')).rows[0].n>=1,'in-flight edit is a retained conflict');
+  mac.reopen();await mac.client.syncNow();assert.equal(mac.state.messages.a.length,422,'reopen uses same account content');
+  mac.switchAccount();await mac.client.syncNow();assert.equal(mac.state.contacts.length,0);assert.equal(Object.keys(mac.state.messages).length,0);
+  assert.equal((await db.query('select count(*) as n from private_phone_sync_records where user_id=$1',[second])).rows[0].n,0,'account A content never uploads to B');
+  assert(!mac.calls.some(x=>/model|chat.completions/.test(x.action)));
+ }finally{for(const stop of devices)stop();await db.close();}
+});
+test('account state codec: real role/message/settings roundtrip, long Unicode parts and device grants stay separate',async()=>{
+ const a=syncCodecFixture(),b=syncCodecFixture(),copy=x=>JSON.parse(JSON.stringify(x));
+ const original={settings:{chat:{base:'https://fixture.test',key:'fixture-model-secret',model:'fixture'},hist:32,smartHomeAir:{nativeGrant:true}},
+  me:{name:'本人',avatar:'idb:avatar-a',locked:false,battery:12,phoneFriend:{id:'friend-a',messages:{peer:[{id:'f1',text:'朋友消息'}]}}},
+  contacts:[{id:'a',name:'角色甲',persona:'人物设定🙂'.repeat(30000),_initiative:{nextAt:50}},{id:'b',name:'角色乙',persona:'第二个人设'}],
+  messages:{a:[{id:'a1',role:'user',content:'第一条',time:100},{id:'a2',role:'assistant',content:'已回复',time:101}],alt_a:[{id:'alt1',role:'user',content:'小号消息',time:100}]},
+  couple:{cid:'a',companion:{deviceSecret:'fixture-device-only'},other:{enabled:true}},moments:[{id:'moment1',text:'朋友圈'}],_persistedAt:1,_proactiveCount:{a:{n:2}}};
+ const projected=copy(await a.project(copy(original)));a.setLocalProjection(projected);
+ assert(Object.keys(projected).some(k=>k.startsWith('blob/record/')));
+ assert(!JSON.stringify(projected).includes('fixture-device-only'));
+ const rows=Object.entries(projected).map(([key,value])=>({key,value,deleted:false}));
+ b.accept(rows.filter(x=>!x.key.startsWith('blob/record/')));
+ assert.equal((await b.materialize()).complete,false,'long values wait for verified complete parts');
+ b.accept(rows);const restored=copy((await b.materialize()).state);
+ assert.deepEqual(restored.contacts.map(x=>x.id),['a','b']);assert.equal(restored.contacts[0].persona,original.contacts[0].persona);
+ assert.deepEqual(restored.messages,original.messages);assert.deepEqual(restored.settings.chat,original.settings.chat);
+ assert(!('smartHomeAir' in restored.settings));assert(!('battery' in restored.me));assert(!('companion' in restored.couple));
+ const kept=copy(b.preserveDeviceState(restored,original));assert.deepEqual(kept.couple.companion,original.couple.companion);
+ assert.deepEqual(kept._proactiveCount,original._proactiveCount);assert.deepEqual(kept.contacts[0]._initiative,original.contacts[0]._initiative);
+ const anotherRole=copy(restored);anotherRole.couple.cid='b';assert(!b.preserveDeviceState(anotherRole,original).couple.companion,'native grants do not transfer to a different role');
+ const changed=copy(original);changed.messages.a.push({id:'a3',role:'user',content:'只追加这一条',time:102});
+ const after=copy(await a.project(changed)),delta=Object.keys(after).filter(key=>JSON.stringify(after[key])!==JSON.stringify(projected[key]));
+ assert.equal(delta.length,1,'one new message changes one logical record');
+ b.accept(delta.map(key=>({key,value:after[key]})));assert.equal((await b.materialize()).state.messages.a.length,3);
+ const beforeDelete=copy(after);changed.messages.a=changed.messages.a.filter(x=>x.id!=='a1');const afterDelete=copy(await a.project(changed));
+ const deleted=Object.keys(beforeDelete).filter(key=>!Object.hasOwn(afterDelete,key));assert.equal(deleted.length,1);
+ b.accept(deleted.map(key=>({key,deleted:true})));assert.equal((await b.materialize()).state.messages.a.some(x=>x.id==='a1'),false);
+ const bytes=new TextEncoder().encode('图片分块'),digest=Buffer.from(await webcrypto.subtle.digest('SHA-256',bytes)).toString('hex');
+ const manifest=await a.addMediaManifest({localKey:'avatar-a',type:'string',bytes:bytes.length,hash:digest,parts:[digest]});
+ b.accept([manifest]);assert.equal((await b.materialize()).complete,true);assert.equal(b.mediaManifest('avatar-a').hash,digest);
+ const reloaded=syncCodecFixture();reloaded.load(copy(b.dump()));assert.equal(reloaded.mediaManifest('avatar-a').hash,digest);
+ assert(Object.hasOwn(await a.project(changed),manifest.key),'media aliases survive normal state snapshots');
+});
+
+test('legacy messages keep the same sync identity when an earlier different message is inserted or removed',async()=>{
+ const codec=syncCodecFixture(),initial={settings:{},me:{},contacts:[],messages:{a:[{role:'user',content:'旧消息一',time:1},{role:'assistant',content:'旧消息二',time:2}]}};
+ const base=await codec.project(initial),keys=Object.keys(base).filter(k=>k.startsWith('state/message/'));
+ initial.messages.a.unshift({id:'new-message',role:'user',content:'前面新插入',time:0});
+ const next=await codec.project(initial);assert(keys.every(key=>Object.hasOwn(next,key)));
+ codec.setLocalProjection(next);const hydrated=(await codec.materialize()).state;
+ assert(hydrated.messages.a.every(x=>typeof x.id==='string'&&x.id));
+ const roundtrip=await codec.project(JSON.parse(JSON.stringify(hydrated)));assert.deepEqual(Object.keys(roundtrip).filter(k=>k.startsWith('state/message/')).sort(),Object.keys(next).filter(k=>k.startsWith('state/message/')).sort());
+ hydrated.messages.a.shift();const deleted=await codec.project(JSON.parse(JSON.stringify(hydrated)));assert(keys.every(key=>Object.hasOwn(deleted,key)));
+});
+
 test('Mac account: native login, renewal and account races keep credentials isolated', {skip:process.platform!=='darwin'},()=>{
  const source=read('native/private-small-phone/XcodeProject/PhoneCompanionMac/MacPhoneBridge.swift');
  const native=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
  const sync=native.slice(native.indexOf('// PRIVATE_DEVICE_SYNC_V1:'),native.lastIndexOf('#if os(macOS)'))
+  .replace(/enum PrivateAccountInstallationID \{[\s\S]*?\n\}\n/,'enum PrivateAccountInstallationID { static func value() throws -> String { \"10000000-0000-0000-0000-000000000099\" } }\n')
   .replace('let config = URLSessionConfiguration.ephemeral','let config = URLSessionConfiguration.ephemeral\nconfig.protocolClasses = [FixtureProtocol.self]');
  const actor=source.slice(source.indexOf('private final class MacAccountRedirectPolicy:'))
   .replaceAll('SecItemCopyMatching(','fixtureCopy(').replaceAll('SecItemUpdate(','fixtureUpdate(')
@@ -73,8 +181,9 @@ final class FixtureProtocol:URLProtocol,@unchecked Sendable {
     if email.contains("13900000001") {delay=0.15}
     result=["access_token":"fixture-access","refresh_token":"fixture-refresh","expires_in":Fixture.expired ? -5:3600,"user":["id":email]]
    }
-  } else if url.path=="/functions/v1/phone-device-sync" {
+  } else if url.path=="/functions/v1/phone-device-sync" || url.path=="/functions/v1/phone-mcp-vault" {
    precondition(body["platform"] as? String == "macOS" && body["userId"]==nil && body["sessionId"]==nil)
+   if body["action"] as? String == "register" { precondition(body["installationId"] as? String == "10000000-0000-0000-0000-000000000099") }
    precondition(request.value(forHTTPHeaderField:"Authorization")=="Bearer fixture-refreshed-access")
    result=["ok":true,"device":["id":"fixture-device"]]
   }
@@ -118,8 +227,10 @@ Task {
   precondition(Fixture.refreshes==1, "single concurrent refresh")
   let stored=try JSONSerialization.jsonObject(with:Fixture.stored!) as! [String:Any]
   precondition(stored["refresh"] as? String == "fixture-rotated-refresh", "rotated refresh persisted")
-  let synced=try await account.handle("account.sync",["action":"register","label":"电脑","platform":"iOS","userId":"forged","sessionId":"forged"])
+  let synced=try await account.handle("account.sync",["action":"register","label":"电脑","platform":"iOS","userId":"forged","sessionId":"forged","installationId":"forged-by-js"])
   precondition(synced["ok"] as? Bool == true, "fixed native account sync endpoint")
+  let managed=try await account.handle("account.mcp",["action":"list","deviceId":"fixture-device","platform":"iOS","userId":"forged","sessionId":"forged"])
+  precondition(managed["ok"] as? Bool == true, "fixed native account MCP endpoint")
   let beforeInvalid=Fixture.calls
   do{_ = try await account.handle("account.sync",["action":"arbitrary-proxy","url":"https://example.com"]);fatalError("allowed arbitrary proxy")}catch{}
   precondition(Fixture.calls==beforeInvalid)
@@ -130,6 +241,31 @@ dispatchMain()
 `;
  const output=cp.execFileSync('swift',['-'],{input:fixture+sync+actor+run,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
  assert(output.includes('native-account-isolation-ok'));
+});
+
+test('Mac content reveal requires a matching account, real cloud readiness and saved hydrated records', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionMac/MacPhoneBridge.swift');
+ const event=source.slice(source.indexOf('struct MacPhoneSyncEvent {'),source.indexOf('\n@MainActor\nfinal class MacPhoneBridge'));
+ const fixture=String.raw`
+import Foundation
+`+event+String.raw`
+let owner="10000000-0000-0000-0000-000000000001"
+let ready:[String:Any] = ["stage":"ready","owner":owner,"hydrated":true,"recordCount":15]
+precondition(MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:ready,owner:owner,cloudReady:false)==nil,"account login alone must not reveal an empty shell")
+precondition(MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:ready,owner:owner,cloudReady:true)?.stage == .ready)
+precondition(MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:ready,owner:"10000000-0000-0000-0000-000000000002",cloudReady:true)==nil,"stale account cannot change current view")
+var incomplete=ready;incomplete["hydrated"]=false
+precondition(MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:incomplete,owner:owner,cloudReady:true)==nil)
+incomplete=ready;incomplete["recordCount"]=0
+precondition(MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:incomplete,owner:owner,cloudReady:true)==nil)
+let progress=MacPhoneSyncEvent.decode(action:"account.sync.ui.progress",payload:["userId":owner,"phase":"pulling","completed":50,"total":20],owner:owner,cloudReady:false)!
+precondition(progress.completed==20 && progress.total==20 && progress.stage == .progress)
+let error=MacPhoneSyncEvent.decode(action:"account.sync.ui",payload:["owner":owner,"stage":"error","phase":"network","message":"fixture-secret-never-display"],owner:owner,cloudReady:false)!
+precondition(!error.detail.contains("fixture-secret") && error.stage == .error)
+print("mac-account-content-state-ok")
+`;
+ const output=cp.execFileSync('swift',['-'],{input:fixture,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
+ assert(output.includes('mac-account-content-state-ok'));
 });
 
 
@@ -215,6 +351,15 @@ test('private device journal: account isolation, CAS conflicts, retries and revo
   const key='state/chat/main/role-a/one',first=change(1,key,0);
   const applied=await changes(phone.id,phoneSession,[first]);assert.equal(applied.outcomes[0].status,'applied');
   await rpc('private_phone_sync_seed',[owner,phoneSession,phone.id,true]);
+  const turn=(device,session,action,key,token,done=false)=>rpc('private_phone_sync_turn',[owner,session,device,action,'main/role-a',key,token,done]);
+  assert.equal((await turn(phone.id,phoneSession,'acquire','user-message-a',mid(80))).acquired,true);
+  assert.equal((await turn(mac.id,macSession,'acquire','user-message-a',mid(81))).busy,true,'same message cannot trigger two model turns');
+  assert.equal((await turn(phone.id,phoneSession,'renew','user-message-a',mid(80))).acquired,true);
+  await assert.rejects(turn(mac.id,macSession,'finish','user-message-a',mid(81),true),/turn_lease_lost/);
+  assert.equal((await turn(phone.id,phoneSession,'finish','user-message-a',mid(80),true)).finished,true);
+  assert.equal((await turn(mac.id,macSession,'acquire','user-message-a',mid(82))).completed,true);
+  assert.equal((await turn(mac.id,macSession,'acquire','user-message-b',mid(83))).acquired,true);
+  await turn(mac.id,macSession,'finish','user-message-b',mid(83),false);
   assert.deepEqual(await changes(phone.id,phoneSession,[first]),applied,'lost acknowledgement never creates another revision');
   await assert.rejects(changes(phone.id,phoneSession,[{...first,digest:'z'.repeat(64)}]),/mutation_payload_changed/);
   const conflict=await changes(mac.id,macSession,[change(2,key,0,'mac-edit')]);assert.equal(conflict.outcomes[0].status,'conflict');
@@ -239,6 +384,18 @@ test('private device journal: account isolation, CAS conflicts, retries and revo
   await assert.rejects(pull(owner,macSession,mac.id),/device_revoked_or_unknown/);
   await assert.rejects(register(owner,macSession,'macOS'),/device_revoked/);
   await assert.rejects(rpc('private_phone_sync_revoke',[other,otherSession,foreign.id,phone.id]),/device_not_found/);
+  const install=mid(90),newSession=mid(91),thirdSession=mid(92);
+  const stable=await rpc('private_phone_sync_device',[owner,phoneSession,'iOS','Phone',install]);
+  assert.equal(stable.id,phone.id);
+  assert.equal((await rpc('private_phone_sync_device',[owner,newSession,'iOS','Phone again',install])).id,phone.id,'password login preserves physical source device');
+  await assert.rejects(rpc('private_phone_sync_device',[owner,phoneSession,'iOS','old session',install]),/device_revoked/);
+  await assert.rejects(pull(owner,phoneSession,phone.id),/device_revoked_or_unknown/);
+  await rpc('private_phone_sync_revoke',[owner,newSession,phone.id,phone.id]);
+  await assert.rejects(rpc('private_phone_sync_device',[owner,newSession,'iOS','revoked',install]),/device_revoked/);
+  assert.equal((await rpc('private_phone_sync_device',[owner,thirdSession,'iOS','fresh password login',install])).id,phone.id);
+  await assert.rejects(rpc('private_phone_sync_device',[owner,newSession,'iOS','retired session',install]),/device_revoked/);
+  await assert.rejects(rpc('private_phone_sync_device',[owner,mid(93),'macOS','wrong platform',install]),/invalid_device/);
+  assert.notEqual((await rpc('private_phone_sync_device',[owner,mid(94),'iOS','another phone',mid(95)])).id,phone.id);
   await db.exec('set role authenticated');
   await assert.rejects(db.query('select * from private_phone_sync_records'),/permission denied/);
   await assert.rejects(register(owner,phoneSession,'iOS'),/permission denied/);
@@ -374,14 +531,14 @@ test('durable two-device journal merges message IDs, replays lost ACK/inbox and 
   const ids={phone:'20000000-0000-0000-0000-000000000001',mac:'20000000-0000-0000-0000-000000000002',fresh:'20000000-0000-0000-0000-000000000003'};
   const server=createSyncHandler({store,authenticate:async token=>({userID:owner,sessionID:ids[token]}),masterKey:'b'.repeat(43),cryptoAPI:webcrypto});
   function device(token,publish){
-   const data={},disk=new Map(),requests=[];let currentOwner=owner,dropAck=false,failApply=false,switchDuringPull=false;
+   const data={},disk=new Map(),requests=[];let currentOwner=owner,dropAck=false,dropResolutionAck=false,failApply=false,switchDuringPull=false,switchDuringResolve=false;
    const options={owner,platform:token==='phone'?'iOS':'macOS',label:token,getOwner:()=>currentOwner,canPublish:()=>publish,
     storage:{read:async user=>disk.has(user)?copy(disk.get(user)):null,write:async(user,value)=>{assert.equal(user,owner);disk.set(user,copy(value));}},
     snapshot:async()=>copy(data),
     async apply(rows,check){for(const row of rows){check();if(row.deleted)delete data[row.key];else data[row.key]=copy(row.value);if(failApply){failApply=false;throw new Error('fixture interrupted app save');}}},
-    async transport(body){requests.push(copy(body));const response=await server(new Request('https://example.test/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)}));const result=await response.json();if(body.action==='push'&&dropAck){dropAck=false;throw new Error('fixture lost acknowledgement');}if(body.action==='pull'&&switchDuringPull){switchDuringPull=false;currentOwner='other-owner';}return result;}};
+    async transport(body){requests.push(copy(body));const response=await server(new Request('https://example.test/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(body)}));const result=await response.json();if(body.action==='push'&&dropAck){dropAck=false;throw new Error('fixture lost acknowledgement');}if(body.action==='resolve'&&dropResolutionAck){dropResolutionAck=false;throw new Error('fixture lost resolution acknowledgement');}if(body.action==='resolve'&&switchDuringResolve){switchDuringResolve=false;currentOwner='other-owner';}if(body.action==='pull'&&switchDuringPull){switchDuringPull=false;currentOwner='other-owner';}return result;}};
    let journal=core.createJournal(options);
-   return {data,disk,requests,get journal(){return journal;},reopen(){journal.close();journal=core.createJournal(options);},publish(){publish=true;},loseAck(){dropAck=true;},interruptApply(){failApply=true;},switchAccountDuringPull(){switchDuringPull=true;}};
+   return {data,disk,requests,get journal(){return journal;},reopen(){journal.close();journal=core.createJournal(options);},publish(){publish=true;},loseAck(){dropAck=true;},loseResolutionAck(){dropResolutionAck=true;},switchAccountDuringResolve(){switchDuringResolve=true;},interruptApply(){failApply=true;},switchAccountDuringPull(){switchDuringPull=true;}};
   }
   const phone=device('phone',true),mac=device('mac',false),a='state/chat/main/role/a',b='state/chat/main/role/b',c='state/chat/main/role/c';
   phone.data[a]={id:'a',text:'第一条'};await phone.journal.seed(false);await phone.journal.cycle();await phone.journal.seed(true);
@@ -397,6 +554,45 @@ test('durable two-device journal merges message IDs, replays lost ACK/inbox and 
   const conflictCalls=mac.requests.filter(x=>x.action==='push').length;
   await mac.journal.cycle();await mac.journal.cycle();
   assert.equal(mac.requests.filter(x=>x.action==='push').length,conflictCalls,'blocked edits do not repeatedly call server');
+  const blocked=(await mac.journal.inspect()).conflicts[0];
+  await phone.journal.request({action:'resolve',conflictId:blocked.id,choice:'server',baseRevision:blocked.revision,mutationId:webcrypto.randomUUID()});
+  await mac.journal.cycle();
+  assert.deepEqual(mac.data[a],phone.data[a],'a conflict resolved on another device must release the original blocked record');
+  async function disagree(phoneText,macText){
+   phone.data[a].text=phoneText;mac.data[a].text=macText;
+   await phone.journal.cycle();await mac.journal.cycle();
+   return (await mac.journal.inspect()).conflicts.find(item=>item.key===a);
+  }
+  const candidate=await disagree('手机下一版','保留电脑候选');
+  const candidateDetail=await mac.journal.request({action:'conflict',conflictId:candidate.id});
+  assert.equal(candidateDetail.current.value.text,'手机下一版');
+  assert.equal(candidateDetail.conflict.value.text,'保留电脑候选');
+  const chosen=await mac.journal.resolve(candidate.id,'candidate',candidateDetail.current.revision);
+  assert.equal(chosen.resolved,true);assert.equal(mac.data[a].text,'保留电脑候选');
+  await phone.journal.cycle();assert.deepEqual(mac.data[a],phone.data[a]);
+  assert.equal(Object.values(mac.journal.state().pending).filter(item=>item.blocked).length,0);
+  const stale=await disagree('手机预览版','电脑尚未确认');
+  const staleDetail=await mac.journal.request({action:'conflict',conflictId:stale.id});
+  phone.data[a].text='预览后手机又有更新';await phone.journal.cycle();
+  const staleChoice=await mac.journal.resolve(stale.id,'candidate',staleDetail.current.revision);
+  assert.equal(staleChoice.resolved,false);assert.equal(staleChoice.reason,'revision_changed');
+  assert.equal(phone.data[a].text,'预览后手机又有更新');assert.equal(mac.data[a].text,'电脑尚未确认');
+  assert.equal((await mac.journal.inspect()).conflicts.length,1,'a stale preview does not create a duplicate conflict');
+  mac.loseResolutionAck();
+  await assert.rejects(mac.journal.resolve(stale.id,'candidate'),/lost resolution acknowledgement/);
+  const pendingChoice=mac.disk.get(owner).resolutions[stale.id];assert(pendingChoice?.mutationId,'resolution is durable before HTTP');
+  const committedRevision=(await db.query('select revision from private_phone_sync_records where record_key=$1',[a])).rows[0].revision;
+  mac.reopen();await mac.journal.cycle();
+  const retriedChoice=mac.requests.filter(item=>item.action==='resolve').at(-1);
+  assert.equal(retriedChoice.mutationId,pendingChoice.mutationId,'restart retries the same chosen operation, never a new write');
+  assert.equal((await db.query('select revision from private_phone_sync_records where record_key=$1',[a])).rows[0].revision,committedRevision);
+  assert.equal(Object.keys(mac.disk.get(owner).resolutions||{}).length,0);
+  await phone.journal.cycle();assert.deepEqual(mac.data[a],phone.data[a]);assert.equal(mac.data[a].text,'电脑尚未确认');
+  const keepServer=await disagree('再保留手机云端','电脑这一份不选');
+  mac.loseResolutionAck();await assert.rejects(mac.journal.resolve(keepServer.id,'server'),/lost resolution acknowledgement/);
+  mac.reopen();await mac.journal.cycle();await phone.journal.cycle();
+  assert.deepEqual(mac.data[a],phone.data[a]);assert.equal(mac.data[a].text,'再保留手机云端');
+  assert.equal((await mac.journal.inspect()).conflicts.length,0);
   const extra='state/chat/main/role/lost';phone.data[extra]={id:'lost',text:'只发送一次'};
   phone.loseAck();await assert.rejects(phone.journal.cycle(),/lost acknowledgement/);
   const sent=phone.requests.filter(x=>x.action==='push').at(-1).changes.find(x=>x.key===extra);
@@ -411,6 +607,11 @@ test('durable two-device journal merges message IDs, replays lost ACK/inbox and 
   phone.data['state/new-after-switch']={text:'不能进入另一个账号'};await phone.journal.cycle();
   fresh.switchAccountDuringPull();await assert.rejects(fresh.journal.cycle(),/账号或设备已变化/);
   assert.equal(fresh.disk.get(owner).cursor,cursorBefore);assert.deepEqual(fresh.data,rowsBefore);
+  const late=await disagree('迟到回复前手机修改','迟到回复前电脑修改');
+  const localBefore=copy(mac.data),diskBefore=copy(mac.disk.get(owner));
+  mac.switchAccountDuringResolve();await assert.rejects(mac.journal.resolve(late.id,'server'),/账号或设备已变化/);
+  assert.deepEqual(mac.data,localBefore,'late successful resolution cannot mutate the new account view');
+  assert.equal(mac.disk.get(owner).known[a].revision,diskBefore.known[a].revision);
   delete phone.data[c];await phone.journal.cycle();
   assert.equal((await db.query('select deleted from private_phone_sync_records where record_key=$1',[c])).rows[0].deleted,true);
  }finally{await db.close();}

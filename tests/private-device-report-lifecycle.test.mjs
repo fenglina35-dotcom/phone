@@ -177,6 +177,7 @@ test('old native bridges cannot masquerade as primary-only or backup reads', asy
         })
       }
     },
+    privateAccountStateIdentity: () => '10000000-0000-0000-0000-000000000001',
     TextDecoder,
     Uint8Array,
     atob

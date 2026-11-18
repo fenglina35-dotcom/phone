@@ -187,7 +187,7 @@ console.log('role body tests passed');
  co.x.S.cohabitation = { homes: { r1: { msgs: [{ who: 'me', time: date(6, 0) }, { who: 'me', time: date(6, 1) }] } } };
  co.tick(date(6, 7, 30)); close(co.b.lastSleepH, 8 - 10 / 60, '共同生活互动同样唤醒并扣除清醒时间');
  // 使用现有的真实休息日判断，覆盖周末、法定假期、请假和调休工作日。
- const schedule = read('src/app/005-imageResultURL.js');
+ const schedule = read('app.js');
  const scheduleFns = ['roleWorkday', 'scheduleDateKey', 'scheduleDateParse', 'scheduleLeaves', 'roleLeaveOn', 'roleHolidaysOn', 'roleHolidayTables', 'roleHolidayAt', 'roleHolidayOn', 'roleMakeupWorkday', 'roleDayOff'];
  for (const [label, start, end, sched, shouldSleep] of [
    ['周末', date(6, 23, 20), date(7, 7, 40), { on: true }, true],

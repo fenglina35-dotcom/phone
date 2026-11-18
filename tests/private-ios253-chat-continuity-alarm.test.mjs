@@ -40,7 +40,12 @@ test('a six-second WebContent stall has a native recovery surface outside WKWebV
 
   assert.match(rootView, /SmallPhoneNativeRecoveryOverlay: View/);
   assert.match(rootView, /if let recoveryReason/);
-  assert.match(rootView, /\.id\(webViewGeneration\)/);
+  const webHost = rootView.slice(rootView.indexOf('            LocalPhoneWebView('),rootView.indexOf('            SmallPhoneUsageReportMountView()'));
+  assert.match(webHost, /webViewGeneration \+= 1/);
+  assert.match(webHost, /\.id\("\\\(webViewGeneration\):\\\(accountDocumentEpoch\)"\)/);
+  const reportHost = rootView.slice(rootView.indexOf('            SmallPhoneUsageReportMountView()'),rootView.indexOf('            if let recoveryReason'));
+  assert.doesNotMatch(reportHost, /\.id\(/, 'WebView account or recovery rebuilds must not remount the system usage report');
+  assert.match(rootView, /smallPhoneAccountDocumentChanged[\s\S]*?accountDocumentEpoch \+= 1/);
   assert.match(rootView, /安全重新打开小手机/);
   assert.match(rootView, /复制诊断给开发者/);
   assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
@@ -55,7 +60,10 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
-  assert.match(webView, /configuration\.websiteDataStore = \.default\(\)/);
+  assert.match(webView, /configuration\.websiteDataStore = context\.coordinator\.bridge\.accountWebsiteDataStore\(\)/);
+  assert.match(bridge, /PrivateNativeWebsiteStoreIdentity\.identifier\([\s\S]*?else \{ return \.default\(\) \}/);
+  assert.match(bridge, /WKWebsiteDataStore\(forIdentifier: identifier\)/);
+  assert.doesNotMatch(bridge, /websiteDataStore\.removeData/, 'account isolation must preserve existing website data');
 });
 
 test('a recovered historical lag cannot force a WebView restart', () => {
