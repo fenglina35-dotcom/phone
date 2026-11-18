@@ -223,13 +223,16 @@ test('actual account client: automatic first migration, fresh login, two-way mes
     reopen(){client.stop();client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);},switchAccount(){token='other';client.accountChanged();}};
   }
   const original=empty();original.settings.hist=32;original.contacts=[{id:'a',name:'角色甲',persona:'原有人设'},{id:'b',name:'角色乙',persona:'另一人设'}];
+  original.roleBody={a:{energy:95,lastTick:0}};
   original.messages.a=Array.from({length:420},(_,i)=>({id:'m'+i,role:i%2?'assistant':'user',content:'消息'+i,time:i+1}));
   const phone=make('phone',original,'iOS',second),mac=make('mac',empty(),'macOS');
   phone.cutAfter(1);await phone.client.syncNow();assert.equal(phone.state.messages.a.length,420,'partial source upload never replaces original S');
   assert.equal((await db.query('select phase from private_phone_sync_state')).rows[0].phase,'pending');
   await mac.client.syncNow();assert.equal(mac.reveals,0,'secondary never reveals a partial first page');assert.equal(mac.state.contacts.length,0);
-  phone.resume();for(let n=0;n<10;n++){await phone.client.syncNow();if((await db.query('select phase from private_phone_sync_state')).rows[0].phase==='ready')break;}
+  phone.resume();for(let n=0;n<10;n++){phone.onPull(()=>{phone.state.roleBody.a.lastTick++;phone.client.markDirty();});await phone.client.syncNow();if((await db.query('select phase from private_phone_sync_state')).rows[0].phase==='ready')break;}
   assert.equal((await db.query('select phase from private_phone_sync_state')).rows[0].phase,'ready');assert.equal(phone.state.messages.a.length,420);
+  assert(Object.values(phone.client.context().journal.state().pending).some(x=>x.value?.path?.[0]==='roleBody'),'a newer in-flight body tick remains durable after the initial checkpoint');
+  await phone.client.syncNow();
   await mac.client.syncNow();assert.equal(mac.client.status().ready,true);assert.equal(mac.state.contacts.length,2);assert.equal(mac.state.messages.a.length,420);assert.equal(mac.state.settings.hist,32);
   mac.state.messages.a.push({id:'mac-new',role:'user',content:'Mac追加',time:500});mac.client.markDirty();await mac.client.syncNow();await phone.client.syncNow();
   assert.equal(phone.state.messages.a.filter(x=>x.id==='mac-new').length,1);
@@ -246,6 +249,31 @@ test('actual account client: automatic first migration, fresh login, two-way mes
   assert(!mac.calls.some(x=>/model|chat.completions/.test(x.action)));
  }finally{for(const stop of devices)stop();await db.close();}
 });
+
+test('first seed checkpoint retains newer updates and media while unacknowledged records still block it',async()=>{
+ const env=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),env);
+ const owner='10000000-0000-0000-0000-000000000001',deviceId='20000000-0000-0000-0000-000000000001',copy=x=>JSON.parse(JSON.stringify(x));
+ async function run(extra,allowed){
+  let disk={version:1,owner,deviceId,initialized:true,cursor:'9',known:{'state/schema':{revision:'1',deleted:false},'state/body':{revision:'4',deleted:false}},
+   pending:{'state/body':{key:'state/body',value:{kind:'field',path:['roleBody'],value:{lastTick:99}},baseRevision:'4',mutationId:webcrypto.randomUUID()},...extra},seed:{phase:'pending',sourceDeviceId:deviceId}};
+  const before=JSON.stringify(disk.pending);let finishes=0;
+  const journal=env.NorthPrivateDeviceSyncCore.createJournal({owner,getOwner:()=>owner,platform:'iOS',label:'fixture',canPublish:()=>true,snapshot:async()=>null,apply:async()=>{},
+   storage:{read:async()=>copy(disk),write:async(_,v)=>{disk=copy(v);}},transport:async body=>{
+    if(body.action==='register')return {ok:true,device:{id:deviceId}};
+    assert.equal(body.action,'seed');finishes++;return {ok:true,seed:{phase:'ready',sourceDeviceId:deviceId}};
+   }});
+  try{
+   if(allowed){assert.equal((await journal.seed(true)).phase,'ready');assert.equal(finishes,1);assert.equal(JSON.stringify(disk.pending),before,'newer edits and not-yet-uploaded media remain durable');}
+   else{await assert.rejects(journal.seed(true));assert.equal(finishes,0);assert.equal(JSON.stringify(disk.pending),before);}
+  }finally{journal.close();}
+ }
+ const row=(key,value)=>({[key]:{key,value,baseRevision:'0',mutationId:webcrypto.randomUUID()}});
+ await run(row('state/media/fixture',{kind:'media',localKey:'avatar'}),true);
+ await run(row('state/new-message',{kind:'message',id:'new',value:{content:'尚未确认'}}),false);
+ await run(row('blob/record/fixture',{base64:'Zml4dHVyZQ'}),false);
+});
+
 test('account state codec: real role/message/settings roundtrip, long Unicode parts and device grants stay separate',async()=>{
  const a=syncCodecFixture(),b=syncCodecFixture(),copy=x=>JSON.parse(JSON.stringify(x));
  const original={settings:{chat:{base:'https://fixture.test',key:'fixture-model-secret',model:'fixture'},hist:32,smartHomeAir:{nativeGrant:true}},

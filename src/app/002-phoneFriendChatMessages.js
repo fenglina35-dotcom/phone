@@ -237,9 +237,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1934 · 多设备同步保护与主设备管理';
+const APP_VER='v1935 · 首批同步确认与持续更新保护';
 //@@ private
-const APP_VER='v1933 · 多设备同步保护与主设备管理';
+const APP_VER='v1934 · 首批同步确认与持续更新保护';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
@@ -498,4 +498,3 @@ function imgKeys(){return imgDB().then(db=>new Promise(res=>{const out=[];let tx
 function imageRefKeys(root){const keys=new Set(),seen=typeof WeakSet!=='undefined'?new WeakSet():null;(function walk(o){if(!o||typeof o!=='object')return;if(seen){if(seen.has(o))return;seen.add(o);}for(const k in o){const v=o[k];if(typeof v==='string'&&v.indexOf('idb:')===0)keys.add(v.slice(4));else if(v&&typeof v==='object')walk(v);}})(root);return [...keys].filter(Boolean);}
 function privateTrimImageMemoryCache(extraKeys){if(!lazyStoredImagesOn())return 0;const rows=Object.entries(_imgCache||{}),sizeOf=v=>typeof v==='string'?v.length:0,limit=NORTH_IOS_WEBKIT&&!privateNativeAppOn()?IOS_WEB_IMAGE_CACHE_CHAR_LIMIT:NORTH_ANDROID&&!privateNativeAppOn()?24*1024*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT;let total=rows.reduce((n,x)=>n+sizeOf(x[1]),0);if(total<=limit)return 0;const keep=new Set([...(extraKeys||[]),...privateBootImageKeys(),...(typeof routeCriticalStoredImageKeys==='function'?routeCriticalStoredImageKeys():[]),...(typeof visibleStoredImageKeys==='function'?visibleStoredImageKeys():[])]);let removed=0;for(const [key,value] of rows){if(total<=limit)break;if(keep.has(key)||String(key).indexOf('__')===0)continue;delete _imgCache[key];if(value)_imgRev.delete(value);total-=sizeOf(value);removed++;}return removed;}
 function imgManyChunk(keys){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const store=tx.objectStore('img');keys.forEach(k=>{const q=store.get(k);q.onsuccess=()=>{if(q.result!=null)out[k]=q.result;};q.onerror=()=>{};});}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
-async function imgMany(keys){keys=[...new Set((keys||[]).filter(Boolean))];const out={};for(let i=0;i<keys.length;i+=48){const part=keys.slice(i,i+48),found=await imgManyChunk(part);Object.assign(out,found);const missing=part.filter(k=>out[k]==null);for(let j=0;j<missing.length;j+=12)Object.assign(out,await imgManyChunk(missing.slice(j,j+12)));}return out;}

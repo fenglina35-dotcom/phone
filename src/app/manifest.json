@@ -3,7 +3,7 @@
  "files": [
   "001-splitAfterPunctuation.js",
   "002-phoneFriendChatMessages.js",
-  "003-imgDelIDB.js",
+  "003-imgMany.js",
   "004-clockMinuteDistance.js",
   "005-modelFeatureIndex.js",
   "006-hasCN.js",

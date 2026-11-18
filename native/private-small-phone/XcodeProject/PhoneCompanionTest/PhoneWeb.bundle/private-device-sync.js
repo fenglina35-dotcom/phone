@@ -173,7 +173,16 @@
    }
    return more;
   }
+  // PRIVATE_SYNC_SEED_CHECKPOINT_V1: live counters may keep changing after the
+  // initial records were acknowledged. Preserve those newer mutations in the
+  // outbox; only never-acknowledged logical records and parts block first reveal.
+  function canFinishSeed(){
+   if(!state?.known?.['state/schema']||state.known['state/schema'].deleted)return false;
+   return !Object.values(state.pending).some(row=>row.blocked||
+    !row.key.startsWith('state/media/')&&(!state.known[row.key]||state.known[row.key].deleted));
+  }
   return Object.freeze({
+   canFinishSeed,
    queue:values=>run(async token=>{await init(token);if(!options.canPublish())throw new Error('此设备尚未完成账号数据读取');const next=clone(state),rows=Array.isArray(values)?values:Object.entries(values).map(([key,value])=>({key,value,deleted:false}));for(const row of rows){const key=safeKey(row.key),deleted=row.deleted===true,fingerprint=deleted?'':await hash(row.value);ensure(token);const pending=next.pending[key],known=next.known[key];if(pending&&pending.deleted===deleted&&pending.hash===fingerprint||!pending&&known&&known.deleted===deleted&&known.hash===fingerprint)continue;next.pending[key]={key,deleted,hash:fingerprint,mutationId:root.crypto.randomUUID(),baseRevision:pending?pending.baseRevision:known?known.revision:'0'};if(!deleted)next.pending[key].value=clone(row.value);}await persist(next,token);}),
    cycle:()=>run(async token=>{await init(token);await reconcileBlocked(token);await capture(token);const pushed=await push(token);const more=await pull(token);return {pushed,more,pending:Object.keys(state.pending).length,conflicts:Object.values(state.pending).filter(x=>x.blocked).length};}),
    flush:(maxBatches=64)=>run(async token=>{await init(token);await reconcileBlocked(token);await capture(token);const limit=Math.max(1,Math.min(64,Math.floor(Number(maxBatches)||64)));for(let n=0;n<limit;n++)if(!await push(token))break;const more=await pull(token);return more||Object.values(state.pending).some(x=>!x.blocked);}),
@@ -189,7 +198,7 @@
     await persist(next,token);return finishResolution(conflictId,item,token);
    }),
    inspect:()=>run(async token=>{await init(token);return call({action:'inspect',deviceId:state.deviceId},token);}),
-   seed:finish=>run(async token=>{await init(token);if(finish&&Object.keys(state.pending).length)throw new Error('首批数据尚未全部确认，请继续同步');const result=await call({action:'seed',deviceId:state.deviceId,finish:finish===true},token);const next=clone(state);next.seed=result.seed;await persist(next,token);return result.seed;}),
+   seed:finish=>run(async token=>{await init(token);if(finish&&!canFinishSeed())throw new Error('首批数据尚未全部确认，请继续同步');const result=await call({action:'seed',deviceId:state.deviceId,finish:finish===true},token);const next=clone(state);next.seed=result.seed;await persist(next,token);return result.seed;}),
    request:body=>run(async token=>{await init(token);return call({...body,deviceId:state.deviceId},token);}),
    state:()=>state?clone(state):null,
    close(){closed=true;epoch++;},

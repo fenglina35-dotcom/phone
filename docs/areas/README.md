@@ -1299,3 +1299,5 @@ Mac 原生首屏由 `PhoneCompanionMac/MacPhoneApp.swift` 显示手机号和私�
 主权与初次 seed 来源分离。主设备可移除其他登录设备；副设备服务端也无此权限。换主设备必须 fresh 验证当前账号密码、按版本原子切换；撤销同时阻断同步、MCP 和旧 JWT 的私人备份访问。系统权限按设备独立授权，Mac 空闲不额外调用模型。媒体覆盖引用图片、相册、音频、音乐、放映室及原始键的通话视频。MCP 凭据走账号加密 vault，不进入 S 或普通同步记录。
 
 回归位于 private-mac-sync、private-native-account-storage、private-account-browser、private-mcp-vault 和 permanent-fix-guard 测试。受控通过不代表真实设备数据、真实 MCP 业务或迁移完成；事故取证和当次进度查维护档案。
+
+2026-11-18 首批确认：已确认的初始逻辑键不必等待持续变化的身体计时等后续修改全部清空。仅在schema、所有初始新键和内容分块已确认、pull无剩余页且无阻挡冲突后结束；较新修改和媒体留在持久发件队列继续CAS同步。媒体泵等seed ready，不能手改云端ready或丢弃pending来绕过等待。真实连续更新回归须在旧实现失败。

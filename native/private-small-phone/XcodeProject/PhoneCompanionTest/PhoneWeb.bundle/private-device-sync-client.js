@@ -98,8 +98,8 @@
     if(ctx.seed.sourceDeviceId!==device){announce('waiting');await ctx.journal.cycle();return;}
     ctx.canPublish=true;ctx.seeding=true;announce('saving');
     // Each call is bounded; persist and yield between batches so a large first login can resume safely.
-    const more=await ctx.journal.flush(4);check(ctx);
-    if(more||Object.keys(ctx.journal.state()?.pending||{}).length){schedule(40);return;}
+    await ctx.journal.flush(4);check(ctx);
+    if(ctx.pullMore||!ctx.journal.canFinishSeed()){schedule(40);return;}
     ctx.seed=await ctx.journal.seed(true);ctx.observedSeed=ctx.seed;ctx.viewPending=true;ctx.pullMore=false;await visible(ctx);ctx.seeding=false;
    }else{
     ctx.canPublish=ctx.hasBase;announce('pulling');const result=await ctx.journal.cycle();check(ctx);
@@ -201,7 +201,7 @@
  async function mediaWrite(key,value,user){const target=mediaTarget(key);if(target.store==='img')return imgPutIDBWithRetry(target.key,value,user);return target.store==='music'?mediaOriginal.mPut(target.key,value,user):mediaOriginal.cinPut(target.key,value,user);}
  function scheduleMedia(ms){if(mediaTimer||document.hidden)return;mediaTimer=setTimeout(()=>{mediaTimer=0;pumpMedia().catch(()=>{});},ms||500);}
  async function pumpMedia(){
-  const ctx=client?.context();if(mediaRunning||!ctx?.ready||!ctx.canPublish||document.hidden||isBusy()){scheduleMedia(5000);return;}mediaRunning=true;
+  const ctx=client?.context();if(mediaRunning||!ctx?.ready||ctx.seed?.phase!=='ready'||!ctx.canPublish||document.hidden||isBusy()){scheduleMedia(5000);return;}mediaRunning=true;
   try{for(const [id,item] of Array.from(mediaPending).sort((a,b)=>(b[1].priority||0)-(a[1].priority||0))){if(client.context()!==ctx)break;if(item.user!==ctx.owner){mediaPending.delete(id);continue;}if(!item.force&&ctx.codec.mediaManifest(item.key)){mediaPending.delete(id);continue;}
    const value=await mediaRead(item.key,item.user);if(client.context()!==ctx)break;if(value==null){mediaPending.delete(id);continue;}
    const type=value instanceof Blob?'blob':typeof value==='string'?'string':'json',bytes=type==='blob'?new Uint8Array(await value.arrayBuffer()):new TextEncoder().encode(type==='string'?value:JSON.stringify(value)),hash=await mediaDigest(bytes),existing=ctx.codec.mediaManifest(item.key);

@@ -48,6 +48,7 @@ test('private account sync retains automatic content hydration, scoped native st
  for(const marker of ['PRIVATE_ACCOUNT_BOOT_IDENTITY_V2','PRIVATE_CORE_SOURCE_GUARD_V1','PRIVATE_CORE_LINEAGE_V1'])assert(read(PRIVATE).includes(marker),marker);
  assert(core.includes('PRIVATE_SYNC_LOCAL_DELETION_V2'));
  assert(client.includes('PRIVATE_DEVICE_REVOKED_GATE_V1')&&client.includes('privatePhoneSyncDevicesOpen'));
+ assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js').includes('PRIVATE_SYNC_SEED_CHECKPOINT_V1'));
  assert(native.includes('PRIVATE_STORAGE_SOURCE_COLLISION_V1'));
  assert(native.includes('PRIVATE_NATIVE_CORE_CAS_V1'));
  assert(read('supabase/migrations/202611170003_private_phone_primary_device.sql').includes('PRIVATE_PRIMARY_DEVICE_V1'));
