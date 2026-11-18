@@ -282,8 +282,12 @@ export function createSupabaseSync({url, serviceKey, masterKey, fetchAPI = globa
       let data;
       try { data = text ? JSON.parse(text) : null; } catch { throw new SyncError('sync_service_unavailable',503); }
       if (!response.ok) {
+        if (path.startsWith('/auth/')) {
+          const rejected=[400,401,403,422].includes(response.status);
+          throw new SyncError(rejected?'authentication_required':'account_auth_temporarily_unavailable',rejected?401:503);
+        }
         if (knownErrors.has(data?.message)) throw new SyncError(data.message,409);
-        throw new SyncError(path.startsWith('/auth/')?'authentication_required':'sync_service_unavailable',path.startsWith('/auth/')?401:503);
+        throw new SyncError('sync_service_unavailable',503);
       }
       return data;
     }

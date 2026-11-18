@@ -26,7 +26,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   browserB:{userID:ownerB,sessionID:'20000000-0000-0000-0000-000000000004'},
   spareA:{userID:ownerA,sessionID:'20000000-0000-0000-0000-000000000005'}
  };
- const nativeCalls=[],modelCalls=[],toolCalls=[],errors=[],sources=[],objects=new Map();let modelMode='ordinary',fixtureConnectionId='',browser,holdResolve=false,resolveSignal,resolveRelease;
+ const nativeCalls=[],modelCalls=[],toolCalls=[],errors=[],sources=[],objects=new Map();let authOutage=false,modelMode='ordinary',fixtureConnectionId='',browser,holdResolve=false,resolveSignal,resolveRelease;
  const store={async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return(await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
   async rpc(name,args){return(await db.query('select public.'+name+'('+Object.keys(args).map((k,i)=>k+'=>$'+(i+1)).join(',')+') value',Object.values(args).map(x=>Array.isArray(x)?JSON.stringify(x):x))).rows[0].value;},async putBlob(key,value){objects.set(key,value);},async getBlob(key){return objects.get(key);}};
  const backend=createSyncHandler({store,authenticate:async token=>identity[token],verifyPassword:async(_,password)=>password==='fixture-correct-password',masterKey:'b'.repeat(43),cryptoAPI:webcrypto});
@@ -37,7 +37,8 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   if(url.pathname==='/__native'){
    const {token,action,body}=await bodyOf(req);nativeCalls.push({token,action,body});let result={ok:false,error:'fixture_unsupported'};
    if(action==='account.status')result={ok:true,loggedIn:true,userId:identity[token].userID,maskedPhone:token==='browserA'?'138****0001':'138****0002'};
-   else if(action==='account.sync')result=await transport(token,body);
+   else if(action==='account.sync')result=authOutage?{ok:false,code:'account_auth_timeout',message:'账号认证服务器响应超时；登录凭证仍保留在本机'}:await transport(token,body);
+   else if(action==='account.password.signin')result={ok:false,code:'account_auth_timeout',message:'账号认证服务器响应超时；登录凭证仍保留在本机'};
    else if(action==='account.mcp'&&body.action==='list')result={ok:true,connections:[],nextCursor:null};
    else if(action==='account.sync.ui')result={ok:true};
    if(action==='account.sync'&&body.action==='resolve'&&holdResolve){holdResolve=false;await new Promise(resolve=>{resolveRelease=resolve;resolveSignal();});}
@@ -66,9 +67,18 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   async function seed(token,state){let saved=null;const codec=core.createStateCodec(),owner=identity[token].userID;
    codec.setLocalProjection(await codec.project(state));
    const journal=core.createJournal({owner,platform:'iOS',label:'受控源手机',getOwner:()=>owner,canPublish:()=>true,transport:body=>transport(token,body),storage:{read:async()=>saved,write:async(_,value)=>{saved=value;}},snapshot:()=>codec.project(state),apply:async rows=>{codec.accept(rows);const next=await codec.materialize();if(next.complete){for(const key of Object.keys(state))delete state[key];Object.assign(state,next.state);}}});
-   sources.push(journal);await journal.inspect();await journal.seed(false);while(await journal.flush(4)){}await journal.seed(true);return {journal,state};
+   sources.push(journal);await journal.inspect();await journal.seed(false);while(await journal.flush(4)){}await journal.seed(true);return {journal,state,codec};
   }
   const source=await seed('sourceA',fixture(ownerA,'云端角色甲'));await seed('sourceB',fixture(ownerB,'云端角色乙'));
+  const initialImage='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4l0AAAAASUVORK5CYII=';
+  source.state.me.homeBg='idb:fixture-first-home';source.state.me.lockBg='idb:fixture-first-home';source.state.me.appIcons={...source.state.me.appIcons,wechat:'idb:fixture-first-icon'};
+  for(const key of ['fixture-first-home','fixture-first-icon']){
+   const bytes=new TextEncoder().encode(initialImage),hash=Buffer.from(await webcrypto.subtle.digest('SHA-256',bytes)).toString('hex');
+   const uploaded=await transport('sourceA',{action:'media.put',deviceId:source.journal.state().deviceId,hash,base64:Buffer.from(bytes).toString('base64url')});assert.equal(uploaded.ok,true);
+   await source.codec.addMediaManifest({localKey:key,type:'string',bytes:bytes.length,hash,parts:[hash]});
+  }
+  await source.journal.flush();
+
   const page=await browser.newPage({viewport:{width:430,height:900}});page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(({origin,owner})=>{
    window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_MAC__=true;window.__SMALL_PHONE_ACCOUNT_SYNC__=true;window.__SMALL_PHONE_NATIVE_ACCOUNT__={loggedIn:true,userId:owner};window.__SMALL_PHONE_LEGACY_OWNER__='';window.fixtureToken='browserA';
@@ -79,7 +89,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
    if(request.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,GET,OPTIONS','Access-Control-Allow-Headers':'*'}});
    if(url.hostname==='model-fixture.invalid'){
     const body=request.postDataJSON();modelCalls.push(body);const done=body.messages.some(x=>String(x.content).includes('[外部工具真实回执'));
-    const content=modelMode==='mcp'&&!done?JSON.stringify({mcp_call:{tool:fixtureConnectionId+'__read_doc',arguments:{query:'花店'}}}):modelMode==='mcp'?'工具查到了花店记录。':'手动微信回复成功。';
+    const content=modelMode==='mcp'&&!done?JSON.stringify({mcp_call:{tool:fixtureConnectionId+'__read_doc',arguments:{query:'花店'}}}):modelMode==='mcp'?'工具查到了花店记录。':modelMode==='offline'?'认证超时期间仍能正常回复。':'手动微信回复成功。';
     return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({choices:[{message:{content},finish_reason:'stop'}]})});
    }
    if(url.hostname==='mcp-fixture.invalid'){
@@ -92,6 +102,19 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   try{await page.waitForFunction(()=>window.__northBootReady&&window.NorthPrivateDeviceSyncClient?.status().ready&&S.contacts.some(x=>x.id==='cloud-a'),null,{timeout:15000});}catch(error){console.log('initial sync diagnostic',JSON.stringify({errors,native:nativeCalls.slice(-12).map(x=>({action:x.action,sync:x.body.action})),state:await page.evaluate(()=>({boot:window.__northBootReady,finished:_appBootFinished,status:window.NorthPrivateDeviceSyncClient?.status(),roles:S.contacts.map(x=>x.id),ref:_coreBootRef&&{savedAt:_coreBootRef.savedAt,discover:_coreBootRef.discover,accountSwitch:_coreBootRef.accountSwitch},screen:document.body.innerText.slice(0,700)}))}));throw error;}
   assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['cloud-a'],'only the cloud roles are shown, with no default fixture roles');
   assert(await page.evaluate(()=>NorthPrivateDeviceSyncClient.status().secondary));
+  await page.waitForFunction(()=>_imgCache['fixture-first-home']&&_imgCache['fixture-first-icon'],null,{timeout:8000});
+  assert.equal(await page.evaluate(()=>_imgCache['fixture-first-home']),initialImage,'first remote hydration restores home/lock wallpaper without a manual image getter');
+  assert.equal(await page.evaluate(()=>_imgCache['fixture-first-icon']),initialImage,'first remote hydration restores customized icons');
+  await page.waitForFunction(()=>document.getElementById('homeDesktop')?.style.backgroundImage.includes('data:image/')&&Array.from(document.querySelectorAll('.custom-app-icon img')).some(img=>img.complete&&img.naturalWidth===1),null,{timeout:8000});
+  source.state.me.homeBg='idb:fixture-late-home';source.state.me.lockBg='idb:fixture-late-home';await source.journal.flush();
+  await page.evaluate(async()=>{await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
+  assert.equal(await page.evaluate(()=>!!_imgCache['fixture-late-home']),false,'a missing future manifest is not replaced with an empty image');
+  const lateBytes=new TextEncoder().encode(initialImage),lateHash=Buffer.from(await webcrypto.subtle.digest('SHA-256',lateBytes)).toString('hex');
+  await source.codec.addMediaManifest({localKey:'fixture-late-home',type:'string',bytes:lateBytes.length,hash:lateHash,parts:[lateHash]});await source.journal.flush();
+  await page.evaluate(async()=>{await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
+  await page.waitForFunction(()=>!!_imgCache['fixture-late-home']&&document.getElementById('homeDesktop')?.style.backgroundImage.includes('data:image/'),null,{timeout:8000});
+
+
   await page.evaluate(()=>{S.me.locked=false;renderLockScreen();});
   await page.evaluate(()=>openChat('cloud-a'));await page.locator('#chatbg').getByText('云端角色甲的云端历史消息',{exact:true}).waitFor();
   const input=page.locator('#cinput');await input.fill('尚未发送的草稿');await input.focus();
@@ -112,6 +135,22 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.locator('#chatbg').getByText('工具查到了花店记录。',{exact:true}).waitFor({timeout:30000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
   assert.equal(toolCalls.filter(x=>x.method==='tools/call').length,1);assert.equal(modelCalls.length,3,'the manual MCP turn has one selection and one final response');
   assert(await page.locator('.mcp-chat-trace[data-mcp-state=ok]').isVisible());assert(!(await page.locator('#chatbg').innerText()).includes('mcp_call'));
+  // An existing account reloads and manually chats through a background Auth
+  // outage. The shipped local persistence and model path are not replaced.
+  await page.evaluate(id=>MCPTools.setRole(id,'cloud-a',false),fixtureConnectionId);
+  authOutage=true;modelMode='offline';await page.reload();
+  await page.waitForFunction(()=>window.__northBootReady&&NorthPrivateDeviceSyncClient?.status().phase==='network'&&NorthPrivateDeviceSyncClient.gateAllowed(),null,{timeout:10000});
+  assert.equal(await page.locator('#privateSyncConnectionNotice').isVisible(),true);
+  assert.equal(await page.locator('#privatePhoneNumber').count(),0,'a timeout does not replace the account view with login');
+  await page.evaluate(()=>privatePhoneAccountBindOpen());await page.locator('#privatePhoneNumber').fill('13800000001');await page.locator('#privatePhonePassword').fill('fixture-password');
+  await page.evaluate(()=>privatePhoneAccountPasswordLogin());await page.waitForTimeout(1300);
+  assert((await page.locator('#privatePhoneLoginNote').innerText()).includes('超时'),'login errors remain readable');assert.equal(await page.locator('[data-private-auth-submit]').first().isDisabled(),false);await page.evaluate(()=>closeModal());
+  await page.evaluate(()=>{S.me.locked=false;renderLockScreen();openChat('cloud-a');});
+  await page.locator('#cinput').fill('断线期间继续聊天');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();
+  await page.locator('#chatbg').getByText('认证超时期间仍能正常回复。',{exact:true}).waitFor({timeout:15000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,4,'one manual local reply is never retried by synchronization');
+  await page.reload();await page.waitForFunction(()=>window.__northBootReady&&NorthPrivateDeviceSyncClient?.gateAllowed(),null,{timeout:10000});assert(await page.evaluate(()=>S.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。')),'the offline reply survives reopening');
+  authOutage=false;await page.evaluate(()=>NorthPrivateDeviceSyncClient.syncNow());await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.status().phase==='ready',null,{timeout:10000});await source.journal.cycle();
+  assert(source.state.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。'),'the saved offline reply uploads after reconnection');assert.equal(modelCalls.length,4);assert.equal(nativeCalls.filter(x=>x.action==='account.signout').length,0);
   // Resolve a genuine same-field CAS conflict through the shipped UI, in each
   // direction. Source and browser retain their independent old revisions.
   source.state.settings.hist=48;await source.journal.flush();
@@ -177,6 +216,6 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');
   const archivedModel=await phoneProbe.evaluate(async owner=>new Promise((resolve,reject)=>{const open=indexedDB.open('smallphone-account-sync-v2-'+owner,1);open.onsuccess=()=>{const db=open.result,tx=db.transaction('state','readonly'),get=tx.objectStore('state').get('__device_sync_v2_'+owner+'_bootstrap_before');let result;get.onsuccess=()=>{result=get.result;};tx.oncomplete=()=>{db.close();resolve(JSON.parse(result.previousCore.json).settings.chat.model);};tx.onerror=()=>reject(tx.error);};}),ownerA);assert.equal(archivedModel,'stale-idb-model','the unique old IDB core survives alignment');
   await phoneProbe.evaluate(async()=>{await saveNowAsync();const head=await SmallPhoneNative.request('storage.get',{key:'__core_state',owner:privateAccountDataIdentity(),primaryOnly:true}),state=JSON.parse(head.stateJSON);state.settings.hist=99;state._persistedAt=Date.now()+1;await SmallPhoneNative.request('storage.put',{key:'__core_state',owner:privateAccountDataIdentity(),ver:1,savedAt:state._persistedAt,stateJSON:JSON.stringify(state),expectedSHA256:head.contentSHA256});});await phoneProbe.reload();await phoneProbe.waitForFunction(()=>window.__northBootReady,null,{timeout:10000});assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');assert.equal(await phoneProbe.evaluate(()=>S.settings.hist),99,'a committed native successor survives interruption before the IDB mirror');await phoneProbe.close();
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:3,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:4,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
  }finally{resolveRelease?.();for(const journal of sources)journal.close();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await db.close();}
 });

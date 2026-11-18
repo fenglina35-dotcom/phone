@@ -249,3 +249,13 @@ console.log('role body tests passed');
  assert.equal(ctx.bodyTakeCare(b,'vitamin',t+86400000).ok,true);
  b.health=0;b.sick=null;b.recoverUntil=t+86400000;ctx.bodyCheckHealth(b,t);assert.equal(b.sick,null);
  console.log('健康底线与道具限额通过'); }
+
+// PRIVATE_SECONDARY_AUTOMATIC_STATE_V1: a secondary displays the primary's body
+// clock, while explicit care actions still use the same state and sync normally.
+{
+ const secondary=ctx.bodyState(c),frozen=JSON.stringify(secondary),at=secondary.lastTick+60000;
+ ctx.window={__SMALL_PHONE_ACCOUNT_SYNC__:true,privatePhoneAutomaticStateAllowed:()=>false};
+ ctx.bodyTick(c,at);assert.equal(JSON.stringify(secondary),frozen,'secondary renders do not advance shared body time or energy');
+ ctx.window.privatePhoneAutomaticStateAllowed=()=>true;ctx.bodyTick(c,at);assert.equal(secondary.lastTick,at,'the current primary alone advances the body clock');
+ delete ctx.window;
+}

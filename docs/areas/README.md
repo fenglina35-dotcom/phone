@@ -1301,3 +1301,8 @@ Mac 原生首屏由 `PhoneCompanionMac/MacPhoneApp.swift` 显示手机号和私�
 回归位于 private-mac-sync、private-native-account-storage、private-account-browser、private-mcp-vault 和 permanent-fix-guard 测试。受控通过不代表真实设备数据、真实 MCP 业务或迁移完成；事故取证和当次进度查维护档案。
 
 2026-11-18 首批确认：已确认的初始逻辑键不必等待持续变化的身体计时等后续修改全部清空。仅在schema、所有初始新键和内容分块已确认、pull无剩余页且无阻挡冲突后结束；较新修改和媒体留在持久发件队列继续CAS同步。媒体泵等seed ready，不能手改云端ready或丢弃pending来绕过等待。真实连续更新回归须在旧实现失败。
+
+2026-11-18 远端首批图片必须主动补载privateBootImageKeys，壁纸在本地没有缓存时可能没有DOM标记；补载按当前context、媒体完整性验证与编辑保护执行，媒体只读GET不被持久写队列阻塞。加入首批和媒体晚到的真实主屏/图标解码回归，不能用手动imgGet成功冒充界面已恢复。
+
+2026-11-18 iOS/Mac581候选追加账号不中断保护：账号只供本人多设备使用，日常聊天、查看、设置不应被同步或认证超时阻断。只读核验iPhone仍为主设备、主权版本1、两端未撤销且Auth会话存在。适配器原先将含“账号”的错误归入authentication，且authentication_required会触发signout。现仅register明确device_revoked才退出；device_revoked_or_unknown先注册确认。认证/网络错误保留身份、本机内容和发件队列。已核实来源或同账号完整缓存先打开、后台验证；已确认移除保留独立access标记，离线缓存不能复活旧登录。降为副设备只改变管理/自动权限，不退出。提示持续可读，登录按钮有忙状态。
+本人手动回复在归属核实、认证未完成/网络失败时使用原模型路径并保存本机，重连补传，不重放模型；自动回复仍要求已确认主设备，在线租约保持。真实HTML受控验证认证超时冷启动、持久错误、手动回复、重开保留、重连补传及无重复模型调用；原有MCP和主权/账号隔离继续测。iPhone Keychain原先先删再加，失败可能丢凭证；现SecItemUpdate，仅notFound时Add，失败保留旧值。Swift故障回归旧失败新通过。读取暂被系统拒绝返回可重试错误，不冒充未登录。认证HTTP45秒、外层60秒。后台Auth429/5xx返回503可重试，401仅认证拒绝，不外泄上游详情。无新迁移、不改主权、不整包恢复。27项同步/真实HTML/凭证专项通过，完整回归和真机安装结果另记。Word只追加原XML并验证其他ZIP成员不变，不宣称既有损坏XML可正常排版。

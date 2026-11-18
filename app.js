@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1935'){
+if(window.__NORTH_SHELL_BUILD__!=='1936'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1935 · 首批同步确认与持续更新保护';
+const APP_VER='v1936 · 同步图片显示与副设备自动状态保护';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2350,7 +2350,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1935&r=v1935-owner-todo-report-1';
+  const url='sw.js?v=1936&r=v1936-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5048,8 +5048,13 @@ function privatePhoneAccountPaint(){const page=$('#setpage3');if(!page||_setTab!
 async function privatePhoneAccountRefresh(showToast){if(!privatePhoneAccountAvailable()||_privatePhoneAccount.loading)return;_privatePhoneAccount.loading=true;_privatePhoneAccount.error='';privatePhoneAccountPaint();try{const s=await privatePhoneAccountCall('account.status');_privatePhoneAccount.loaded=true;_privatePhoneAccount.loggedIn=!!(s&&s.loggedIn);_privatePhoneAccount.maskedPhone=String(s&&s.maskedPhone||'');_privatePhoneAccount.userId=String(s&&s.userId||'');_privatePhoneAccount.backup=null;if(_privatePhoneAccount.loggedIn){try{const info=await privatePhoneAccountCall('account.backup.info');if(info&&info.ok===false)throw new Error(info.message||'云备份状态读取失败');const row=info&&info.backup||{};_privatePhoneAccount.backup=Object.assign({found:!!(info&&info.found)},row);}catch(e){const msg=String(e&&e.message||'云备份服务器暂时不可用');_privatePhoneAccount.backup={found:false,unknown:true};_privatePhoneAccount.error=msg+(/登录.*保留|凭证.*保留/.test(msg)?'':'；手机号登录仍保留在本机');}}if(showToast)toast(_privatePhoneAccount.loggedIn?(_privatePhoneAccount.error||'手机号账号正常'):'尚未绑定手机号');}catch(e){_privatePhoneAccount.loaded=true;_privatePhoneAccount.error=(e&&e.message)||'本机账号状态读取失败';}finally{_privatePhoneAccount.loading=false;privatePhoneAccountPaint();}}
 function privatePhoneAccountBindOpen(){openModal(`<h3>创建或登录手机号账号</h3><div class="hint">这是独立的私人小手机云账号，不使用邀请码项目，也不发送短信验证码。第一次使用请选择“创建并绑定”；以前创建过请选择“登录并恢复”。</div><div class="field"><input id="privatePhoneNumber" inputmode="tel" autocomplete="tel" maxlength="13" placeholder="请输入中国大陆手机号"></div><div class="field"><input id="privatePhonePassword" type="password" autocomplete="current-password" maxlength="72" placeholder="请输入私人账号密码（至少 8 位）"></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn g" onclick="privatePhoneAccountPasswordLogin()">登录并恢复</button><button class="btn p" onclick="privatePhoneAccountPasswordSignup()">创建并绑定</button></div>`);setTimeout(()=>{$('#privatePhoneNumber')&&$('#privatePhoneNumber').focus();},80);}
 function privatePhoneAccountCredentials(){const phone=String($('#privatePhoneNumber')&&$('#privatePhoneNumber').value||'').replace(/\s+/g,''),password=String($('#privatePhonePassword')&&$('#privatePhonePassword').value||'');if(!/^(?:\+?86)?1[3-9]\d{9}$/.test(phone)){toast('请输入正确的 11 位手机号');return null;}if(password.length<8||password.length>72){toast('密码需要 8 至 72 位');return null;}return{phone,password};}
-async function privatePhoneAccountPasswordFinish(action,busyText,fallback){const credentials=privatePhoneAccountCredentials();if(!credentials)return;toast(busyText);try{
-const r=await privatePhoneAccountCall(action,credentials);if(!r||r.ok!==true)throw new Error(r&&r.message||fallback);closeModal();_privatePhoneAccount.loaded=false;await privatePhoneAccountRefresh(false);await privatePhoneAccountAfterLogin();}catch(e){toast((e&&e.message)||fallback);}}
+async function privatePhoneAccountPasswordFinish(action,busyText,fallback){const credentials=privatePhoneAccountCredentials();if(!credentials)return;
+toast(busyText);
+try{
+const r=await privatePhoneAccountCall(action,credentials);if(!r||r.ok!==true)throw new Error(r&&r.message||fallback);closeModal();_privatePhoneAccount.loaded=false;await privatePhoneAccountRefresh(false);await privatePhoneAccountAfterLogin();}catch(e){
+toast((e&&e.message)||fallback);
+}
+}
 function privatePhoneAccountPasswordSignup(){return privatePhoneAccountPasswordFinish('account.password.signup','正在创建独立手机号账号…','手机号账号创建失败');}
 function privatePhoneAccountPasswordLogin(){return privatePhoneAccountPasswordFinish('account.password.signin','正在登录手机号…','手机号或密码不正确');}
 async function privatePhoneAccountAfterLogin(){try{const info=await privatePhoneAccountCall('account.backup.info');if(!info||info.ok===false)throw new Error(info&&info.message||'云备份尚未配置');if(!info.found){await privatePhoneCloudBackup(true);return;}const b=info.backup||{};openModal(`<h3>手机号登录成功</h3><div class="hint" style="line-height:1.8">这个手机号云端已有一份备份：<br><b>${esc(privatePhoneAccountDate(b.captured_at))}</b> · ${esc(privatePhoneAccountBytes(b.byte_count))}<br><br>为防止覆盖错误，系统没有自动上传或下载。请选择要保留哪一份。</div><div class="btns"><button class="btn p" onclick="closeModal();privatePhoneCloudBackup(false)">保留本机并上传</button><button class="btn g" onclick="closeModal();privatePhoneCloudRestoreOpen()">查看云端并恢复</button></div>`);}catch(e){toast((e&&e.message)||'手机号已登录，但云备份尚未启用');}}

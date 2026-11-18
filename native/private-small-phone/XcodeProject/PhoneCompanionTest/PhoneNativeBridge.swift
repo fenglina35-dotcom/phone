@@ -120,7 +120,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.580 (580)"
+    private static let build = "1.0.581 (581)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -2296,6 +2296,12 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     ) {
         if action == "account.status" {
             let session = loadPrivateAccountSession()
+            if privateAccountSessionReadError != nil {
+                reply(requestID: requestID, result: ["ok": false,
+                    "code": "account_credentials_unavailable",
+                    "message": "暂时无法读取本机登录凭证，请解锁手机后重试；原登录未清除"])
+                return
+            }
             reply(
                 requestID: requestID,
                 result: privateAccountStatus(session)
@@ -3104,7 +3110,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 18
+        request.timeoutInterval = 45
         request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
         request.setValue(
             "Bearer " + (bearer ?? Self.privateAccountAPIKey),
@@ -3205,6 +3211,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         return result
     }
 
+    private var privateAccountSessionReadError: OSStatus?
+
     private func loadPrivateAccountSession() -> PrivateAccountSession? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -3214,11 +3222,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
         var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else {
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        privateAccountSessionReadError = status == errSecSuccess || status == errSecItemNotFound ? nil : status
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        guard let session = try? JSONDecoder().decode(PrivateAccountSession.self, from: data) else {
+            privateAccountSessionReadError = errSecDecode
             return nil
         }
-        return try? JSONDecoder().decode(PrivateAccountSession.self, from: data)
+        return session
     }
 
     private func savePrivateAccountSession(_ session: PrivateAccountSession) throws {
@@ -3228,11 +3239,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             kSecAttrService as String: Self.privateAccountKeychainService,
             kSecAttrAccount as String: "primary"
         ]
-        SecItemDelete(query as CFDictionary)
-        var item = query
-        item[kSecValueData as String] = data
-        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        let status = SecItemAdd(item as CFDictionary, nil)
+        // PRIVATE_ACCOUNT_ATOMIC_CREDENTIAL_V1: a failed renewal must retain the previous session.
+        let attributes: [String: Any] = [kSecValueData as String: data]
+        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var item = query
+            item[kSecValueData as String] = data
+            item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            status = SecItemAdd(item as CFDictionary, nil)
+        }
         guard status == errSecSuccess else {
             throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
         }

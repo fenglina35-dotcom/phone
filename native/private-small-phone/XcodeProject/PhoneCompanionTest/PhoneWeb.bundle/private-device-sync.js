@@ -183,6 +183,7 @@
   }
   return Object.freeze({
    canFinishSeed,
+   deviceId:()=>state?.deviceId||'',
    queue:values=>run(async token=>{await init(token);if(!options.canPublish())throw new Error('此设备尚未完成账号数据读取');const next=clone(state),rows=Array.isArray(values)?values:Object.entries(values).map(([key,value])=>({key,value,deleted:false}));for(const row of rows){const key=safeKey(row.key),deleted=row.deleted===true,fingerprint=deleted?'':await hash(row.value);ensure(token);const pending=next.pending[key],known=next.known[key];if(pending&&pending.deleted===deleted&&pending.hash===fingerprint||!pending&&known&&known.deleted===deleted&&known.hash===fingerprint)continue;next.pending[key]={key,deleted,hash:fingerprint,mutationId:root.crypto.randomUUID(),baseRevision:pending?pending.baseRevision:known?known.revision:'0'};if(!deleted)next.pending[key].value=clone(row.value);}await persist(next,token);}),
    cycle:()=>run(async token=>{await init(token);await reconcileBlocked(token);await capture(token);const pushed=await push(token);const more=await pull(token);return {pushed,more,pending:Object.keys(state.pending).length,conflicts:Object.values(state.pending).filter(x=>x.blocked).length};}),
    flush:(maxBatches=64)=>run(async token=>{await init(token);await reconcileBlocked(token);await capture(token);const limit=Math.max(1,Math.min(64,Math.floor(Number(maxBatches)||64)));for(let n=0;n<limit;n++)if(!await push(token))break;const more=await pull(token);return more||Object.values(state.pending).some(x=>!x.blocked);}),
@@ -197,6 +198,7 @@
     const item={choice,baseRevision:revision,mutationId:root.crypto.randomUUID()};next.resolutions[conflictId]=item;
     await persist(next,token);return finishResolution(conflictId,item,token);
    }),
+   reregister:()=>run(async token=>{state=null;await init(token);return {ok:true};}),
    inspect:()=>run(async token=>{await init(token);return call({action:'inspect',deviceId:state.deviceId},token);}),
    seed:finish=>run(async token=>{await init(token);if(finish&&!canFinishSeed())throw new Error('首批数据尚未全部确认，请继续同步');const result=await call({action:'seed',deviceId:state.deviceId,finish:finish===true},token);const next=clone(state);next.seed=result.seed;await persist(next,token);return result.seed;}),
    request:body=>run(async token=>{await init(token);return call({...body,deviceId:state.deviceId},token);}),

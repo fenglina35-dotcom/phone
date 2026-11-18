@@ -24,7 +24,8 @@ function scale(){const c=cfg();return DP_SIZES[c&&c.size]||DP_SIZES.m;}
 function dims(){const k=scale();return{w:VB_W*k,h:VB_H*k};}
 function bounds(){const h=host(),d=dims();return{w:Math.max(80,(h.clientWidth||window.innerWidth)-d.w),h:Math.max(80,(h.clientHeight||window.innerHeight)-d.h)};}
 function rname(c){return c?(c.remark||c.name||'ta'):'ta';}
-function persist(){const c=cfg();if(!c||state.perch)return;c.x=Math.round(state.x);c.y=Math.round(state.y);if(typeof save==='function')save(800);}
+// PRIVATE_SECONDARY_AUTOMATIC_STATE_V1: one primary advances shared state; explicit gestures still save.
+function persist(manual){const c=cfg();if(!c||state.perch||!manual&&typeof window!=='undefined'&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&!window.privatePhoneAutomaticStateAllowed?.())return;c.x=Math.round(state.x);c.y=Math.round(state.y);if(typeof save==='function')save(800);}
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function escH(x){return typeof esc==='function'?esc(x):String(x).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 
@@ -510,7 +511,7 @@ function dropAt(){const d=dims(),hr=hostRect(),fx0=state.x+d.w/2+hr.left,fy=stat
   const gy=groundY();if(Math.abs(state.y-gy)<36){state.y=gy;state.onGround=true;return;}
   state.placedUntil=Date.now()+PLACE_MS;}
 function onUp(e){if(!drag||e.pointerId!==drag.id)return;clearTimeout(pressTimer);const d=drag;drag=null;
-  if(d.moved){dropAt();react('land',360);setEyes('dizzy',1300);persist();nextActAt=Date.now()+2500;return;}
+  if(d.moved){dropAt();react('land',360);setEyes('dizzy',1300);persist(true);nextActAt=Date.now()+2500;return;}
   if(d.pet)return;{const now=Date.now(),p=cfg();if(p&&p.snack!==false&&now-lastPetTapAt<330){lastPetTapAt=0;snackOpen();return;}lastPetTapAt=now;}tap();}
 /* 点一下冒爱心；连着点太多下会不耐烦，再点就生气跑开 */
 function tap(){const now=Date.now();taps=taps.filter(t=>now-t<5000);taps.push(now);const n=taps.length;
@@ -618,7 +619,7 @@ function mmHM(m){m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart
 /* 三个饭点：到点先「该吃饭了」，他跟她说一声再去吃（或者没人说话时自己去）；饭点过了 90 分钟还没吃就算没顾上 */
 function bodyMealWindows(c,t){const T=bodyMealTimes(c);return[['早饭',T.b,T.b+90],['午饭',T.l,T.l+90],['晚饭',T.d,T.d+90]];}
 function bodyStartEat(b,name,t,why){if(b.eating||b.asleep)return false;b.eating={name:name||'饭',since:t,until:t+30*60000,extra:0,lastUser:t};b.due=null;bodyLog(b,why==='her-wait'?'他先去吃'+(name||'饭')+'了':'他去吃'+(name||'饭')+'了',t);return true;}
-function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c))return b;now=now||Date.now();let t=Math.max(b.lastTick||now,now-72*3600000);if(t>now)return b;bodyCareQuota(b,now);bodyCheckHealth(b,now);const userAt=lastUserAt(c),times=bodyUserTimes(c);let ui=0,quietAt=0;
+function bodyTick(c,now){const b=bodyState(c);if(!bodyOn(c)||typeof window!=='undefined'&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&!window.privatePhoneAutomaticStateAllowed?.())return b;now=now||Date.now();let t=Math.max(b.lastTick||now,now-72*3600000);if(t>now)return b;bodyCareQuota(b,now);bodyCheckHealth(b,now);const userAt=lastUserAt(c),times=bodyUserTimes(c);let ui=0,quietAt=0;
   while(ui<times.length&&times[ui]<=t)quietAt=times[ui++];
   for(;;){
     const m=minsOf(t),night=bodyNight(m),win=bodySleepWindow(t);

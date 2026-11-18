@@ -115,7 +115,7 @@ test('revoked device loses visible and model permissions, signs out, and preserv
   async native(action,body){
    if(action==='account.status')return {ok:true,loggedIn,userId:loggedIn?owner:''};
    if(action==='account.signout'){loggedIn=false;signouts++;return {ok:true,loggedIn:false};}
-   if(revoked)return {ok:false,error:'device_revoked_or_unknown'};
+   if(revoked)return {ok:false,error:body.action==='register'?'device_revoked':'device_revoked_or_unknown'};
    if(body.action==='register')return {ok:true,device:{id:deviceId}};
    if(body.action==='inspect')return {ok:true,seed,isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1',conflicts:[]};
    if(body.action==='push')return {ok:true,outcomes:body.changes.map(row=>({key:row.key,mutationId:row.mutationId,status:'applied',revision:'1'}))};
@@ -126,8 +126,8 @@ test('revoked device loses visible and model permissions, signs out, and preserv
  try{
   await client.syncNow();assert.equal(client.gateAllowed(),true);assert.equal(client.backgroundAllowed(),true);
   const before=JSON.stringify(state),diskBefore=JSON.stringify([...disk]);revoked=true;
-  await client.syncNow();assert.equal(client.status().phase,'authentication');assert.equal(client.gateAllowed(),false);assert.equal(client.backgroundAllowed(),false);assert.equal(client.modelAllowed({}),false);assert.equal(signouts,1);assert.equal(resets,1);
-  assert.equal(JSON.stringify(state),before);assert.equal(JSON.stringify([...disk]),diskBefore,'outbox and account-local cache remain available');
+  await client.syncNow();assert.equal(signouts,0,'an ambiguous device failure must be confirmed by registration');await client.syncNow();assert.equal(client.status().phase,'authentication');assert.equal(client.gateAllowed(),false);assert.equal(client.backgroundAllowed(),false);assert.equal(client.modelAllowed({}),false);assert.equal(signouts,1);assert.equal(resets,1);
+  assert.equal(JSON.stringify(state),before);assert.equal(JSON.stringify([...disk].filter(([key])=>!key.endsWith('_access'))),diskBefore,'outbox and account-local cache remain available');assert([...disk].some(([key,value])=>key.endsWith('_access')&&value.revoked===true),'confirmed removal prevents offline reuse of the revoked session');
   client.stop();loggedIn=true;client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);const beforeReveal=reveals;await client.syncNow();assert.equal(reveals,beforeReveal,'cached content is not revealed before the server accepts the device');assert.equal(client.gateAllowed(),false);
  }finally{client.stop();}
 });
@@ -874,4 +874,89 @@ test('durable two-device journal merges message IDs, replays lost ACK/inbox and 
   delete phone.data[c];await phone.journal.cycle();
   assert.equal((await db.query('select deleted from private_phone_sync_records where record_key=$1',[c.replace(/^(state|blob)\//,'$1/sync2/')])).rows[0].deleted,true);
  }finally{await db.close();}
+});
+
+test('secondary automatic pet motion never writes shared coordinates while a manual drag still saves',()=>{
+ const source=read('desk-pet.js'),state={x:120,y:300,perch:null},pet={x:8,y:9};let saves=0,primary=false;
+ const ctx=vm.createContext({state,cfg:()=>pet,Math,save:()=>{saves++;},window:{__SMALL_PHONE_ACCOUNT_SYNC__:true,privatePhoneAutomaticStateAllowed:()=>primary}});
+ vm.runInContext(fnSource(source,'persist'),ctx);
+ ctx.persist();assert.deepEqual(pet,{x:8,y:9});assert.equal(saves,0,'secondary animation stays on screen without creating shared-state writes');
+ ctx.persist(true);assert.deepEqual(pet,{x:120,y:300});assert.equal(saves,1,'an explicit drag continues to save and sync normally');
+ primary=true;state.x=130;ctx.persist();assert.equal(pet.x,130);assert.equal(saves,2,'the primary retains its existing automatic persistence');
+});
+
+test('media reads stay responsive during a durable push and reject late replies after an account change',async()=>{
+ const env=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,setTimeout:()=>1,clearTimeout:()=>{}});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),env);
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js'),env);
+ const owner='10000000-0000-0000-0000-000000000001',deviceId='20000000-0000-0000-0000-000000000001',copy=x=>JSON.parse(JSON.stringify(x)),disk=new Map(),seed={phase:'ready',sourceDeviceId:deviceId};
+ let state={_deviceSyncOwner:owner,settings:{hist:12},me:{},contacts:[{id:'a'}],messages:{a:[]}},holdPush=false,holdMedia=false,pushStarted,releasePush,releaseMedia;
+ const started=new Promise(resolve=>{pushStarted=resolve;});
+ const host={core:env.NorthPrivateDeviceSyncCore,platform:'macOS',label:'fixture',snapshot:async()=>copy(state),getState:()=>state,boundOwner:()=>owner,stateOwner:()=>owner,bindOwner:async()=>{},meaningful:()=>true,emptyState:()=>({}),replaceState:async next=>{state=copy(next);},isVisible:()=>true,isBusy:()=>false,applying:()=>false,onAccount:()=>{},status:()=>{},reveal:()=>{},cancelReplies:()=>{},accountReset:()=>{},
+  read:async k=>disk.has(k)?copy(disk.get(k)):null,write:async(k,v)=>disk.set(k,copy(v)),
+  native:async(action,body)=>{
+   if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};
+   if(body.action==='register')return {ok:true,device:{id:deviceId}};
+   if(body.action==='inspect')return {ok:true,seed,isPrimary:false,conflicts:[]};
+   if(body.action==='pull')return {ok:true,seed,records:[],cursor:'0',more:false};
+   if(body.action==='push'){if(holdPush){pushStarted();await new Promise(resolve=>{releasePush=resolve;});}return {ok:true,outcomes:body.changes.map(x=>({key:x.key,mutationId:x.mutationId,status:'applied',revision:'1'}))};}
+   if(body.action==='media.get'){if(holdMedia)await new Promise(resolve=>{releaseMedia=resolve;});return {ok:true,hash:body.hash,base64:'Zml4dHVyZQ'};}
+   assert.fail('unexpected '+body.action);
+  }};
+ const client=env.NorthPrivateDeviceSyncRuntime.createClient(host);let cycle,image;
+ try{
+  await client.syncNow();holdPush=true;state.settings.hist=13;client.markDirty();cycle=client.syncNow();await started;
+  image=client.request({action:'media.get',hash:'a'.repeat(64)});
+  const result=await Promise.race([image,new Promise(resolve=>setTimeout(()=>resolve({blocked:true}),100))]);
+  assert.equal(result.ok,true,'a small visible image is independent of a long durable journal push');
+  releasePush();await cycle;holdPush=false;holdMedia=true;
+  const late=client.request({action:'media.get',hash:'b'.repeat(64)});while(!releaseMedia)await new Promise(resolve=>setTimeout(resolve,1));
+  client.accountChanged();releaseMedia();await assert.rejects(late,/账号已变化/);
+ }finally{releasePush?.();releaseMedia?.();client.stop();await Promise.allSettled([cycle,image].filter(Boolean));}
+});
+
+test('authentication outages and role demotion preserve the existing account, local data and outbox',async()=>{
+ const env=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,setTimeout:()=>1,clearTimeout:()=>{}});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),env);
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js'),env);
+ const owner='10000000-0000-0000-0000-000000000001',deviceId='20000000-0000-0000-0000-000000000001',copy=x=>JSON.parse(JSON.stringify(x)),disk=new Map(),seed={phase:'ready',sourceDeviceId:deviceId};
+ const state={_deviceSyncOwner:owner,settings:{hist:32},me:{},contacts:[{id:'a',name:'保留角色'}],messages:{a:[{id:'m1',content:'保留聊天'}]}};let errorMode='timeout',signouts=0,primary=true,reveals=0,releaseAuth,authStarted;const started=new Promise(resolve=>{authStarted=resolve;});const pushed=[];
+ const host={core:env.NorthPrivateDeviceSyncCore,platform:'iOS',label:'fixture',snapshot:async()=>copy(state),getState:()=>state,boundOwner:()=>owner,stateOwner:()=>owner,nativeOwner:()=>owner,legacyOwner:()=>owner,hasPersistedSource:()=>true,bindOwner:async()=>{},meaningful:()=>true,emptyState:()=>({}),replaceState:async()=>assert.fail('no incoming records'),isVisible:()=>true,isBusy:()=>false,applying:()=>false,onAccount:()=>{},status:()=>{},reveal:()=>{reveals++;},cancelReplies:()=>{},accountReset:()=>{},
+  read:async k=>disk.has(k)?copy(disk.get(k)):null,write:async(k,v)=>disk.set(k,copy(v)),native:async(action,body)=>{
+   if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};
+   if(action==='account.signout'){signouts++;return {ok:true,loggedIn:false};}
+   if(errorMode==='hold'){authStarted();await new Promise(resolve=>{releaseAuth=resolve;});return {ok:false,code:'account_auth_timeout',message:'账号认证服务器响应超时'};}
+   if(errorMode==='timeout')return {ok:false,code:'account_auth_timeout',message:'账号认证服务器响应超时；手机号登录凭证仍保留在本机，请稍后刷新'};
+   if(errorMode==='authentication')return {ok:false,error:'authentication_required'};
+   if(errorMode==='unknown'&&body.action==='inspect'){errorMode='';return {ok:false,error:'device_revoked_or_unknown'};}
+   if(body.action==='register')return {ok:true,device:{id:deviceId}};
+   if(body.action==='inspect')return {ok:true,seed,isPrimary:primary,primaryDeviceId:primary?deviceId:'20000000-0000-0000-0000-000000000002',primaryRevision:primary?'1':'2',conflicts:[]};
+   if(body.action==='push'){pushed.push(...body.changes);return {ok:true,outcomes:body.changes.map(x=>({key:x.key,mutationId:x.mutationId,status:'applied',revision:'1'}))};}
+   if(body.action==='pull')return {ok:true,seed,records:[],cursor:'0',more:false};
+   assert.fail('unexpected '+body.action);
+  }};
+ let client=env.NorthPrivateDeviceSyncRuntime.createClient(host);
+ try{
+  const original=JSON.stringify(state);errorMode='hold';const cycle=client.syncNow();await started;assert.equal(client.gateAllowed(),true,'a verified local source opens before background authentication returns');await client.waitForIdle();releaseAuth();await cycle;assert.equal(client.status().phase,'network');assert.equal(client.status().owner,owner);assert.equal(client.gateAllowed(),true,'verified owner data stays usable after a refresh timeout');assert.equal(client.status().secondary,null,'unknown authority is not displayed as a demotion');assert.equal(signouts,0);assert.equal(JSON.stringify(state),original);
+  state.messages.a.push({id:'offline-new',content:'断线期间的新聊天'});client.markDirty();client.stop();client=env.NorthPrivateDeviceSyncRuntime.createClient(host);
+  errorMode='authentication';await client.syncNow();assert.equal(client.status().phase,'network');assert.equal(client.gateAllowed(),true);assert.equal(signouts,0,'an authentication failure never invokes destructive local sign-out');
+  errorMode='';await client.syncNow();assert.equal(client.backgroundAllowed(),true);assert(pushed.some(x=>x.value?.kind==='message'&&x.value.id==='offline-new'));
+  const saved=JSON.stringify(state);primary=false;await client.syncNow();assert.equal(client.status().secondary,true);assert.equal(client.gateAllowed(),true,'becoming secondary does not sign the device out');assert.equal(signouts,0);assert.equal(JSON.stringify(state),saved);assert(reveals>0);
+  const existingContext=client.context();errorMode='unknown';await client.syncNow();assert.equal(client.gateAllowed(),true,'an ambiguous device error does not interrupt local use');assert.equal(client.context(),existingContext);await client.syncNow();assert.equal(client.status().phase,'ready');assert.equal(client.context(),existingContext,'registration confirmation preserves the current conversation context');assert.equal(signouts,0);
+ }finally{client.stop();}
+});
+
+test('Auth service outages remain retryable and cannot masquerade as account invalidation',async()=>{
+ const module=await import('data:text/javascript;base64,'+Buffer.from(read('supabase/functions/phone-device-sync/core.mjs')).toString('base64'));
+ for(const status of [429,500,502,503]){
+  let calls=0;const handler=module.createSupabaseSync({url:'https://fixture.supabase.co',serviceKey:'fixture-service-key',masterKey:'a'.repeat(43),fetchAPI:async url=>{calls++;assert.equal(new URL(url).pathname,'/auth/v1/user');return Response.json({message:'fixture-sensitive-upstream-message'},{status});}});
+  const response=await handler(new Request('https://fixture.test/sync',{method:'POST',headers:{Authorization:'Bearer header.payload.signature','Content-Type':'application/json'},body:JSON.stringify({protocolVersion:2,action:'register',platform:'iOS',label:'fixture'})}));
+  const result=await response.json();assert.equal(response.status,503);assert.equal(result.error,'account_auth_temporarily_unavailable');assert(!JSON.stringify(result).includes('fixture-sensitive'));assert.equal(calls,1);
+ }
+});
+test('iPhone session replacement failure preserves the existing Keychain credential',()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),start=source.indexOf('private func savePrivateAccountSession(');assert(start>=0);const open=source.indexOf('{',start);let level=1,end=open+1;while(level&&end<source.length){if(source[end]==='{')level++;if(source[end]==='}')level--;end++;}
+ const method=source.slice(start,end).replace('private func','func');
+ const swift="import Foundation\ntypealias CFDictionary=NSDictionary\ntypealias OSStatus=Int32\nlet kSecClass=\"class\",kSecAttrService=\"service\",kSecAttrAccount=\"account\",kSecValueData=\"data\",kSecAttrAccessible=\"accessible\"\nlet kSecClassGenericPassword=\"generic\",kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly=\"after-unlock\"\nlet errSecSuccess:OSStatus=0,errSecItemNotFound:OSStatus = -25300\nvar stored:Data?=Data(\"previous-credential\".utf8),updateStatus:OSStatus = -50,addStatus:OSStatus = -50,deletions=0\nfunc SecItemUpdate(_ query:CFDictionary,_ attributes:CFDictionary)->OSStatus{if updateStatus==0{stored=attributes[kSecValueData] as? Data};return updateStatus}\nfunc SecItemAdd(_ item:CFDictionary,_ result:Any?)->OSStatus{if addStatus==0{stored=item[kSecValueData] as? Data};return addStatus}\nfunc SecItemDelete(_ query:CFDictionary)->OSStatus{deletions+=1;stored=nil;return 0}\nstruct PrivateAccountSession:Codable{let value:String}\nfinal class Probe{\n static let privateAccountKeychainService=\"fixture-service\"\n"+method+"\n}\nlet bridge=Probe(),previous=stored\ndo{try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"new\"));assertionFailure(\"write must fail\")}catch{}\nprecondition(stored==previous,\"failed replacement must retain the previous credential\")\nprecondition(deletions==0,\"renewal never deletes a credential\")\nupdateStatus=0;try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"updated\"));precondition(stored != previous)\nstored=nil;updateStatus=errSecItemNotFound;addStatus=0;try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"new-install\"));precondition(stored != nil)\nprint(\"atomic-credential-preserved\")\n";
+ const output=cp.execFileSync('swift',['-'],{input:swift,encoding:'utf8',maxBuffer:2*1024*1024});assert(output.includes('atomic-credential-preserved'));
 });
