@@ -120,7 +120,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.583 (583)"
+    private static let build = "1.0.584 (584)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -4169,7 +4169,7 @@ enum PrivateDeviceSyncHTTP {
 
     static func request(_ payload: [String: Any], platform: String, bearer: String, kind: Kind = .sync) async throws -> [String: Any] {
         let allowed = kind == .sync
-            ? ["register", "seed", "push", "pull", "inspect", "conflict", "resolve", "revoke", "primary", "media.put", "media.get", "turn.acquire", "turn.renew", "turn.finish"]
+            ? ["register", "seed", "push", "pull", "inspect", "check", "conflict", "resolve", "revoke", "primary", "media.put", "media.get", "turn.acquire", "turn.renew", "turn.finish"]
             : ["list", "put", "remove", "rpc"]
         guard let action = payload["action"] as? String, allowed.contains(action),
               !bearer.isEmpty, JSONSerialization.isValidJSONObject(payload) else {

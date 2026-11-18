@@ -142,6 +142,14 @@ export function createSyncHandler({store, authenticate, verifyPassword, masterKe
         ensure(uuid.test(body.targetId || ''), 'invalid_device');
         return respond(await store.rpc('private_phone_sync_revoke',{...scope,p_target:body.targetId}));
       }
+      // PRIVATE_SYNC_QUIET_CHECK_V1: watermark only, no record decryption,
+      // media transfer or conflict enumeration during a quiet foreground check.
+      if (body.action === 'check') {
+        const after=cursor(body.cursor);
+        ensure(typeof store.changed==='function','sync_service_unavailable',503);
+        const authority=await store.rpc('private_phone_sync_authority',scope);
+        return respond({ok:true,changed:await store.changed(owner,after),...authority});
+      }
       if (body.action === 'inspect') {
         const info=await store.rpc('private_phone_sync_inspect',scope);
         return respond({ok:true,...info,conflicts:(info.conflicts||[]).filter(row=>/^(state|blob)\/sync2\//.test(row.key)).map(row=>({...row,key:logicalKey(row.key)})),
@@ -293,6 +301,12 @@ export function createSupabaseSync({url, serviceKey, masterKey, fetchAPI = globa
     }
     const store = {
       rpc:(name,args)=>json('/rest/v1/rpc/'+name,{method:'POST',body:args}),
+      async changed(owner,after){
+        const query=new URLSearchParams({select:'seq',user_id:'eq.'+owner,seq:'gt.'+after,
+          or:'(record_key.like.state/sync2/*,record_key.like.blob/sync2/*)',limit:'1'});
+        const rows=await json('/rest/v1/private_phone_sync_records?'+query.toString());
+        ensure(Array.isArray(rows),'sync_service_unavailable',503);return rows.length>0;
+      },
       async key(owner,candidate) {
         const path = '/rest/v1/private_phone_sync_keys?select=wrapped_key,key_version&user_id=eq.'+owner+'&limit=1';
         const existing = await json(path);

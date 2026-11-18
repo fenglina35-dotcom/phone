@@ -960,3 +960,54 @@ test('iPhone session replacement failure preserves the existing Keychain credent
  const swift="import Foundation\ntypealias CFDictionary=NSDictionary\ntypealias OSStatus=Int32\nlet kSecClass=\"class\",kSecAttrService=\"service\",kSecAttrAccount=\"account\",kSecValueData=\"data\",kSecAttrAccessible=\"accessible\"\nlet kSecClassGenericPassword=\"generic\",kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly=\"after-unlock\"\nlet errSecSuccess:OSStatus=0,errSecItemNotFound:OSStatus = -25300\nvar stored:Data?=Data(\"previous-credential\".utf8),updateStatus:OSStatus = -50,addStatus:OSStatus = -50,deletions=0\nfunc SecItemUpdate(_ query:CFDictionary,_ attributes:CFDictionary)->OSStatus{if updateStatus==0{stored=attributes[kSecValueData] as? Data};return updateStatus}\nfunc SecItemAdd(_ item:CFDictionary,_ result:Any?)->OSStatus{if addStatus==0{stored=item[kSecValueData] as? Data};return addStatus}\nfunc SecItemDelete(_ query:CFDictionary)->OSStatus{deletions+=1;stored=nil;return 0}\nstruct PrivateAccountSession:Codable{let value:String}\nfinal class Probe{\n static let privateAccountKeychainService=\"fixture-service\"\n"+method+"\n}\nlet bridge=Probe(),previous=stored\ndo{try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"new\"));assertionFailure(\"write must fail\")}catch{}\nprecondition(stored==previous,\"failed replacement must retain the previous credential\")\nprecondition(deletions==0,\"renewal never deletes a credential\")\nupdateStatus=0;try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"updated\"));precondition(stored != previous)\nstored=nil;updateStatus=errSecItemNotFound;addStatus=0;try bridge.savePrivateAccountSession(PrivateAccountSession(value:\"new-install\"));precondition(stored != nil)\nprint(\"atomic-credential-preserved\")\n";
  const output=cp.execFileSync('swift',['-'],{input:swift,encoding:'utf8',maxBuffer:2*1024*1024});assert(output.includes('atomic-credential-preserved'));
 });
+
+
+test('same-account retry retains local use and quiet operation only checks a small watermark',async()=>{
+ let now=1000000,nextTimer=0,visible=true,hold=false,release,started;
+ const timers=new Map(),copy=x=>JSON.parse(JSON.stringify(x)),disk=new Map(),calls=[];
+ class ClockDate extends Date{static now(){return now;}}
+ const env=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,Date:ClockDate,setTimeout:(fn,ms)=>{const id=++nextTimer;timers.set(id,{fn,ms,at:now+ms});return id;},clearTimeout:id=>timers.delete(id)});
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js'),env);
+ vm.runInContext(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js'),env);
+ const owner='10000000-0000-0000-0000-000000000001',deviceId='20000000-0000-0000-0000-000000000001',seed={phase:'ready',sourceDeviceId:deviceId};let resets=0,cancellations=0;
+ const state={_deviceSyncOwner:owner,settings:{hist:32},me:{},contacts:[{id:'a'}],messages:{a:[{id:'old',content:'retained'}]}};
+ const host={core:env.NorthPrivateDeviceSyncCore,platform:'iOS',label:'fixture',snapshot:async()=>copy(state),getState:()=>state,boundOwner:()=>owner,stateOwner:()=>owner,nativeOwner:()=>owner,legacyOwner:()=>owner,hasPersistedSource:()=>true,bindOwner:async()=>{},meaningful:()=>true,emptyState:()=>({}),replaceState:async()=>assert.fail('no remote data'),isVisible:()=>visible,isBusy:()=>false,applying:()=>false,onAccount:()=>{},status:()=>{},reveal:()=>{},cancelReplies:()=>{cancellations++;},accountReset:()=>{resets++;},read:async k=>disk.has(k)?copy(disk.get(k)):null,write:async(k,v)=>disk.set(k,copy(v)),
+ native:async(action,body)=>{
+  if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};calls.push(copy(body));
+  if(body.action==='register')return {ok:true,device:{id:deviceId}};
+  if(body.action==='inspect'){if(hold){started();await new Promise(resolve=>{release=resolve;});}return {ok:true,seed,isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1',conflicts:[]};}
+  if(body.action==='check')return {ok:true,changed:false,isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1'};
+  if(body.action==='push')return {ok:true,outcomes:body.changes.map(x=>({key:x.key,mutationId:x.mutationId,status:'applied',revision:'1'}))};
+  if(body.action==='pull')return {ok:true,seed,records:[],cursor:'0',more:false};assert.fail('unexpected '+body.action);
+ }};
+ const client=env.NorthPrivateDeviceSyncRuntime.createClient(host);
+ async function runNext(){const [id,timer]=[...timers].sort((a,b)=>a[1].at-b[1].at)[0]||[];assert(timer,'a bounded timer is scheduled');timers.delete(id);now=timer.at;timer.fn();for(let n=0;n<10000&&client.status().syncing;n++)await new Promise(resolve=>setImmediate(resolve));assert.equal(client.status().syncing,false);return timer.ms;}
+ try{
+  await client.syncNow();const ctx=client.context(),beforeCancel=cancellations;
+  hold=true;const entered=new Promise(resolve=>{started=resolve;}),running=client.syncNow();await entered;client.retry();assert.equal(client.context(),ctx);assert.equal(client.gateAllowed(),true);await client.waitForIdle(true);release();hold=false;await running;await runNext();assert.equal(cancellations,beforeCancel);assert.equal(resets,0);
+  client.retry();state._persistedAt=now;client.markDirty();assert.equal(await runNext(),0,'an explicit reconnect keeps priority over automatic save notifications');
+  const baseline=calls.length;
+  for(let n=0;n<20;n++){state._persistedAt=now;client.markDirty();assert.equal(await runNext(),1500);}
+  assert.equal(calls.length,baseline,'a save timestamp or unchanged local view sends no cloud request');
+  for(let n=0;n<6;n++)assert.equal(await runNext(),300000);
+  assert.equal(calls.length-baseline,6,'half an hour of quiet foreground uses six small checks');assert(calls.slice(baseline).every(x=>x.action==='check'));
+  state.roleBody={tick:0};client.markDirty();await runNext();const firstRoutineAt=now,routineBaseline=calls.length;
+  state.roleBody.tick=1;client.markDirty();await runNext();assert.equal(calls.length,routineBaseline);
+  for(let n=2;n<=20;n++){now+=1000;state.roleBody.tick=n;client.markDirty();}
+  assert.equal(calls.length,routineBaseline,'automatic timer changes are coalesced without extra cloud requests');
+  assert.equal([...timers.values()][0].at,firstRoutineAt+60000);await runNext();assert(calls.slice(routineBaseline).some(x=>x.action==='push'&&x.changes.some(row=>row.value?.path?.[0]==='roleBody'&&row.value.value.tick===20)),'the latest combined state is uploaded, with no lost local change');
+  visible=false;client.suspend();state.messages.a.push({id:'new-local',content:'saved while another device is closed'});client.markDirty();assert.equal(timers.size,0,'hidden devices have no synchronization polling timer');const beforeOpen=calls.length;
+  visible=true;await client.syncNow();assert(calls.slice(beforeOpen).some(x=>x.action==='push'&&x.changes.some(row=>row.value?.kind==='message'&&row.value.id==='new-local')),'reopening immediately uploads the durable local change');assert.equal(client.context(),ctx);assert.equal(JSON.stringify(state.messages.a[0]),JSON.stringify({id:'old',content:'retained'}));
+ }finally{release?.();client.stop();}
+});
+
+test('quiet server check returns no chat, media or key material and enforces the device account',async()=>{
+ const owner='10000000-0000-0000-0000-000000000001',session='20000000-0000-0000-0000-000000000001',deviceId='30000000-0000-0000-0000-000000000001';const calls=[];let changed=false;
+ const handler=createSyncHandler({authenticate:async()=>({userID:owner,sessionID:session}),masterKey:'a'.repeat(43),cryptoAPI:webcrypto,store:{async rpc(name,args){calls.push(name);assert.equal(args.p_user,owner);assert.equal(args.p_session,session);assert.equal(args.p_device,deviceId);if(name==='private_phone_sync_assert_device')return {};if(name==='private_phone_sync_authority')return {isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1'};assert.fail('quiet check must not enumerate records or conflicts: '+name);},async changed(user,after){assert.equal(user,owner);assert.equal(after,'42');return changed;},async key(){assert.fail('no encryption key access');},async getBlob(){assert.fail('no media download');}}});
+ for(const expected of [false,true]){changed=expected;const response=await handler(new Request('https://fixture.invalid/sync',{method:'POST',headers:{Authorization:'Bearer fixture','Content-Type':'application/json'},body:JSON.stringify({protocolVersion:2,action:'check',deviceId,cursor:'42'})}));const result=await response.json();assert.equal(response.status,200);assert.equal(result.changed,expected);assert.deepEqual(Object.keys(result).sort(),['changed','isPrimary','ok','primaryDeviceId','primaryRevision']);}
+ assert.deepEqual(calls,['private_phone_sync_assert_device','private_phone_sync_authority','private_phone_sync_assert_device','private_phone_sync_authority']);
+ const requests=[],claims={sub:owner,session_id:session,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600},token='header.'+Buffer.from(JSON.stringify(claims)).toString('base64url')+'.signature';
+ const rest=createSupabaseSync({url:'https://fixture.supabase.co',serviceKey:'fixture-service-key',masterKey:'a'.repeat(43),fetchAPI:async url=>{const parsed=new URL(url);requests.push(parsed.pathname);if(parsed.pathname==='/auth/v1/user')return Response.json({id:owner});if(parsed.pathname==='/rest/v1/rpc/private_phone_sync_assert_device')return Response.json(true);if(parsed.pathname==='/rest/v1/rpc/private_phone_sync_authority')return Response.json({isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1'});assert.equal(parsed.pathname,'/rest/v1/private_phone_sync_records');assert.equal(parsed.searchParams.get('select'),'seq');assert.equal(parsed.searchParams.get('user_id'),'eq.'+owner);assert.equal(parsed.searchParams.get('seq'),'gt.42');assert.equal(parsed.searchParams.get('limit'),'1');assert.equal(parsed.searchParams.get('or'),'(record_key.like.state/sync2/*,record_key.like.blob/sync2/*)');return Response.json([]);}});
+ const response=await rest(new Request('https://fixture.invalid/sync',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({protocolVersion:2,action:'check',deviceId,cursor:'42'})}));assert.equal(response.status,200);assert.equal((await response.json()).changed,false);assert.equal(requests.length,4);
+
+});

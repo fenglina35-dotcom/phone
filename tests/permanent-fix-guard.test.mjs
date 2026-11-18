@@ -47,8 +47,10 @@ test('private account sync retains automatic content hydration, scoped native st
  assert(read('supabase/migrations/202611170001_private_phone_device_sync.sql').includes('retired_sessions'));
  for(const marker of ['PRIVATE_ACCOUNT_BOOT_IDENTITY_V2','PRIVATE_CORE_SOURCE_GUARD_V1','PRIVATE_CORE_LINEAGE_V1'])assert(read(PRIVATE).includes(marker),marker);
  assert(core.includes('PRIVATE_SYNC_LOCAL_DELETION_V2'));
+ assert(core.includes('PRIVATE_SYNC_LOCAL_COLLECTION_V1'));
+ assert(read('supabase/functions/phone-device-sync/core.mjs').includes('PRIVATE_SYNC_QUIET_CHECK_V1'));
  assert(client.includes('PRIVATE_DEVICE_REVOKED_GATE_V1')&&client.includes('privatePhoneSyncDevicesOpen'));
- for(const marker of ['PRIVATE_ACCOUNT_CRITICAL_MEDIA_V1','PRIVATE_MEDIA_READ_LANE_V1','PRIVATE_AUTH_SESSION_RETENTION_V1','PRIVATE_ACCOUNT_STATUS_SETTINGS_ONLY_V1','PRIVATE_ACCOUNT_DIALOG_THEME_V1','PRIVATE_TRUSTED_LOCAL_RESUME_V1','PRIVATE_MANUAL_OFFLINE_REPLY_V1'])assert(client.includes(marker),marker);
+ for(const marker of ['PRIVATE_ACCOUNT_CRITICAL_MEDIA_V1','PRIVATE_MEDIA_READ_LANE_V1','PRIVATE_AUTH_SESSION_RETENTION_V1','PRIVATE_ACCOUNT_STATUS_SETTINGS_ONLY_V1','PRIVATE_SYNC_CHANGE_DRIVEN_V1','PRIVATE_SYNC_REFRESH_RETAIN_CONTEXT_V1','PRIVATE_BACKUP_DETAILS_EXPANSION_V1','PRIVATE_ACCOUNT_DIALOG_THEME_V1','PRIVATE_TRUSTED_LOCAL_RESUME_V1','PRIVATE_MANUAL_OFFLINE_REPLY_V1'])assert(client.includes(marker),marker);
  assert(read('desk-pet.js').includes('PRIVATE_SECONDARY_AUTOMATIC_STATE_V1'));
  assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/desk-pet.js').includes('PRIVATE_SECONDARY_AUTOMATIC_STATE_V1'));
  assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js').includes('PRIVATE_SYNC_SEED_CHECKPOINT_V1'));

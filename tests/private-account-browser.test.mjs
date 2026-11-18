@@ -27,7 +27,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   spareA:{userID:ownerA,sessionID:'20000000-0000-0000-0000-000000000005'}
  };
  const nativeCalls=[],modelCalls=[],toolCalls=[],errors=[],sources=[],objects=new Map();let authOutage=false,modelMode='ordinary',fixtureConnectionId='',browser,holdResolve=false,resolveSignal,resolveRelease;
- const store={async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return(await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
+ const store={async changed(owner,after){return (await db.query("select seq from private_phone_sync_records where user_id=$1 and seq>$2 and (record_key like 'state/sync2/%' or record_key like 'blob/sync2/%') limit 1",[owner,after])).rows.length>0;},async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return(await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
   async rpc(name,args){return(await db.query('select public.'+name+'('+Object.keys(args).map((k,i)=>k+'=>$'+(i+1)).join(',')+') value',Object.values(args).map(x=>Array.isArray(x)?JSON.stringify(x):x))).rows[0].value;},async putBlob(key,value){objects.set(key,value);},async getBlob(key){return objects.get(key);}};
  const backend=createSyncHandler({store,authenticate:async token=>identity[token],verifyPassword:async(_,password)=>password==='fixture-correct-password',masterKey:'b'.repeat(43),cryptoAPI:webcrypto});
  async function transport(token,body){return(await backend(new Request('https://fixture.invalid/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({protocolVersion:2,...body})}))).json();}
@@ -66,7 +66,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
    state.contacts=[role];state.messages={[role.id]:[{id:'history-'+role.id,role:'assistant',type:'text',content:name+'的云端历史消息',time:Date.now()-60000}]};state.me.name='测试本人';state.me.locked=false;state.me.active='main';state.settings.chat={base:'https://model-fixture.invalid/v1',key:'fixture-only',model:'fixture',maxTokens:4096,temp:.7};state.settings.chatRoutes=[];state.settings.replyDelay=0;state.settings.sound=false;state.settings.manualReply=true;state.settings.timeAware=false;state.settings.memoryFreq=0;return state;}
   async function seed(token,state){let saved=null;const codec=core.createStateCodec(),owner=identity[token].userID;
    codec.setLocalProjection(await codec.project(state));
-   const journal=core.createJournal({owner,platform:'iOS',label:'受控源手机',getOwner:()=>owner,canPublish:()=>true,transport:body=>transport(token,body),storage:{read:async()=>saved,write:async(_,value)=>{saved=value;}},snapshot:()=>codec.project(state),apply:async rows=>{codec.accept(rows);const next=await codec.materialize();if(next.complete){for(const key of Object.keys(state))delete state[key];Object.assign(state,next.state);}}});
+   const journal=core.createJournal({owner,platform:'iOS',label:'受控源手机',getOwner:()=>owner,canPublish:()=>true,transport:body=>transport(token,body),storage:{read:async()=>saved,write:async(_,value)=>{saved=value;}},snapshot:async()=>{const projected=await codec.project(state);codec.setLocalProjection(projected);return projected;},apply:async rows=>{codec.accept(rows);const next=await codec.materialize();if(next.complete){for(const key of Object.keys(state))delete state[key];Object.assign(state,next.state);}}});
    sources.push(journal);await journal.inspect();await journal.seed(false);while(await journal.flush(4)){}await journal.seed(true);return {journal,state,codec};
   }
   const source=await seed('sourceA',fixture(ownerA,'云端角色甲'));await seed('sourceB',fixture(ownerB,'云端角色乙'));
@@ -112,7 +112,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   const lateBytes=new TextEncoder().encode(initialImage),lateHash=Buffer.from(await webcrypto.subtle.digest('SHA-256',lateBytes)).toString('hex');
   await source.codec.addMediaManifest({localKey:'fixture-late-home',type:'string',bytes:lateBytes.length,hash:lateHash,parts:[lateHash]});await source.journal.flush();
   await page.evaluate(async()=>{await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
-  await page.waitForFunction(()=>!!_imgCache['fixture-late-home']&&document.getElementById('homeDesktop')?.style.backgroundImage.includes('data:image/'),null,{timeout:8000});
+  try{await page.waitForFunction(()=>!!_imgCache['fixture-late-home']&&document.getElementById('homeDesktop')?.style.backgroundImage.includes('data:image/'),null,{timeout:8000});}catch(error){console.log('late media diagnostic',JSON.stringify({errors,sourceHome:source.state.me.homeBg,sourceLock:source.state.me.lockBg,client:await page.evaluate(()=>({status:NorthPrivateDeviceSyncClient.status(),home:S.me.homeBg,manifest:!!NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-late-home'),cache:!!_imgCache['fixture-late-home']}))}));throw error;}
 
 
   await page.evaluate(()=>{S.me.locked=false;renderLockScreen();});
@@ -125,6 +125,13 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.evaluate(async()=>{await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
   await page.locator('#chatbg').getByText('另一设备新增的消息',{exact:true}).waitFor();
   assert(await page.evaluate(()=>fixtureComposer===document.querySelector('#cinput')&&document.activeElement===fixtureComposer&&fixtureComposer.value==='尚未发送的草稿'),'remote arrival preserves draft, node and focus');
+  await page.evaluate(()=>openSettings('data'));
+  await page.getByText('额外备份与恢复',{exact:true}).click();
+  await page.evaluate(()=>{window.fixtureRefreshContext=NorthPrivateDeviceSyncClient.context();});
+  await page.evaluate(()=>privatePhoneAccountRefresh(false));
+  assert(await page.evaluate(()=>NorthPrivateDeviceSyncClient.context()===fixtureRefreshContext),'refreshing the same account never destroys the active synchronization or reply context');
+  assert(await page.locator('details').filter({has:page.locator('#privateAccountRecovery')}).evaluate(node=>node.open),'refresh keeps extra backup and recovery expanded');
+  await page.evaluate(()=>privatePhoneAccountRefresh(false));assert(await page.locator('details').filter({has:page.locator('#privateAccountRecovery')}).evaluate(node=>node.open));
   await page.evaluate(()=>go('settings'));await page.waitForTimeout(1200);await page.evaluate(()=>NorthPrivateDeviceSyncClient.syncNow());
   assert.equal(modelCalls.length,0,'secondary idle and settings produce zero automatic model calls');
   await page.evaluate(()=>openChat('cloud-a'));await page.locator('#cinput').fill('请给我一句回复');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));

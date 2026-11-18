@@ -5,20 +5,22 @@
  const copy=x=>JSON.parse(JSON.stringify(x));
  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  function createClient(host){
-  const core=host.core;let context=null,owner='',epoch=0,busy=false,wakeTimer=0,stopped=false,error='',phase='authentication',loginError='';
+  const core=host.core;let context=null,owner='',epoch=0,busy=false,wakeTimer=0,stopped=false,error='',phase='authentication',loginError='',queuedReason='',scheduledReason='',retryCount=0,retryAt=0,lastLocalNetworkAt=0,localDeferredUntil=0;
   const permits=new Map();let account=host.account||{loggedIn:false,userId:''};
   const current=ctx=>!stopped&&context===ctx&&ctx.epoch===epoch&&owner===ctx.owner;
-  function check(ctx){if(!current(ctx))throw new Error('账号已变化，本轮同步已停止');}
+  function check(ctx){if(!current(ctx)){const failure=new Error('账号已变化，本轮同步已停止');failure.deviceSyncCancelled=true;throw failure;}}
+  function busyError(){const failure=new Error('等待本机当前回复保存后继续同步');failure.deviceSyncBusy=true;return failure;}
   function stateKey(user,kind){return '__device_sync_v2_'+user+'_'+kind;}
   async function read(ctx,kind){check(ctx);const value=await host.read(stateKey(ctx.owner,kind));check(ctx);return value;}
   async function write(ctx,kind,value){check(ctx);await host.write(stateKey(ctx.owner,kind),value);check(ctx);}
   function announce(next,detail){phase=next;error=detail||'';host.status?.({phase,error,owner,ready:!!context?.ready,conflicts:context?.conflicts||0});}
   async function native(ctx,body){check(ctx);const value=await host.native('account.sync',body);check(ctx);if(value?.ok!==true){const failure=new Error(value?.message||value?.error||'账号同步暂时不可用');failure.code=value?.error||value?.code;throw failure;}if(body.action==='pull'){ctx.observedSeed=value.seed;ctx.pullMore=value.more===true;}return value;}
-  function schedule(ms){if(stopped)return;clearTimeout(wakeTimer);wakeTimer=setTimeout(()=>{wakeTimer=0;tick().catch(()=>{});},Math.max(0,ms));}
+  function schedule(ms,reason='continue'){if(stopped||reason==='local'&&wakeTimer&&scheduledReason==='manual')return;clearTimeout(wakeTimer);scheduledReason=reason;wakeTimer=setTimeout(()=>{wakeTimer=0;scheduledReason='';tick(reason).catch(()=>{});},Math.max(0,ms));}
   function invalidate(){permits.clear();context?.journal?.close();context=null;epoch++;host.cancelReplies?.();}
   async function saveCodec(ctx,pendingView){await write(ctx,'codec',{version:1,records:ctx.codec.dump(),pendingView:!!pendingView});}
   async function visible(ctx,retainLocal){
    check(ctx);if(!ctx.authorized||!ctx.viewPending||host.isBusy())return false;
+   ctx.applyingRemote=true;try{
    const unpacked=await ctx.codec.materialize();check(ctx);if(!unpacked.complete)return false;
    if(ctx.observedSeed?.phase!=='ready'&&ctx.seed?.phase!=='ready')return false;
    if(ctx.pullMore)return false;
@@ -32,6 +34,7 @@
     }
     if(delta.length){if(retainLocal)await retainLocal(delta);else if(ctx.seeding&&ctx.journal?.queue)await ctx.journal.queue(delta);else throw new Error('本机内容正在变化，请稍后同步');ctx.codec.accept(delta);await saveCodec(ctx,true);const merged=await ctx.codec.materialize();if(!merged.complete)throw new Error('本机新内容尚未完成整理');incoming=merged.state;ctx.dirtySeq++;}
    }
+   if(host.isBusy())throw busyError();
    const preserved=ctx.codec.preserveDeviceState(incoming,host.getState());
    await host.replaceState(preserved,()=>check(ctx));check(ctx);
    ctx.visibleRecords=await ctx.codec.project(await host.snapshot());check(ctx);
@@ -39,6 +42,7 @@
    ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.canPublish=true;
    host.reveal?.(ctx.owner,Math.max(1,ctx.codec.dump().filter(x=>x.key.startsWith('state/')).length));
    return true;
+   }finally{ctx.applyingRemote=false;}
   }
   async function capture(ctx){
    check(ctx);if(ctx.dirtySeq===ctx.capturedSeq)return null;
@@ -118,17 +122,36 @@
    check(ctx);ctx.conflicts=new Set([...ctx.conflictItems.map(x=>x.id),...Object.values(ctx.journal.state()?.pending||{}).map(x=>x.blocked).filter(Boolean)]).size;
    announce(ctx.ready?'ready':'waiting');
   }
-  async function tick(){
-   if(stopped||busy)return;busy=true;
+  // PRIVATE_SYNC_CHANGE_DRIVEN_V1: upload real local deltas; open/resume pulls
+  // immediately. Quiet foreground uses one small watermark/authority check per
+  // five minutes, without transferring records or running full reconciliation.
+  async function tick(reason='manual'){
+   if(stopped)return;if(busy){if(reason==='manual'||!queuedReason)queuedReason=reason;return;}busy=true;let failed=false,waiting=false,waitingReason='continue';
    try{
-    if(!host.isVisible()){schedule(60000);return;}
+    if(!host.isVisible())return;
     const status=await host.native('account.status',{});if(stopped)return;
     if(status?.ok===false){const failure=new Error(status.message||status.error||'暂时无法读取本机账号，原登录仍保留');failure.code=status.error||status.code;throw failure;}
     account=status||{loggedIn:false};await host.onAccount?.(account);
     if(!account.loggedIn||!UUID.test(String(account.userId||''))){if(owner){invalidate();owner='';}announce('authentication');return;}
     let ctx=context;if(!ctx||owner!==String(account.userId))ctx=await build(account);
-    await sync(ctx);
+    if(reason==='local'&&ctx.ready&&ctx.journal.deviceId()){
+     if(host.isBusy()){waiting=true;waitingReason='local';return;}
+     const local=await ctx.journal.collectLocal();check(ctx);
+     if(!local.needsConnect&&!local.pending){if(phase!=='network')announce('ready');return;}
+     if(retryAt>Date.now())return;
+     if(!local.urgent&&!host.recentInteraction?.()&&lastLocalNetworkAt&&Date.now()-lastLocalNetworkAt<60000){localDeferredUntil=lastLocalNetworkAt+60000;schedule(localDeferredUntil-Date.now(),'local');return;}
+     localDeferredUntil=0;
+    }
+    if(reason==='check'&&ctx.ready&&ctx.authorized){
+     const info=await ctx.journal.check();check(ctx);
+     ctx.authority={isPrimary:info.isPrimary===true,primaryDeviceId:info.primaryDeviceId||null,primaryRevision:String(info.primaryRevision||'0')};
+     if(info.changed!==true){retryCount=0;retryAt=0;announce('ready');return;}
+    }
+    await sync(ctx);if(reason==='local')lastLocalNetworkAt=Date.now();retryCount=0;retryAt=0;
    }catch(e){
+    if(stopped||e?.deviceSyncCancelled)return;
+    if(e?.deviceSyncBusy){waiting=true;return;}
+    failed=true;retryCount++;retryAt=Date.now()+[30000,120000,300000,900000][Math.min(retryCount-1,3)];
     const message=String(e?.message||'连接暂时中断');
     if((e?.code||message)==='device_revoked'){
      // PRIVATE_DEVICE_REVOKED_GATE_V1: stop all consumers before touching login UI.
@@ -155,19 +178,31 @@
      if(!stopped)announce('network',(e?.code||message)==='authentication_required'?'暂时无法验证账号，登录和本机内容已保留，请重试连接':message);
     }
    }
-   finally{busy=false;if(!wakeTimer&&!stopped)schedule(host.isVisible()?20000:60000);}
+   finally{
+    busy=false;
+    if(!stopped&&host.isVisible()){
+     if(queuedReason){const next=queuedReason;queuedReason='';schedule(0,next);}
+     else if(waiting)schedule(1500,waitingReason);
+     else if(!wakeTimer){
+      if(failed||retryAt>Date.now()){if(retryCount<=4)schedule(Math.max(0,retryAt-Date.now()),'retry');}
+      else if(context?.ready)schedule(300000,'check');
+     }
+    }
+   }
   }
   function manualKey(id,aid){return String(aid||'main')+'|'+String(id);}
   const api={
    start:()=>{stopped=false;schedule(0);},
-   retry(){if(context){context.journal?.close();context=null;epoch++;}host.accountReset?.();error='';schedule(0);},
-   syncNow:()=>tick(),
-   async waitForIdle(){const activeOwner=owner;while(busy&&!stopped&&owner===activeOwner&&!(context?.localTrusted&&(phase==='network'||!context.authorized)))await wait(20);if(stopped||owner!==activeOwner)throw new Error('账号已变化');},
+   // PRIVATE_SYNC_REFRESH_RETAIN_CONTEXT_V1: refresh/retry are not account switches.
+   retry(){retryCount=0;retryAt=0;localDeferredUntil=0;announce(context?.ready?'pulling':'waiting');if(busy){queuedReason='manual';return;}schedule(0,'manual');},
+   syncNow:()=>{retryCount=0;retryAt=0;localDeferredUntil=0;clearTimeout(wakeTimer);wakeTimer=0;scheduledReason='';return tick('manual');},
+   suspend(){clearTimeout(wakeTimer);wakeTimer=0;scheduledReason='';queuedReason='';},
+   async waitForIdle(localUse=false){const activeOwner=owner;while(busy&&!stopped&&owner===activeOwner&&!(context?.localTrusted&&context.ready&&!context.applyingRemote&&!host.applying()&&(localUse||phase==='network'||!context.authorized)))await wait(20);if(stopped||owner!==activeOwner)throw new Error('账号已变化');},
    async prepareAccountSwitch(){if(!context||!owner)return;const ctx=context,state=await host.snapshot();check(ctx);await write(ctx,'local',{version:1,owner:ctx.owner,state});if(host.persistCurrent&&!await host.persistCurrent())throw new Error('当前账号内容尚未保存');},
-   accountChanged(){invalidate();schedule(0);},
+   accountChanged(nextOwner,refreshSession=false){if(typeof nextOwner==='string'&&nextOwner===owner&&context){if(refreshSession)context.needsRegister=true;api.retry();return;}invalidate();schedule(0,'manual');},
    stop(){stopped=true;clearTimeout(wakeTimer);invalidate();owner='';},
-   markDirty(){if(host.applying())return;if(context){context.dirtySeq++;schedule(1000);}},
-   status:()=>({owner,phase,error,ready:!!context?.ready,secondary:context?.authority?context.authority.isPrimary!==true:null,conflicts:context?.conflicts||0}),
+   markDirty(){if(host.applying())return;if(context){context.dirtySeq++;if(host.isVisible())schedule(host.recentInteraction?.()?1500:Math.max(1500,localDeferredUntil-Date.now()),'local');}},
+   status:()=>({owner,phase,error,ready:!!context?.ready,secondary:context?.authority?context.authority.isPrimary!==true:null,conflicts:context?.conflicts||0,syncing:busy}),
    gateAllowed:()=>!!(owner&&context?.ready&&host.boundOwner()===owner),
    legacySourceOwned:user=>!!(context?.legacySource&&owner===user&&host.boundOwner()===user&&host.legacyOwner?.()===user&&host.nativeOwner?.()===user),
    automaticStateAllowed:()=>!!(context?.ready&&context.authorized&&context.seed?.phase==='ready'&&context.authority?.isPrimary),
@@ -194,7 +229,7 @@
  }
  root.NorthPrivateDeviceSyncRuntime=Object.freeze({createClient});
  if(root.__SMALL_PHONE_PRIVATE__!==true||root.__SMALL_PHONE_ACCOUNT_SYNC__!==true||!root.SmallPhoneNative||!root.NorthPrivateDeviceSyncCore)return;
- const platform=root.__SMALL_PHONE_MAC__===true?'macOS':'iOS';let applying=false,client,overlay=null,activeModels=0,waitingReplies=0,finishingReplies=0;
+ const platform=root.__SMALL_PHONE_MAC__===true?'macOS':'iOS';let applying=false,client,overlay=null,activeModels=0,waitingReplies=0,finishingReplies=0,accountRecoveryExpanded=false;
  const BOUND='north-private-device-owner-v1';
  const labels={authentication:'登录小手机账号',waiting:'正在等待账号数据',saving:'正在同步本机已有数据',pulling:'正在读取账号内容',ready:'账号同步已连接',network:'同步暂时中断'};
  async function native(action,body){return root.SmallPhoneNative.request(action,body||{});}
@@ -263,8 +298,9 @@
  }
  function cancelReplies(){closeConflictPanel();closeDevicePanel();try{const aids=(S.me?.accounts||[]).map(x=>x.id);if(!aids.length)aids.push('main');for(const contact of S.contacts||[])for(const aid of aids)if(typeof replyTouch==='function')replyTouch(contact.id,aid);}catch(_){} }
  async function onAccount(status){
+  if(!status||status.ok===false)throw new Error(status?.message||'暂时无法读取本机账号，原登录已保留');
   const previous=typeof _privatePhoneAccount!=='undefined'?String(_privatePhoneAccount.userId||''):'';
-  if(previous&&previous!==String(status.userId||'')){cancelReplies();if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();for(const task of [typeof _coreMirrorWrite==='undefined'?null:_coreMirrorWrite,typeof _messageArchiveWrite==='undefined'?null:_messageArchiveWrite])if(task)await Promise.resolve(task).catch(()=>{});}
+  if(previous&&previous!==String(status.userId||'')){accountRecoveryExpanded=false;cancelReplies();if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();for(const task of [typeof _coreMirrorWrite==='undefined'?null:_coreMirrorWrite,typeof _messageArchiveWrite==='undefined'?null:_messageArchiveWrite])if(task)await Promise.resolve(task).catch(()=>{});}
   if(typeof _privatePhoneAccount!=='undefined')Object.assign(_privatePhoneAccount,{loaded:true,loggedIn:!!status.loggedIn,userId:status.userId||'',maskedPhone:status.maskedPhone||'',error:''});
   if(!status.loggedIn)return;
   if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise)try{await _bootImagesPromise;}catch(error){
@@ -318,7 +354,7 @@
   overlay.dataset.mode=login?'login':'sync';overlay.innerHTML='<div style="width:min(100%,340px);display:grid;gap:16px"><div style="font-size:26px;font-weight:700">'+(login?'登录小手机':'账号云同步')+'</div><p data-sync-note style="margin:0;color:#999;line-height:1.65">'+esc(status.error||(login?loginError:'')||labels[status.phase]||'正在连接账号')+'</p>'+(login?'<input data-phone inputmode="tel" autocomplete="tel" placeholder="手机号" style="padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><div style="display:flex;gap:8px"><input data-password type="password" autocomplete="current-password" placeholder="账号密码" style="min-width:0;flex:1;padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><button data-eye aria-label="显示密码" style="width:48px;border-radius:16px;border:1px solid #38383a;background:#1c1c1e;color:#fff">◉</button></div><button data-login style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">登录并同步</button>':'<button data-retry style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">重新连接</button>')+'<small style="color:#777;line-height:1.7">登录后自动显示此账号的角色、聊天和设置。手机系统权限由本机单独授权。</small></div>';
   overlay.querySelector('[data-eye]')?.addEventListener('click',()=>{const input=overlay.querySelector('[data-password]');input.type=input.type==='password'?'text':'password';});
   overlay.querySelector('[data-retry]')?.addEventListener('click',()=>client.retry());
-  overlay.querySelector('[data-login]')?.addEventListener('click',async()=>{const button=overlay.querySelector('[data-login]'),phone=overlay.querySelector('[data-phone]').value,password=overlay.querySelector('[data-password]').value;button.disabled=true;const note=overlay.querySelector('[data-sync-note]');loginError='';note.textContent='正在连接账号…';try{const result=await native('account.password.signin',{phone,password});if(result?.ok!==true)throw new Error(result?.message||'请核对手机号和密码');overlay.querySelector('[data-password]').value='';loginError='';client.accountChanged();}catch(e){loginError=String(e?.message||'登录没有完成');note.textContent=loginError;}finally{button.disabled=false;}});
+  overlay.querySelector('[data-login]')?.addEventListener('click',async()=>{const button=overlay.querySelector('[data-login]'),phone=overlay.querySelector('[data-phone]').value,password=overlay.querySelector('[data-password]').value;button.disabled=true;const note=overlay.querySelector('[data-sync-note]');loginError='';note.textContent='正在连接账号…';try{const result=await native('account.password.signin',{phone,password});if(result?.ok!==true)throw new Error(result?.message||'请核对手机号和密码');overlay.querySelector('[data-password]').value='';loginError='';client.accountChanged(String(result.userId||''),true);}catch(e){loginError=String(e?.message||'登录没有完成');note.textContent=loginError;}finally{button.disabled=false;}});
  }
  client=createClient({core:root.NorthPrivateDeviceSyncCore,platform,label:platform==='macOS'?'小手机 Mac':'小手机 iPhone',native,
   read:key=>syncStore(key,null,false),write:(key,value)=>syncStore(key,value,true),snapshot,getState:()=>S,replaceState,
@@ -326,16 +362,16 @@
   hasPersistedSource:()=>_privateCoreVerifiedOwner===privateAccountDataIdentity(),
   stateOwner:()=>String(S._deviceSyncOwner||''),boundOwner:()=>String(S._deviceSyncOwner||localStorage.getItem(BOUND)||''),legacyOwner:()=>privateAccountLegacyIdentity(),nativeOwner:()=>String((root.__SMALL_PHONE_NATIVE_ACCOUNT__||root.__SMALL_PHONE_ACCOUNT__||{}).userId||''),
   async bindOwner(user){const previous=S._deviceSyncOwner;applying=true;try{S._deviceSyncOwner=user;if(!await saveNowAsync())throw new Error('账号归属保存未完成');localStorage.setItem(BOUND,user);}catch(e){if(previous===undefined)delete S._deviceSyncOwner;else S._deviceSyncOwner=previous;throw e;}finally{applying=false;}},
-  applying:()=>applying,isBusy,isVisible:()=>!document.hidden,onAccount,status:showStatus,reveal,cancelReplies,persistCurrent:()=>saveNowAsync(),
+  applying:()=>applying,isBusy,isVisible:()=>!document.hidden,recentInteraction:()=>typeof _privatePhoneLastInteractionAt!=='undefined'&&Date.now()-_privatePhoneLastInteractionAt<5000,onAccount,status:showStatus,reveal,cancelReplies,persistCurrent:()=>saveNowAsync(),
   accountReset:()=>{if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();},syncConnections:()=>{if(typeof MCPTools!=='undefined')Promise.resolve(MCPTools.accountSync?.()).catch(()=>{});}});
  root.NorthPrivateDeviceSyncClient=client;root.privatePhoneAutomaticStateAllowed=()=>client.automaticStateAllowed();installMediaHooks();
  const originalMany=root.imgMany;if(typeof originalMany==='function')root.imgMany=async function(keys){const user=client.status().owner,found=await originalMany.apply(this,arguments);if(!client.context()?.ready)return found;for(const key of (keys||[]).filter(key=>found[key]==null&&mediaAllowed(key)).slice(0,4)){if(client.status().owner!==user)break;try{const value=await fetchMedia(key);if(value!=null)found[key]=value;}catch(_){}}return found;};
  const originalChatAPI=root.chatAPI;
- if(typeof originalChatAPI==='function')root.chatAPI=async function(){await client.waitForIdle();activeModels++;try{return await originalChatAPI.apply(this,arguments);}finally{activeModels--;}};
+ if(typeof originalChatAPI==='function')root.chatAPI=async function(){await client.waitForIdle(true);activeModels++;try{return await originalChatAPI.apply(this,arguments);}finally{activeModels--;}};
  const originalReply=root.aiReply;
  if(typeof originalReply==='function')root.aiReply=async function(id,note,token,aid,intent,options){
   aid=aid||actId();waitingReplies++;
-  try{await client.waitForIdle();}finally{waitingReplies--;}
+  try{await client.waitForIdle(true);}finally{waitingReplies--;}
   const ctx=client.context();if(!ctx?.ready)return false;
   const manualToken=client.replyPermit(id,aid,token,!note||!!options?.reopenCompleted);
   if(!client.backgroundAllowed()&&!manualToken)return false;
@@ -448,7 +484,7 @@
  root.privatePhoneAccountSection=function(){if(!privatePhoneAccountAvailable())return '';const a=_privatePhoneAccount,status=client.status();
   const main='<div class="section" id="set_private_account"><div class="it"><span><b style="color:#bfeaff">私人小手机账号</b><small id="privateSyncAccountStatus" style="display:block;color:#8f9eb3;margin-top:5px;line-height:1.6">'+esc(accountStatusText(status))+'</small></span><span class="v">'+esc(a.loggedIn?a.maskedPhone||'已登录':'尚未登录')+'</span></div><div class="hint">同一个手机号登录后，角色、聊天和设置自动同步；系统权限按设备单独授权。</div><button class="btn g" id="privateSyncConflictCount" style="margin:8px 14px;width:calc(100% - 28px);color:#9bcaff;'+(status.conflicts?'':'display:none;')+'" '+(status.conflicts?'':'hidden')+' onclick="privatePhoneSyncConflictsOpen()">查看 '+status.conflicts+' 项不同修改</button><div class="btns" style="padding:10px 14px 14px;gap:10px">'+(a.loggedIn?'<button class="btn p" onclick="NorthPrivateDeviceSyncClient.syncNow()">立即同步</button><button class="btn g" onclick="privatePhoneSyncDevicesOpen()">登录设备</button><button class="btn g" onclick="privatePhoneAccountSignOut()">退出此设备</button>':'<button class="btn p" onclick="privatePhoneAccountBindOpen()">创建或登录账号</button>')+'</div></div>';
   const extra=typeof backupSection==='function'?backupSection.apply(this,arguments).replace(/id="set_private_account"/g,'id="privateAccountRecovery"'):'';
-  return main+(extra?'<details class="section" style="padding:14px"><summary style="cursor:pointer;color:#999">额外备份与恢复</summary><div style="margin-top:14px">'+extra+'</div></details>':'');
+  return main+(extra?'<details id="privateAccountRecoveryDetails" '+(accountRecoveryExpanded?'open ':'')+'class="section" style="padding:14px"><summary style="cursor:pointer;color:#999">额外备份与恢复</summary><div style="margin-top:14px">'+extra+'</div></details>':'');
  };
  root.privatePhoneAccountLoginFeedback=function(message,busy){
   const note=document.getElementById('privatePhoneLoginNote');
@@ -466,11 +502,16 @@
 
  const automaticBackup=root.privatePhoneCloudAutoBackup;if(typeof automaticBackup==='function')root.privatePhoneCloudAutoBackup=function(){if(!client.backgroundAllowed())return Promise.resolve(false);return automaticBackup.apply(this,arguments);};
  // Hooks execute only in this private entry; the public build keeps its original account/backup flow.
- root.privatePhoneAccountAfterLogin=async()=>{client.accountChanged();};
- root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged();}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};
+ root.privatePhoneAccountAfterLogin=async()=>{client.accountChanged(String(_privatePhoneAccount.userId||''),true);};
+ root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged(String(_privatePhoneAccount.userId||''));}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};
  const originalSignOut=root.privatePhoneAccountSignOut;
  if(typeof originalSignOut==='function')root.privatePhoneAccountSignOut=async function(){await client.flush().catch(()=>{});const result=await originalSignOut.apply(this,arguments);client.accountChanged();return result;};
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){client.syncNow();scheduleMedia(100);scheduleAccountImages();}});
+  // PRIVATE_BACKUP_DETAILS_EXPANSION_V1: transient UI state stays outside S.
+ document.addEventListener('toggle',event=>{if(event.target?.id==='privateAccountRecoveryDetails')accountRecoveryExpanded=event.target.open;},true);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)client.suspend();else{client.syncNow();scheduleMedia(100);scheduleAccountImages();}});
+ root.addEventListener('focus',()=>{if(!document.hidden)client.syncNow();});
+ root.addEventListener('online',()=>{if(!document.hidden)client.syncNow();});
+ root.addEventListener('pagehide',()=>client.suspend());
  root.addEventListener('pageshow',()=>client.syncNow());
  client.start();
 })(typeof window==='undefined'?globalThis:window);

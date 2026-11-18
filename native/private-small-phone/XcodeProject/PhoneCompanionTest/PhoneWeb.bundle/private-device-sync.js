@@ -10,7 +10,7 @@
  }
  async function hash(value){const text=canonical(value);if(text===undefined)throw new Error('同步记录不完整');const bytes=await root.crypto.subtle.digest('SHA-256',encoder.encode(text));return Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');}
  function safeKey(key){if(typeof key!=='string'||!/^(state|blob)\/[A-Za-z0-9_./:%-]+$/.test(key)||encoder.encode(key).length>512||key.split('/').some(x=>['__proto__','constructor','prototype'].includes(x)))throw new Error('同步记录标识有误');return key;}
- function stopped(){return new Error('账号或设备已变化，本轮同步已停止');}
+ function stopped(){const error=new Error('账号或设备已变化，本轮同步已停止');error.deviceSyncCancelled=true;return error;}
  function createJournal(options){
   const {owner,transport,storage,snapshot,apply,getOwner}=options;
   let state=null,chain=Promise.resolve(),epoch=0,closed=false;
@@ -183,6 +183,10 @@
   }
   return Object.freeze({
    canFinishSeed,
+   // PRIVATE_SYNC_LOCAL_COLLECTION_V1: dirty notifications can be inspected and
+   // journaled locally without performing any network request.
+   collectLocal:()=>run(async token=>{if(!state)return {needsConnect:true,pending:0};await capture(token);const pending=Object.values(state.pending).filter(x=>!x.blocked);return {needsConnect:false,pending:pending.length,urgent:pending.some(x=>['message','thread','contact','contactField'].includes(x.value?.kind))};}),
+   check:()=>run(async token=>{await init(token);return call({action:'check',deviceId:state.deviceId,cursor:state.cursor},token);}),
    deviceId:()=>state?.deviceId||'',
    queue:values=>run(async token=>{await init(token);if(!options.canPublish())throw new Error('此设备尚未完成账号数据读取');const next=clone(state),rows=Array.isArray(values)?values:Object.entries(values).map(([key,value])=>({key,value,deleted:false}));for(const row of rows){const key=safeKey(row.key),deleted=row.deleted===true,fingerprint=deleted?'':await hash(row.value);ensure(token);const pending=next.pending[key],known=next.known[key];if(pending&&pending.deleted===deleted&&pending.hash===fingerprint||!pending&&known&&known.deleted===deleted&&known.hash===fingerprint)continue;next.pending[key]={key,deleted,hash:fingerprint,mutationId:root.crypto.randomUUID(),baseRevision:pending?pending.baseRevision:known?known.revision:'0'};if(!deleted)next.pending[key].value=clone(row.value);}await persist(next,token);}),
    cycle:()=>run(async token=>{await init(token);await reconcileBlocked(token);await capture(token);const pushed=await push(token);const more=await pull(token);return {pushed,more,pending:Object.keys(state.pending).length,conflicts:Object.values(state.pending).filter(x=>x.blocked).length};}),
