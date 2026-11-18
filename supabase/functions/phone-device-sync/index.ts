@@ -1,6 +1,7 @@
 import {createSupabaseSync} from './core.mjs';
 
-// Supabase JWT verification also runs at the edge; core verifies the active Auth session.
+// The handler verifies the bearer with Auth before trusting claims or accessing any data.
+// Deploy with --no-verify-jwt for both legacy and asymmetric Auth signing keys.
 const handler = createSupabaseSync({
   url: Deno.env.get('SUPABASE_URL') ?? '',
   serviceKey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',

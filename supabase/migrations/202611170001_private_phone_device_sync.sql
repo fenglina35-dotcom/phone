@@ -10,6 +10,8 @@ create table if not exists public.private_phone_sync_devices (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   session_id uuid not null,
+  installation_id uuid,
+  retired_sessions uuid[] not null default '{}',
   platform text not null check (platform in ('iOS','macOS')),
   label text not null check (length(label) between 1 and 80),
   revoked_at timestamptz,
@@ -17,6 +19,8 @@ create table if not exists public.private_phone_sync_devices (
   last_seen_at timestamptz not null default now(),
   unique(user_id,session_id)
 );
+create unique index if not exists private_phone_sync_installation
+  on public.private_phone_sync_devices(user_id,installation_id) where installation_id is not null;
 
 create sequence if not exists public.private_phone_sync_sequence;
 create table if not exists public.private_phone_sync_state (
@@ -69,22 +73,43 @@ create table if not exists public.private_phone_sync_conflicts (
   unique(user_id,device_id,mutation_id)
 );
 
+create table if not exists public.private_phone_sync_turns (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  thread_key text not null check(length(thread_key) between 1 and 160),
+  device_id uuid not null references public.private_phone_sync_devices(id),
+  turn_key text not null check(length(turn_key) between 1 and 240),
+  lease_token uuid not null,
+  expires_at timestamptz not null,
+  primary key(user_id,thread_key)
+);
+create table if not exists public.private_phone_sync_completed_turns (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  thread_key text not null,
+  turn_key text not null,
+  completed_at timestamptz not null default now(),
+  primary key(user_id,thread_key,turn_key)
+);
+
 alter table public.private_phone_sync_keys enable row level security;
 alter table public.private_phone_sync_devices enable row level security;
 alter table public.private_phone_sync_state enable row level security;
 alter table public.private_phone_sync_records enable row level security;
 alter table public.private_phone_sync_mutations enable row level security;
 alter table public.private_phone_sync_conflicts enable row level security;
+alter table public.private_phone_sync_turns enable row level security;
+alter table public.private_phone_sync_completed_turns enable row level security;
 revoke all on public.private_phone_sync_keys, public.private_phone_sync_devices,
   public.private_phone_sync_records, public.private_phone_sync_mutations,
-  public.private_phone_sync_conflicts,public.private_phone_sync_state from public, anon, authenticated;
+  public.private_phone_sync_conflicts,public.private_phone_sync_state,
+  public.private_phone_sync_turns,public.private_phone_sync_completed_turns from public, anon, authenticated;
 grant select,insert,update,delete on public.private_phone_sync_keys,
   public.private_phone_sync_devices,public.private_phone_sync_records,
-  public.private_phone_sync_mutations,public.private_phone_sync_conflicts,public.private_phone_sync_state to service_role;
+  public.private_phone_sync_mutations,public.private_phone_sync_conflicts,public.private_phone_sync_state,
+  public.private_phone_sync_turns,public.private_phone_sync_completed_turns to service_role;
 grant usage,select on sequence public.private_phone_sync_sequence to service_role;
 
 create or replace function public.private_phone_sync_device(
-  p_user uuid,p_session uuid,p_platform text,p_label text
+  p_user uuid,p_session uuid,p_platform text,p_label text,p_installation uuid default null
 ) returns jsonb language plpgsql security definer set search_path = '' as $$
 declare d public.private_phone_sync_devices%rowtype;
 begin
@@ -92,13 +117,31 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('sync/'||p_user::text,2));
   if p_user is null or p_session is null or p_platform not in ('iOS','macOS')
      or length(p_label) not between 1 and 80 then raise exception 'invalid_device'; end if;
-  insert into public.private_phone_sync_devices(user_id,session_id,platform,label)
-    values(p_user,p_session,p_platform,p_label)
-    on conflict(user_id,session_id) do nothing;
+  if exists(select 1 from public.private_phone_sync_devices where user_id=p_user
+    and p_session=any(retired_sessions)) then raise exception 'device_revoked'; end if;
   select * into d from public.private_phone_sync_devices
     where user_id=p_user and session_id=p_session for update;
-  if d.revoked_at is not null then raise exception 'device_revoked'; end if;
+  if found then
+    if d.revoked_at is not null then raise exception 'device_revoked'; end if;
+    if p_installation is not null and d.installation_id is not null and d.installation_id<>p_installation
+      then raise exception 'invalid_device'; end if;
+  elsif p_installation is not null then
+    select * into d from public.private_phone_sync_devices
+      where user_id=p_user and installation_id=p_installation for update;
+    if found then
+      if d.platform<>p_platform then raise exception 'invalid_device'; end if;
+      -- Fresh password authentication re-enrols the same physical installation;
+      -- an old revoked JWT session was rejected by the branch above.
+      update public.private_phone_sync_devices set session_id=p_session,revoked_at=null,
+        retired_sessions=array_append(retired_sessions,session_id) where id=d.id;
+    end if;
+  end if;
+  if d.id is null then
+    insert into public.private_phone_sync_devices(user_id,session_id,platform,label,installation_id)
+      values(p_user,p_session,p_platform,p_label,p_installation) returning * into d;
+  end if;
   update public.private_phone_sync_devices set last_seen_at=now(),label=p_label
+    ,installation_id=coalesce(installation_id,p_installation)
     where id=d.id;
   return jsonb_build_object('id',d.id,'platform',d.platform,'label',p_label);
 end $$;
@@ -136,6 +179,41 @@ begin
       returning * into seed;
   end if;
   return jsonb_build_object('phase',seed.phase,'format',seed.format,'sourceDeviceId',seed.seed_device);
+end $$;
+
+create or replace function public.private_phone_sync_turn(
+  p_user uuid,p_session uuid,p_device uuid,p_action text,p_thread text,p_turn text,p_token uuid,p_complete boolean default false
+) returns jsonb language plpgsql security definer set search_path = '' as $$
+declare active public.private_phone_sync_turns%rowtype;
+begin
+  perform public.private_phone_sync_assert_device(p_user,p_session,p_device);
+  if p_action not in ('acquire','renew','finish') or p_action is null or p_thread is null
+    or length(p_thread) not between 1 and 160 or p_turn is null or length(p_turn) not between 1 and 240 or p_token is null
+    then raise exception 'invalid_turn'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('turn/'||p_user::text||'/'||p_thread,3));
+  if exists(select 1 from public.private_phone_sync_completed_turns where user_id=p_user and thread_key=p_thread and turn_key=p_turn)
+    then return jsonb_build_object('ok',true,'acquired',false,'completed',true); end if;
+  select * into active from public.private_phone_sync_turns where user_id=p_user and thread_key=p_thread for update;
+  if p_action='acquire' then
+    if found and active.expires_at>now() and (active.device_id<>p_device or active.lease_token<>p_token or active.turn_key<>p_turn)
+      then return jsonb_build_object('ok',true,'acquired',false,'busy',true); end if;
+    insert into public.private_phone_sync_turns(user_id,thread_key,device_id,turn_key,lease_token,expires_at)
+      values(p_user,p_thread,p_device,p_turn,p_token,now()+interval '180 seconds')
+      on conflict(user_id,thread_key) do update set device_id=excluded.device_id,turn_key=excluded.turn_key,
+        lease_token=excluded.lease_token,expires_at=excluded.expires_at;
+    return jsonb_build_object('ok',true,'acquired',true,'leaseSeconds',180);
+  end if;
+  if not found or active.device_id<>p_device or active.lease_token<>p_token or active.turn_key<>p_turn or active.expires_at<=now()
+    then raise exception 'turn_lease_lost'; end if;
+  if p_action='renew' then
+    update public.private_phone_sync_turns set expires_at=now()+interval '180 seconds' where user_id=p_user and thread_key=p_thread;
+    return jsonb_build_object('ok',true,'acquired',true,'leaseSeconds',180);
+  end if;
+  if p_complete is true then
+    insert into public.private_phone_sync_completed_turns(user_id,thread_key,turn_key) values(p_user,p_thread,p_turn) on conflict do nothing;
+  end if;
+  delete from public.private_phone_sync_turns where user_id=p_user and thread_key=p_thread;
+  return jsonb_build_object('ok',true,'finished',true);
 end $$;
 
 create or replace function public.private_phone_sync_apply(
@@ -300,19 +378,21 @@ begin
   return result;
 end $$;
 
-revoke all on function public.private_phone_sync_device(uuid,uuid,text,text),
+revoke all on function public.private_phone_sync_device(uuid,uuid,text,text,uuid),
   public.private_phone_sync_assert_device(uuid,uuid,uuid),
   public.private_phone_sync_apply(uuid,uuid,uuid,jsonb),
   public.private_phone_sync_pull(uuid,uuid,uuid,bigint),
   public.private_phone_sync_revoke(uuid,uuid,uuid,uuid),
   public.private_phone_sync_inspect(uuid,uuid,uuid,uuid),
   public.private_phone_sync_seed(uuid,uuid,uuid,boolean),
+  public.private_phone_sync_turn(uuid,uuid,uuid,text,text,text,uuid,boolean),
   public.private_phone_sync_resolve(uuid,uuid,uuid,uuid,text,bigint,uuid,text) from public,anon,authenticated;
-grant execute on function public.private_phone_sync_device(uuid,uuid,text,text),
+grant execute on function public.private_phone_sync_device(uuid,uuid,text,text,uuid),
   public.private_phone_sync_assert_device(uuid,uuid,uuid),
   public.private_phone_sync_apply(uuid,uuid,uuid,jsonb),
   public.private_phone_sync_pull(uuid,uuid,uuid,bigint),
   public.private_phone_sync_revoke(uuid,uuid,uuid,uuid),
   public.private_phone_sync_inspect(uuid,uuid,uuid,uuid),
   public.private_phone_sync_seed(uuid,uuid,uuid,boolean),
+  public.private_phone_sync_turn(uuid,uuid,uuid,text,text,text,uuid,boolean),
   public.private_phone_sync_resolve(uuid,uuid,uuid,uuid,text,bigint,uuid,text) to service_role;

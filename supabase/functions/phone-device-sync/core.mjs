@@ -3,9 +3,9 @@ const utf8 = new TextEncoder();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const revision = /^(0|[1-9][0-9]{0,18})$/;
 const LIMIT = Object.freeze({body: 3_000_000, record: 240_000, changes: 64});
-const knownErrors = new Set(['device_revoked','device_revoked_or_unknown','device_not_found',
+const knownErrors = new Set(['device_revoked','device_revoked_or_unknown','device_not_found','invalid_device',
   'mutation_payload_changed','conflict_not_found','duplicate_key','invalid_batch','invalid_change','invalid_cursor',
-  'invalid_seed','empty_seed','seed_requires_phone','seed_in_progress','seed_not_ready']);
+  'invalid_seed','empty_seed','seed_requires_phone','seed_in_progress','seed_not_ready','invalid_turn','turn_lease_lost']);
 class SyncError extends Error {
   constructor(code, status = 400) { super(code); this.status = status; }
 }
@@ -62,7 +62,7 @@ function cursor(value = '0') {
   ensure(typeof value === 'string' && revision.test(value) && BigInt(value) <= 9223372036854775807n, 'invalid_cursor');
   return value;
 }
-export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = globalThis.crypto}) {
+export function createAccountCipher({store, masterKey, cryptoAPI = globalThis.crypto}) {
   // No persistent DEK cache: account keys are never retained between requests or exposed to clients.
   const importAES = bytes => cryptoAPI.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt','decrypt']);
   async function seal(key, text, aad) {
@@ -70,8 +70,8 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
     const bytes = await cryptoAPI.subtle.encrypt({name:'AES-GCM',iv,additionalData:utf8.encode(aad),tagLength:128}, key, utf8.encode(text));
     return 'v1.'+base64(iv)+'.'+base64(new Uint8Array(bytes));
   }
-  async function open(key, envelope, aad) {
-    ensure(typeof envelope === 'string' && envelope.length <= 360000, 'invalid_envelope');
+  async function open(key, envelope, aad, maximum=360000) {
+    ensure(typeof envelope === 'string' && envelope.length <= maximum, 'invalid_envelope');
     const [version, ivText, cipherText, extra] = envelope.split('.');
     ensure(version === 'v1' && !extra && ivText && cipherText, 'invalid_envelope');
     const iv = unbase64(ivText); ensure(iv.length === 12, 'invalid_envelope');
@@ -92,9 +92,13 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
     raw.fill(0);
     const derive = info=>({name:'HKDF',hash:'SHA-256',salt:utf8.encode(owner),info:utf8.encode(info)});
     const aes = await cryptoAPI.subtle.deriveKey(derive('private-phone-state-encryption-v1'),material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
-    const mac = await cryptoAPI.subtle.deriveKey(derive('private-phone-mutation-digest-v1'),material,{name:'HMAC',hash:'SHA-256',length:256},false,['sign']);
+    const mac = await cryptoAPI.subtle.deriveKey(derive('private-phone-mutation-digest-v1'),material,{name:'HMAC',hash:'SHA-256',length:256},false,['sign','verify']);
     return {aes,mac};
   }
+  return {accountKeys,seal,open};
+}
+export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = globalThis.crypto}) {
+  const {accountKeys,seal,open}=createAccountCipher({store,masterKey,cryptoAPI});
   async function unpack(owner, aes, row) {
     const {ciphertext, ...safe} = row;
     return {...safe, ...(row.deleted ? {} : {value: JSON.parse(await open(aes,ciphertext,'private-phone-sync/record/'+owner+'/'+keyName(row.key)))})};
@@ -114,7 +118,8 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
       if (body.action === 'register') {
         ensure(['iOS','macOS'].includes(body.platform) && typeof body.label === 'string'
           && body.label.trim().length > 0 && body.label.length <= 80, 'invalid_device');
-        const device = await store.rpc('private_phone_sync_device', {p_user:owner,p_session:session,p_platform:body.platform,p_label:body.label.trim()});
+        ensure(body.installationId===undefined || uuid.test(body.installationId),'invalid_device');
+        const device = await store.rpc('private_phone_sync_device', {p_user:owner,p_session:session,p_platform:body.platform,p_label:body.label.trim(),p_installation:body.installationId||null});
         return respond({ok:true,device});
       }
       ensure(uuid.test(body.deviceId || ''), 'invalid_device');
@@ -126,6 +131,12 @@ export function createSyncHandler({store, authenticate, masterKey, cryptoAPI = g
         return respond(await store.rpc('private_phone_sync_revoke',{...scope,p_target:body.targetId}));
       }
       if (body.action === 'inspect') return respond({ok:true,...await store.rpc('private_phone_sync_inspect',scope)});
+      if (['turn.acquire','turn.renew','turn.finish'].includes(body.action)) {
+        ensure(typeof body.threadKey==='string' && body.threadKey.length>0 && body.threadKey.length<=160
+          && typeof body.turnKey==='string' && body.turnKey.length>0 && body.turnKey.length<=240 && uuid.test(body.leaseToken||''),'invalid_turn');
+        return respond(await store.rpc('private_phone_sync_turn',{...scope,p_action:body.action.slice(5),p_thread:body.threadKey,
+          p_turn:body.turnKey,p_token:body.leaseToken,p_complete:body.completed===true}));
+      }
       if (body.action === 'seed') {
         ensure(typeof body.finish === 'boolean','invalid_seed');
         return respond({ok:true,seed:await store.rpc('private_phone_sync_seed',{...scope,p_finish:body.finish})});
