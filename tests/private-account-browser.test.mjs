@@ -186,7 +186,16 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   const loopRestored=await page.evaluate(async()=>{await imgDel('__role_call_loop_v1_fixture');const blob=await imgGet('__role_call_loop_v1_fixture');return Array.from(new Uint8Array(await blob.arrayBuffer()));});assert.deepEqual(loopRestored,[1,2,3,4],'an existing raw-key call video also synchronizes without a new upload action');
   // Exercise the actual device-management UI, including server-side password and authority gates.
   const spare=(await transport('spareA',{action:'register',platform:'macOS',label:'待移除的电脑'})).device.id;
-  await page.evaluate(()=>privatePhoneSyncDevicesOpen());const devicePanel=page.locator('#privateSyncDevicesOverlay');
+  await page.evaluate(()=>privatePhoneSyncDevicesOpen());
+  await page.waitForFunction(()=>document.querySelector('#privateSyncDevicesOverlay')?.textContent.includes('本机是副设备'));
+  for(const width of [430,320]){
+   await page.setViewportSize({width,height:900});
+   const layout=await page.locator('#privateSyncDevicesOverlay').evaluate(panel=>{const frame=panel.firstElementChild,header=frame.firstElementChild,title=header.firstElementChild,close=header.lastElementChild,b=close.getBoundingClientRect(),t=title.getBoundingClientRect(),primary=Array.from(panel.querySelectorAll('button')).find(button=>button.textContent==='将本机设为主设备');return{closeWidth:b.width,closeHeight:b.height,titleHeight:t.height,titleLineHeight:parseFloat(getComputedStyle(title).lineHeight),titleRight:t.right,closeLeft:b.left,overflow:frame.scrollWidth>frame.clientWidth,primaryBackground:getComputedStyle(primary).backgroundColor,primaryImage:getComputedStyle(primary).backgroundImage,primaryColor:getComputedStyle(primary).color,primaryWidth:primary.getBoundingClientRect().width,frameBackground:getComputedStyle(frame).backgroundColor,frameBorder:getComputedStyle(frame).borderTopColor};});
+   assert.equal(layout.closeWidth,layout.closeHeight,'close is circular, never a wide strip');assert(layout.closeWidth>=32&&layout.closeWidth<=44);assert(layout.titleHeight<=layout.titleLineHeight+1,'title remains one comfortable line');assert(layout.titleRight<layout.closeLeft);assert.equal(layout.overflow,false);assert.equal(layout.frameBackground,'rgb(17, 17, 19)');assert.equal(layout.frameBorder,'rgba(255, 255, 255, 0.22)');assert.equal(layout.primaryImage,'none','account action does not inherit the unrelated pink gradient');assert.equal(layout.primaryColor,'rgb(137, 185, 246)');assert(layout.primaryWidth<230,'a secondary management action stays compact');
+   fs.mkdirSync(path.join(ROOT,'.codex_tmp'),{recursive:true});await page.screenshot({path:path.join(ROOT,'.codex_tmp','private-sync-dialog-'+width+'.png')});
+  }
+  await page.setViewportSize({width:430,height:900});
+const devicePanel=page.locator('#privateSyncDevicesOverlay');
   await devicePanel.getByText(/本机是副设备/).waitFor();assert.equal(await devicePanel.getByRole('button',{name:'移除',exact:true}).count(),0);
   await devicePanel.getByRole('button',{name:'将本机设为主设备',exact:true}).click();await devicePanel.getByLabel('小手机账号密码').fill('fixture-wrong-password');await devicePanel.getByRole('button',{name:'验证密码并设为主设备',exact:true}).click();await devicePanel.getByText('密码没有通过验证，请重新输入。',{exact:true}).waitFor();
   await devicePanel.getByLabel('小手机账号密码').fill('fixture-correct-password');await devicePanel.getByRole('button',{name:'验证密码并设为主设备',exact:true}).click();await devicePanel.getByText(/本机是主设备/).waitFor();
