@@ -109,9 +109,9 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    }
    check(body.action==='rpc'&&methods.has(body.method),'unsupported_action');
    check(uuid.test(body.operationId||'')&&typeof body.connectionRevision==='string'&&/^\d+$/.test(body.connectionRevision),'invalid_operation');
-   const row=await read(connId);check(row?.active&&!row.deleted,'connection_missing',409);check(row.revision===body.connectionRevision,'connection_changed',409);
-   let c=await decrypt(row);check(object(body.params)&&utf8.encode(canonical(body.params)).length<=131072,'invalid_parameters');
-   const argumentHash=await digest(body.params.arguments||{});
+   diagnosticStage='rpc-connection-read';const row=await read(connId);check(row?.active&&!row.deleted,'connection_missing',409);check(row.revision===body.connectionRevision,'connection_changed',409);
+   diagnosticStage='rpc-connection-decrypt';let c=await decrypt(row);check(object(body.params)&&utf8.encode(canonical(body.params)).length<=131072,'invalid_parameters');
+   diagnosticStage='rpc-argument-digest';const argumentHash=await digest(body.params.arguments||{});
    const approvalData={owner:scope.p_user,account:scope.p_account,device:scope.p_device,connection:connId,revision:row.revision,operation:body.operationId,role:body.roleId||'',tool:body.params.name||'',arguments:argumentHash};
    if(body.method==='tools/call'){
     const t=allowedTool(c,body.roleId,body.params.name);check(object(body.params.arguments)&&!parameterIssues(t.inputSchema,body.params.arguments),'invalid_parameters');
@@ -128,14 +128,14 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
     check(c.enabled&&c.roles.includes(body.roleId)&&c.tools.some(t=>t._meta?.ui?.resourceUri===body.params.uri),'resource_not_allowed',403);
    }
    operation=body.operationId;lease=cryptoAPI.randomUUID();
-   const fingerprint=await sign(keys.mac,{account:scope.p_account,connection:connId,revision:row.revision,method:body.method,params:body.params,role:body.roleId||'',rpcId:body.rpcId??null});
+   diagnosticStage='rpc-fingerprint';const fingerprint=await sign(keys.mac,{account:scope.p_account,connection:connId,revision:row.revision,method:body.method,params:body.params,role:body.roleId||'',rpcId:body.rpcId??null});
    let claim;
-   for(let n=0;n<20;n++){claim=await store.rpc('private_phone_mcp_claim',{...scope,p_id:connId,p_revision:row.revision,p_operation:operation,p_digest:fingerprint,p_lease:lease});if(claim.state!=='busy')break;await pause(250);}
+   diagnosticStage='rpc-claim';for(let n=0;n<20;n++){claim=await store.rpc('private_phone_mcp_claim',{...scope,p_id:connId,p_revision:row.revision,p_operation:operation,p_digest:fingerprint,p_lease:lease});if(claim.state!=='busy')break;await pause(250);}
    check(claim?.state!=='busy','connection_busy',409);
    const outcomeAAD='private-phone-mcp/outcome/'+scope.p_user+'/'+scope.p_account+'/'+connId+'/'+operation;
    if(claim.state==='complete')return reply(JSON.parse(await open(keys.aes,claim.ciphertext,outcomeAAD,outcomeEnvelopeLimit)));
    check(claim.state==='claimed','operation_result_unknown',409);
-   c=JSON.parse(await open(keys.aes,claim.ciphertext,aad(connId),1800000));
+   diagnosticStage='rpc-claim-decrypt';c=JSON.parse(await open(keys.aes,claim.ciphertext,aad(connId),1800000));
    const progress=(phase,ciphertext=null)=>store.rpc('private_phone_mcp_progress',{...scope,p_id:connId,p_operation:operation,p_lease:lease,p_phase:phase,p_ciphertext:ciphertext});
    if(c.auth==='oauth'&&c.token&&c.exp&&now()>=c.exp){
     check(c.refresh&&c.oauth?.token_endpoint,'reauthorization_required',401);
@@ -154,20 +154,20 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    if(body.sessionId){check(typeof body.sessionId==='string'&&body.sessionId.length<=1024&&!/[\r\n]/.test(body.sessionId),'invalid_session');headers['Mcp-Session-Id']=body.sessionId;}
    const rpc={jsonrpc:'2.0',method:body.method,params:body.params};if(body.rpcId!=null){check(typeof body.rpcId==='string'&&body.rpcId.length<=100||Number.isSafeInteger(body.rpcId),'invalid_rpc_id');rpc.id=body.rpcId;}
    await progress('submitted');submitted=true;
-   const response=await fetchAPI(destination(c.url),{method:'POST',headers,body:JSON.stringify(rpc),redirect:'error',signal:AbortSignal.timeout(35000)});
+   diagnosticStage='provider-request';const response=await fetchAPI(destination(c.url),{method:'POST',headers,body:JSON.stringify(rpc),redirect:'error',signal:AbortSignal.timeout(35000)});
    const text=await responseText(response,body.rpcId),safeHeaders={};
    const secrets=[c.token,c.refresh,c.clientSecret].filter(v=>typeof v==='string'&&v.length>=8);if(c.clientSecret)secrets.push(btoa(encodeURIComponent(c.clientId)+':'+encodeURIComponent(c.clientSecret)));
    const redact=value=>{let out=String(value);for(const secret of secrets)for(const variant of [secret,encodeURIComponent(secret),JSON.stringify(secret).slice(1,-1)])out=out.split(variant).join('[凭据已隐藏]');return out;};
    for(const key of ['content-type','mcp-session-id','www-authenticate'])if(response.headers.get(key))safeHeaders[key]=redact(response.headers.get(key));
    const outcome={ok:true,status:response.status,headers:safeHeaders,text:redact(text)};
-   await progress('complete',await seal(keys.aes,canonical(outcome),outcomeAAD));
+   diagnosticStage='outcome-save';await progress('complete',await seal(keys.aes,canonical(outcome),outcomeAAD));
    return reply(outcome);
   }catch(error){
    if(scope&&lease&&operation&&connId)try{await store.rpc('private_phone_mcp_progress',{...scope,p_id:connId,p_operation:operation,p_lease:lease,p_phase:'unknown',p_ciphertext:null});}catch{}
    const safe=error instanceof VaultError?error:new VaultError(refreshSubmitted?'refresh_result_unknown':errors.has(error?.message)?error.message:'vault_service_unavailable',503);
    // PRIVATE_MCP_SAFE_FAILURE_STAGE_V1: report only fixed stage/type codes,
    // never the raw error, request, connection, JWT or credential contents.
-   if(safe.status>=500){const kind=['encrypted_data_unreadable','sync_not_configured','invalid_envelope'].includes(error?.message)?error.message:['TypeError','OperationError','DataError'].includes(error?.name)?error.name:'internal_failure';try{reportError({event:'mcp_vault_failure',stage:diagnosticStage,code:safe.message,kind});}catch{}}
+   if(safe.status>=500){const kind=typeof error?.dbCode==='string'?'database_'+error.dbCode:['encrypted_data_unreadable','sync_not_configured','invalid_envelope'].includes(error?.message)?error.message:['TypeError','OperationError','DataError'].includes(error?.name)?error.name:'internal_failure';try{reportError({event:'mcp_vault_failure',stage:diagnosticStage,code:safe.message,kind});}catch{}}
    return reply({ok:false,error:safe.message,unknown:submitted||refreshSubmitted||['operation_result_unknown','refresh_result_unknown'].includes(safe.message)},safe.status);
   }
  };
@@ -182,7 +182,7 @@ export function createSupabaseVault({url,serviceKey,masterKey,fetchAPI=globalThi
    const headers={apikey:serviceKey,Authorization:'Bearer '+bearer,'Content-Type':'application/json'};if(prefer)headers.Prefer=prefer;
    const response=await fetchAPI(new URL(path,base),{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal}),text=await response.text();check(text.length<=4100000,'vault_service_unavailable',503);let data;try{data=text?JSON.parse(text):null;}catch{throw new VaultError('vault_service_unavailable',503);}
    // PRIVATE_MCP_AUTH_OUTAGE_V1: Auth rate limits/outages never mean lost login.
-   if(!response.ok){const auth=path.startsWith('/auth/'),temporary=response.status===429||response.status>=500;throw new VaultError(auth&&temporary?'account_auth_temporarily_unavailable':errors.has(data?.message)?data.message:auth?'authentication_required':'vault_service_unavailable',temporary?503:auth?401:409);}return data;
+   if(!response.ok){const auth=path.startsWith('/auth/'),temporary=response.status===429||response.status>=500,error=new VaultError(auth&&temporary?'account_auth_temporarily_unavailable':errors.has(data?.message)?data.message:auth?'authentication_required':'vault_service_unavailable',temporary?503:auth?401:409);if(!auth&&/^[A-Z0-9]{5,8}$/.test(data?.code||''))error.dbCode=data.code;throw error;}return data;
   }
   const store={rpc:(name,args)=>json('/rest/v1/rpc/'+name,{method:'POST',body:args}),async key(owner,candidate){
    const path='/rest/v1/private_phone_sync_keys?select=wrapped_key,key_version&user_id=eq.'+owner+'&limit=1';let rows=await json(path);
