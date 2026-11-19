@@ -172,6 +172,8 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    }
    check(protocols.has(body.protocolVersion),'unsupported_protocol');
    const headers={'Content-Type':'application/json',Accept:'application/json, text/event-stream','MCP-Protocol-Version':body.protocolVersion};
+   // MCP_MODERN_ROUTING_HEADERS_V1: derive routing headers from the validated RPC, never trust arbitrary client headers.
+   if(body.protocolVersion==='2026-07-28'){headers['Mcp-Method']=body.method;if(['tools/call','resources/read'].includes(body.method)){const value=String(body.params.name||body.params.uri||'');headers['Mcp-Name']=/[^\x20-\x7e\t]/.test(value)||value.trim()!==value||/^=\?base64\?.*\?=$/.test(value)?'=?base64?'+btoa(String.fromCharCode(...utf8.encode(value)))+'?=':value;}}
    if(c.token)headers.Authorization='Bearer '+c.token;
    if(body.sessionId){check(typeof body.sessionId==='string'&&body.sessionId.length<=1024&&!/[\r\n]/.test(body.sessionId),'invalid_session');headers['Mcp-Session-Id']=body.sessionId;}
    const rpc={jsonrpc:'2.0',method:body.method,params:body.params};if(body.rpcId!=null){check(typeof body.rpcId==='string'&&body.rpcId.length<=100||Number.isSafeInteger(body.rpcId),'invalid_rpc_id');rpc.id=body.rpcId;}

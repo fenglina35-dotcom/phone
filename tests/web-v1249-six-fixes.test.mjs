@@ -28,7 +28,7 @@ function functionSource(name) {
 test('① a full backup skips unreadable images instead of aborting', () => {
   const blob = functionSource('fullBackupFileBlob');
   assert.doesNotMatch(blob, /throw new Error\('有备份图片暂时无法读取/, '坏图不能再中止整份备份');
-  assert.match(blob, /_fullBackupSkippedImages\.add\(key\)/);
+  assert.match(blob, /_fullBackupSkippedImages\.add\(ref\)/);
   assert.match(blob, /const _fullBackupSkippedImages=new Set\(\)/, '计数是本次导出内的局部状态，不跨次累积');
   assert.match(functionSource('exportData'), /stats\.skippedImages/, '导出结果要如实告知跳过了几张');
   // 聊天存档本身仍然不允许缺失，那是正文不是配图。

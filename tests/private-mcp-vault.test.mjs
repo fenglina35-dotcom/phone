@@ -30,7 +30,7 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
     await new Promise(r=>setTimeout(r,40));if(refreshFail)throw new Error('fixture unknown refresh');
     return Response.json({access_token:'fixture-access-rotated-'+refreshes,refresh_token:'fixture-refresh-rotated-'+refreshes,expires_in:7200});
    }
-   providerCalls++;const body=JSON.parse(options.body);calls.push(body);assert(options.headers.Authorization.startsWith('Bearer fixture-access-'));
+   providerCalls++;const body=JSON.parse(options.body);calls.push(body);if(options.headers['MCP-Protocol-Version']==='2026-07-28'){assert.equal(options.headers['Mcp-Method'],body.method);if(body.method==='tools/call')assert.equal(options.headers['Mcp-Name'],body.params.name);}assert(options.headers.Authorization.startsWith('Bearer fixture-access-'));
    if(body.method==='tools/call'){if(body.params.name==='write')writes++;await new Promise(r=>setTimeout(r,40));if(toolFail)throw new Error('fixture submitted response lost');}
    return Response.json({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:largeReply?'\\'.repeat(500000):'真实受控结果；fixture-access-rotated-'+refreshes}]}});
   };
@@ -74,6 +74,7 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
   assert.equal((await send('mac',readApprovalCase)).json.error,'approval_required','ask mode includes read-only tools');
   const readTicket=(await send('mac',{...readApprovalCase,phase:'approval'})).json.approvalToken;
   const readResult=await send('mac',{...readApprovalCase,approvalToken:readTicket});assert.equal(readResult.status,200);
+  const modernRead={...readApprovalCase,operationId:oid(18),protocolVersion:'2026-07-28',params:{...readApprovalCase.params,_meta:{'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientCapabilities':{}}}},modernTicket=(await send('mac',{...modernRead,phase:'approval'})).json.approvalToken;assert.equal((await send('mac',{...modernRead,approvalToken:modernTicket})).status,200);
 
   // Escaped valid provider JSON stays below 1 MiB, but its durable outer outcome
   // exceeds the old 1.8M envelope/2M native limit. A lost ACK must read the stored

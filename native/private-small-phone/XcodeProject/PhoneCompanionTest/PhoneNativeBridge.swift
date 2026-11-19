@@ -4047,7 +4047,7 @@ private final class PrivateMCPNetworkRequest: NSObject, URLSessionDataDelegate, 
               let method = arguments["method"] as? String, ["GET", "POST"].contains(method),
               let headers = arguments["headers"] as? [String: String], headers.count <= 8,
               headers.allSatisfy({ name, value in
-                  ["accept", "content-type", "authorization", "mcp-protocol-version", "mcp-session-id"].contains(name.lowercased()) &&
+                  ["accept", "content-type", "authorization", "mcp-protocol-version", "mcp-session-id", "mcp-method", "mcp-name"].contains(name.lowercased()) &&
                   value.utf8.count <= 16_384 && !value.unicodeScalars.contains(where: { $0.value == 13 || $0.value == 10 })
               }) else { throw URLError(.badURL) }
         let body = arguments["body"] as? String ?? ""

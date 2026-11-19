@@ -163,6 +163,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.evaluate(()=>Object.defineProperty(navigator,'locks',{configurable:true,value:fixtureLocks}));
   fixtureConnectionId=await page.evaluate(async()=>{const c=MCPTools.add({name:'受控资料',url:'https://mcp-fixture.invalid/mcp',auth:'none'});await MCPTools.connect(c.id);MCPTools.setRole(c.id,'cloud-a',true);return c.id;});assert(fixtureConnectionId);
   modelMode='mcp';await page.locator('#cinput').fill('请查外部花店文档');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();
+  await page.locator('.mcp-approval').waitFor();assert.equal(toolCalls.filter(x=>x.method==='tools/call').length,0,'read-only waits for approval');await page.locator('.mcp-approval').getByRole('button',{name:'允许本次',exact:true}).click();
   await page.locator('#chatbg').getByText('工具查到了花店记录。',{exact:true}).waitFor({timeout:30000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
   assert.equal(toolCalls.filter(x=>x.method==='tools/call').length,1);assert.equal(modelCalls.length,6,'the manual MCP turn has one selection and one final response');
   assert(await page.locator('.mcp-chat-trace[data-mcp-state=ok]').isVisible());assert(!(await page.locator('#chatbg').innerText()).includes('mcp_call'));

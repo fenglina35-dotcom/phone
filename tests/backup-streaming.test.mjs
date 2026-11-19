@@ -110,7 +110,7 @@ test('native export bypasses Web Share even when the platform exposes an unusabl
 
 test('native backup waits for a fresh save click after asynchronous generation',async()=>{
  const nodes=new Map(['backup-save-ready','backup-save-download','backup-save-hint'].map(id=>[id,{style:{},disabled:false}]));let downloads=0,gesture=false;
- const ctx=vm.createContext({beautyAppleDevice:()=>true,privateNativeAppOn:()=>true,openModal(){},closeModal(){},toast(){},document:{getElementById:id=>nodes.get(id)},beautySaveFile:async()=>{assert(gesture,'native download must start inside the new click');downloads++;return 'pending';}});
+ const ctx=vm.createContext({beautyAppleDevice:()=>false,privateNativeAppOn:()=>true,openModal(){},closeModal(){},toast(){},document:{getElementById:id=>nodes.get(id)},beautySaveFile:async()=>{assert(gesture,'native download must start inside the new click');downloads++;return 'pending';}});
  vm.runInContext(fnSource(src,'backupOfferSave'),ctx);
  assert.equal(ctx.backupOfferSave(new Blob(['{}']),'backup.json',''),true);assert.equal(downloads,0);
  gesture=true;await nodes.get('backup-save-ready').onclick();assert.equal(downloads,1);

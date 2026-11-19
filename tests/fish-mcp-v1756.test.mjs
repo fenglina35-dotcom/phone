@@ -554,8 +554,18 @@ test('session id, paginated catalog and matching SSE response are handled; open 
  const c=s.M.add({name:'SSE',url:'https://mcp.fixture.invalid/mcp'});assert.equal((await s.M.connect(c.id)).length,2);assert.equal(page,2);assert(cancelled);
 });
 
+test('MCP HTTP errors preserve bounded provider messages without declaring authentication failure',async()=>{
+ const s=sandbox((u,i,b)=>b?.method==='initialize'?reply({message:'fixture protocol mismatch'},400):null);const c=s.M.add({url:'https://mcp.fixture.invalid/mcp'});
+ await assert.rejects(s.M.connect(c.id),e=>e.status===400&&e.message.includes('fixture protocol mismatch'));
+ assert.equal(s.calls.length,1,'a generic HTTP 400 must not retry or reauthorize');
+});
+test('official Supabase can discover modern-only protocol before a legacy rejection',async()=>{
+ const s=sandbox((u,i,b)=>{if(b?.method==='initialize')return reply({message:'Legacy protocol is not supported'},400);if(b?.method==='server/discover'){assert.equal(i.headers['Mcp-Method'],'server/discover');return reply({jsonrpc:'2.0',id:b.id,result:{supportedVersions:['2026-07-28'],capabilities:{tools:{}}}});}});
+ const c=s.M.add({provider:'supabase',url:'https://mcp.supabase.com/mcp?read_only=true'});await s.M.connect(c.id);
+ assert.equal(s.calls[0].body.method,'server/discover');assert(!s.calls.some(x=>x.body?.method==='initialize'));assert.equal(s.M.connection(c.id).state,'connected');
+});
 test('modern server can negotiate stateless protocol without legacy session retry',async()=>{
- const s=sandbox((u,i,b)=>{if(b?.method==='initialize')return reply({jsonrpc:'2.0',id:b.id,error:{code:-32022,message:'unsupported',data:{supported:['2026-07-28']}}},400);if(b?.method==='server/discover')return reply({jsonrpc:'2.0',id:b.id,result:{resultType:'complete',serverInfo:{name:'modern'},capabilities:{tools:{}}}});if(b?.method==='tools/list'){assert.equal(b.params._meta['io.modelcontextprotocol/protocolVersion'],'2026-07-28');assert.equal(i.headers['MCP-Protocol-Version'],'2026-07-28');assert.equal(i.headers['Mcp-Session-Id'],undefined);}});const c=s.M.add({url:'https://mcp.fixture.invalid/mcp'});await s.M.connect(c.id);assert(!s.calls.some(x=>x.body?.method==='notifications/initialized'));
+ const s=sandbox((u,i,b)=>{if(b?.method==='initialize')return reply({jsonrpc:'2.0',id:b.id,error:{code:-32022,message:'unsupported',data:{supported:['2026-07-28']}}},400);if(b?.method==='server/discover'){assert.equal(i.headers['Mcp-Method'],'server/discover');return reply({jsonrpc:'2.0',id:b.id,result:{resultType:'complete',serverInfo:{name:'modern'},capabilities:{tools:{}}}});}if(b?.method==='tools/list'){assert.equal(b.params._meta['io.modelcontextprotocol/protocolVersion'],'2026-07-28');assert.equal(i.headers['MCP-Protocol-Version'],'2026-07-28');assert.equal(i.headers['Mcp-Method'],'tools/list');assert.equal(i.headers['Mcp-Session-Id'],undefined);}});const c=s.M.add({url:'https://mcp.fixture.invalid/mcp'});await s.M.connect(c.id);assert(!s.calls.some(x=>x.body?.method==='notifications/initialized'));
 });
 
 test('OAuth DCR and PKCE bind state, resource and callback; wrong state cannot exchange code',async()=>{

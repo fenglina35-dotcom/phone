@@ -77,7 +77,7 @@ export async function gmailProxy(request,env,context,fetchFn=fetch){
  }
  if(!props.googleAccessToken||Number(props.googleExpiresAt)<=Date.now()+5000)return rpcError(body.id,-32001,'Google 授权已过期，请刷新连接或重新登录。',401);
  const headers=new Headers({'Authorization':'Bearer '+props.googleAccessToken,'Content-Type':'application/json','Accept':'application/json, text/event-stream'});
- for(const name of ['MCP-Protocol-Version','Mcp-Session-Id']){const v=request.headers.get(name);if(v)headers.set(name,v);}
+ for(const name of ['MCP-Protocol-Version','Mcp-Session-Id','Mcp-Method','Mcp-Name']){const v=request.headers.get(name);if(v)headers.set(name,v);}
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
  try{
   const response=await fetchFn(UPSTREAM,{method:'POST',headers,body:JSON.stringify(body),redirect:'manual',signal:controller.signal});

@@ -661,7 +661,7 @@ const PERMANENT_FIXES = [
     release: 'v1249（v1258 同步私人）',
     name: '完整备份跳过读不出的图片，不再整份中止',
     scope: 'both',
-    marker: '_fullBackupSkippedImages.add(key)',
+    marker: '_fullBackupSkippedImages.add(ref)',
     least: 1,
   },
   {
@@ -2207,3 +2207,7 @@ test('native backup avoids Web Share and model source survives the sync boundary
 test('MCP ask mode includes read-only calls and no receipt cannot become a result',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['MCP_CONFIRM_ALL_CALLS_V1','MCP_CATALOG_TASK_ORDER_V1','MCP_NO_UNEXECUTED_RESULT_V1'])assert(read(file).includes(marker));assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('MCP_CONFIRM_ALL_CALLS_V1'));});
 
 test('partial backup keeps media references and protects matching local images',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['BACKUP_MISSING_MEDIA_REFERENCES_V1','BACKUP_MISSING_MEDIA_IMPORT_V1','NATIVE_BACKUP_SAVE_GESTURE_V1'])assert(read(file).includes(marker));});
+
+test('Mac export can use the user-selected save panel inside the sandbox',()=>{const ent=read('native/private-small-phone/XcodeProject/PhoneCompanionMac.entitlements');assert(ent.includes('<key>com.apple.security.app-sandbox</key><true/>'));assert(ent.includes('<key>com.apple.security.files.user-selected.read-write</key><true/>'));});
+
+test('MCP modern routes preserve required headers and Supabase discovery',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['MCP_MODERN_ROUTING_HEADERS_V1','MCP_SUPABASE_MODERN_DISCOVERY_V1','MCP_PROVIDER_ERROR_DETAIL_V1'])assert(read(file).includes(marker));assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('MCP_MODERN_ROUTING_HEADERS_V1'));});

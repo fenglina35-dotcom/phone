@@ -217,7 +217,7 @@ let _backupImportPins=new Set(),_fullBackupImportBusy=false;
 
 let _fullBackupExportBusy=false,_fullBackupExportProgress='';
 // BACKUP_SAVE_GESTURE_V1 / NATIVE_BACKUP_SAVE_GESTURE_V1: Apple web and native downloads need a fresh save click after async generation.
-function backupOfferSave(blob,name,note){if(typeof beautyAppleDevice!=='function'||!beautyAppleDevice())return false;
+function backupOfferSave(blob,name,note){const native=typeof privateNativeAppOn==='function'&&privateNativeAppOn();if(!native&&(typeof beautyAppleDevice!=='function'||!beautyAppleDevice()))return false;
  openModal('<h3>备份已生成</h3><p class="hint" id="backup-save-hint">点击保存备份，在系统面板中选择存储到文件。</p><div class="btns"><button class="btn p" id="backup-save-ready">保存备份</button><button class="btn g" id="backup-save-download" style="display:none">下载备份</button></div>');
  const button=document.getElementById('backup-save-ready'),fallback=document.getElementById('backup-save-download'),hint=document.getElementById('backup-save-hint');
  button.onclick=async()=>{button.disabled=true;try{const mode=await beautySaveFile(blob,name);if(mode==='cancelled'){hint.textContent='已取消保存，可以再次点击。';return;}closeModal();toast('备份文件已交给系统，请完成存储'+note,7000);}catch(e){hint.textContent='系统没有允许分享，请点击下载备份后在系统界面存储。';fallback.style.display='';}finally{button.disabled=false;}};
