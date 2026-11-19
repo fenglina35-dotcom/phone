@@ -2,8 +2,47 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 import {read,fnSource,BUNDLES} from './_helpers.mjs';
 const src=read('app.js');
+
+test('cold primary audit resolves only active archives and rejects truncated structured text',()=>{
+ const tool=read('scripts/check_backup_realistic_browser.cjs'),match=tool.match(/const code=String.raw`([\s\S]*?)`;/);
+ assert(match,'the verified cold-copy reader must be present');
+ const runner=String.raw`
+import ast,sys,sqlite3,json,struct,hashlib,copy
+tree=ast.parse(sys.stdin.read())
+functions=[x for x in tree.body if isinstance(x,ast.FunctionDef) and x.name in ('text_value','resolve')]
+assert len(functions)==2
+c=sqlite3.connect(':memory:');c.execute('CREATE TABLE Records(recordID INTEGER PRIMARY KEY,value BLOB)')
+keys={};archives=[];state={};scope={'c':c,'keys':keys,'archives':archives,'state':state,'json':json,'hashlib':hashlib}
+exec(compile(ast.Module(body=functions,type_ignores=[]),'<actual-cold-reader>','exec'),scope)
+def put(key,text,latin=False):
+ identifier=len(keys)+1;keys[key]=identifier;data=text.encode('latin-1' if latin else 'utf-16-le');length=len(data) if latin else len(data)//2
+ c.execute('INSERT INTO Records VALUES(?,?)',(identifier,struct.pack('<I',15)+b'\x10'+struct.pack('<I',length|(0x80000000 if latin else 0))+data));return identifier
+put('unicode','{"text":"\u539f\u6587\U0001f600"}')
+assert scope['text_value']('unicode')=='{"text":"\u539f\u6587\U0001f600"}'
+put('latin','{"text":"keep"}',True);assert scope['text_value']('latin')=='{"text":"keep"}'
+for bad in (b'\x0f\x00\x00\x00\x10\x02\x00\x00\x00A',b'\x0e\x00\x00\x00\x10\x00\x00\x00\x00',b'\x0f\x00\x00\x00\x02\x00\x00\x00\x00'):
+ identifier=len(keys)+1;keys['bad'+str(identifier)]=identifier;c.execute('INSERT INTO Records VALUES(?,?)',(identifier,bad))
+ try:scope['text_value']('bad'+str(identifier));raise RuntimeError('corrupt text accepted')
+ except AssertionError:pass
+old=put('__messages',json.dumps({'old':[{'id':'intentionally-deleted'}]}))
+put('__pf_messages_f',json.dumps({'friend':[{'id':'kept-private'}]}));put('__pf_group_messages_f',json.dumps({'group':[{'id':'kept-group'}]}))
+state.update({'messages':{'kept':[{'id':'current'}]},'me':{'phoneFriend':{'id':'f','messages':{'__idb':'phoneFriendMessages','id':'f'},'groupMessages':{'__idb':'phoneFriendGroupMessages','id':'f'}}}})
+before=copy.deepcopy(state);queries=[];c.set_trace_callback(queries.append);result=scope['resolve'](state)
+assert result['messages']==before['messages'] and state==before
+assert result['me']['phoneFriend']['messages']['friend'][0]['id']=='kept-private'
+assert result['me']['phoneFriend']['groupMessages']['group'][0]['id']=='kept-group'
+assert not any('recordID='+str(old) in q for q in queries),'unreferenced old archive was read'
+for value in ({'__idb':'messages','kept':[{'id':'live-tail'}]},{'__idb':'unknown'}):
+ try:scope['resolve'](value,('messages',));raise RuntimeError('unsupported pointer accepted')
+ except (AssertionError,ValueError):pass
+c.close();print('cold reader: exact text, active-only archives, no mutation, fail-closed pointers')
+`;
+ const result=spawnSync(process.env.PYTHON||(process.platform==='win32'?'python':'python3'),['-c',runner],{input:match[1],encoding:'utf8'});
+ assert.equal(result.status,0,result.stderr);assert.match(result.stdout,/active-only archives/);
+});
 const start=src.indexOf('// 文件备份按块读写');
 const code=src.slice(start<0?src.indexOf('let _fullBackupExportBusy'):start,src.indexOf('async function applyFullBackupData('));
 function setup(state={},extras={},source=src){

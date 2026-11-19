@@ -7,7 +7,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
 // NORTH_BACKUP_FILE audits a user-authorized local export in disposable browser storage.
 // No request may leave the loopback test origin; credentials/content are never logged.
 async function auditExistingBackup(file){
- const crypto=require('node:crypto'),input=fs.readFileSync(file),expected=JSON.parse(input),digest=x=>crypto.createHash('sha256').update(x).digest('hex');
+ const crypto=require('node:crypto'),input=fs.readFileSync(file),decoded=JSON.parse(input),envelope=decoded.format==='smallphone-primary-core-audit-v1',expected=envelope?decoded.state:decoded,digest=x=>crypto.createHash('sha256').update(x).digest('hex');
  const canonical=v=>v&&typeof v==='object'?(Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]))):v;
  const hashes=Object.fromEntries(Object.entries(expected).filter(([k])=>!['_persistedAt','_backupMedia','presence','roleBody'].includes(k)).map(([k,v])=>[k,digest(JSON.stringify(canonical(v)))]));
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`,browser=await chromium.launch({headless:true});
@@ -20,7 +20,7 @@ async function auditExistingBackup(file){
   await page.goto(entry);await page.waitForFunction(()=>window.__northBootReady);await page.evaluate(()=>_bootImagesPromise);
   await page.evaluate(()=>{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));S.me.locked=false;const gate=document.getElementById('gate');if(gate)gate.remove();openSettings('data');closeModal();window.auditNotices=[];const original=toast;toast=t=>{auditNotices.push(String(t));return original(t);};uiConfirm=async()=>true;});
   await page.evaluate(()=>{const input=document.createElement('input');input.id='auditBackupInput';input.type='file';input.onchange=()=>readJsonFile(input.files[0],async d=>{await applyFullBackupData(d);window.auditImportComplete=true;});document.body.appendChild(input);});
-  await page.locator('#auditBackupInput').setInputFiles(path.resolve(file));
+  await page.locator('#auditBackupInput').setInputFiles(envelope?{name:'primary-core-audit.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(expected))}:path.resolve(file));
   await page.waitForFunction(()=>window.auditImportComplete||auditNotices.some(x=>x.startsWith('导入失败')),null,{timeout:240000});
   assert(await page.evaluate(()=>!!window.auditImportComplete),'local backup import did not complete');
   const inspect=()=>page.evaluate(async hashes=>{
@@ -51,13 +51,85 @@ async function auditExistingBackup(file){
   reports.push({privateApp,afterImport,persisted,afterReload,pageErrors:errors.length,externalRequestsBlocked});console.log(JSON.stringify(reports[reports.length-1]));await context.close();
  }}finally{await browser.close();await new Promise(r=>server.close(r));}
  const localMusicFiles=(expected.music?.songs||[]).filter(s=>s?.src?.t==='idb').length,localCinemaFiles=(expected.cinema?.library||[]).filter(s=>s?.source==='idb').length;
- const report={scope:'core JSON restoration; not a claim that all local media is embedded',backupBytes:input.length,backupSHA256:digest(input),reports,mediaCompleteness:{missingImagePositions:expected._backupMedia?.missing?.length||0,unembeddedAudioReferences:reports[0]?.afterReload.uniqueAudioReferences||0,unembeddedLocalMusicFiles:localMusicFiles,unembeddedLocalCinemaFiles:localCinemaFiles}};
+ const report={scope:'core JSON restoration; not a claim that all local media is embedded',sourceKind:envelope?'primary core audit envelope':'exported backup',sourceNativeCoreSHA256:envelope?decoded.sourceNativeCoreSHA256:undefined,backupBytes:input.length,backupSHA256:digest(input),reports,mediaCompleteness:{missingImagePositions:envelope?(reports[0]?.afterReload.missingMediaPositions||0):(expected._backupMedia?.missing?.length||0),unembeddedAudioReferences:reports[0]?.afterReload.uniqueAudioReferences||0,unembeddedLocalMusicFiles:localMusicFiles,unembeddedLocalCinemaFiles:localCinemaFiles}};
  report.coreRestorePassed=reports.every(r=>!r.afterImport.differentRoots.length&&!r.persisted.differentRoots.length&&r.afterReload.providedFieldDifferences.originalMemoriesRetained&&!r.afterReload.providedFieldDifferences.paths.some(p=>!/^me\/(?:locked|battery|charging)$/.test(p)&&!/^contacts\/\d+\/memory\/length$/.test(p))&&!r.pageErrors);
  report.completeMediaBackup=Object.values(report.mediaCompleteness).every(n=>n===0);
- if(process.env.NORTH_BACKUP_REPORT){const target=process.env.NORTH_BACKUP_REPORT,data=JSON.parse(fs.readFileSync(target,'utf8'));data.backupRestoreValidation=report;fs.writeFileSync(target,JSON.stringify(data,null,2)+'\n');}
+ if(process.env.NORTH_BACKUP_REPORT){const target=process.env.NORTH_BACKUP_REPORT,data=JSON.parse(fs.readFileSync(target,'utf8'));if(data.backupRestoreValidation&&data.backupRestoreValidation.backupSHA256!==report.backupSHA256){const history=data.backupRestoreValidationHistory||(data.backupRestoreValidationHistory=[]);if(!history.some(x=>x.backupSHA256===data.backupRestoreValidation.backupSHA256))history.push(data.backupRestoreValidation);}data.backupRestoreValidation=report;fs.writeFileSync(target,JSON.stringify(data,null,2)+'\n');}
  for(const result of reports){assert.deepEqual(result.afterImport.differentRoots,[]);assert.deepEqual(result.persisted.differentRoots,[]);assert.equal(result.afterReload.providedFieldDifferences.originalMemoriesRetained,true);assert.deepEqual(result.afterReload.providedFieldDifferences.paths.filter(p=>!/^me\/(?:locked|battery|charging)$/.test(p)&&!/^contacts\/\d+\/memory\/length$/.test(p)),[]);assert.equal(result.pageErrors,0);}
 }
-if(process.env.NORTH_BACKUP_FILE)auditExistingBackup(process.env.NORTH_BACKUP_FILE).catch(e=>{console.error(e);server.close();process.exitCode=1;});
+// Materialize only explicitly referenced chat archives from a verified cold copy.
+// Never append an unreferenced old __messages archive to intentionally deleted chats.
+function materializePrimaryCore(directory){
+ const cp=require('node:child_process');
+ const code=String.raw`
+from pathlib import Path
+import json,sqlite3,hashlib,uuid,os
+root=Path(__import__('sys').argv[1]).resolve()
+proof=json.loads((root/'backup-manifest.json').read_text())
+assert proof.get('format')=='smallphone-primary-preservation-v1' and proof.get('verified') is True,'raw snapshot is not verified'
+pin=json.loads((root/'Library/Application Support/SmallPhonePrivateAccounts/sync-source.v2.json').read_text())
+assert pin.get('source') in ('legacy','account'),'unknown approved source'
+owner=str(uuid.UUID(pin['owner']))
+assert pin['owner'].lower()==owner,'noncanonical account owner'
+store=root/'Library/Application Support'/('SmallPhonePrivateStore' if pin['source']=='legacy' else 'SmallPhonePrivateAccounts/'+owner)
+core=store/'__core_state.json';assert core.resolve().is_relative_to(root),'core path escapes snapshot';raw=core.read_bytes();record=json.loads(raw);state=json.loads(record['json'])
+assert state.get('_deviceSyncOwner')==owner,'core owner differs from source pin'
+row=next(x for x in proof['files'] if x['path']==str(core.relative_to(root)))
+assert hashlib.sha256(raw).hexdigest()==row['sha256'],'core changed after verification'
+databases=[]
+for p in (root/'Library/WebKit').rglob('IndexedDB.sqlite3'):
+ c=sqlite3.connect(p.as_uri()+'?mode=ro',uri=True)
+ try:
+  name=c.execute("SELECT value FROM IDBDatabaseInfo WHERE key='DatabaseName'").fetchone()[0]
+  name=name.decode('utf-16-le') if isinstance(name,bytes) else name
+  if name in ('yibeiImg','yibeiImg-account-'+owner):databases.append(p)
+ finally:c.close()
+assert len(databases)==1,'image store scope is ambiguous'
+db=databases[0];assert db.resolve().is_relative_to(root),'image store escapes snapshot';wal=Path(str(db)+'-wal');assert not wal.exists() or wal.stat().st_size==0,'image WAL must be checkpointed for immutable inspection'
+dbrow=next(x for x in proof['files'] if x['path']==str(db.relative_to(root)))
+h=hashlib.sha256()
+with db.open('rb') as f:
+ for block in iter(lambda:f.read(8388608),b''):h.update(block)
+assert h.hexdigest()==dbrow['sha256'],'image store changed after verification'
+c=sqlite3.connect(db.as_uri()+'?mode=ro&immutable=1',uri=True);c.text_factory=bytes;keys={}
+for key,identifier in c.execute('SELECT key,recordID FROM Records'):
+ if isinstance(key,bytes) and key[:2]==b'\x00\x60':
+  count=int.from_bytes(key[2:6],'little')
+  if len(key)==6+count*2:keys[key[6:].decode('utf-16-le')]=identifier
+def text_value(key):
+ assert key in keys,'required active chat archive is absent'
+ data=c.execute('SELECT value FROM Records WHERE recordID=?',(keys[key],)).fetchone()[0]
+ assert len(data)>=9 and data[:5]==b'\x0f\x00\x00\x00\x10','unsupported structured text version'
+ length=int.from_bytes(data[5:9],'little');latin=bool(length&0x80000000);length&=0x7fffffff
+ assert len(data)==9+length*(1 if latin else 2),'structured text is truncated'
+ return data[9:].decode('latin-1' if latin else 'utf-16-le')
+archives=[]
+def resolve(value,path=()):
+ if isinstance(value,dict):
+  if '__idb' in value:
+   kind=value['__idb'];person=state.get('me',{}).get('phoneFriend',{})
+   assert all(k in ('__idb','id') for k in value),'live archive tail requires separate review'
+   if path==('messages',) and kind=='messages':key='__messages'
+   elif path==('me','phoneFriend','messages') and kind=='phoneFriendMessages':key='__pf_messages_'+str(value.get('id') or person.get('id') or 'main')
+   elif path==('me','phoneFriend','groupMessages') and kind=='phoneFriendGroupMessages':key='__pf_group_messages_'+str(value.get('id') or person.get('id') or 'main')
+   else:raise ValueError('unknown active archive pointer')
+   text=text_value(key);result=json.loads(text);archives.append({'kind':kind,'sha256':hashlib.sha256(text.encode()).hexdigest()});return result
+  return {k:resolve(v,path+(k,)) for k,v in value.items()}
+ if isinstance(value,list):return [resolve(v,path+('*',)) for v in value]
+ return value
+try:resolved=resolve(state)
+finally:c.close()
+envelope={'format':'smallphone-primary-core-audit-v1','sourceNativeCoreSHA256':hashlib.sha256(raw).hexdigest(),'sourceStateSHA256':hashlib.sha256(record['json'].encode()).hexdigest(),'source':'verified cold primary Library','notStandaloneMediaBackup':True,'resolvedActiveArchives':archives,'state':resolved}
+target=root/'core-restore-audit.json';assert not target.is_symlink(),'audit output must not be a symlink'
+if target.exists():assert json.loads(target.read_text())==envelope,'unique prior audit material must not be overwritten'
+else:
+ fd=os.open(target,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+ with os.fdopen(fd,'w') as out:json.dump(envelope,out,ensure_ascii=True,separators=(',',':'))
+print(str(target))
+`;
+ return cp.execFileSync('python3',['-c',code,path.resolve(directory)],{encoding:'utf8',maxBuffer:1024*1024}).trim();
+}
+if(process.env.NORTH_RAW_PRIMARY_DIR||process.env.NORTH_BACKUP_FILE){Promise.resolve().then(()=>process.env.NORTH_RAW_PRIMARY_DIR?materializePrimaryCore(process.env.NORTH_RAW_PRIMARY_DIR):process.env.NORTH_BACKUP_FILE).then(auditExistingBackup).catch(e=>{console.error(e);server.close();process.exitCode=1;});}
 else (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  try{for(const engine of (process.env.NORTH_BACKUP_ENGINE?[process.env.NORTH_BACKUP_ENGINE]:['edge','webkit'])){
   const browser=await(engine==='edge'?chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'}):webkit.launch({headless:true}));
