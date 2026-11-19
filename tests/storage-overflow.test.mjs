@@ -55,7 +55,9 @@ test('overflow saves are verified asynchronously and failures are rate limited',
   assert.match(app, /now-_storageFailureToastAt>60000/);
   assert.match(app, /now-_storageFailureModalAt>300000/);
   assert.match(app, /大容量存档保存失败/);
-  assert.match(app, /原生主存档与备用数据库本次都没有确认写入/);
+  assert.match(app, /本次保存没有完成核验/);
+  assert.doesNotMatch(functionSource('storageFullAlert'), /原生主存档与备用数据库本次都没有确认写入/);
+  assert.match(functionSource('storageFullAlert'), /privateNativeAppOn\(\)\?'本次保存尚未确认'/);
   assert.match(app, /const IMG_DB_VERSION=2/);
   assert.match(functionSource('imgDB'), /objectStoreNames\.contains\('img'\)/);
   assert.match(functionSource('imgPutIDBWithRetry'), /attempt<3/);
