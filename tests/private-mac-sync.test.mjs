@@ -1112,3 +1112,30 @@ test('lost native save receipt is reconciled only against the exact committed op
   else{await assert.rejects(pending,/storage_revision_changed|storage_account_changed/);assert.equal(heads.get(owner+'|__core_state'),parent,mismatch+' must not silently adopt another CAS head');assert.equal(heads.get(owner+'|__core_state|json'),'previous');}
  }
 });
+
+
+test('a model waiting for sync never sends old messages with another account or replaced state',async()=>{
+ const source=read(PRIV_DIR+'private-device-sync-client.js'),a=source.indexOf(' const originalChatAPI=root.chatAPI;'),b=source.indexOf(' const originalReply=root.aiReply',a);
+ for(const change of ['owner','wechat','state','none']){
+  let release,owner='owner-a',account='main',calls=0;const context={},ready=new Promise(r=>{release=r;});
+  const c=vm.createContext({S:{_deviceSyncOwner:'owner-a'},activeModels:0,actId:()=>account,client:{context:()=>context,status:()=>({owner}),waitForIdle:()=>ready}});
+  c.root={chatAPI:async()=>{calls++;return 'answer';}};vm.runInContext(source.slice(a,b),c);
+  const pending=c.root.chatAPI([{role:'user',content:'old private message'}],{});
+  if(change==='owner')owner='owner-b';if(change==='wechat')account='other';if(change==='state')c.S={_deviceSyncOwner:'owner-a'};
+  release();if(change==='none'){assert.equal(await pending,'answer');assert.equal(calls,1);}else{await assert.rejects(pending,/变化|取消/);assert.equal(calls,0);}
+  assert.equal(c.activeModels,0);
+ }
+});
+
+test('sync display failures cannot roll back an already persisted account state',async()=>{
+ const source=read(PRIV_DIR+'private-device-sync-client.js');
+ for(const mode of ['display-failure','save-failure','another-state-during-save']){
+  const previous={_deviceSyncOwner:'owner-a',messages:{old:[]}},incoming={_deviceSyncOwner:'owner-a',messages:{current:[]}},third={_deviceSyncOwner:'owner-b'};
+  let saved=null;const c=vm.createContext({S:previous,applying:false,client:{status:()=>({owner:'owner-a'})},mergeStateData:x=>structuredClone(x),normalizeLoadedState(){},adoptPublishedComposer(){},document:{activeElement:null},cur:()=>({p:'home'}),render(){throw new Error('display failed');},
+   saveNowAsync:async()=>{if(mode==='another-state-during-save'){c.S=third;return false;}if(mode==='save-failure')return false;saved=c.S;return true;}});
+  vm.runInContext(fnSource(source,'replaceState'),c);
+  if(mode==='display-failure'){await c.replaceState(incoming,()=>{});assert.equal(c.S,saved);assert.deepEqual(c.S.messages,{current:[]});}
+  else{await assert.rejects(c.replaceState(incoming,()=>{}));assert.equal(c.S,mode==='save-failure'?previous:third);}
+  assert.equal(c.applying,false);
+ }
+});

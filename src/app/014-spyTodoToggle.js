@@ -258,6 +258,11 @@ const MCPTools=(()=>{
   const action=/(?:查询|查一下|查下|查查|查看|查(?=\s|我的|外部|邮箱|邮件|笔记|项目|仓库)|搜索|搜一下|搜歌|找一首|帮我找|获取|读取|核对|列出|发送|发邮件|发给|创建|新建|更新|修改|改成|改为|改这|改一下|删除|调用|使用|用一下|用\s*(?:MCP|工具)|通过\s*MCP|帮我查|\b(?:search|find|list|read|send|create|update|delete|call)\b)/i;
   const service=/(?:\b(?:mcp|gmail|github|supabase|cloudflare|spotify|notion|workers|r2)\b|邮箱|邮件|收件箱|草稿|笔记|文档|仓库|项目|云端额度|云端用量|云服务|工具|歌曲|歌单|曲目)/i;
   if(!action.test(text)||!service.test(text))return null;
+  // MCP_EXPLICIT_REQUEST_V1: mentioning an action/service is not an instruction to execute it.
+  const lead=text.replace(/^(?:(?:你好|嗨|好的|好|那就|这个|那个|这次|现在|今天|先|再|接着|继续|请你|请|麻烦你|麻烦|帮我|替我|给我|我想要|我想|我要|我需要|我希望|让你|希望你|需要你|你能不能|你可以|你能|你|能不能|可以|能|please|could you|can you|would you)[\s，,：:]*)+/i,'');
+  const direct=new RegExp('^(?:'+action.source+')','i').test(lead),using=/^(?:用|通过|use\b|using\b)\s*\S/i.test(lead),targetFirst=/^(?:把|将).{0,100}(?:发送|发给|创建|更新|修改|删除|查询|搜索|读取)/.test(lead);
+  if(!direct&&!using&&!targetFirst)return null;
+  if(/^(?:使用|用一下|用\s*(?:MCP|工具)).*(?:怎么|如何|为什么|是什么|收费|多少钱|意思|原理)/i.test(lead))return null;
   if(/(?:文案|措辞|润色|翻译|怎么写|写一封)/.test(text)&&/(?:不要发送|不用发送|不发送|只写|只要文案)/.test(text))return null;
   return context(roleId,valid,sourceMessage);
  }

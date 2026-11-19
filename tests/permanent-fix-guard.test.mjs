@@ -2237,3 +2237,7 @@ test('Mac card hosting preserves iPhone capability and native main-frame boundar
 
 
 test('native core lost receipts require exact readback without adopting competing revisions',()=>{assert(read(PRIVATE).includes('PRIVATE_CORE_RECEIPT_READBACK_V1'));});
+
+
+test('read-only independent snapshots keep pinned SQLite reads, owner checks and completion hashes',()=>{const bridge=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');for(const marker of ['PRIVATE_READONLY_SNAPSHOT_V1','SQLITE_OPEN_READONLY','sqlite3_backup_init','archiveSHA256','manifestSHA256','storage.snapshot.begin'])assert(bridge.includes(marker));assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-cloud-backup.js').includes('PRIVATE_READONLY_SNAPSHOT_UI_V1'));});
+test('verified primary backup and model or display sync boundaries remain guarded',()=>{const dir='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';assert(read(dir+'private-cloud-backup.js').includes('PRIVATE_BACKUP_PRIMARY_AUTHORITY_V1'));const adapter=read(dir+'private-device-sync-client.js');assert(adapter.includes('PRIVATE_MODEL_SYNC_OWNER_V1'));assert(adapter.includes('PRIVATE_SYNC_COMMIT_DISPLAY_V1'));for(const file of [WEB,PRIVATE])assert(read(file).includes('MCP_EXPLICIT_REQUEST_V1'));});

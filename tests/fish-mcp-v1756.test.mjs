@@ -668,12 +668,12 @@ test('MCP ordinary chat: connected tools do not intercept listening, greetings o
   const s=guideSandbox(null,variant);await connected(s);
   const hook=forVariant(readAppSource(),variant).split('\n').find(x=>x.includes('if(!note)_md.mcpContext='));
   assert(hook);
-  for(const content of ['听听','晚安','你继续','我想你了','你说你刚才在听音乐吗？','写一封道歉邮件的文案，不要发送']){
+  for(const content of ['听听','晚安','你继续','我想你了','你说你刚才在听音乐吗？','写一封道歉邮件的文案，不要发送','今天我在 GitHub 更新了项目','我已经删除了那封邮件','刚才有人让我使用工具读取邮件','MCP 这个工具怎么使用？','我想知道你为什么调用了工具']){
    Object.assign(s.ctx,{note:'',_md:{},id:'role-a',_lu:{role:'user',content},replyToken:1,replyAccount:'main',replyStale:()=>false});
    vm.runInContext(hook,s.ctx);assert.equal(s.ctx._md.mcpContext,null,content);
   }
   for(const type of ['image','file','sys']){Object.assign(s.ctx,{_md:{},_lu:{role:'user',type,content:'用 MCP 发送 Gmail 邮件'}});vm.runInContext(hook,s.ctx);assert.equal(s.ctx._md.mcpContext,null,'an attachment is not an instruction');}
-  for(const content of ['查一下 Gmail 最近的邮件','帮我发送邮件给 beiye5912@gmail.com','用 MCP 搜索歌曲 Hello','查一下云端额度']){
+  for(const content of ['查一下 Gmail 最近的邮件','帮我发送邮件给 beiye5912@gmail.com','用 MCP 搜索歌曲 Hello','查一下云端额度','用 Spotify 搜索 Adele 的 Hello','请你帮我查询 Gmail 最近的邮件','可以帮我搜索歌曲 Hello 吗','请把这封 Gmail 邮件发给 test@example.com','Search Spotify songs Hello','Please use Spotify to search Hello']){
    Object.assign(s.ctx,{_md:{},_lu:{role:'user',content}});vm.runInContext(hook,s.ctx);
    assert(s.ctx._md.mcpContext,content);
   }

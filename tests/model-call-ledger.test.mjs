@@ -154,7 +154,7 @@ test('两版的功能表一模一样', () => {
 test('private sync wait preserves the originating feature across its async boundary',async()=>{
  const {ctx,src}=load(BUNDLES.private);const adapter=currentRead(PRIV_DIR+'private-device-sync-client.js');
  const start=adapter.indexOf(" if(typeof originalChatAPI==='function')root.chatAPI="),end=adapter.indexOf(' const originalReply=',start);assert(start>=0&&end>start);
- vm.runInContext('var root=this,activeModels=0,client={waitForIdle:async()=>{await Promise.resolve();}},originalChatAPI=async(messages,opt)=>modelFeatureOf(opt);'+adapter.slice(start,end)+';function spyRefresh(opt){return chatAPI([],opt||{});}',ctx);
+ vm.runInContext('var root=this,activeModels=0,client={context:()=>null,status:()=>({owner:"ledger-fixture"}),waitForIdle:async()=>{await Promise.resolve();}},originalChatAPI=async(messages,opt)=>modelFeatureOf(opt);'+adapter.slice(start,end)+';function spyRefresh(opt){return chatAPI([],opt||{});}',ctx);
  assert.equal((await ctx.spyRefresh()).key,'spy_refresh');assert.equal((await ctx.spyRefresh({_modelFeatureOrigin:{key:'wechat'}})).key,'spy_refresh');assert.equal((await ctx.spyRefresh()).label,'查他手机·刷新');
 });
 

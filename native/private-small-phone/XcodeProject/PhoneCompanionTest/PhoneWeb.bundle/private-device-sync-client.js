@@ -318,14 +318,18 @@
   ta._chatOwner=S;if(typeof chatComposerStateSync==='function')chatComposerStateSync(ta);
  }
  async function replaceState(next,guard){
-  guard();const previous=S;applying=true;
+  guard();const previous=S;let published=null,persisted=false;applying=true;
   try{
    const user=client.status().owner;if(String(previous._deviceSyncOwner||'')!==user){_imgCache={};_imgRev=new Map();_imgReady=new Set();_heavy={};_heavyStamp={};_heavyReady=new Set();}
-   S=mergeStateData(next);S._deviceSyncOwner=user;normalizeLoadedState();guard();if(!await saveNowAsync())throw new Error('账号内容保存未完成');guard();if(typeof phoneFriendState==='function')phoneFriendState();adoptPublishedComposer(previous,user);
-   if(typeof cur==='function'&&cur().p==='chat'&&typeof refreshChatMessages==='function')refreshChatMessages(cur().id);
-   else if(!document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"]')&&typeof render==='function')render();
+   S=mergeStateData(next);published=S;S._deviceSyncOwner=user;normalizeLoadedState();guard();if(!await saveNowAsync())throw new Error('账号内容保存未完成');persisted=true;guard();
+   // PRIVATE_SYNC_COMMIT_DISPLAY_V1: a renderer is not a storage transaction.
+   try{
+    if(typeof phoneFriendState==='function')phoneFriendState();adoptPublishedComposer(previous,user);
+    if(typeof cur==='function'&&cur().p==='chat'&&typeof refreshChatMessages==='function')refreshChatMessages(cur().id);
+    else if(!document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"]')&&typeof render==='function')render();
+   }catch(error){try{if(typeof northBrowserDiagnosticError==='function')northBrowserDiagnosticError('sync-display',error);}catch(_){}}
   }
-  catch(e){const failed=S;S=previous;adoptPublishedComposer(failed,String(previous._deviceSyncOwner||''));throw e;}finally{applying=false;}
+  catch(e){if(!persisted&&S===published){const failed=S;S=previous;adoptPublishedComposer(failed,String(previous._deviceSyncOwner||''));}throw e;}finally{applying=false;}
  }
  function cancelReplies(){closeConflictPanel();closeDevicePanel();try{const aids=(S.me?.accounts||[]).map(x=>x.id);if(!aids.length)aids.push('main');for(const contact of S.contacts||[])for(const aid of aids)if(typeof replyTouch==='function')replyTouch(contact.id,aid);}catch(_){} }
  async function onAccount(status){
@@ -395,7 +399,14 @@
  root.NorthPrivateDeviceSyncClient=client;root.privatePhoneAutomaticStateAllowed=()=>client.automaticStateAllowed();installMediaHooks();
  const originalMany=root.imgMany;if(typeof originalMany==='function')root.imgMany=async function(keys){const user=client.status().owner,found=await originalMany.apply(this,arguments);if(!client.context()?.ready)return found;for(const key of (keys||[]).filter(key=>found[key]==null&&mediaAllowed(key)).slice(0,4)){if(client.status().owner!==user)break;try{const value=await fetchMedia(key);if(value!=null)found[key]=value;}catch(_){}}return found;};
  const originalChatAPI=root.chatAPI;
- if(typeof originalChatAPI==='function')root.chatAPI=async function(messages,opt){/* MODEL_SOURCE_BEFORE_SYNC_WAIT_V1 */opt=Object.assign({},opt);if(typeof modelFeatureOf==='function'){const originOpt=Object.assign({},opt);delete originOpt._modelFeatureOrigin;opt._modelFeatureOrigin=modelFeatureOf(originOpt);}await client.waitForIdle(true);activeModels++;try{return await originalChatAPI.call(this,messages,opt);}finally{activeModels--;}};
+ if(typeof originalChatAPI==='function')root.chatAPI=async function(messages,opt){
+  /* MODEL_SOURCE_BEFORE_SYNC_WAIT_V1 */opt=Object.assign({},opt);if(typeof modelFeatureOf==='function'){const originOpt=Object.assign({},opt);delete originOpt._modelFeatureOrigin;opt._modelFeatureOrigin=modelFeatureOf(originOpt);}
+  // PRIVATE_MODEL_SYNC_OWNER_V1: never pair an old prompt with a newly selected account/configuration.
+  const requestState=S,requestContext=client.context(),requestOwner=client.status().owner,requestAccount=typeof actId==='function'?String(actId()):'';
+  await client.waitForIdle(true);
+  if(S!==requestState||client.context()!==requestContext||client.status().owner!==requestOwner||(typeof actId==='function'?String(actId()):'')!==requestAccount)throw new Error('本次请求所属的账号或存档已变化，已取消旧请求');
+  activeModels++;try{return await originalChatAPI.call(this,messages,opt);}finally{activeModels--;}
+ };
  const originalReply=root.aiReply,localReplyTurns=new Map();
  const runDeviceReply=async function(id,note,token,aid,intent,options,hasLocalLock=false){
   aid=aid||actId();waitingReplies++;

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1947'){
+if(window.__NORTH_SHELL_BUILD__!=='1948'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1947 · 存档回执安全核验';
+const APP_VER='v1948 · 只读备份与同步聊天边界保护';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2354,7 +2354,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1947&r=v1947-owner-todo-report-1';
+  const url='sw.js?v=1948&r=v1948-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -6297,6 +6297,11 @@ const MCPTools=(()=>{
   const action=/(?:查询|查一下|查下|查查|查看|查(?=\s|我的|外部|邮箱|邮件|笔记|项目|仓库)|搜索|搜一下|搜歌|找一首|帮我找|获取|读取|核对|列出|发送|发邮件|发给|创建|新建|更新|修改|改成|改为|改这|改一下|删除|调用|使用|用一下|用\s*(?:MCP|工具)|通过\s*MCP|帮我查|\b(?:search|find|list|read|send|create|update|delete|call)\b)/i;
   const service=/(?:\b(?:mcp|gmail|github|supabase|cloudflare|spotify|notion|workers|r2)\b|邮箱|邮件|收件箱|草稿|笔记|文档|仓库|项目|云端额度|云端用量|云服务|工具|歌曲|歌单|曲目)/i;
   if(!action.test(text)||!service.test(text))return null;
+  // MCP_EXPLICIT_REQUEST_V1: mentioning an action/service is not an instruction to execute it.
+  const lead=text.replace(/^(?:(?:你好|嗨|好的|好|那就|这个|那个|这次|现在|今天|先|再|接着|继续|请你|请|麻烦你|麻烦|帮我|替我|给我|我想要|我想|我要|我需要|我希望|让你|希望你|需要你|你能不能|你可以|你能|你|能不能|可以|能|please|could you|can you|would you)[\s，,：:]*)+/i,'');
+  const direct=new RegExp('^(?:'+action.source+')','i').test(lead),using=/^(?:用|通过|use\b|using\b)\s*\S/i.test(lead),targetFirst=/^(?:把|将).{0,100}(?:发送|发给|创建|更新|修改|删除|查询|搜索|读取)/.test(lead);
+  if(!direct&&!using&&!targetFirst)return null;
+  if(/^(?:使用|用一下|用\s*(?:MCP|工具)).*(?:怎么|如何|为什么|是什么|收费|多少钱|意思|原理)/i.test(lead))return null;
   if(/(?:文案|措辞|润色|翻译|怎么写|写一封)/.test(text)&&/(?:不要发送|不用发送|不发送|只写|只要文案)/.test(text))return null;
   return context(roleId,valid,sourceMessage);
  }

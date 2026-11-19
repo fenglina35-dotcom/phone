@@ -314,3 +314,102 @@ print("native-predecessor-commits=\(cell.writes)")
 `;
  const out=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});assert(out.includes('native-predecessor-commits=1'),'both bridges accepted the same old parent: '+out.trim());
 });
+
+
+test('read-only native snapshot pins WAL state, rejects changing cores and never replaces evidence', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+ const start=source.indexOf('enum PrivateReadOnlySnapshot {');
+ const engine=start<0?'':source.slice(start,source.indexOf('// One foreground-only job',start));
+ const program=`import Foundation\nimport CryptoKit\nimport SQLite3\n${engine}\n`+String.raw`
+let f=FileManager.default,root=f.temporaryDirectory.appendingPathComponent("smallphone-snapshot-test-"+UUID().uuidString)
+defer{try? f.removeItem(at:root)}
+let library=root.appendingPathComponent("Library"),store=library.appendingPathComponent("Application Support/SmallPhonePrivateStore"),web=library.appendingPathComponent("WebKit/WebsiteData/Default/IndexedDB/test")
+try f.createDirectory(at:store,withIntermediateDirectories:true);try f.createDirectory(at:web,withIntermediateDirectories:true)
+let owner="10000000-0000-0000-0000-000000000001",core=store.appendingPathComponent("__core_state.json"),dbURL=web.appendingPathComponent("IndexedDB.sqlite3")
+let state=String(data:try JSONSerialization.data(withJSONObject:["_deviceSyncOwner":owner,"messages":[:]]),encoding:.utf8)!
+let original=try JSONSerialization.data(withJSONObject:["json":state,"ver":1,"savedAt":1])
+try original.write(to:core)
+var db:OpaquePointer?;precondition(sqlite3_open(dbURL.path,&db)==SQLITE_OK)
+defer{sqlite3_close(db)}
+precondition(sqlite3_exec(db,"PRAGMA journal_mode=WAL;CREATE TABLE t(value);INSERT INTO t VALUES(7);CREATE TABLE BlobFiles(fileName);INSERT INTO BlobFiles VALUES('1.blob');",nil,nil,nil)==SQLITE_OK)
+try Data("audio-original".utf8).write(to:web.appendingPathComponent("1.blob"))
+let destination=root.appendingPathComponent("snapshot")
+`+(start<0?String.raw`
+// Actual historical strategy copied the main database and missed its active WAL.
+try f.createDirectory(at:destination,withIntermediateDirectories:true)
+try f.copyItem(at:dbURL,to:destination.appendingPathComponent("IndexedDB.sqlite3"))
+var copied:OpaquePointer?;sqlite3_open_v2(destination.appendingPathComponent("IndexedDB.sqlite3").path,&copied,SQLITE_OPEN_READONLY,nil)
+var statement:OpaquePointer?;let ready=sqlite3_prepare_v2(copied,"SELECT value FROM t",-1,&statement,nil)==SQLITE_OK
+let matches=ready && sqlite3_step(statement)==SQLITE_ROW && sqlite3_column_int(statement,0)==7
+sqlite3_finalize(statement);sqlite3_close(copied)
+precondition(matches,"raw main-file copy loses the committed WAL state")
+`:String.raw`
+var wrote=false
+try PrivateReadOnlySnapshot.create(library:library,store:store,webRoot:web,extras:[],destination:destination,owner:owner,check:{},progress:{_,_ in
+ if !wrote {wrote=true;precondition(sqlite3_exec(db,"UPDATE t SET value=8",nil,nil,nil)==SQLITE_OK)}
+})
+let copied=destination.appendingPathComponent("Library/WebKit/WebsiteData/Default/IndexedDB/test/IndexedDB.sqlite3")
+var output:OpaquePointer?;precondition(sqlite3_open_v2(copied.path,&output,SQLITE_OPEN_READONLY,nil)==SQLITE_OK)
+var query:OpaquePointer?;precondition(sqlite3_prepare_v2(output,"SELECT value FROM t",-1,&query,nil)==SQLITE_OK)
+precondition(sqlite3_step(query)==SQLITE_ROW && sqlite3_column_int(query,0)==7,"snapshot must retain its pinned version despite concurrent writes")
+sqlite3_finalize(query);sqlite3_close(output)
+let proof=try Data(contentsOf:destination.appendingPathComponent("backup-manifest.json"))
+var blocked=false
+do{try PrivateReadOnlySnapshot.create(library:library,store:store,webRoot:web,extras:[],destination:destination,owner:owner,check:{},progress:{_,_ in})}catch{blocked=true}
+precondition(blocked && (try! Data(contentsOf:destination.appendingPathComponent("backup-manifest.json")))==proof,"existing proof must be preserved")
+let changing=root.appendingPathComponent("changing")
+blocked=false
+do{try PrivateReadOnlySnapshot.create(library:library,store:store,webRoot:web,extras:[],destination:changing,owner:owner,check:{},progress:{_,_ in try! Data("changed".utf8).write(to:core)})}catch{blocked=true}
+precondition(blocked && !f.fileExists(atPath:changing.path),"changed core may not publish a complete manifest")
+try original.write(to:core)
+try f.removeItem(at:web.appendingPathComponent("1.blob"))
+blocked=false
+let missing=root.appendingPathComponent("missing")
+do{try PrivateReadOnlySnapshot.create(library:library,store:store,webRoot:web,extras:[],destination:missing,owner:owner,check:{},progress:{_,_ in})}catch{blocked=true}
+precondition(blocked && !f.fileExists(atPath:missing.path),"missing referenced blob must reject complete proof")
+let cancelled=root.appendingPathComponent("cancelled")
+blocked=false
+do{try PrivateReadOnlySnapshot.create(library:library,store:store,webRoot:web,extras:[],destination:cancelled,owner:owner,check:{throw PrivateReadOnlySnapshot.failure("cancelled")},progress:{_,_ in})}catch{blocked=true}
+precondition(blocked && !f.fileExists(atPath:cancelled.path),"cancelled job must not publish")
+precondition((try! Data(contentsOf:core))==original,"source core must never be written by the snapshot")
+print("snapshot-wal-core-blob-cancel-evidence-verified")
+`);
+ const output=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});
+ assert(output.includes('snapshot-wal-core-blob-cancel-evidence-verified'));
+});
+
+
+test('native snapshot job produces a ZIP, scopes status and preserves its completed artifact on reopen', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+ const engine=source.slice(source.indexOf('enum PrivateReadOnlySnapshot {'),source.indexOf('// PRIVATE_NATIVE_CAS_GLOBAL_QUEUE_V1:'));
+ const program=`import Foundation\nimport CryptoKit\nimport SQLite3\n${engine}\n`+String.raw`
+let f=FileManager.default,root=f.temporaryDirectory.appendingPathComponent("smallphone-snapshot-job-"+UUID().uuidString)
+defer{try? f.removeItem(at:root)}
+let library=root.appendingPathComponent("Library"),store=library.appendingPathComponent("Application Support/SmallPhonePrivateStore"),web=library.appendingPathComponent("WebKit/WebsiteData/Default/IndexedDB/test")
+try f.createDirectory(at:store,withIntermediateDirectories:true);try f.createDirectory(at:web,withIntermediateDirectories:true)
+let owner="10000000-0000-0000-0000-000000000001"
+let state=String(data:try JSONSerialization.data(withJSONObject:["_deviceSyncOwner":owner,"messages":[:]]),encoding:.utf8)!
+try JSONSerialization.data(withJSONObject:["json":state,"ver":1,"savedAt":1]).write(to:store.appendingPathComponent("__core_state.json"))
+var db:OpaquePointer?;precondition(sqlite3_open(web.appendingPathComponent("IndexedDB.sqlite3").path,&db)==SQLITE_OK)
+precondition(sqlite3_exec(db,"CREATE TABLE t(value);INSERT INTO t VALUES(7)",nil,nil,nil)==SQLITE_OK);sqlite3_close(db)
+let jobs=PrivateReadOnlySnapshotJobs.shared
+let first=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner),token=first["token"] as! String
+var status=first
+for _ in 0..<2000 {
+ status=try jobs.status(owner:owner,token:token)
+ if !["copying","packaging"].contains(status["phase"] as! String){break}
+ Thread.sleep(forTimeInterval:0.01)
+}
+precondition(status["phase"] as? String == "ready",String(describing:status))
+let archive=try jobs.archive(owner:owner,token:token),before=try PrivateReadOnlySnapshot.digest(archive)
+let handle=try FileHandle(forReadingFrom:archive);let prefix=try handle.read(upToCount:2);try handle.close();precondition(prefix==Data([0x50,0x4b]))
+var denied=false;do{_ = try jobs.status(owner:"10000000-0000-0000-0000-000000000002",token:token)}catch{denied=true};precondition(denied)
+denied=false;do{_ = try jobs.archive(owner:owner,token:"wrong-token")}catch{denied=true};precondition(denied)
+let repeated=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner)
+precondition(repeated["phase"] as? String == "ready")
+precondition((try! PrivateReadOnlySnapshot.digest(archive))==before,"existing archive may not be replaced on another click")
+let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/unzip");process.arguments=["-tqq",archive.path];let output=Pipe();process.standardOutput=output;process.standardError=output;try process.run();process.waitUntilExit();precondition(process.terminationStatus==0)
+print("snapshot-job-zip-owner-evidence-verified")
+`;
+ const output=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});assert(output.includes('snapshot-job-zip-owner-evidence-verified'));
+});

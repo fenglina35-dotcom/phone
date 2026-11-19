@@ -36,6 +36,11 @@
 
 ## MCP 工具中心
 
+MCP_EXPLICIT_REQUEST_V1：服务名加动作词不足以证明本人要求调用。当前只接受明确请求开头、用指定服务执行、把/将对象交给工具处理，以及同角色同账号有效追问的紧接回答；“今天我在 GitHub 更新了项目”等叙述、询问工具怎么使用仍走原普通聊天。仅改变入口意图判断，不改变角色授权、逐次确认、实际工具、预算和结果卡片。双端行为回归见 `fish-mcp-v1756`。
+
+PRIVATE_MODEL_SYNC_OWNER_V1 / PRIVATE_SYNC_COMMIT_DISPLAY_V1：模型在同步等待前固定 S、账号上下文、手机号 owner 与微信号，等待后有任何变化就取消旧请求，不能用新账号配置发送旧提示词。同账号重新认证但仍同上下文可正常继续。replaceState 的内存回滚只允许发生在保存失败且内存仍是本次待提交对象时；保存成功后的界面错误仅记诊断，不撤销已保存状态，也不覆盖等待期间切到的新对象。消费者包括首开恢复、账号切换、远端显式/副设备应用，均需覆盖。行为回归见 `private-mac-sync`，完整核心聊天另验。
+
+
 2026-11-19 MCP_MAC_OFFICIAL_HOST_V1：本人明确要求能返回官方卡片时优先卡片，并在小手机里直接收听。Mac原生壳有MCP网络但无iPhone的mcp.card.*容器，原officialNative把Mac误归为iPhone而退链接。Mac现复用现有opaque网页宿主，iPhone原生路径及旧版能力门继续保留；不打开系统桥、文件、账号、相机或麦克风权限。Mac现有原生消息入口继续只接受主frame/本地主文档。MCP_OFFICIAL_CARD_LINK_V1让歌曲卡片旁保留小的真实官方链接，播放器网络不可用时仍有入口；不另造官方卡。Spotify按真实曲目ID显示官方152px播放器；其他服务仅在可信来源实际提供官方UI时显示，不能虚构卡片。播放范围由Spotify官方决定，须实际点击验证，不能把卡片出现等同完整歌曲可听。 589版Mac真实C搜索经本次确认返回三张官方卡，Hello试听进度12→18→27秒，暂停/继续成功；本人确认iPhone589卡片有声音。当前为官方试听，非完整曲目承诺。
 
 2026-11-19 公开Spotify现由本人批准的免费Pipeworx身份查询：GitHub仅read:user/user:email，服务密钥allowlist限定spotify、每日200次，0充值/0订阅/自动充值关闭。独立 /spotify/mcp 保持旧小手机Bearer/仅C/ask，内部固定一次公开HTTP查询并使用服务端密钥，失败不降级匿名或重试。Mac588角色真实搜索已成功返回Adele Hello官方链接；个人Spotify账号未直连。MCP_SPOTIFY_SEARCH_RESULT_V1避免把分页limit当账户额度，API到双端渲染旧失败/新通过。
@@ -1348,6 +1353,11 @@ GUI核验一度因异步重绘导致旧AX索引落到清空数据确认页，立
 
 
 ## 备份文件导出
+
+只读固定快照（PRIVATE_READONLY_SNAPSHOT_V1）：私人 iPhone 的 `PhoneNativeBridge.swift` 用当前账号和既有来源选择器限定原生存档及 WebKit 目录。所有数据库先开启只读事务固定读视图，再用 SQLite backup API 复制到独立目录；不对原库 checkpoint、不恢复、不覆盖。外置媒体先复制并前后哈希核对，数据库输出转独立 DELETE 日志并 quick_check，BlobFiles 指向的原件缺失则失败；结束时重查核心原文与文件清单。失败不发布完整证明。整个 App 只允许一个前台任务，退后台/换号停止，异步状态轮询不占用存档写入队列。系统协调器只压缩已经固定的目录，ZIP 与清单哈希写入完成回执后才允许分享；重开读回核验，未完成旧副本保留且拒绝覆盖。入口在授权与数据现有备份分组；生成、系统保存和手机外副本核验分别验收。原库包并非普通 JSON 导入包，历史已经缺失的应用图片引用不能靠它恢复。`private-native-account-storage` 行为测试、`private-daily-file-backup` 手动入口及既有浏览器检查的 `NORTH_SNAPSHOT_UI_AUDIT` 覆盖此流程。
+
+自动云备份（PRIVATE_BACKUP_PRIMARY_AUTHORITY_V1）：旧浏览器来源标记缺失不能单独把已核验的当前主设备永远挡在确认外。只有账号同步已 ready/authorized、种子 ready、当前账号核心已启动并匹配 owner、主设备权限明确时，自动任务才可绕过旧标记；首次绑定、未知归属和副设备仍拒绝。生成前及原生分块提交前重查权限，缺失原件仍拒绝覆盖旧完整云备份；等待前台、90 秒空闲、性能保护或重试原因只在授权与数据显示，不冒充成功。停止/退后台的 App 不承诺定时上传。
+
 
 独立验收：给既有 `scripts/check_backup_realistic_browser.cjs` 设置 `NORTH_BACKUP_FILE` 为本机备份绝对路径、`NORTH_BACKUP_REPORT` 为已有 JSON 记录路径，再经 `scripts/run_tests_mac.sh --check` 执行。仅用一次性私人浏览器存储，阻断外部请求；真实导入后到无脚本页面读回实际数据库逐栏目比对，再正常重开确认原有资料保留。报告分开记录 `coreRestorePassed` 与 `completeMediaBackup`；音频引用、本地歌曲和放映室元数据不能当作原件已打包。真实文件与凭据不入仓库。无文件参数仍走原有万条聊天及媒体性能测试。
 

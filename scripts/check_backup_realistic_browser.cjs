@@ -129,7 +129,32 @@ print(str(target))
 `;
  return cp.execFileSync('python3',['-c',code,path.resolve(directory)],{encoding:'utf8',maxBuffer:1024*1024}).trim();
 }
-if(process.env.NORTH_RAW_PRIMARY_DIR||process.env.NORTH_BACKUP_FILE){Promise.resolve().then(()=>process.env.NORTH_RAW_PRIMARY_DIR?materializePrimaryCore(process.env.NORTH_RAW_PRIMARY_DIR):process.env.NORTH_BACKUP_FILE).then(auditExistingBackup).catch(e=>{console.error(e);server.close();process.exitCode=1;});}
+async function auditSnapshotUI(){
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`,browser=await chromium.launch({headless:true});
+ try{for(const width of [320,430]){
+  const context=await browser.newContext({viewport:{width,height:900},serviceWorkers:'block'}),page=await context.newPage(),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_MAC__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'audit-native-unavailable'})};});
+  await page.goto(origin+'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html');await page.waitForFunction(()=>window.__northBootReady);await page.evaluate(()=>_bootImagesPromise);
+  await page.evaluate(()=>{
+   const owner='10000000-0000-0000-0000-000000000001';window.__SMALL_PHONE_NATIVE_ACCOUNT__={platform:'iOS',userId:owner};
+   localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));S.me.locked=false;document.getElementById('gate')?.remove();
+   window.snapshotRequests=[];window.SmallPhoneNative={request:async(action,payload)=>{snapshotRequests.push({action,owner:payload?.owner,token:payload?.token});if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};if(action==='account.backup.info')return {ok:true,found:false};if(action==='storage.snapshot.begin')return {ok:true,token:'ui-audit-token',phase:'copying',detail:'正在生成固定副本'};if(action==='storage.snapshot.status')return {ok:true,token:'ui-audit-token',phase:'ready',detail:'独立备份已生成；请点保存，尚未复制到手机外'};if(action==='storage.snapshot.save')return {ok:true,completed:true};return {ok:true};}};
+   uiConfirm=async()=>true;saveNowAsync=async()=>true;openSettings('data');_setTab=3;
+   _privatePhoneAccount={loaded:true,loading:false,loggedIn:true,userId:owner,maskedPhone:'测试账号',backup:{found:false},error:''};privatePhoneAccountPaint();closeModal();
+  });
+  if(await page.locator('#privateAccountRecoveryDetails').count())await page.locator('#privateAccountRecoveryDetails').evaluate(node=>node.open=true);const section=page.locator('#private_readonly_snapshot');await section.waitFor();assert.equal(await page.evaluate(()=>snapshotRequests.filter(x=>x.action.startsWith('storage.snapshot')).length),0);
+  await section.getByRole('button',{name:'生成或查看独立备份'}).click();await section.getByRole('button',{name:'保存备份文件'}).waitFor({timeout:10000});
+  await page.evaluate(()=>closeModal());await section.scrollIntoViewIfNeeded();const geometry=await section.evaluate(node=>{const r=node.getBoundingClientRect();return{left:r.left,right:r.right,width:innerWidth,buttons:[...node.querySelectorAll('button')].map(b=>{const r=b.getBoundingClientRect();return{width:r.width,height:r.height,left:r.left,right:r.right};})};});
+  assert(geometry.left>=0&&geometry.right<=width+1,JSON.stringify(geometry));assert(geometry.buttons.every(x=>x.width>=80&&x.height>=24&&x.left>=0&&x.right<=width+1));
+  await page.screenshot({path:path.join(root,'.codex_tmp',`private-sync-dialog-${width}.png`)});
+  await section.getByRole('button',{name:'保存备份文件'}).click();await section.getByText('系统保存操作已完成，请核对保存位置').waitFor();
+  assert.deepEqual(await page.evaluate(()=>snapshotRequests.filter(x=>x.action.startsWith('storage.snapshot')).map(x=>x.action)),['storage.snapshot.begin','storage.snapshot.status','storage.snapshot.save']);assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({snapshotUI:true,width,pageErrors:errors.length,geometry,nativeRequests:'simulated; real native engine tested separately'}));await context.close();
+ }}finally{await browser.close();server.close();}
+}
+if(process.env.NORTH_SNAPSHOT_UI_AUDIT){auditSnapshotUI().catch(e=>{console.error(e);server.close();process.exitCode=1;});}
+else if(process.env.NORTH_RAW_PRIMARY_DIR||process.env.NORTH_BACKUP_FILE){Promise.resolve().then(()=>process.env.NORTH_RAW_PRIMARY_DIR?materializePrimaryCore(process.env.NORTH_RAW_PRIMARY_DIR):process.env.NORTH_BACKUP_FILE).then(auditExistingBackup).catch(e=>{console.error(e);server.close();process.exitCode=1;});}
 else (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  try{for(const engine of (process.env.NORTH_BACKUP_ENGINE?[process.env.NORTH_BACKUP_ENGINE]:['edge','webkit'])){
   const browser=await(engine==='edge'?chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'}):webkit.launch({headless:true}));
