@@ -20,7 +20,7 @@ window.__NORTH_PAGE_ART__=["assets/roleplay-studio/theatre-card.png?r=user-choic
 (function(){var preview=new URLSearchParams(location.search).get('northPreview');if(preview&&!['page-art','roleplay','gamehub','worldbook','bankwallet','familycards','mybankcards'].includes(preview))return;window.__NORTH_PAGE_ART_EARLY__=true;window.__NORTH_PAGE_ART__.forEach(function(src){var link=document.createElement('link');link.rel='preload';link.as='image';link.href=src;link.setAttribute('fetchpriority','low');document.head.appendChild(link);});})();
 </script>
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1945';</script>
+<script>window.__NORTH_SHELL_BUILD__='1946';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -39,11 +39,11 @@ window.__NORTH_PAGE_ART__=["assets/roleplay-studio/theatre-card.png?r=user-choic
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1945-roleplay-studio-1';
+  var key='north-sw-reloaded-1946-roleplay-studio-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1945&r=v1945-owner-todo-report-1';
+  var url='sw.js?v=1946&r=v1946-owner-todo-report-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -2883,20 +2883,20 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
 <script>/* 样式表偶尔在打开瞬间下载失败，页面会失去主屏组件样式；失败时自动换地址再载一次，不用退出重进。 */window.__northCssRetry=function(link){try{if(!link||link.dataset.retried)return;link.dataset.retried='1';var next=document.createElement('link');next.rel='stylesheet';next.href=link.href+(link.href.indexOf('?')<0?'?':'&')+'retry='+Date.now();next.dataset.retried='1';link.parentNode.insertBefore(next,link.nextSibling);}catch(_){}};</script>
-<link rel="stylesheet" href="glass-theme.css?v=1945&r=music-disc-color-1" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="mail-outbox.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-home.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-hotel.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-regions.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-train.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-concert-booking.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-taxi.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-concert.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-flight.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-guide.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="role-family-card.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="wechat-me.css?v=1945" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="pet-game.css?v=1945" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="glass-theme.css?v=1946&r=music-disc-color-1" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="mail-outbox.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-home.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-hotel.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-regions.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-train.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-concert-booking.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-taxi.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-concert.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-flight.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-guide.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="role-family-card.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="wechat-me.css?v=1946" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="pet-game.css?v=1946" onerror="__northCssRetry(this)">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17" onerror="__northCssRetry(this)">
 </head>
 <body>
@@ -2935,6 +2935,8 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 (function(){
   window.__northBootReady=false;
   window.__northBootStarted=false;
+  /* BOOT_FAIL_TERMINAL_V1: 失败诊断不能被稍后等待文案覆盖。 */
+  var bootFailed=false;
   function safeText(v){return String(v||'').replace(/[<>]/g,'').slice(0,180);}
   function reasonText(raw){var s=String(raw||'');if(/quota|storage|memory|out of memory/i.test(s))return '本机网页存储或内存不足。先修复缓存；能进入后请尽快导出备份并清理旧图片。';if(/syntax|unexpected token|not defined|not a function/i.test(s))return '浏览器内核过旧或脚本没有完整加载。请更新 Chrome / 系统 WebView，再修复缓存。';if(/404|failed to load|loading chunk|network|fetch/i.test(s))return '页面文件没有完整加载，通常是网络抖动或旧缓存造成的。';return '启动时遇到异常，聊天和角色数据仍保存在本机，没有被清除。';}
   function retryUrl(){return location.pathname+'?reload='+Date.now()+(location.hash||'');}
@@ -2942,72 +2944,72 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   function ownBootError(e){var target=e&&(e.target||e.srcElement),tag=String(target&&target.tagName||'').toUpperCase();if(target&&target!==window&&target!==document)return tag==='SCRIPT'&&/\b(?:app|license-gate)\.js(?:\?|$)/i.test(String(target.src||''));var file=String(e&&e.filename||'');var msg=String(e&&e.message||'');if(/^script error\.?$/i.test(msg)&&!file)return false;if(file&&!/(?:小手机\.html|\/app\.js|\/license-gate\.js)(?:\?|$)/i.test(file))return false;return true;}
   window.__northRetry=function(){location.replace(retryUrl());};
   window.__northRepair=function(){location.replace(repairUrl());};
-  window.__northBootProgress=function(text){if(window.__northBootReady)return;var app=document.getElementById('app'),msg=app&&app.querySelector('.bootmsg');if(msg)msg.textContent=safeText(text)||'仍在安全读取本机数据，请稍候…';};
-  window.__northBootFail=function(raw){if(window.__northBootReady)return;var app=document.getElementById('app');if(!app)return;var detail=safeText(raw);app.innerHTML='<div class="bootbox"><div class="bootcard"><div class="bootlogo">🛠️</div><div class="boottitle">小手机没有正常启动</div><div class="bootmsg">'+reasonText(raw)+(detail?'<br><small style="color:#777">诊断：'+detail+'</small>':'')+'<br><b style="color:#8fd6a7">下面操作不会删除聊天、角色或密钥。</b></div><a class="bootbtn" href="'+retryUrl()+'">重新加载</a><a class="bootbtn secondary" href="'+repairUrl()+'">修复页面缓存后重开</a></div></div>';};
+  window.__northBootProgress=function(text){if(window.__northBootReady||bootFailed)return;var app=document.getElementById('app'),msg=app&&app.querySelector('.bootmsg');if(msg)msg.textContent=safeText(text)||'仍在安全读取本机数据，请稍候…';};
+  window.__northBootFail=function(raw){if(window.__northBootReady)return;bootFailed=true;var app=document.getElementById('app');if(!app)return;var detail=safeText(raw);app.innerHTML='<div class="bootbox"><div class="bootcard"><div class="bootlogo">🛠️</div><div class="boottitle">小手机没有正常启动</div><div class="bootmsg">'+reasonText(raw)+(detail?'<br><small style="color:#777">诊断：'+detail+'</small>':'')+'<br><b style="color:#8fd6a7">下面操作不会删除聊天、角色或密钥。</b></div><a class="bootbtn" href="'+retryUrl()+'">重新加载</a><a class="bootbtn secondary" href="'+repairUrl()+'">修复页面缓存后重开</a></div></div>';if(typeof window.__northBootConflictPrompt==='function')window.__northBootConflictPrompt();};
   window.addEventListener('error',function(e){if(!window.__northBootReady&&ownBootError(e))window.__northBootFail((e&&e.message)||'关键页面文件加载失败');},true);
   window.addEventListener('unhandledrejection',function(e){if(!window.__northBootReady)window.__northBootFail((e&&e.reason&&e.reason.message)||'启动任务失败');});
   setTimeout(function(){if(!window.__northBootReady)window.__northBootProgress(window.__northBootStarted?'本机存档较大，仍在安全读取；不会重置主题或聊天…':'网络较慢，仍在加载关键页面文件…');},12000);
-  setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
+  setTimeout(function(){if(!window.__northBootReady&&!bootFailed)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1945"></script>
-<script src="license-gate.js?v=1945" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1945" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1945"></script>
-<script src="message-beijing-time.js?v=1945&r=offline-me-1"></script>
-<script src="travel-gallery.js?v=1945"></script>
-<script src="travel-home.js?v=1945"></script>
-<script src="travel-hotel-data.js?v=1945"></script>
-<script src="travel-payment.js?v=1945"></script>
-<script src="travel-hotel.js?v=1945"></script>
-<script src="destination-photos.js?v=1945"></script>
-<script src="travel-ticket-data.js?v=1945"></script><script src="travel-guide.js?v=1945"></script>
-<script src="travel-regions.js?v=1945"></script>
-<script src="travel-train.js?v=1945" onerror="__northBootFail('火车票组件载入失败')"></script><script src="travel-train-booking.js?v=1945"></script>
-<script src="travel-concert-booking.js?v=1945"></script>
-<script src="travel-taxi.js?v=1945"></script>
-<script src="travel-concert.js?v=1945"></script>
-<script src="travel-flight.js?v=1945" onerror="__northBootFail('机票组件载入失败')"></script><script src="travel-flight-booking.js?v=1945"></script>
-<script src="app.js?v=1945&r=v1945-owner-todo-report-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1945&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1945"></script>
-<script src="public-north-runtime.js?v=1945"></script>
-<script src="phone-shortcuts.js?v=1945"></script>
-<script src="request-size-details.js?v=1945" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1945" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1945&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1945" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1945&r=v1945-owner-todo-report-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1946"></script>
+<script src="license-gate.js?v=1946" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1946" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1946"></script>
+<script src="message-beijing-time.js?v=1946&r=offline-me-1"></script>
+<script src="travel-gallery.js?v=1946"></script>
+<script src="travel-home.js?v=1946"></script>
+<script src="travel-hotel-data.js?v=1946"></script>
+<script src="travel-payment.js?v=1946"></script>
+<script src="travel-hotel.js?v=1946"></script>
+<script src="destination-photos.js?v=1946"></script>
+<script src="travel-ticket-data.js?v=1946"></script><script src="travel-guide.js?v=1946"></script>
+<script src="travel-regions.js?v=1946"></script>
+<script src="travel-train.js?v=1946" onerror="__northBootFail('火车票组件载入失败')"></script><script src="travel-train-booking.js?v=1946"></script>
+<script src="travel-concert-booking.js?v=1946"></script>
+<script src="travel-taxi.js?v=1946"></script>
+<script src="travel-concert.js?v=1946"></script>
+<script src="travel-flight.js?v=1946" onerror="__northBootFail('机票组件载入失败')"></script><script src="travel-flight-booking.js?v=1946"></script>
+<script src="app.js?v=1946&r=v1946-owner-todo-report-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1946&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1946"></script>
+<script src="public-north-runtime.js?v=1946"></script>
+<script src="phone-shortcuts.js?v=1946"></script>
+<script src="request-size-details.js?v=1946" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1946" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1946&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1946" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1946&r=v1946-owner-todo-report-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1945" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1945" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="assets/north-dessert-shop.js?v=1945"></script>
-<script src="assets/north-mcdonalds-shop.js?v=1945"></script>
-<script src="assets/north-luckin-shop.js?v=1945"></script>
-<script src="assets/north-breakfast-shop.js?v=1945"></script>
-<script src="assets/north-fruit-bowl-shop.js?v=1945"></script>
-<script src="assets/north-pharmacy-shop.js?v=1945"></script>
-<script src="delivery.js?v=1945" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1945" onerror="northCommerceLoadFailed()"></script>
-<script src="north-runner.js?v=1945" defer></script>
-<script src="pet-game.js?v=1945" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="desk-pet.js?v=1945" onerror="console.warn('桌面小机器人载入失败')"></script>
-<script src="mail-outbox.js?v=1945" onerror="__northBootFail('信件投递组件载入失败')"></script>
-<script src="role-family-card.js?v=1945" onerror="__northBootFail('亲属卡组件载入失败')"></script>
-<script src="pf-group-role.js?v=1945" onerror="console.warn('真人群角色组件载入失败')"></script>
-<script src="pixel-home-policy.js?v=1945"></script>
-<script src="pixel-wardrobe-info.js?v=1945"></script>
-<script src="pixel-home.js?v=1945"></script>
-<script src="gift-effects.js?v=1945" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1945" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="photo-album.js?v=1945"></script>
-<script src="role-video.js?v=1945"></script>
-<script src="task-notes.js?v=1945"></script>
-<script src="fish-mcp.js?v=1945"></script>
-<script src="voice-expressive.js?v=1945"></script>
+<script src="wechat-me.js?v=1946" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1946" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="assets/north-dessert-shop.js?v=1946"></script>
+<script src="assets/north-mcdonalds-shop.js?v=1946"></script>
+<script src="assets/north-luckin-shop.js?v=1946"></script>
+<script src="assets/north-breakfast-shop.js?v=1946"></script>
+<script src="assets/north-fruit-bowl-shop.js?v=1946"></script>
+<script src="assets/north-pharmacy-shop.js?v=1946"></script>
+<script src="delivery.js?v=1946" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1946" onerror="northCommerceLoadFailed()"></script>
+<script src="north-runner.js?v=1946" defer></script>
+<script src="pet-game.js?v=1946" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="desk-pet.js?v=1946" onerror="console.warn('桌面小机器人载入失败')"></script>
+<script src="mail-outbox.js?v=1946" onerror="__northBootFail('信件投递组件载入失败')"></script>
+<script src="role-family-card.js?v=1946" onerror="__northBootFail('亲属卡组件载入失败')"></script>
+<script src="pf-group-role.js?v=1946" onerror="console.warn('真人群角色组件载入失败')"></script>
+<script src="pixel-home-policy.js?v=1946"></script>
+<script src="pixel-wardrobe-info.js?v=1946"></script>
+<script src="pixel-home.js?v=1946"></script>
+<script src="gift-effects.js?v=1946" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1946" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="photo-album.js?v=1946"></script>
+<script src="role-video.js?v=1946"></script>
+<script src="task-notes.js?v=1946"></script>
+<script src="fish-mcp.js?v=1946"></script>
+<script src="voice-expressive.js?v=1946"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1945" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="couple-windowsill.js?v=1945" onerror="console.warn('窗台组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1946" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-windowsill.js?v=1946" onerror="console.warn('窗台组件载入失败')"></script>
 </body>
 </html>

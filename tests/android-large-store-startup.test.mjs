@@ -1,3 +1,4 @@
+import {read,PRIV_DIR} from './_helpers.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -100,4 +101,10 @@ test('Android recovers a meaningful orphaned IndexedDB core before treating the 
   assert.equal(sandbox.shellAt,321,'the compact local index is rebuilt without rewriting the recovered core');
   assert.equal(sandbox._androidOrphanCoreProbe,false);
   assert.match(sandbox.progress,/已找回安卓浏览器中的原核心存档/);
+});
+
+for(const name of ['小手机.html',PRIV_DIR+'index.html',PRIV_DIR+'小手机.html'])test(name+' boot failure remains terminal instead of turning into a waiting message',()=>{
+ const source=read(name),start=source.indexOf('/* 安卓启动保护'),script=source.slice(start,source.indexOf('</script>',start)),message={textContent:'actual failure'},app={innerHTML:'',querySelector:()=>message},timers=[];
+ const ctx=vm.createContext({window:{addEventListener(){}},document:{getElementById:()=>app},location:{pathname:'/小手机.html',hash:''},setTimeout:(fn,ms)=>timers.push({fn,ms})});vm.runInContext(script,ctx);
+ ctx.window.__northBootFail('原生存档与备用存档内容不一致');const original=app.innerHTML;ctx.window.__northBootProgress('仍在读取，请等待');assert.equal(message.textContent,'actual failure');for(const t of timers)t.fn();assert.equal(message.textContent,'actual failure');assert.equal(app.innerHTML,original,'the 60-second timeout must not replace an already known cause');
 });

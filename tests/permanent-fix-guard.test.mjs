@@ -86,6 +86,11 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1945 / web v1946",scope:"private",least:1,name:"本机启动实时状态差异须确认并保留两份原件",marker:"PRIVATE_CORE_RUNTIME_REVIEW_V1"},
+  {release:"private v1945 / web v1946",scope:"private",least:1,name:"旧镜像迟到提交不能覆盖已完成的新存档",marker:"PRIVATE_CORE_MIRROR_CAS_V1"},
+  {release:"private v1945 / web v1946",scope:"web",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift",least:1,name:"多个原生桥共用存档CAS原子队列",marker:"PRIVATE_NATIVE_CAS_GLOBAL_QUEUE_V1"},
+  {release:"private v1945 / web v1946",scope:"web",file:"小手机.html",least:1,name:"失败诊断不能被稍后等待文字覆盖",marker:"BOOT_FAIL_TERMINAL_V1"},
+  {release:"private v1945 / web v1946",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html",least:1,name:"私人启动失败诊断保持真实原因",marker:"BOOT_FAIL_TERMINAL_V1"},
   {release:'wechat-profile-steady',scope:'both',least:1,name:'微信我页头像资料卡不参与通用位移且菜单反馈保留',marker:'// SHELL_WECHAT_PROFILE_STEADY_V1:'},
   {release:'wechat-role-slide-entry',scope:'both',least:1,name:'微信进入角色整页向左滑入，名字同速自然进入且输入业务即时',marker:'/* WECHAT_ROLE_SLIDE_ENTRY_V1:'},
   {release:'shell-anchored-titles',scope:'both',least:1,name:'恢复内容动效且标题与祖先始终固定，保留指定例外',marker:'/* SHELL_ANCHORED_TITLES_V3:'},

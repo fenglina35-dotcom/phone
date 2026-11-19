@@ -120,7 +120,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.590 (590)"
+    private static let build = "1.0.591 (591)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -290,6 +290,11 @@ enum SmallPhoneRecoveryLaunchStore {
     }
 }
 
+// PRIVATE_NATIVE_CAS_GLOBAL_QUEUE_V1: all page bridges serialize the complete read/compare/write transaction.
+enum PrivateNativeStorageWork {
+    nonisolated static let shared = DispatchQueue(label: "com.smallphone.private-storage", qos: .utility)
+}
+
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
@@ -323,10 +328,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
         return bridge
     }()
-    private let storageQueue = DispatchQueue(
-        label: "com.smallphone.private-storage",
-        qos: .utility
-    )
+    private let storageQueue = PrivateNativeStorageWork.shared
     private struct NativeStorageReadSession {
         let data: Data
         let expiresAt: TimeInterval

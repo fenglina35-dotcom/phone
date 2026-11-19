@@ -1081,3 +1081,16 @@ test('boot conflict evidence contains only fixed metadata and never writes eithe
  const before=JSON.stringify([a,b]);assert.throws(()=>ctx.privateSelectStoredCore(a,b),/不一致/);assert.equal(JSON.stringify([a,b]),before);
  assert.equal(events.length,3);const text=JSON.stringify(events);for(const secret of ['SECRET_MUST_NOT_LOG','PRIVATE_ROLE','PRIVATE_NOTE','OTHER_SECRET'])assert(!text.includes(secret));assert.equal(events[0].fields.nativeParent,'b'.repeat(64));assert.equal(events[1].fields.nativeNotes,1);assert.equal(events[2].fields.messagesSame,true);
 });
+
+test('runtime conflict review compares every other field and cannot authorize protected data changes',()=>{
+ const source=read(PRIV_DIR+'app.js'),ctx=vm.createContext({});for(const name of ['privateCoreJSONSame','privateCoreOnlyRuntimeDiff'])vm.runInContext(fnSource(source,name),ctx);
+ const a={settings:{chat:{model:'kept'},hist:12},contacts:[{id:'kept',memories:['kept']}],me:{lifeNotes:[]},messages:{__idb:'messages'},spy:{kept:{wechat:[]}},presence:{a:1},roleBody:{kept:{energy:12}}},b=JSON.parse(JSON.stringify(a));b.presence.a=2;b.roleBody.kept.energy=11;
+ assert.equal(ctx.privateCoreOnlyRuntimeDiff(JSON.stringify(a),JSON.stringify(b)),true);
+ for(const change of [x=>x.settings.hist=32,x=>x.contacts.push({id:'deleted'}),x=>x.contacts[0].memories.push('removed'),x=>x.me.lifeNotes.push('deleted'),x=>x.messages={kept:[{id:'deleted'}]},x=>x.spy.kept.wechat.push('removed'),x=>x.customField='unique']){const other=JSON.parse(JSON.stringify(b));change(other);assert.equal(ctx.privateCoreOnlyRuntimeDiff(JSON.stringify(a),JSON.stringify(other)),false);}
+ assert.equal(ctx.privateCoreJSONSame({a:1,nested:{x:2,y:3}},{nested:{y:3,x:2},a:1}),true);
+});
+
+test('account changes release predecessor bodies and pending review from another owner',()=>{
+ const source=read(PRIV_DIR+'app.js'),first='10000000-0000-0000-0000-000000000001',second='10000000-0000-0000-0000-000000000002';
+ const ctx=vm.createContext({window:{__SMALL_PHONE_NATIVE_ACCOUNT__:{userId:second}},_privateNativeCoreHeads:new Map([[first+'|__core_state|json','PRIVATE_PREDECESSOR'],[first+'|__core_state','a'.repeat(64)]]),_privateCoreBootConflict:{owner:first}});vm.runInContext(fnSource(source,'privateAccountDataIdentity'),ctx);assert.equal(ctx.privateAccountDataIdentity(),second);assert(!ctx._privateNativeCoreHeads.has(first+'|__core_state|json'));assert.equal(ctx._privateCoreBootConflict,null);
+});

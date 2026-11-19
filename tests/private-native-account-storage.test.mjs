@@ -293,3 +293,24 @@ print("account-webstore-identity-ok")
  assert(root.includes('.id("\\(webViewGeneration):\\(accountDocumentEpoch)")'));
  assert(!root.includes('SmallPhoneUsageReportMountView().id'),'account changes must not remount the companion report');
 });
+
+test('two native bridge instances cannot both commit against one predecessor', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+ const shared=source.match(/enum PrivateNativeStorageWork \{[\s\S]*?\n\}/)?.[0]||'';
+ const declaration=source.match(/private let storageQueue = PrivateNativeStorageWork\.shared/)?.[0]||source.match(/private let storageQueue = DispatchQueue\([\s\S]*?\n    \)/)?.[0];assert(declaration);
+ const program=`import Foundation\n${shared}\nfinal class FixtureBridge {\n${declaration}\n`+String.raw`
+ func attempt(_ value:String){storageQueue.async{let previous=cell.read();ready.signal();_ = release.wait(timeout:.now()+3);if previous=="parent"{cell.commit(value)};finished.leave()}}
+}
+final class Cell: @unchecked Sendable {
+ let lock=NSLock();var value="parent",writes=0
+ func read()->String{lock.lock();defer{lock.unlock()};return value}
+ func commit(_ next:String){lock.lock();defer{lock.unlock()};value=next;writes+=1}
+}
+let cell=Cell(),ready=DispatchSemaphore(value:0),release=DispatchSemaphore(value:0),finished=DispatchGroup()
+let first=FixtureBridge(),second=FixtureBridge();finished.enter();finished.enter();first.attempt("first");second.attempt("second")
+_ = ready.wait(timeout:.now()+1);_ = ready.wait(timeout:.now()+0.1);release.signal();release.signal()
+precondition(finished.wait(timeout:.now()+5) == .success)
+print("native-predecessor-commits=\(cell.writes)")
+`;
+ const out=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});assert(out.includes('native-predecessor-commits=1'),'both bridges accepted the same old parent: '+out.trim());
+});
