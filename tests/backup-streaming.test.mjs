@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {readFileSync} from 'node:fs';
 import {webcrypto} from 'node:crypto';
-const src=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+import {read,fnSource} from './_helpers.mjs';
+const src=read('app.js');
 const start=src.indexOf('// 文件备份按块读写');
 const code=src.slice(start<0?src.indexOf('let _fullBackupExportBusy'):start,src.indexOf('async function applyFullBackupData('));
 function setup(state={},extras={}){
@@ -14,6 +14,19 @@ function setup(state={},extras={}){
   toast:s=>events.push(s),beautySaveFile:async b=>{saved=b;return 'downloaded';},...extras});
  vm.runInContext(code,c);return{c,db,events,get saved(){return saved;}};
 }
+test('unreadable image and album entries do not abort or alter a backup',async()=>{
+ const state={settings:{},messages:{a:[{content:'原文保留',img:'idb:broken'},{content:'相册保留',img:'album:missing'},{img:'idb:good'}]}},original=JSON.stringify(state);
+ const env=setup(state,{imgGet:async key=>{if(key==='broken')throw new Error('image read failure');return 'data:image/png;base64,good';},albumBackupImage:async()=>{throw new Error('album missing');}});
+ await vm.runInContext('exportData()',env.c);
+ assert.ok(env.saved,'a failed image read must still produce a parseable file');
+ const exported=JSON.parse(await env.saved.text());assert.equal(exported.messages.a[0].content,'原文保留');assert.equal(exported.messages.a[0].img,'');assert.equal(exported.messages.a[1].img,'');assert.equal(exported.messages.a[2].img,'data:image/png;base64,good');assert.equal(JSON.stringify(state),original);
+});
+test('Apple share failures cannot silently report a successful download',async()=>{
+ let downloads=0;const env=vm.createContext({File,Blob,navigator:{share:async()=>{throw new DOMException('needs gesture','NotAllowedError');}},beautyAppleDevice:()=>true,privateNativeAppOn:()=>false,downloadBlob:()=>{downloads++;}});
+ vm.runInContext(fnSource(src,'beautySaveFile'),env);
+ await assert.rejects(()=>env.beautySaveFile(new Blob(['{}']),'backup.json'),/needs gesture/);assert.equal(downloads,0);
+ env.privateNativeAppOn=()=>true;env.navigator={};assert.equal(await env.beautySaveFile(new Blob(['{}']),'backup.json'),'pending');assert.equal(downloads,1);
+});
 test('export survives aggregate JSON larger than the engine string budget',async()=>{
  const image='data:image/png;base64,'+'A'.repeat(128*1024),state={settings:{text:'聊天原文'},images:Array(32).fill(image)};
  const limitedJSON={parse:JSON.parse,stringify(...args){const s=JSON.stringify(...args);if(s&&s.length>2*1024*1024)throw new RangeError('Invalid string length');return s;}};

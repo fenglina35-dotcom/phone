@@ -172,9 +172,11 @@ async function fullBackupFileBlob(onProgress,stats){const _fullBackupSkippedImag
   // 直接分段读取当前存档：每个容器进入时固定键或数组长度，避免十万级数组先建整张键表并复制整份状态。
   const state=S;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(onProgress)onProgress('正在分段生成完整备份');let lastKey='',lastImage='',imageReads=0;
   return backupJsonBlob(state,async(v,path)=>{
-    if(typeof v==='string'&&v.indexOf('album:')===0)return await albumBackupImage(v);
+    // BACKUP_UNREADABLE_MEDIA_V1: isolate media read errors, never swallow an
+    // archive/JSON error or modify the live reference while exporting.
+    if(typeof v==='string'&&v.indexOf('album:')===0){if(!stats)return await albumBackupImage(v);try{const image=await albumBackupImage(v);if(typeof image==='string'&&image&&!image.startsWith('album:'))return image;}catch(_){} _fullBackupSkippedImages.add(v);stats.skippedImages=_fullBackupSkippedImages.size;return ''; }
     if(typeof v==='string'&&v.indexOf('idb-audio:')===0&&path.some(p=>p==='favorites'||p==='_favorite')){const data=await imgGet('__audio_'+v.slice(10));if(typeof data!=='string'||!data)throw new Error('收藏原音频无法读取，请检查收藏后重试备份');return data;}
-    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-image-read');const image=await imgGet(key);typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(typeof image!=='string'||!image){_fullBackupSkippedImages.add(key);if(stats)stats.skippedImages=_fullBackupSkippedImages.size;lastKey=key;lastImage='';if(onProgress)onProgress('有 '+_fullBackupSkippedImages.size+' 张图片已损坏，跳过后继续备份');return lastImage;}lastKey=key;lastImage=image;if(onProgress)onProgress('正在读取备份图片：'+(++imageReads)+' 次');}return lastImage;}
+    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-image-read');let image;try{image=await imgGet(key);}catch(e){if(!stats)throw e;image=null;}typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(typeof image!=='string'||!image){_fullBackupSkippedImages.add(key);if(stats)stats.skippedImages=_fullBackupSkippedImages.size;lastKey=key;lastImage='';if(onProgress)onProgress('有 '+_fullBackupSkippedImages.size+' 张图片暂时读不到，跳过后继续备份');return lastImage;}lastKey=key;lastImage=image;if(onProgress)onProgress('正在读取备份图片：'+(++imageReads)+' 次');}return lastImage;}
     if(v&&typeof v==='object'&&v.__idb){let key='';const p=state.me&&state.me.phoneFriend;
       if(path.length===1&&path[0]==='messages'&&v.__idb==='messages')key='__messages';
       if(path.join('.')==='me.phoneFriend.messages'&&v.__idb==='phoneFriendMessages')key='__pf_messages_'+(v.id||p.id||'main');
@@ -219,8 +221,8 @@ async function exportData(){
   const stats={skippedImages:0};
   try{const blob=await fullBackupFileBlob(progress,stats);
     typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-download');const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
-    const skipped=+stats.skippedImages||0,note=skipped?('；有 '+skipped+' 张图片已损坏读不出来，已跳过，其余内容都在'):'';
-    if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”'+note,skipped?7000:undefined);else toast('已导出'+note,skipped?7000:undefined);
+    const skipped=+stats.skippedImages||0,note=skipped?('；有 '+skipped+' 张图片暂时读不到，已跳过；聊天和其余可读取内容已保留'):'';
+    if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”'+note,skipped?7000:undefined);else if(mode==='pending')toast('备份文件已生成，正在打开系统保存面板'+note,7000);else toast('已导出'+note,skipped?7000:undefined);
   }catch(e){typeof northBrowserDiagnosticError==='function'&&northBrowserDiagnosticError('backup-export',e);toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-export-ended');}
 }
 async function readJsonFile(f,onData){
@@ -397,10 +399,10 @@ function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFrien
     groups:(data.groups||[]).map(g=>pickObj(g,['id','name','avatar','chatBg','bubbleStyle','memberBubbleStyles'])),
     beautyArchive:data.beautyArchive||null};}
 function beautyAppleDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}catch(_){return false;}}
-async function beautySaveFile(blob,name){if(beautyAppleDevice()&&typeof File==='function'&&navigator.share){const file=new File([blob],name,{type:String(blob&&blob.type||'application/octet-stream')});try{if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return'shared';}}catch(e){if(e&&e.name==='AbortError')return'cancelled';}}
-  downloadBlob(blob,name);return'downloaded';}
+async function beautySaveFile(blob,name){if(beautyAppleDevice()&&typeof File==='function'&&navigator.share){const file=new File([blob],name,{type:String(blob&&blob.type||'application/octet-stream')});try{if(!navigator.canShare||navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return'shared';}}catch(e){if(e&&e.name==='AbortError')return'cancelled';throw e;}}
+  downloadBlob(blob,name);return typeof privateNativeAppOn==='function'&&privateNativeAppOn()?'pending':'downloaded';}
 async function exportBeautyData(){const pack=beautyPackFrom(S),refs=imageRefKeys(pack);if(refs.length)_rehydrateWithCache(pack,await imgMany(refs));const text=JSON.stringify(pack,null,2),blob=new Blob([text],{type:'application/json'}),name='North美化包_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
-  if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('美化包已生成，请在系统面板选择“存储到文件”');else toast('美化包已下载（'+cacheSizeText(blob.size)+'）');}
+  if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('美化包已生成，请在系统面板选择“存储到文件”');else if(mode==='pending')toast('美化包已生成，正在打开系统保存面板');else toast('美化包已下载（'+cacheSizeText(blob.size)+'）');}
 function beautyClone(v){return v&&typeof v==='object'?JSON.parse(JSON.stringify(v)):v;}
 function beautyAssign(dst,src,keys){let n=0;dst=dst||{};src=src||{};keys.forEach(k=>{if(src[k]==null)return;dst[k]=beautyClone(src[k]);n++;});return n;}
 const BEAUTY_LAYOUT_KEYS=['widgets','appLayout','homeLayout','appDock','homeReferenceAppSlots','_glassReferenceLayoutV2','_glassSecondPageLayoutV1'];

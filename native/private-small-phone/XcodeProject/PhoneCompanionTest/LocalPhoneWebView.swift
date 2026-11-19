@@ -16,7 +16,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     )
     private static let processSessionID =
         String(UUID().uuidString.prefix(8))
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
         let bridge = PhoneNativeBridge()
         let onRecoveryNeeded: (String) -> Void
         let onRecoveryRestartReady: (Bool) -> Void
@@ -41,6 +41,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
+        private var fileExportDirectories: [ObjectIdentifier: URL] = [:]
+        private weak var fileExportWebView: WKWebView?
         init(
             onRecoveryNeeded: @escaping (String) -> Void,
             onRecoveryRestartReady: @escaping (Bool) -> Void,
@@ -692,6 +694,16 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
+            // PRIVATE_LOCAL_FILE_EXPORT_V1: only the bundled main document may
+            // download its own Blob. Do not send blob: URLs to UIApplication.
+            if navigationAction.shouldPerformDownload,
+               navigationAction.sourceFrame.isMainFrame,
+               navigationAction.sourceFrame.request.url?.standardizedFileURL == bundledFileURL?.standardizedFileURL,
+               bundledFileURL != nil,
+               url.scheme == "blob" {
+                decisionHandler(.download)
+                return
+            }
             if url.scheme == "cozy-home", url.host == "app", navigationAction.targetFrame?.isMainFrame == false {
                 decisionHandler(.allow)
             } else if url.isFileURL || url.scheme == "about" {
@@ -707,6 +719,57 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 UIApplication.shared.open(url)
                 decisionHandler(.cancel)
             }
+        }
+
+        func webView(_ webView: WKWebView, navigationAction: WKNavigationAction,
+                     didBecome download: WKDownload) {
+            fileExportWebView = webView
+            download.delegate = self
+        }
+
+        func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
+                      suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+            let directory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("smallphone-export-" + UUID().uuidString, isDirectory: true)
+            do {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+                fileExportDirectories[ObjectIdentifier(download)] = directory
+                let name = (suggestedFilename as NSString).lastPathComponent
+                completionHandler(directory.appendingPathComponent(name.isEmpty || name == "." || name == ".." ? "North备份.json" : name))
+            } catch {
+                completionHandler(nil)
+                fileExportFailure()
+            }
+        }
+
+        func downloadDidFinish(_ download: WKDownload) {
+            guard let directory = fileExportDirectories.removeValue(forKey: ObjectIdentifier(download)) else { return }
+            guard let file = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first,
+                  let webView = fileExportWebView,
+                  var presenter = webView.window?.rootViewController else {
+                try? FileManager.default.removeItem(at: directory)
+                fileExportFailure()
+                return
+            }
+            while let presented = presenter.presentedViewController { presenter = presented }
+            let sheet = UIActivityViewController(activityItems: [file], applicationActivities: nil)
+            sheet.popoverPresentationController?.sourceView = webView
+            sheet.popoverPresentationController?.sourceRect = CGRect(x: webView.bounds.midX, y: webView.bounds.midY, width: 1, height: 1)
+            sheet.completionWithItemsHandler = { _, _, _, _ in
+                try? FileManager.default.removeItem(at: directory)
+            }
+            presenter.present(sheet, animated: true)
+        }
+
+        func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+            if let directory = fileExportDirectories.removeValue(forKey: ObjectIdentifier(download)) {
+                try? FileManager.default.removeItem(at: directory)
+            }
+            fileExportFailure()
+        }
+
+        private func fileExportFailure() {
+            fileExportWebView?.evaluateJavaScript("typeof toast==='function'&&toast('文件导出未完成，请重试',7000)", completionHandler: nil)
         }
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

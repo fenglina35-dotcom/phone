@@ -65,23 +65,24 @@ async function responseText(response,rpcId){
   }return text+decoder.decode();
  }finally{reader.releaseLock();}
 }
-export function createVaultHandler({store,authenticate,masterKey,fetchAPI=globalThis.fetch,cryptoAPI=globalThis.crypto,now=()=>Date.now(),pause=ms=>new Promise(r=>setTimeout(r,ms))}){
+export function createVaultHandler({store,authenticate,masterKey,fetchAPI=globalThis.fetch,cryptoAPI=globalThis.crypto,now=()=>Date.now(),pause=ms=>new Promise(r=>setTimeout(r,ms)),reportError=()=>{}}){
  const {accountKeys,seal,open}=createAccountCipher({store,masterKey,cryptoAPI});
  const sign=async(key,v)=>b64(new Uint8Array(await cryptoAPI.subtle.sign('HMAC',key,utf8.encode(canonical(v)))));
  const digest=async v=>Array.from(new Uint8Array(await cryptoAPI.subtle.digest('SHA-256',utf8.encode(canonical(v)))),b=>b.toString(16).padStart(2,'0')).join('');
  return async request=>{
-  let scope,lease,operation,connId,keys,submitted=false,refreshSubmitted=false;
+  let scope,lease,operation,connId,keys,submitted=false,refreshSubmitted=false,diagnosticStage='authenticate';
   try{
    check(request.method==='POST','method_not_allowed',405);check(!request.headers.has('origin'),'native_client_required',403);
    const bearer=request.headers.get('authorization')||'';check(/^Bearer [A-Za-z0-9_.-]{1,8192}$/.test(bearer),'authentication_required',401);
    const identity=await authenticate(bearer.slice(7));check(identity&&uuid.test(identity.userID)&&uuid.test(identity.sessionID),'authentication_required',401);
    const body=await readJSON(request);check(object(body)&&uuid.test(body.deviceId||'')&&typeof body.accountId==='string'&&body.accountId.length>0&&body.accountId.length<=160);
    scope={p_user:identity.userID,p_session:identity.sessionID,p_device:body.deviceId,p_account:body.accountId};
-   await store.rpc('private_phone_sync_assert_device',{p_user:scope.p_user,p_session:scope.p_session,p_device:scope.p_device});
-   keys=await accountKeys(scope.p_user);
+   diagnosticStage='device-authorization';await store.rpc('private_phone_sync_assert_device',{p_user:scope.p_user,p_session:scope.p_session,p_device:scope.p_device});
+   diagnosticStage='account-key';keys=await accountKeys(scope.p_user);
    const aad=id=>'private-phone-mcp/connection/'+scope.p_user+'/'+scope.p_account+'/'+id;
    const decrypt=async row=>row?.ciphertext?JSON.parse(await open(keys.aes,row.ciphertext,aad(row.id),1800000)):null;
    async function read(id){return(await store.rpc('private_phone_mcp_read',{...scope,p_id:id,p_after:''})).connection;}
+   diagnosticStage=['list','put','remove','rpc'].includes(body.action)?'connection-'+body.action:'invalid-action';
    if(body.action==='list'){
     if(body.connectionId){check(/^[A-Za-z0-9_-]{1,100}$/.test(body.connectionId));const row=await read(body.connectionId);return reply({ok:true,connection:row?{id:row.id,active:row.active,deleted:row.deleted,revision:row.revision,stagingNonce:row.stagingNonce,activatedNonce:row.activatedNonce,...(row.active&&!row.deleted?{value:publicConnection(await decrypt(row),row)}:{})}:null});}
     check(body.cursor===undefined||typeof body.cursor==='string'&&body.cursor.length<=100);
@@ -164,20 +165,24 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
   }catch(error){
    if(scope&&lease&&operation&&connId)try{await store.rpc('private_phone_mcp_progress',{...scope,p_id:connId,p_operation:operation,p_lease:lease,p_phase:'unknown',p_ciphertext:null});}catch{}
    const safe=error instanceof VaultError?error:new VaultError(refreshSubmitted?'refresh_result_unknown':errors.has(error?.message)?error.message:'vault_service_unavailable',503);
+   // PRIVATE_MCP_SAFE_FAILURE_STAGE_V1: report only fixed stage/type codes,
+   // never the raw error, request, connection, JWT or credential contents.
+   if(safe.status>=500){const kind=['encrypted_data_unreadable','sync_not_configured','invalid_envelope'].includes(error?.message)?error.message:['TypeError','OperationError','DataError'].includes(error?.name)?error.name:'internal_failure';try{reportError({event:'mcp_vault_failure',stage:diagnosticStage,code:safe.message,kind});}catch{}}
    return reply({ok:false,error:safe.message,unknown:submitted||refreshSubmitted||['operation_result_unknown','refresh_result_unknown'].includes(safe.message)},safe.status);
   }
  };
 }
 function reply(body,status=200){return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
 
-export function createSupabaseVault({url,serviceKey,masterKey,fetchAPI=globalThis.fetch}){
+export function createSupabaseVault({url,serviceKey,masterKey,fetchAPI=globalThis.fetch,reportError=()=>{}}){
  const base=new URL(url);check(base.protocol==='https:'&&/^[a-z0-9]+\.supabase\.co$/.test(base.hostname),'vault_not_configured',503);
  return async request=>{
   const signal=AbortSignal.timeout(45000);
   async function json(path,{method='GET',body,bearer=serviceKey,prefer}={}){
    const headers={apikey:serviceKey,Authorization:'Bearer '+bearer,'Content-Type':'application/json'};if(prefer)headers.Prefer=prefer;
    const response=await fetchAPI(new URL(path,base),{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'error',signal}),text=await response.text();check(text.length<=4100000,'vault_service_unavailable',503);let data;try{data=text?JSON.parse(text):null;}catch{throw new VaultError('vault_service_unavailable',503);}
-   if(!response.ok)throw new VaultError(errors.has(data?.message)?data.message:path.startsWith('/auth/')?'authentication_required':'vault_service_unavailable',path.startsWith('/auth/')?401:409);return data;
+   // PRIVATE_MCP_AUTH_OUTAGE_V1: Auth rate limits/outages never mean lost login.
+   if(!response.ok){const auth=path.startsWith('/auth/'),temporary=response.status===429||response.status>=500;throw new VaultError(auth&&temporary?'account_auth_temporarily_unavailable':errors.has(data?.message)?data.message:auth?'authentication_required':'vault_service_unavailable',temporary?503:auth?401:409);}return data;
   }
   const store={rpc:(name,args)=>json('/rest/v1/rpc/'+name,{method:'POST',body:args}),async key(owner,candidate){
    const path='/rest/v1/private_phone_sync_keys?select=wrapped_key,key_version&user_id=eq.'+owner+'&limit=1';let rows=await json(path);
@@ -185,6 +190,6 @@ export function createSupabaseVault({url,serviceKey,masterKey,fetchAPI=globalThi
    check(rows?.length===1&&rows[0].key_version===1,'vault_not_configured',503);return rows[0].wrapped_key;
   }};
   async function authenticate(token){const user=await json('/auth/v1/user',{bearer:token});let claims;try{claims=JSON.parse(new TextDecoder().decode(unb64(token.split('.')[1])));}catch{throw new VaultError('authentication_required',401);}check(user?.id===claims.sub&&claims.role==='authenticated'&&claims.exp>Date.now()/1000,'authentication_required',401);return{userID:user.id,sessionID:claims.session_id};}
-  return createVaultHandler({store,authenticate,masterKey,fetchAPI})(request);
+  return createVaultHandler({store,authenticate,masterKey,fetchAPI,reportError})(request);
  };
 }

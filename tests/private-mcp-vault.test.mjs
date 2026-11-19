@@ -127,6 +127,21 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
  }finally{await db.close();}
 });
 
+test('MCP vault Auth outages remain temporary instead of impersonating expired login',async()=>{
+ for(const status of [429,500,502,503]){
+  let calls=0;const handler=createSupabaseVault({url:'https://fixture.supabase.co',serviceKey:'fixture-server-only',masterKey:'c'.repeat(43),fetchAPI:async url=>{calls++;assert.equal(new URL(url).pathname,'/auth/v1/user');return Response.json({message:'fixture-secret-upstream'},{status});}});
+  const response=await handler(new Request('https://fixture.test/vault',{method:'POST',headers:{Authorization:'Bearer header.payload.signature','Content-Type':'application/json'},body:JSON.stringify({action:'list',deviceId:'30000000-0000-0000-0000-000000000001',accountId:'main'})}));
+  const result=await response.json();assert.equal(response.status,503);assert.equal(result.error,'account_auth_temporarily_unavailable');assert(!JSON.stringify(result).includes('fixture-secret'));assert.equal(calls,1);
+ }
+});
+
+test('MCP stage diagnostics reveal no credential, owner, request or raw failure',async()=>{
+ const events=[],secret='never-log-this-credential';
+ const handler=createVaultHandler({authenticate:async()=>({userID:'10000000-0000-0000-0000-000000000001',sessionID:'20000000-0000-0000-0000-000000000001'}),store:{rpc:async()=>({}),key:async()=>{throw new TypeError(secret);}},masterKey:'c'.repeat(43),reportError:row=>events.push(row)});
+ const r=await handler(new Request('https://fixture.test/vault',{method:'POST',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({action:'list',deviceId:'30000000-0000-0000-0000-000000000001',accountId:'main'})}));
+ assert.equal(r.status,503);assert.deepEqual(events,[{event:'mcp_vault_failure',stage:'account-key',code:'vault_service_unavailable',kind:'TypeError'}]);assert(!JSON.stringify(events).includes(secret));assert(!JSON.stringify(events).includes('10000000'));
+});
+
 test('vault REST auth: invalid Auth, foreign sub and expired JWT cannot reach any data RPC',async()=>{
  const user='10000000-0000-0000-0000-000000000001',other='10000000-0000-0000-0000-000000000002';
  let rejectAuth=true;const calls=[];
@@ -148,11 +163,13 @@ test('private MCP client: activation ACK loss freezes direct tokens, then adopts
  const source=full.slice(start,end+6)+'\n;globalThis.vaultTest=MCPTools;';
  const connection={id:'m-fixture',provider:'cloudflare',name:'Cloudflare',url:'https://mcp.cloudflare.com/mcp',auth:'oauth',token:'fixture-local-access',refresh:'fixture-local-refresh',clientSecret:'fixture-local-client-secret',clientId:'fixture-client',clientAuth:'none',oauth:{token_endpoint:'https://mcp.cloudflare.com/token'},roles:['role-a'],disabledTools:[],mode:'ask',enabled:true,state:'connected',rev:1,tools:[],exp:Date.now()+3600000};
  const oldKey='fixture-license|account:'+owner+':main',newKey='account:'+owner+':main',stored=new Map([['smallphone-mcp-local-v1',JSON.stringify({[oldKey]:{connections:[connection],receipts:[]}})]]);
- const active=new Map(),staged=new Map(),nativeCalls=[],timers=new Map();let timer=0,dropActivation=true,revision=0,changedDuringPrepare=false;
+ const active=new Map(),staged=new Map(),nativeCalls=[],timers=new Map();let timer=0,dropActivation=true,revision=0,changedDuringPrepare=false,vaultListFail=false,vaultRPCFail=false;
  const publicValue=c=>({...JSON.parse(JSON.stringify(c)),token:'',refresh:'',clientSecret:'',pending:null,accountManaged:true,accountPreparing:false,accountMigrating:false,cloudRevision:String(revision)});
  const native=async(action,body)=>{
   nativeCalls.push({action,body:JSON.parse(JSON.stringify(body))});
   if(action==='account.sync')return {ok:true,device:{id:device}};
+  if(vaultListFail&&action==='account.mcp'&&body.action==='list')return {ok:false,error:'account_auth_temporarily_unavailable'};
+  if(vaultRPCFail&&action==='account.mcp'&&body.action==='rpc')return {ok:false,error:'account_auth_temporarily_unavailable'};
   assert.equal(action,'account.mcp','there is no fallback to direct credential transport');
   assert.equal(body.deviceId,device);assert.equal(body.accountId,'main');
   if(body.action==='list'){
@@ -202,6 +219,11 @@ test('private MCP client: activation ACK loss freezes direct tokens, then adopts
  const legacy=JSON.parse(stored.get('smallphone-mcp-local-v1'))[oldKey].connections[0];assert.equal(legacy.token,'');assert.equal(legacy.refresh,'');
  await api.connect(connection.id);
  assert.deepEqual(nativeCalls.filter(x=>x.action==='account.mcp'&&x.body.action==='rpc').map(x=>x.body.method),['initialize','notifications/initialized','tools/list']);
+ const listsBefore=nativeCalls.filter(x=>x.action==='account.mcp'&&x.body.action==='list').length;
+ vaultListFail=true;await api.connect(connection.id);vaultListFail=false;
+ assert.equal(nativeCalls.filter(x=>x.action==='account.mcp'&&x.body.action==='list').length,listsBefore,'an already synchronized connection never waits for another account list');
+ const verified=JSON.stringify(api.connection(connection.id));vaultRPCFail=true;await assert.rejects(api.connect(connection.id),/暂时繁忙/);vaultRPCFail=false;
+ assert.equal(api.connection(connection.id).state,'connected','a temporary verification failure preserves the verified connection');assert.equal(api.connection(connection.id).accountManaged,true);assert.equal(JSON.stringify(api.connection(connection.id)),verified,'temporary failure changes no credentials, tools or role grants');
  const ctx=api.context('role-a');assert.equal(ctx,null,'an empty tool catalog does not pretend role tools exist');
   api.configure(connection.id,{roles:['role-a','role-b'],mode:'auto'});
   await api.accountSync(true);

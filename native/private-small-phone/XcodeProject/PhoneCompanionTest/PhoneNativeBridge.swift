@@ -4195,8 +4195,10 @@ enum PrivateDeviceSyncHTTP {
         request.setValue("Bearer " + bearer, forHTTPHeaderField: "Authorization")
         request.setValue("sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0", forHTTPHeaderField: "apikey")
         let (data, response) = try await network.data(for: request)
+        // PRIVATE_SYNC_STRUCTURED_FAILURE_V1: keep controlled 5xx error codes and
+        // unknown execution flags; never reinterpret a failed write as safe to retry.
         guard let http = response as? HTTPURLResponse,
-              (200...299).contains(http.statusCode) || (400...499).contains(http.statusCode),
+              (200...299).contains(http.statusCode) || (400...599).contains(http.statusCode),
               data.count <= (kind == .mcp ? 3_000_000 : 2_000_000), let result = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               result["ok"] is Bool else {
             throw NSError(domain: "PrivateDeviceSync", code: 503, userInfo: [NSLocalizedDescriptionKey: "设备同步暂时不可用，本机数据已保留"])

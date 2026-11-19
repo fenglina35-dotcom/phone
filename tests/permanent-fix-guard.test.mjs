@@ -50,11 +50,15 @@ test('private account sync retains automatic content hydration, scoped native st
  assert(core.includes('PRIVATE_SYNC_LOCAL_COLLECTION_V1'));
  assert(read('supabase/functions/phone-device-sync/core.mjs').includes('PRIVATE_SYNC_QUIET_CHECK_V1'));
  assert(client.includes('PRIVATE_DEVICE_REVOKED_GATE_V1')&&client.includes('privatePhoneSyncDevicesOpen'));
- for(const marker of ['PRIVATE_ACCOUNT_CRITICAL_MEDIA_V1','PRIVATE_MEDIA_READ_LANE_V1','PRIVATE_AUTH_SESSION_RETENTION_V1','PRIVATE_ACCOUNT_STATUS_SETTINGS_ONLY_V1','PRIVATE_SYNC_CHANGE_DRIVEN_V1','PRIVATE_SYNC_REFRESH_RETAIN_CONTEXT_V1','PRIVATE_BACKUP_DETAILS_EXPANSION_V1','PRIVATE_ACCOUNT_DIALOG_THEME_V1','PRIVATE_TRUSTED_LOCAL_RESUME_V1','PRIVATE_MANUAL_OFFLINE_REPLY_V1'])assert(client.includes(marker),marker);
+ for(const marker of ['PRIVATE_SYNC_NONBLOCKING_V1','PRIVATE_REPLY_ATTEMPT_OWNERSHIP_V1','PRIVATE_ACCOUNT_CRITICAL_MEDIA_V1','PRIVATE_MEDIA_READ_LANE_V1','PRIVATE_AUTH_SESSION_RETENTION_V1','PRIVATE_ACCOUNT_STATUS_SETTINGS_ONLY_V1','PRIVATE_SYNC_CHANGE_DRIVEN_V1','PRIVATE_SYNC_REFRESH_RETAIN_CONTEXT_V1','PRIVATE_BACKUP_DETAILS_EXPANSION_V1','PRIVATE_ACCOUNT_DIALOG_THEME_V1','PRIVATE_TRUSTED_LOCAL_RESUME_V1','PRIVATE_MANUAL_OFFLINE_REPLY_V1'])assert(client.includes(marker),marker);
  assert(read('desk-pet.js').includes('PRIVATE_SECONDARY_AUTOMATIC_STATE_V1'));
  assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/desk-pet.js').includes('PRIVATE_SECONDARY_AUTOMATIC_STATE_V1'));
  assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync.js').includes('PRIVATE_SYNC_SEED_CHECKPOINT_V1'));
  assert(native.includes('PRIVATE_ACCOUNT_ATOMIC_CREDENTIAL_V1'));
+ assert(native.includes('PRIVATE_SYNC_STRUCTURED_FAILURE_V1'));
+ assert(read(PRIVATE).includes('MCP_VERIFY_SYNC_STAGE_V1'));
+ for(const file of [WEB,PRIVATE])assert(read(file).includes('MCP_VERIFIED_CONNECTION_RETAIN_V1'));
+ assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('PRIVATE_MCP_AUTH_OUTAGE_V1'));
  assert(native.includes('PRIVATE_STORAGE_SOURCE_COLLISION_V1'));
  assert(native.includes('PRIVATE_NATIVE_CORE_CAS_V1'));
  assert(read('supabase/migrations/202611170003_private_phone_primary_device.sql').includes('PRIVATE_PRIMARY_DEVICE_V1'));
@@ -2185,4 +2189,10 @@ test('MCP role tools retain real dispatch, explicit grants, confirmation choice 
  const bridge=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
  for(const marker of ['MCP_NATIVE_HTTP_V1','private final class PrivateMCPNetworkRequest','case "mcp.http.request":','case "mcp.http.cancel":','mcpNetworkRequests.count < 4','completionHandler(nil) // Never forward credentials'])assert(bridge.includes(marker),marker);
  assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift').includes('window.__SMALL_PHONE_MCP_HTTP__ = true;'));
+});
+
+// File generation is not delivery; both native shells must accept local Blob downloads.
+test('unreadable media cannot abort file export and native shells keep a save path',()=>{
+ for(const file of [WEB,PRIVATE])assert(read(file).includes('BACKUP_UNREADABLE_MEDIA_V1'),file);
+ for(const file of ['PhoneCompanionTest/LocalPhoneWebView.swift','PhoneCompanionMac/MacPhoneBridge.swift']){const src=read('native/private-small-phone/XcodeProject/'+file);assert(src.includes('PRIVATE_LOCAL_FILE_EXPORT_V1'));assert(src.includes('WKDownloadDelegate'));assert(src.includes('downloadDidFinish'));}
 });

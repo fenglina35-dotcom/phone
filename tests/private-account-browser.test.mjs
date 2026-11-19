@@ -137,10 +137,34 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.evaluate(()=>openChat('cloud-a'));await page.locator('#cinput').fill('请给我一句回复');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));
   await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.locator('#chatbg').getByText('手动微信回复成功。',{exact:true}).waitFor({timeout:30000});
   await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,1,'the manual secondary-device turn submits exactly one model request');
+  // Explicitly asking for another reply to the same message is a new manual
+  // attempt, not another physical device and not an automatic model replay.
+  await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();
+  await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
+  assert.equal(modelCalls.length,2,'a completed cloud turn must not block an explicit second manual reply on the same device');
+  // Persist the exact lease owned by this device, then simulate a process
+  // interruption after acquisition. The next manual attempt may release that
+  // precise old lease, but must never clear an unknown/foreign lease.
+  await page.evaluate(async()=>{const ctx=NorthPrivateDeviceSyncClient.context(),threadKey=await NorthPrivateDeviceSyncCore.hash(['main','cloud-a']),old={deviceId:ctx.journal.state().deviceId,threadKey,turnKey:'interrupted-local-turn',leaseToken:crypto.randomUUID()};await SmallPhoneNative.request('account.sync',{...old,action:'turn.acquire'});await new Promise((resolve,reject)=>{const open=indexedDB.open('smallphone-account-sync-v2-'+ctx.owner,1);open.onsuccess=()=>{const db=open.result,tx=db.transaction('state','readwrite');tx.objectStore('state').put(old,'__device_sync_v2_'+ctx.owner+'_turn_'+threadKey);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>reject(tx.error);};});});
+  await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
+  assert.equal(modelCalls.length,3,'the exact persisted local lease is recovered without waiting three minutes');
+  await page.evaluate(()=>{window.fixtureLocalLockStarted=false;window.fixtureLocalLock=navigator.locks.request('smallphone-reply:'+NorthPrivateDeviceSyncClient.status().owner+':main:cloud-a',()=>{fixtureLocalLockStarted=true;return new Promise(resolve=>{window.fixtureReleaseLocalLock=resolve;});});});
+  await page.waitForFunction(()=>fixtureLocalLockStarted);await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
+  assert.equal(modelCalls.length,3,'a live local window lock cannot be mistaken for an abandoned local lease');
+  await page.evaluate(async()=>{fixtureReleaseLocalLock();await fixtureLocalLock;});
+  const foreignLease={deviceId:source.journal.deviceId(),threadKey:await core.hash(['main','cloud-a']),turnKey:'active-foreign-turn',leaseToken:webcrypto.randomUUID()};
+  assert.equal((await transport('sourceA',{...foreignLease,action:'turn.acquire'})).acquired,true);
+  await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
+  assert.equal(modelCalls.length,3,'an active foreign-device lease cannot be stolen or trigger another model call');
+  assert.equal((await transport('sourceA',{...foreignLease,action:'turn.renew'})).acquired,true);
+  await transport('sourceA',{...foreignLease,action:'turn.finish',completed:false});
+  await page.evaluate(()=>{window.fixtureLocks=navigator.locks;Object.defineProperty(navigator,'locks',{configurable:true,value:{request:()=>Promise.reject(new DOMException('opaque origin','SecurityError'))}});});
+  await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,4,'WebKit without usable Web Locks still allows a normal manual reply without stealing a lease');
+  await page.evaluate(()=>Object.defineProperty(navigator,'locks',{configurable:true,value:fixtureLocks}));
   fixtureConnectionId=await page.evaluate(async()=>{const c=MCPTools.add({name:'受控资料',url:'https://mcp-fixture.invalid/mcp',auth:'none'});await MCPTools.connect(c.id);MCPTools.setRole(c.id,'cloud-a',true);return c.id;});assert(fixtureConnectionId);
   modelMode='mcp';await page.locator('#cinput').fill('请查外部花店文档');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();
   await page.locator('#chatbg').getByText('工具查到了花店记录。',{exact:true}).waitFor({timeout:30000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));
-  assert.equal(toolCalls.filter(x=>x.method==='tools/call').length,1);assert.equal(modelCalls.length,3,'the manual MCP turn has one selection and one final response');
+  assert.equal(toolCalls.filter(x=>x.method==='tools/call').length,1);assert.equal(modelCalls.length,6,'the manual MCP turn has one selection and one final response');
   assert(await page.locator('.mcp-chat-trace[data-mcp-state=ok]').isVisible());assert(!(await page.locator('#chatbg').innerText()).includes('mcp_call'));
   // An existing account reloads and manually chats through a background Auth
   // outage. The shipped local persistence and model path are not replaced.
@@ -158,10 +182,10 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   assert((await page.locator('#privatePhoneLoginNote').innerText()).includes('超时'),'login errors remain readable');assert.equal(await page.locator('[data-private-auth-submit]').first().isDisabled(),false);await page.evaluate(()=>closeModal());
   await page.evaluate(()=>{S.me.locked=false;renderLockScreen();openChat('cloud-a');});
   await page.locator('#cinput').fill('断线期间继续聊天');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();
-  await page.locator('#chatbg').getByText('认证超时期间仍能正常回复。',{exact:true}).waitFor({timeout:15000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,4,'one manual local reply is never retried by synchronization');
+  await page.locator('#chatbg').getByText('认证超时期间仍能正常回复。',{exact:true}).waitFor({timeout:15000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,7,'one manual local reply is never retried by synchronization');
   await page.reload();await page.waitForFunction(()=>window.__northBootReady&&NorthPrivateDeviceSyncClient?.gateAllowed(),null,{timeout:10000});assert(await page.evaluate(()=>S.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。')),'the offline reply survives reopening');
   authOutage=false;await page.evaluate(()=>NorthPrivateDeviceSyncClient.syncNow());await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.status().phase==='ready',null,{timeout:10000});await source.journal.cycle();
-  assert(source.state.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。'),'the saved offline reply uploads after reconnection');assert.equal(modelCalls.length,4);assert.equal(nativeCalls.filter(x=>x.action==='account.signout').length,0);
+  assert(source.state.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。'),'the saved offline reply uploads after reconnection');assert.equal(modelCalls.length,7);assert.equal(nativeCalls.filter(x=>x.action==='account.signout').length,0);
   // Resolve a genuine same-field CAS conflict through the shipped UI, in each
   // direction. Source and browser retain their independent old revisions.
   source.state.settings.hist=48;await source.journal.flush();
@@ -236,6 +260,6 @@ const devicePanel=page.locator('#privateSyncDevicesOverlay');
   assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');
   const archivedModel=await phoneProbe.evaluate(async owner=>new Promise((resolve,reject)=>{const open=indexedDB.open('smallphone-account-sync-v2-'+owner,1);open.onsuccess=()=>{const db=open.result,tx=db.transaction('state','readonly'),get=tx.objectStore('state').get('__device_sync_v2_'+owner+'_bootstrap_before');let result;get.onsuccess=()=>{result=get.result;};tx.oncomplete=()=>{db.close();resolve(JSON.parse(result.previousCore.json).settings.chat.model);};tx.onerror=()=>reject(tx.error);};}),ownerA);assert.equal(archivedModel,'stale-idb-model','the unique old IDB core survives alignment');
   await phoneProbe.evaluate(async()=>{await saveNowAsync();const head=await SmallPhoneNative.request('storage.get',{key:'__core_state',owner:privateAccountDataIdentity(),primaryOnly:true}),state=JSON.parse(head.stateJSON);state.settings.hist=99;state._persistedAt=Date.now()+1;await SmallPhoneNative.request('storage.put',{key:'__core_state',owner:privateAccountDataIdentity(),ver:1,savedAt:state._persistedAt,stateJSON:JSON.stringify(state),expectedSHA256:head.contentSHA256});});await phoneProbe.reload();await phoneProbe.waitForFunction(()=>window.__northBootReady,null,{timeout:10000});assert.equal(await phoneProbe.evaluate(()=>S.settings.chat.model),'current-source-model');assert.equal(await phoneProbe.evaluate(()=>S.settings.hist),99,'a committed native successor survives interruption before the IDB mirror');await phoneProbe.close();
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:4,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:7,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
  }finally{resolveRelease?.();for(const journal of sources)journal.close();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await db.close();}
 });

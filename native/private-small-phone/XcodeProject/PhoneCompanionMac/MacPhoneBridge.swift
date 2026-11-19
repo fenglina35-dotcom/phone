@@ -38,7 +38,8 @@ struct MacPhoneSyncEvent {
 }
 
 @MainActor
-final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
+final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+    private var fileExportDirectories: [ObjectIdentifier: URL] = [:]
     private let account: MacPhoneAccount
     private let transport = MacMCPTransport()
     private weak var webView: WKWebView?
@@ -185,6 +186,13 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url else { decisionHandler(.cancel); return }
+        // PRIVATE_LOCAL_FILE_EXPORT_V1: only a Blob from this bundled main
+        // document may enter the local export lane. Remote frames cannot use it.
+        if action.shouldPerformDownload, action.sourceFrame.isMainFrame,
+           mainDocument(action.sourceFrame.request.url), url.scheme == "blob" {
+            decisionHandler(.download)
+            return
+        }
         if action.targetFrame?.isMainFrame != false {
             if mainDocument(url) { decisionHandler(.allow); return }
             if action.navigationType == .linkActivated, url.scheme == "https", url.user == nil, url.password == nil {
@@ -194,6 +202,54 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
         } else {
             decisionHandler(["https", "data", "about", "file"].contains(url.scheme ?? "") ? .allow : .cancel)
         }
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse,
+                  suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("smallphone-export-" + UUID().uuidString, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+            fileExportDirectories[ObjectIdentifier(download)] = directory
+            let name = (suggestedFilename as NSString).lastPathComponent
+            completionHandler(directory.appendingPathComponent(name.isEmpty || name == "." || name == ".." ? "North备份.json" : name))
+        } catch { completionHandler(nil); fileExportFailure() }
+    }
+
+    func downloadDidFinish(_ download: WKDownload) {
+        guard let directory = fileExportDirectories.removeValue(forKey: ObjectIdentifier(download)) else { return }
+        guard let file = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first else {
+            try? FileManager.default.removeItem(at: directory)
+            fileExportFailure()
+            return
+        }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = file.lastPathComponent
+        panel.begin { [weak self] result in
+            defer { try? FileManager.default.removeItem(at: directory) }
+            guard result == .OK, let destination = panel.url else { return }
+            do {
+                // NSSavePanel has obtained the user's overwrite confirmation.
+                if FileManager.default.fileExists(atPath: destination.path) {
+                    _ = try FileManager.default.replaceItemAt(destination, withItemAt: file)
+                } else { try FileManager.default.copyItem(at: file, to: destination) }
+            } catch { self?.fileExportFailure() }
+        }
+    }
+
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        if let directory = fileExportDirectories.removeValue(forKey: ObjectIdentifier(download)) {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        fileExportFailure()
+    }
+
+    private func fileExportFailure() {
+        webView?.evaluateJavaScript("typeof toast==='function'&&toast('文件导出未完成，请重试',7000)", completionHandler: nil)
     }
 
     private static func bootstrap(userID: String) -> String {

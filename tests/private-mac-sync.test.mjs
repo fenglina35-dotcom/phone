@@ -4,7 +4,7 @@ import cp from 'node:child_process';
 import {createRequire} from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import {read, fnSource, REL, iosProject, macProjectConfigurations} from './_helpers.mjs';
+import {read, fnSource, REL, PRIV_DIR, iosProject, macProjectConfigurations} from './_helpers.mjs';
 import {createSyncHandler, createSupabaseSync} from '../supabase/functions/phone-device-sync/core.mjs';
 import {webcrypto} from 'node:crypto';
 import vm from 'node:vm';
@@ -961,6 +961,43 @@ test('iPhone session replacement failure preserves the existing Keychain credent
  const output=cp.execFileSync('swift',['-'],{input:swift,encoding:'utf8',maxBuffer:2*1024*1024});assert(output.includes('atomic-credential-preserved'));
 });
 
+
+test('iPhone synchronization failures never put a blocking overlay over normal pages',()=>{
+ const src=read(PRIV_DIR+'private-device-sync-client.js'),notes=[];
+ const env=vm.createContext({document:{getElementById:()=>null,createElement:()=>assert.fail('background sync must not create a modal')},platform:'iOS',labels:{network:'网络暂不可用'},notify:(...args)=>notes.push(args),accountStatusText:()=>'',overlay:null});
+ vm.runInContext(fnSource(src,'showStatus'),env);
+ for(const phase of ['network','waiting','pulling','authentication'])env.showStatus({ready:false,phase,error:'连接超时',conflicts:0});
+ assert.equal(env.overlay,null);assert.equal(notes.length,4);
+});
+
+test('native MCP transport preserves a structured temporary failure and unknown execution state',{skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+ const actual=source.slice(source.indexOf('// PRIVATE_DEVICE_SYNC_V1:'),source.lastIndexOf('#if os(macOS)')).replace('let config = URLSessionConfiguration.ephemeral','let config = URLSessionConfiguration.ephemeral\nconfig.protocolClasses = [FixtureProtocol.self]');
+ const fixture=String.raw`import Foundation
+import Security
+final class FixtureProtocol:URLProtocol,@unchecked Sendable {
+ override class func canInit(with request:URLRequest)->Bool { true }
+ override class func canonicalRequest(for request:URLRequest)->URLRequest { request }
+ override func stopLoading() {}
+ override func startLoading() {
+  precondition(request.url!.path.hasSuffix("/phone-mcp-vault"))
+  let response=HTTPURLResponse(url:request.url!,statusCode:503,httpVersion:nil,headerFields:["Content-Type":"application/json"])!
+  client?.urlProtocol(self,didReceive:response,cacheStoragePolicy:.notAllowed)
+  client?.urlProtocol(self,didLoad:Data(#"{"ok":false,"error":"account_auth_temporarily_unavailable","unknown":true}"#.utf8))
+  client?.urlProtocolDidFinishLoading(self)
+ }
+}
+`;
+ const run=String.raw`Task { do {
+ let result=try await PrivateDeviceSyncHTTP.request(["action":"list"],platform:"iOS",bearer:"fixture-only",kind:.mcp)
+ precondition(result["error"] as? String == "account_auth_temporarily_unavailable")
+ precondition(result["unknown"] as? Bool == true)
+ print("temporary-and-unknown-preserved");exit(0)
+ } catch { print("structured-failure-was-lost");exit(1) } }
+RunLoop.main.run()
+`;
+ const output=cp.execFileSync('swift',['-'],{input:fixture+actual+run,encoding:'utf8',maxBuffer:1024*1024});assert(output.includes('temporary-and-unknown-preserved'));
+});
 
 test('same-account retry retains local use and quiet operation only checks a small watermark',async()=>{
  let now=1000000,nextTimer=0,visible=true,hold=false,release,started;

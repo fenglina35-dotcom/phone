@@ -5,4 +5,5 @@ Deno.serve(createSupabaseVault({
  url:Deno.env.get('SUPABASE_URL')??'',
  serviceKey:Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'',
  masterKey:Deno.env.get('PRIVATE_PHONE_SYNC_MASTER_KEY_V1')??'',
+ reportError:record=>console.error(JSON.stringify(record)),
 }));

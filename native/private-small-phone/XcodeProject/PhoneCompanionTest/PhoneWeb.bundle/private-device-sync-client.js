@@ -39,7 +39,7 @@
    await host.replaceState(preserved,()=>check(ctx));check(ctx);
    ctx.visibleRecords=await ctx.codec.project(await host.snapshot());check(ctx);
    await write(ctx,'local',{version:1,owner:ctx.owner,state:await host.snapshot()});
-   ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.canPublish=true;
+   ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.localTrusted=true;ctx.canPublish=true;
    host.reveal?.(ctx.owner,Math.max(1,ctx.codec.dump().filter(x=>x.key.startsWith('state/')).length));
    return true;
    }finally{ctx.applyingRemote=false;}
@@ -347,14 +347,11 @@
   const counter=document.getElementById('privateSyncConflictCount');if(counter){counter.hidden=!status.conflicts;counter.style.display=status.conflicts?'':'none';counter.textContent='查看 '+status.conflicts+' 项不同修改';}
   if(status.ready){scheduleAccountImages();if(overlay){overlay.remove();overlay=null;}if(status.phase==='ready')notify('ready','ready',client.context()?.codec.dump().length||1);return;}
   notify(status.phase==='network'?'error':'progress',status.phase);
-  if(platform==='macOS')return;
-  if(!overlay){overlay=document.createElement('section');overlay.id='privateAccountSyncOverlay';overlay.style.cssText='position:fixed;inset:0;z-index:2147483600;background:#000;color:#f5f5f7;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:system-ui';document.body.appendChild(overlay);}
-  const login=status.phase==='authentication';
-  if(overlay.dataset.mode===(login?'login':'sync')){const text=overlay.querySelector('[data-sync-note]');if(text)text.textContent=status.error||(login?loginError:'')||labels[status.phase]||'正在连接账号';return;}
-  overlay.dataset.mode=login?'login':'sync';overlay.innerHTML='<div style="width:min(100%,340px);display:grid;gap:16px"><div style="font-size:26px;font-weight:700">'+(login?'登录小手机':'账号云同步')+'</div><p data-sync-note style="margin:0;color:#999;line-height:1.65">'+esc(status.error||(login?loginError:'')||labels[status.phase]||'正在连接账号')+'</p>'+(login?'<input data-phone inputmode="tel" autocomplete="tel" placeholder="手机号" style="padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><div style="display:flex;gap:8px"><input data-password type="password" autocomplete="current-password" placeholder="账号密码" style="min-width:0;flex:1;padding:15px;border-radius:16px;background:#1c1c1e;border:1px solid #38383a;color:#fff;font:inherit"><button data-eye aria-label="显示密码" style="width:48px;border-radius:16px;border:1px solid #38383a;background:#1c1c1e;color:#fff">◉</button></div><button data-login style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">登录并同步</button>':'<button data-retry style="padding:15px;border:0;border-radius:18px;background:#0a84ff;color:white;font:inherit;font-weight:600">重新连接</button>')+'<small style="color:#777;line-height:1.7">登录后自动显示此账号的角色、聊天和设置。手机系统权限由本机单独授权。</small></div>';
-  overlay.querySelector('[data-eye]')?.addEventListener('click',()=>{const input=overlay.querySelector('[data-password]');input.type=input.type==='password'?'text':'password';});
-  overlay.querySelector('[data-retry]')?.addEventListener('click',()=>client.retry());
-  overlay.querySelector('[data-login]')?.addEventListener('click',async()=>{const button=overlay.querySelector('[data-login]'),phone=overlay.querySelector('[data-phone]').value,password=overlay.querySelector('[data-password]').value;button.disabled=true;const note=overlay.querySelector('[data-sync-note]');loginError='';note.textContent='正在连接账号…';try{const result=await native('account.password.signin',{phone,password});if(result?.ok!==true)throw new Error(result?.message||'请核对手机号和密码');overlay.querySelector('[data-password]').value='';loginError='';client.accountChanged(String(result.userId||''),true);}catch(e){loginError=String(e?.message||'登录没有完成');note.textContent=loginError;}finally{button.disabled=false;}});
+  // PRIVATE_SYNC_NONBLOCKING_V1: startup and network progress belong in
+  // authorization/data. Never create a second, non-dismissable login/sync gate.
+  // gateAllowed still protects unverified/foreign account contents.
+  if(overlay){overlay.remove();overlay=null;}
+
  }
  client=createClient({core:root.NorthPrivateDeviceSyncCore,platform,label:platform==='macOS'?'小手机 Mac':'小手机 iPhone',native,
   read:key=>syncStore(key,null,false),write:(key,value)=>syncStore(key,value,true),snapshot,getState:()=>S,replaceState,
@@ -368,8 +365,8 @@
  const originalMany=root.imgMany;if(typeof originalMany==='function')root.imgMany=async function(keys){const user=client.status().owner,found=await originalMany.apply(this,arguments);if(!client.context()?.ready)return found;for(const key of (keys||[]).filter(key=>found[key]==null&&mediaAllowed(key)).slice(0,4)){if(client.status().owner!==user)break;try{const value=await fetchMedia(key);if(value!=null)found[key]=value;}catch(_){}}return found;};
  const originalChatAPI=root.chatAPI;
  if(typeof originalChatAPI==='function')root.chatAPI=async function(){await client.waitForIdle(true);activeModels++;try{return await originalChatAPI.apply(this,arguments);}finally{activeModels--;}};
- const originalReply=root.aiReply;
- if(typeof originalReply==='function')root.aiReply=async function(id,note,token,aid,intent,options){
+ const originalReply=root.aiReply,localReplyTurns=new Map();
+ const runDeviceReply=async function(id,note,token,aid,intent,options,hasLocalLock=false){
   aid=aid||actId();waitingReplies++;
   try{await client.waitForIdle(true);}finally{waitingReplies--;}
   const ctx=client.context();if(!ctx?.ready)return false;
@@ -377,10 +374,16 @@
   if(!client.backgroundAllowed()&&!manualToken)return false;
   const generation=ctx.epoch,threadKey=await root.NorthPrivateDeviceSyncCore.hash([aid,id]);
   const rows=msgsForAccount(id,aid),lastUser=[...rows].reverse().find(x=>x?.role==='user'&&x.type!=='sys');
-  const turnKey=String(note&&options?.reopenCompleted?'continue:'+crypto.randomUUID():!note&&lastUser?.id?lastUser.id:'event:'+crypto.randomUUID()).slice(0,240),leaseToken=crypto.randomUUID();
+  // PRIVATE_REPLY_ATTEMPT_OWNERSHIP_V1: an explicit regeneration is a new
+  // attempt. The durable token recovers only this device's exact old lease.
+  const leaseToken=crypto.randomUUID(),regenerate=!!(manualToken&&options?.reopenCompleted&&lastUser?._replyHandoffCompleted);
+  const turnKey=String(note&&options?.reopenCompleted||regenerate?'continue:'+crypto.randomUUID():!note&&lastUser?.id?lastUser.id:'event:'+crypto.randomUUID()).slice(0,240);
+  const localKey=ctx.owner+'|'+threadKey,leaseKey='__device_sync_v2_'+ctx.owner+'_turn_'+threadKey;
+  if(localReplyTurns.has(localKey))return false;
+  localReplyTurns.set(localKey,leaseToken);
   let lease=false,lost=false,renewing=false,renewTimer=0,result=false;
   const assert=()=>{if(client.context()!==ctx||ctx.epoch!==generation||client.status().owner!==ctx.owner)throw new Error('账号已变化');};
-  const direct=async body=>{assert();const response=await native('account.sync',Object.assign({deviceId:ctx.journal.state()?.deviceId,threadKey,turnKey,leaseToken},body));assert();if(response?.ok!==true)throw new Error('当前回复的设备授权已失效');return response;};
+  const direct=async body=>{assert();const response=await native('account.sync',Object.assign({deviceId:ctx.journal.state()?.deviceId,threadKey,turnKey,leaseToken},body));assert();if(response?.ok!==true){const error=new Error('当前回复状态暂时无法确认');error.code=response?.error||response?.code;throw error;}return response;};
   try{
    // PRIVATE_MANUAL_OFFLINE_REPLY_V1: preserve manual use of a verified local
    // account during an authentication outage. Save the result locally; the
@@ -390,16 +393,31 @@
     result=!!(await originalReply.call(this,id,note,token,aid,intent,options));assert();
     client.markDirty();if(!await saveNowAsync())throw new Error('回复尚未保存');return result;
    }
-   const acquired=await direct({action:'turn.acquire'});if(acquired.acquired!==true){if(manualToken&&typeof toast==='function')toast(acquired.completed?'这条消息已在另一台设备完成回复':'另一台设备正在回复，请稍候');return false;}lease=true;
+   const previous=await syncStore(leaseKey,null,false);assert();
+   if(hasLocalLock&&previous&&previous.deviceId===ctx.journal.deviceId()&&previous.threadKey===threadKey&&UUID.test(previous.leaseToken||'')&&typeof previous.turnKey==='string'){
+    const released=await direct({...previous,action:'turn.finish',completed:false}).catch(error=>{if(error.code==='turn_lease_lost')return {ok:true};throw error;});
+    if(released.ok!==true)throw new Error('上一轮回复状态尚未确认');
+   }
+   await syncStore(leaseKey,{deviceId:ctx.journal.deviceId(),threadKey,turnKey,leaseToken},true);assert();
+   const acquired=await direct({action:'turn.acquire'});if(acquired.acquired!==true){await syncStore(leaseKey,null,true);if(manualToken&&typeof toast==='function')toast(acquired.completed?'这条消息已有回复，正在同步聊天记录':'当前会话仍有回复尚未结束，请稍候');client.retry();return false;}lease=true;
    renewTimer=setInterval(async()=>{if(renewing||lost)return;renewing=true;try{const response=await direct({action:'turn.renew'});if(response.renewed!==true&&response.acquired!==true)throw new Error('lease lost');}catch(_){lost=true;permitsForLostTurn();}finally{renewing=false;}},60000);
    function permitsForLostTurn(){client.revokeReply(id,aid);try{replyTouch(id,aid);}catch(_){} }
    result=!!(await originalReply.call(this,id,note,token,aid,intent,options));
    assert();if(lost)return false;
-   finishingReplies++;try{client.markDirty();const saved=await saveNowAsync();if(!saved)throw new Error('回复尚未保存');const syncConfirmed=await client.flush();await direct({action:'turn.finish',completed:result&&syncConfirmed});lease=false;}finally{finishingReplies--;}
+   finishingReplies++;try{client.markDirty();const saved=await saveNowAsync();if(!saved)throw new Error('回复尚未保存');const syncConfirmed=await client.flush();await direct({action:'turn.finish',completed:result&&syncConfirmed});lease=false;await syncStore(leaseKey,null,true);}finally{finishingReplies--;}
    return result;
-  }catch(error){if(!lost&&client.context()===ctx&&manualToken&&typeof toast==='function')toast('本轮回复暂未完成，请稍后重试');return false;}
-  finally{clearInterval(renewTimer);if(lease)try{await direct({action:'turn.finish',completed:false});}catch(_){} }
+  }catch(error){if(!result&&!lost&&client.context()===ctx&&manualToken&&typeof toast==='function')toast('本轮回复暂未完成，请稍后重试');return result;}
+  finally{clearInterval(renewTimer);try{if(lease)try{await direct({action:'turn.finish',completed:false});await syncStore(leaseKey,null,true);}catch(_){} }finally{if(localReplyTurns.get(localKey)===leaseToken)localReplyTurns.delete(localKey);} }
  };
+ // Web Locks cover separate live WebViews of this account on the same device.
+ // Without that proof, retain the server lease until expiry instead of stealing it.
+ if(typeof originalReply==='function')root.aiReply=async function(id,note,token,aid,intent,options){
+  const locks=root.navigator?.locks;
+  if(!locks?.request)return runDeviceReply.call(this,id,note,token,aid,intent,options,false);
+  const name='smallphone-reply:'+client.status().owner+':'+String(aid||actId())+':'+String(id);
+  let entered=false;try{return await locks.request(name,{ifAvailable:true},lock=>{entered=true;return lock?runDeviceReply.call(this,id,note,token,aid,intent,options,true):false;});}catch(e){if(!entered&&['SecurityError','NotSupportedError'].includes(e?.name))return runDeviceReply.call(this,id,note,token,aid,intent,options,false);throw e;}
+ };
+
  // PRIVATE_SYNC_CONFLICT_UI_V1: bounded review, explicit field-level choice, no raw keys or credentials.
  let conflictPanel=null,conflictPanelContext=null,conflictOperation=false;
  const conflictFields={hist:'上下文长度',histUnit:'上下文单位',chat:'聊天模型',chatRoutes:'模型路线',chatRouteActive:'当前模型路线',aux:'辅助模型',tts:'语音设置',name:'名字',remark:'备注',persona:'人设',signature:'签名',avatar:'头像',model:'模型选择',maxTokens:'回复长度',memory:'记忆',summaries:'聊天总结',worldbook:'世界书',worldbookCategories:'世界书分类',music:'音乐',cinema:'放映室',calendar:'日历',tasks:'任务',moments:'朋友圈',proactive:'主动消息设置',spy:'授权设置',voice:'声音',chatBg:'聊天背景',homeBg:'主屏幕背景',homeDashboard:'主屏幕组件',wxTheme:'微信外观',accounts:'微信账号',active:'当前微信账号',sound:'提示音',timeAware:'时间感知',timeZone:'时区',manualReply:'手动回复',initiative:'主动消息',replyDelay:'回复间隔',settings:'设置',me:'个人资料',couple:'共同生活',offline:'约会存档',roleplay:'角色扮演',appIcons:'应用图标'};
