@@ -35,7 +35,7 @@ assert.match(source, /function scheduleVisibleStoredImages\(force,alreadyHydrate
 assert.match(source, /NORTH_ANDROID&&!privateNativeAppOn\(\)\?24\*1024\*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT/,'Android image memory remains bounded independently of iOS');
 assert.match(html, /window\.__northBootProgress=function/);
 assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady\)window\.__northBootProgress[\s\S]*?\},12000\)/,'12 seconds reports slow progress instead of replacing a healthy boot');
-assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady\)window\.__northBootFail[\s\S]*?\},60000\)/,'a genuinely stuck boot still exposes recovery');
+assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady&&!bootFailed\)window\.__northBootFail[\s\S]*?\},60000\)/,'a genuinely stuck boot still exposes recovery');
 assert.doesNotMatch(html, /__northBootFail\('启动超过 12 秒/);
 
 console.log("android app launch tests passed");
