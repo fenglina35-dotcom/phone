@@ -4,6 +4,8 @@ import path from 'node:path';
 import test from 'node:test';
 import {createRequire} from 'node:module';
 import os from 'node:os';
+import cp from 'node:child_process';
+import {read as versionedRead} from './_helpers.mjs';
 import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
@@ -119,7 +121,8 @@ test('actual backup SQL retains full backups, isolates partial snapshots and pro
   assert.equal((await commit(5)).saved,true);
   assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(5)+'/part-00000.bin'])).rows.length,0,'lost commit ACK cleanup cannot delete committed data');
   assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(6)+'/part-00000.bin'])).rows.length,1,'unreferenced failed uploads remain cleanable');
-  await db.exec('reset role');
+  await assert.rejects(commit(7),/backup_parts_missing/,'cleanup before publication must never produce a dangling manifest');
+  await db.exec('reset role');await db.query("insert into storage.objects values($1,'private-phone-backups',$2)",[prefix(6)+'/part-00000.bin',u]);
   const mac=(await db.query('select id from private_phone_sync_devices where session_id=$1',[secondary])).rows[0].id;
   await db.query('select public.private_phone_sync_promote($1,$2,$3,1)',[u,secondary,mac]);await db.exec('set role authenticated');
   await assert.rejects(commit(6),/backup_primary_required/,'a primary transfer invalidates the old phone at commit time');
@@ -128,4 +131,60 @@ test('actual backup SQL retains full backups, isolates partial snapshots and pro
   await assert.rejects(commit(7),/backup_primary_not_verified/);await assert.rejects(db.query('select private_phone_backup_info_v2()'),/backup_session_unavailable/);
 
  }finally{await db.close();}
+});
+
+
+test('actual native commit branch never cleans an upload after an unknown manifest reply', {skip:process.platform!=='darwin'},()=>{
+ const source=versionedRead(prefix+'PhoneCompanionTest/PhoneNativeBridge.swift'),start=source.indexOf('                    let token = arguments["token"]',source.indexOf('case "account.backup.file.commit":')),end=source.indexOf('                case "account.backup.upload":',start),body=source.slice(start,end);
+ assert(start>0&&end>start);
+ const program=String.raw`import Foundation
+struct Session { let userID="fixture-owner";let accessToken="fixture-token" }
+struct Response { let status:Int;let body:Any? }
+actor Deletes { static let shared=Deletes();var n=0;func add(){n+=1};func count()->Int{n};func reset(){n=0} }
+enum Fixture {static var mode=0;static var uploads=0}
+enum SmallPhoneDiagnosticsStore {static func append(_ name:String,fields:[String:Any]){}}
+final class PrivateBackupUploadProgressDelegate {init(_ f:@escaping (Int64,Int64)->Void){}}
+final class URLSession {
+ init(configuration:URLSessionConfiguration){}
+ func invalidateAndCancel(){}
+ func upload(for request:URLRequest,from part:Data,delegate:PrivateBackupUploadProgressDelegate) async throws -> (Data,URLResponse) {
+  Fixture.uploads+=1;if Fixture.mode==1 && Fixture.uploads==2 {throw URLError(.timedOut)}
+  return (Data(),HTTPURLResponse(url:request.url!,statusCode:200,httpVersion:nil,headerFields:nil)!)
+ }
+}
+actor PrivateBackupFileStore {
+ static let shared=PrivateBackupFileStore()
+ struct Prepared {let bytes:Int64=4*1024*1024+3;let capturedAt:Double=1000;let build="fixture";let checksum=String(repeating:"a",count:64);let missingImages=177}
+ func prepare(token:String,owner:String)throws->Prepared{Prepared()}
+ func readPart(token:String,owner:String,offset:Int64,maximumBytes:Int)throws->Data{Data(repeating:1,count:min(maximumBytes,Int(Prepared().bytes-offset)))}
+ func updateUploadProgress(token:String,owner:String,sentBytes:Int64,expectedBytes:Int64){}
+ func remove(token:String){}
+}
+final class Bridge {
+ static let privateBackupChunkBytes=4*1024*1024,privateAccountAPIKey="fixture"
+ func validPrivateAccountSession() async throws->Session{Session()}
+ func loadPrivateAccountSession()->Session?{Session()}
+ func privateBackupObjectName(prefix:String,partIndex:Int)->String{prefix+"/part"}
+ func privateBackupStorageURL(objectName:String)->URL{URL(string:"https://fixture.invalid/part")!}
+ func privateAccountJSONRequest(path:String,method:String,body:[String:Any],bearer:String) async throws->Response {
+  if Fixture.mode==0{throw URLError(.timedOut)}
+  if Fixture.mode==2{return Response(status:403,body:[])}
+  return Response(status:200,body:[["saved":true]])
+ }
+ func deletePrivateBackupParts(prefix:String,partCount:Int,session:Session) async{await Deletes.shared.add()}
+ func reply(requestID:String,result:[String:Any]){}
+ func run(arguments:[String:Any],requestID:String) async throws {
+`+body+String.raw`
+ }
+}
+for mode in [0,1,2,3] {
+ Fixture.mode=mode;Fixture.uploads=0;await Deletes.shared.reset()
+ let bridge=Bridge();try await bridge.run(arguments:["token":"fixture"],requestID:"fixture")
+ try await Task.sleep(nanoseconds:20_000_000)
+ let removed=await Deletes.shared.count()
+ precondition(removed==(mode==1 ? 1:0),"unknown manifest reply must preserve parts; mode=\(mode), removed=\(removed)")
+}
+print("native-unknown-commit-protected")
+`;
+ assert(cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024}).includes('native-unknown-commit-protected'));
 });

@@ -2879,6 +2879,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 case "account.backup.file.commit":
                     let token = arguments["token"] as? String ?? ""
                     var uploadStarted = false
+                    var manifestSubmitted = false
                     var uploadedPrefix = ""
                     var uploadedPartCount = 0
                     do {
@@ -2975,6 +2976,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                             .withInternetDateTime,
                             .withFractionalSeconds
                         ]
+                        // PRIVATE_BACKUP_UNKNOWN_COMMIT_V1: a missing reply never authorizes deleting submitted data.
+                        manifestSubmitted = true
                         let manifestResponse = try await self.privateAccountJSONRequest(
                             path: "/rest/v1/rpc/save_private_phone_backup_manifest_v2",
                             method: "POST",
@@ -3034,7 +3037,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         }
                     } catch {
                         await PrivateBackupFileStore.shared.remove(token: token)
-                        if !uploadedPrefix.isEmpty, uploadedPartCount > 0 {
+                        if !manifestSubmitted, !uploadedPrefix.isEmpty, uploadedPartCount > 0 {
                             let cleanupSession = self.loadPrivateAccountSession()
                             let cleanupPrefix = uploadedPrefix
                             let cleanupPartCount = uploadedPartCount

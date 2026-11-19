@@ -40,7 +40,7 @@ create function public.save_private_phone_backup_manifest_v2(
 ) returns table(saved boolean,revision bigint,captured_at timestamptz,uploaded_at timestamptz,
  previous_storage_prefix text,previous_part_count integer)
 language plpgsql security definer set search_path='' as $$
-declare u uuid; old jsonb; existing jsonb; result record; item jsonb; retired jsonb;
+declare u uuid; old jsonb; existing jsonb; result record; item jsonb; retired jsonb; i integer;
 begin
  u:=public.private_phone_backup_assert_primary();
  if p_captured_at is null or p_captured_at>now()+interval '5 minutes'
@@ -52,6 +52,12 @@ begin
  or p_storage_prefix is null or p_storage_prefix !~ ('^'||u::text||'/[0-9a-f-]{36}$')
  or p_missing_images is null or p_missing_images not between 0 and 1000000
  then raise exception 'invalid backup manifest' using errcode='22023'; end if;
+ -- Serialize cleanup with publication and reject a manifest if cleanup won first.
+ for i in 0..p_part_count-1 loop
+  perform 1 from storage.objects where bucket_id='private-phone-backups'
+   and name=p_storage_prefix||'/part-'||lpad(i::text,5,'0')||'.bin' and owner_id=u::text for share;
+  if not found then raise exception 'backup_parts_missing' using errcode='22023'; end if;
+ end loop;
  select to_jsonb(b) into old from public.private_phone_backup_files b where user_id=u;
  select manifest into existing from public.private_phone_backup_preserved where user_id=u and slot='partial';
  -- Capture times order snapshots only; they never authorize device ownership.
@@ -111,10 +117,15 @@ revoke all on function public.save_private_phone_backup_manifest(timestamptz,tex
 grant execute on function public.save_private_phone_backup_manifest(timestamptz,text,text,bigint,text,integer,integer) to authenticated;
 
 create function public.private_phone_backup_object_protected(object_name text) returns boolean
-language sql stable security definer set search_path='' as $$
- select exists(select 1 from public.private_phone_backup_files where user_id=auth.uid() and object_name like storage_prefix||'/%')
- or exists(select 1 from public.private_phone_backup_preserved where user_id=auth.uid() and object_name like (manifest->>'storage_prefix')||'/%')
-$$;
+language plpgsql volatile security definer set search_path='' as $$
+declare u uuid:=auth.uid();
+begin
+ if u is null then return true; end if;
+ -- VOLATILE SPI reads take a fresh snapshot after waiting for the publisher.
+ perform pg_advisory_xact_lock(hashtextextended('sync/'||u::text,2));
+ return exists(select 1 from public.private_phone_backup_files where user_id=u and object_name like storage_prefix||'/%')
+ or exists(select 1 from public.private_phone_backup_preserved where user_id=u and object_name like (manifest->>'storage_prefix')||'/%');
+end $$;
 revoke all on function public.private_phone_backup_object_protected(text) from public,anon;
 grant execute on function public.private_phone_backup_object_protected(text) to authenticated;
 drop policy "private phone backup object delete" on storage.objects;
