@@ -165,7 +165,8 @@ test('inactive native helpers do not keep waking the main thread',()=>{
 test('private core storage stays off MainActor and restores large state through bounded chunks',()=>{
   assert.match(app,/const args=\{key:k,ver:[\s\S]*?stateJSON:String\(v\.json\|\|''\)\}[\s\S]*?request\('storage\.put',args\)/);
   assert.doesNotMatch(app,/request\('storage\.put',\{key:k,value:v\}\)/);
-  assert.match(bridge,/private let storageQueue = DispatchQueue\([\s\S]*?qos: \.utility/);
+  assert.match(bridge,/enum PrivateNativeStorageWork \{[\s\S]*?nonisolated static let shared = DispatchQueue\([\s\S]*?qos: \.utility/);
+  assert.match(bridge,/private let storageQueue = PrivateNativeStorageWork\.shared/);
   assert.match(bridge,/storageQueue\.async \{ \[weak self\] in/);
   assert.match(bridge,/stateData\.count > 131_072[\s\S]*?"chunked"\] = true[\s\S]*?"chunkBytes"\] = 196_608/);
   assert.match(bridge,/case "storage\.get\.chunk"[\s\S]*?chunkOffset \+ 196_608[\s\S]*?chunk\.base64EncodedString\(\)/);
