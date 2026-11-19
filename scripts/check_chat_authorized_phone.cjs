@@ -44,6 +44,14 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    openChat(role.id);
   });
 
+  if(process.env.NORTH_EXPORT_SAVE==='1'){
+   if(privateApp){await page.close();continue;}
+   await page.evaluate(()=>{beautyAppleDevice=()=>true;window.exportShareCalls=0;window.exportActivation=false;Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});Object.defineProperty(navigator,'share',{configurable:true,value:async value=>{exportShareCalls++;exportActivation=navigator.userActivation.isActive;if(!exportActivation)throw new DOMException('gesture required','NotAllowedError');window.exportSavedText=await value.files[0].text();}});});
+   await page.evaluate(()=>exportData());assert.equal(await page.evaluate(()=>exportShareCalls),0,'no share may occur after the asynchronous preparation');assert(await page.locator('#backup-save-ready').isVisible());
+   await page.locator('#backup-save-ready').click();await page.waitForFunction(()=>!!window.exportSavedText);assert(await page.evaluate(()=>exportActivation));assert(await page.evaluate(()=>!!JSON.parse(exportSavedText).contacts.length));assert.equal(await page.evaluate(()=>_fullBackupExportBusy),false);
+   assert.deepEqual(errors,[]);console.log(JSON.stringify({safariFreshSaveGesture:true,actualBackupJSON:true,pageErrors:0}));await page.close();continue;
+  }
+
   if(process.env.NORTH_CALL_EVENT_REPLAY==='1'){
    const quiet=await page.evaluate(async()=>{
     window.callEventNote=wechatNaturalCallEventNote('刚刚这通语音来电没有接通，当前没有新的用户话语。');

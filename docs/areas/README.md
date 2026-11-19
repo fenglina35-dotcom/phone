@@ -1367,3 +1367,5 @@ NORTH_CALL_EVENT_REPLAY=1复用check_chat_authorized_phone：真实双端aiReply
 网页v1940已发布：Pages构建44482368648成功，线上app.js/小手机.html/sw.js/index.html与候选逐字节一致；手机先安装验证后发布网页，私人功能分离保持。
 
 2026-11-19候选586：原生异步备份丢失Web Share手势，改优先WKDownload；同步等待丢失调用栈，改等待前捕获来源；带功能事件的当前用户消息保留原副端许可，后台事件不放行。旧回归失败、新专项通过。C真实文档搜索通过；其余四连接、400原因和实际保存待验，未安装发布，不宣称完成。
+
+BACKUP_SAVE_GESTURE_V1：2026-11-19备份补充：Safari网页采用生成后再次点击保存，防止异步处理消耗系统手势；分享被拒只显示下载入口，不伪报成功，关闭页面不遗留导出忙锁。NORTH_EXPORT_SAVE真实浏览器点击确认userActivation且读回JSON通过。私人版继续直接原生WKDownload，实际系统保存待验。

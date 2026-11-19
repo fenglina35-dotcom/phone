@@ -214,14 +214,22 @@ async function readBackupJson(file,onString,onProgress){
 let _backupImportPins=new Set(),_fullBackupImportBusy=false;
 
 let _fullBackupExportBusy=false,_fullBackupExportProgress='';
+// BACKUP_SAVE_GESTURE_V1: Safari needs a fresh click after async file generation.
+function backupOfferSave(blob,name,note){if(typeof beautyAppleDevice!=='function'||!beautyAppleDevice()||typeof privateNativeAppOn==='function'&&privateNativeAppOn())return false;
+ openModal('<h3>备份已生成</h3><p class="hint" id="backup-save-hint">点击保存备份，在系统面板中选择存储到文件。</p><div class="btns"><button class="btn p" id="backup-save-ready">保存备份</button><button class="btn g" id="backup-save-download" style="display:none">下载备份</button></div>');
+ const button=document.getElementById('backup-save-ready'),fallback=document.getElementById('backup-save-download'),hint=document.getElementById('backup-save-hint');
+ button.onclick=async()=>{button.disabled=true;try{const mode=await beautySaveFile(blob,name);if(mode==='cancelled'){hint.textContent='已取消保存，可以再次点击。';return;}closeModal();toast('备份文件已交给系统，请完成存储'+note,7000);}catch(e){hint.textContent='系统没有允许分享，请点击下载备份后在系统界面存储。';fallback.style.display='';}finally{button.disabled=false;}};
+ fallback.onclick=()=>{downloadBlob(blob,name);hint.textContent='已请求打开备份文件，请在系统界面完成存储。'+note;};return true;
+}
 async function exportData(){
   if(_fullBackupExportBusy){toast(_fullBackupExportProgress||'正在生成完整备份，请稍候');return;}
   _fullBackupExportBusy=true;_fullBackupExportProgress='正在生成完整备份，请保持页面开启';toast(_fullBackupExportProgress);let progressAt=Date.now();
   const progress=text=>{_fullBackupExportProgress=text;if(Date.now()-progressAt>=1500){progressAt=Date.now();toast(text+'，请保持页面开启');}};
   const stats={skippedImages:0};
   try{const blob=await fullBackupFileBlob(progress,stats);
-    typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-download');const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
+    typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-download');const name='North备份_'+new Date().toISOString().slice(0,10)+'.json';
     const skipped=+stats.skippedImages||0,note=skipped?('；有 '+skipped+' 张图片暂时读不到，已跳过；聊天和其余可读取内容已保留'):'';
+    if(backupOfferSave(blob,name,note)){toast('备份已生成，请点击保存备份'+note,7000);return;}const mode=await beautySaveFile(blob,name);
     if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”'+note,skipped?7000:undefined);else if(mode==='pending')toast('备份文件已生成，正在打开系统保存面板'+note,7000);else toast('已导出'+note,skipped?7000:undefined);
   }catch(e){typeof northBrowserDiagnosticError==='function'&&northBrowserDiagnosticError('backup-export',e);toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-export-ended');}
 }
