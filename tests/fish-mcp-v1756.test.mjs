@@ -367,6 +367,17 @@ test('official UI: older native Apps do not advertise UI before the isolated con
  const s=sandbox();s.ctx.privateNativeAppOn=()=>true;await connected(s);const init=s.calls.find(c=>c.body?.method==='initialize');assert.equal(init.body.params.capabilities.extensions,undefined);
 });
 
+test('Mac native shell uses the isolated web card host while iPhone keeps its native capability gate',async()=>{
+ for(const variant of ['web','private']){
+  const response={structuredContent:{name:'Hello',uri:'spotify:track:62PaSfnXSMyLshYJrlTuL3'},content:[]};
+  const s=guideSandbox((u,i,b)=>b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result:response}):null,variant);s.ctx.privateNativeAppOn=()=>true;s.ctx.window={__SMALL_PHONE_MAC__:true};
+  await connected(s);const init=s.calls.find(x=>x.body?.method==='initialize');assert(init.body.params.capabilities.extensions,'Mac must advertise its available isolated web UI host');
+  const m={role:'user'},ctx=s.M.context('role-a',()=>true,m);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});const html=s.M.chatTraceHTML(m,'role-a');assert(html.includes('data-mcp-official="spotify"'));assert(html.includes('href="https://open.spotify.com/track/62PaSfnXSMyLshYJrlTuL3"'),'provider link remains available beside the player');
+  s.ctx.window.__SMALL_PHONE_MAC__=false;assert(!s.M.chatTraceHTML(m,'role-a').includes('data-mcp-official="spotify"'),'older iPhone still falls back safely');
+  s.ctx.window.__SMALL_PHONE_MCP_CARDS__=true;assert(s.M.chatTraceHTML(m,'role-a').includes('data-mcp-official="spotify"'),'current iPhone retains its native host');
+ }
+});
+
 test('official cards: reordering results preserves the matching provider frame identity',async()=>{
  const s=sandbox((u,i,b)=>b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result:{structuredContent:{tracks:[{name:'A',uri:'spotify:track:4uLU6hMCjMI75M1A2tKUQC'},{name:'B',uri:'spotify:track:0Lr4kGOYn9l83EjuK6cZFQ'}]},content:[]}}):null);await connected(s);const m={role:'user'},ctx=s.M.context('role-a',()=>true,m);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});const ids=html=>Array.from(html.matchAll(/data-mcp-view="([^"]+)"/g),x=>x[1]),before=ids(s.M.chatTraceHTML(m,'role-a'));assert.equal(before.length,2);m._mcpTrace.cards.reverse();const after=ids(s.M.chatTraceHTML(m,'role-a'));assert.deepEqual(after,[before[1],before[0]]);
 });

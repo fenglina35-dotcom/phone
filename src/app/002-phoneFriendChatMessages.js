@@ -237,9 +237,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1943 · 修复多连接工具目录匹配';
+const APP_VER='v1944 · 修复Mac官方歌曲卡片与站内收听';
 //@@ private
-const APP_VER='v1942 · 修复多连接工具目录匹配';
+const APP_VER='v1943 · 修复Mac官方歌曲卡片与站内收听';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
