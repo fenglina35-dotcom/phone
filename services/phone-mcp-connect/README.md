@@ -71,3 +71,5 @@ MCP_SPOTIFY_PUBLIC_SEARCH_V1：本人优先个人账号；现有 Free 登录不�
 本人已明确允许使用GitHub免费注册并接受条款。实际GitHub授权范围仅read:user、user:email，无仓库；新账号已登录，余额0，auto-refill关闭，未订阅/充值。通过官方API将密钥allowlist限定spotify一个pack、spotify每日200上限，并GET读回restricted/capped；个人Spotify浏览器登录不变。独立Worker Secret PIPEWORX_CATALOG_KEY只发固定公开HTTP搜索上游，不交给小手机或角色；小手机Bearer仍只用于本网关认证。认证失败不回退匿名、不重试，错误不包含服务密钥。31项服务回归通过，角色复验待配置部署。
 
 角色实测已通过（Mac588，08:46）：自然要求Spotify公开搜Adele Hello，C先显示spotify_search query/type/limit参数确认；本次允许后真实返回三项官方链接，两项Hello发行版本和一项Someone Like You，并按真实曲库回答。随后发现分页limit=3被现有通用用量卡识别为额度上限3；MCP_SPOTIFY_SEARCH_RESULT_V1改用returned计数保留total/offset。API→两版真实渲染回归旧实现生成1张错误额度卡，新实现只生成歌曲；不修改通用额度、音乐播放器或核心聊天。31项服务测试通过；去噪后的角色复验另记。
+
+最终核验：9158cb75部署为ae58eee6-1052-4f8c-a7f4-43a029896e36，31项服务测试、全量5491通过。歌曲真实ID62PaSfnXSMyLshYJrlTuL3经Spotify官方oEmbed HTTP200确认title=Hello。实际C08:46搜索已通过；随后“谢谢啦”自然回复“不客气，随时找我搜”“早饭吃了没？”，没有新MCP确认。最终去噪回包经过API→两版实际渲染回归，无错误额度卡。Mac原生bootstrap仅声明MCP_HTTP，未实现MCP_CARDS和mcp.card.*；所以当前只显示官方链接，不应描述为服务没有曲目/卡片数据。iPhone与网页有官方播放器实现路径，本轮未在手机实测卡片。副设备测试消息不回写主设备，不为保存测试记录改变主副规则。最终再次可视复查时可见历史已回到主设备版本，不把该次未留在当前历史的新查询列为第二次真人成功证据。
