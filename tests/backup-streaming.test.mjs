@@ -101,3 +101,9 @@ for(const [name,file] of BUNDLES)test(`${name}: missing album originals export r
  assert.equal(result.messages.r[0].content,state.messages.r[0].content);assert.equal(result.messages.r[0].img,'');assert.equal(result.offline.r.msgs[0].content,'线下仍在');
  assert.equal(state.messages.r[0].img,'album:gone');assert.ok(env.events.some(x=>x.includes('1 张图片')));
 });
+
+test('native export bypasses Web Share even when the platform exposes an unusable share API',async()=>{
+ let shares=0,downloads=0;const ctx=vm.createContext({Blob,File,navigator:{share:async()=>{shares++;throw new DOMException('gesture lost','NotAllowedError');}},beautyAppleDevice:()=>true,privateNativeAppOn:()=>true,downloadBlob:()=>{downloads++;}});
+ vm.runInContext(fnSource(src,'beautySaveFile'),ctx);await Promise.resolve();
+ assert.equal(await ctx.beautySaveFile(new Blob(['{"messages":{}}']),'backup.json'),'pending');assert.equal(shares,0);assert.equal(downloads,1);
+});

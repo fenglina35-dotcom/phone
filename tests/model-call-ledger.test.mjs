@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {read as currentRead,PRIV_DIR} from './_helpers.mjs';
 
 const ROOT = process.env.FIX_TEST_ROOT || new URL('..', import.meta.url).pathname;
 const BUNDLES = {
@@ -12,7 +13,7 @@ const BUNDLES = {
 };
 
 function load(dir, settings = {}) {
-  const src = fs.readFileSync(dir + 'app.js', 'utf8');
+  const src = currentRead(dir===BUNDLES.private?PRIV_DIR+'app.js':'app.js');
   const a = src.indexOf('/* MODEL_CALL_LEDGER_V1'), b = src.indexOf('async function chatAPI(');
   assert.ok(a > 0 && b > a, '要有调用记录和清单代码');
   const store = {};
@@ -148,4 +149,18 @@ test('两版的功能表一模一样', () => {
   const a = load(BUNDLES.private).src, b = load(BUNDLES.web).src;
   const cut = s => s.slice(s.indexOf('const MODEL_FEATURES=['), s.indexOf('async function chatAPI('));
   assert.equal(cut(a), cut(b));
+});
+
+test('private sync wait preserves the originating feature across its async boundary',async()=>{
+ const {ctx,src}=load(BUNDLES.private);const adapter=currentRead(PRIV_DIR+'private-device-sync-client.js');
+ const start=adapter.indexOf(" if(typeof originalChatAPI==='function')root.chatAPI="),end=adapter.indexOf(' const originalReply=',start);assert(start>=0&&end>start);
+ vm.runInContext('var root=this,activeModels=0,client={waitForIdle:async()=>{await Promise.resolve();}},originalChatAPI=async(messages,opt)=>modelFeatureOf(opt);'+adapter.slice(start,end)+';function spyRefresh(opt){return chatAPI([],opt||{});}',ctx);
+ assert.equal((await ctx.spyRefresh()).key,'spy_refresh');assert.equal((await ctx.spyRefresh({_modelFeatureOrigin:{key:'wechat'}})).key,'spy_refresh');assert.equal((await ctx.spyRefresh()).label,'查他手机·刷新');
+});
+
+test('a current user reply carrying a feature event keeps its existing secondary-device permit',()=>{
+ const adapter=currentRead(PRIV_DIR+'private-device-sync-client.js'),a=adapter.indexOf('  const userEvent='),line=adapter.split('\n').find(x=>x.includes('const manualToken=client.replyPermit'));
+ const code=(a<0?'':adapter.slice(a,adapter.indexOf('\n',a)))+'\n'+line+';this.allowed=!!manualToken;';
+ const ctx={id:'r',aid:'main',token:2,note:'[功能事件即时反应]改备注',options:null,client:{replyPermit:(id,aid,token,manual)=>manual?'existing-permit':''},featureEventNoteActive:n=>n.includes('功能事件'),replyPendingUserText:()=> '当前未回复的新消息'};vm.createContext(ctx);vm.runInContext(code.replaceAll('const ','var '),ctx);assert.equal(ctx.allowed,true);
+ ctx.replyPendingUserText=()=>'';vm.runInContext(code.replaceAll('const ','var '),ctx);assert.equal(ctx.allowed,false,'an unattended feature event must not gain the user permit');
 });

@@ -1126,7 +1126,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       window.__SMALL_PHONE_MCP_CARDS__ = true;
       window.__SMALL_PHONE_MCP_HTTP__ = true;
       window.__SMALL_PHONE_ACCOUNT_SYNC__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.585 (585)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.586 (586)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = false;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1158,7 +1158,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.585 (585)', autoBackupPaused: false },
+        { build: '1.0.586 (586)', autoBackupPaused: false },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

@@ -2201,3 +2201,5 @@ test('unreadable media cannot abort file export and native shells keep a save pa
 test('long chat loading and call events retain one-shot ownership in both builds',()=>{
  for(const file of [WEB,PRIVATE]){const src=read(file);for(const marker of ['MSG_ARCHIVE_BOOT_RACE_V1','CALL_EVENT_CONSUME_ONCE_V1','CALL_MISSED_SESSION_V1','CALL_REDIAL_THREE_V1','CALL_REAL_FACTS_V1'])assert(src.includes(marker),file+': '+marker);}
 });
+
+test('native backup avoids Web Share and model source survives the sync boundary',()=>{for(const file of [WEB,PRIVATE])assert(read(file).includes('NATIVE_EXPORT_SHARE_BYPASS_V1'));const adapter=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js');assert(adapter.includes('MODEL_SOURCE_BEFORE_SYNC_WAIT_V1'));assert(adapter.includes('PRIVATE_USER_EVENT_REPLY_PERMIT_V1'));});

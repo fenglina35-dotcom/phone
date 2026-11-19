@@ -364,13 +364,15 @@
  root.NorthPrivateDeviceSyncClient=client;root.privatePhoneAutomaticStateAllowed=()=>client.automaticStateAllowed();installMediaHooks();
  const originalMany=root.imgMany;if(typeof originalMany==='function')root.imgMany=async function(keys){const user=client.status().owner,found=await originalMany.apply(this,arguments);if(!client.context()?.ready)return found;for(const key of (keys||[]).filter(key=>found[key]==null&&mediaAllowed(key)).slice(0,4)){if(client.status().owner!==user)break;try{const value=await fetchMedia(key);if(value!=null)found[key]=value;}catch(_){}}return found;};
  const originalChatAPI=root.chatAPI;
- if(typeof originalChatAPI==='function')root.chatAPI=async function(){await client.waitForIdle(true);activeModels++;try{return await originalChatAPI.apply(this,arguments);}finally{activeModels--;}};
+ if(typeof originalChatAPI==='function')root.chatAPI=async function(messages,opt){/* MODEL_SOURCE_BEFORE_SYNC_WAIT_V1 */opt=Object.assign({},opt);if(typeof modelFeatureOf==='function'){const originOpt=Object.assign({},opt);delete originOpt._modelFeatureOrigin;opt._modelFeatureOrigin=modelFeatureOf(originOpt);}await client.waitForIdle(true);activeModels++;try{return await originalChatAPI.call(this,messages,opt);}finally{activeModels--;}};
  const originalReply=root.aiReply,localReplyTurns=new Map();
  const runDeviceReply=async function(id,note,token,aid,intent,options,hasLocalLock=false){
   aid=aid||actId();waitingReplies++;
   try{await client.waitForIdle(true);}finally{waitingReplies--;}
   const ctx=client.context();if(!ctx?.ready)return false;
-  const manualToken=client.replyPermit(id,aid,token,!note||!!options?.reopenCompleted);
+  // PRIVATE_USER_EVENT_REPLY_PERMIT_V1: a fresh user turn may carry a real feature event without becoming autonomous work.
+  const userEvent=!!note&&typeof featureEventNoteActive==='function'&&featureEventNoteActive(note)&&typeof replyPendingUserText==='function'&&!!replyPendingUserText(id,aid);
+  const manualToken=client.replyPermit(id,aid,token,!note||!!options?.reopenCompleted||userEvent);
   if(!client.backgroundAllowed()&&!manualToken)return false;
   const generation=ctx.epoch,threadKey=await root.NorthPrivateDeviceSyncCore.hash([aid,id]);
   const rows=msgsForAccount(id,aid),lastUser=[...rows].reverse().find(x=>x?.role==='user'&&x.type!=='sys');
