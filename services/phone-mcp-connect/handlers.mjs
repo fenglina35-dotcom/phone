@@ -213,3 +213,65 @@ export async function defaultHandler(request,env,fetchFn=fetch){
  }
  return html('<h1>小手机 Gmail 连接</h1><p>请从小手机的 MCP 设置中发起连接。</p>',new Headers(),404);
 }
+
+
+// MCP_SPOTIFY_PUBLIC_SEARCH_V1: isolated public metadata, never personal Spotify OAuth.
+const SPOTIFY_CATALOG_UPSTREAM='https://gateway.pipeworx.io/spotify/mcp';
+const spotifySearchTool={name:'spotify_search',description:'只读搜索 Spotify 公开歌曲曲库，返回歌曲、歌手及 Spotify 官方链接。没有登录个人 Spotify，不读取收藏、歌单或控制播放。',inputSchema:{type:'object',required:['query'],properties:{query:{type:'string',minLength:1,maxLength:256},type:{type:'string',enum:['track']},market:{type:'string',pattern:'^[A-Z]{2}$',default:'US'},limit:{type:'integer',minimum:1,maximum:10,default:3},offset:{type:'integer',minimum:0,maximum:1000,default:0}},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:true}};
+function spotifyArgs(args){
+ if(!object(args)||Object.keys(args).some(k=>!Object.hasOwn(spotifySearchTool.inputSchema.properties,k)))invalid('搜歌参数不正确。');
+ if(typeof args.query!=='string'||!args.query.trim()||args.query.length>256||/[\x00-\x1f\x7f]/.test(args.query))invalid('请输入不超过256字的歌曲或歌手。');
+ const type=args.type??'track',market=args.market??'US',limit=args.limit??3,offset=args.offset??0;
+ if(type!=='track'||typeof market!=='string'||!/^([A-Z]{2})$/.test(market)||!Number.isInteger(limit)||limit<1||limit>10||!Number.isInteger(offset)||offset<0||offset>1000)invalid('搜歌范围或数量不正确。');
+ return{query:args.query.trim(),type,market,limit,offset};
+}
+function publicTracks(result,args){
+ if(result?.isError)throw Error('catalog_unavailable');
+ let value=result?.structuredContent;
+ if(!value?.tracks)for(const c of result?.content||[]){if(c.type!=='text')continue;try{const parsed=JSON.parse(c.text);if(parsed?.tracks){value=parsed;break;}}catch(_){}}
+ if(!Array.isArray(value?.tracks?.items))throw Error('catalog_response_invalid');
+ const small=(v,max)=>typeof v==='string'?v.slice(0,max):'';
+ const items=value.tracks.items.slice(0,args.limit).map(t=>{
+  if(!/^[A-Za-z0-9]{22}$/.test(t?.id)||typeof t.name!=='string'||!Array.isArray(t.artists))throw Error('catalog_track_invalid');
+  return{id:t.id,type:'track',name:small(t.name,300),artists:t.artists.slice(0,10).map(a=>({name:small(a.name,200)})),album:{name:small(t.album?.name,300)},...(Number.isFinite(t.duration_ms)?{duration_ms:t.duration_ms}:{}),external_urls:{spotify:'https://open.spotify.com/track/'+t.id}};
+ });
+ return{source:'Spotify 公开曲库',personalAccount:false,tracks:{items,limit:args.limit,offset:args.offset,...(Number.isInteger(value.tracks.total)&&value.tracks.total>=0?{total:value.tracks.total}:{})}};
+}
+export async function spotifyCatalog(request,env,fetchFn=fetch){
+ const token=request.headers.get('Authorization')?.match(/^Bearer ([^\s]{16,256})$/)?.[1];
+ const digest=token?Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))).map(x=>x.toString(16).padStart(2,'0')).join(''):'';
+ if(!env.SPOTIFY_CATALOG_TOKEN_SHA256||digest!==env.SPOTIFY_CATALOG_TOKEN_SHA256)return rpcError(null,-32001,'曲库连接凭据未通过。',401);
+ if(request.method!=='POST')return rpcError(null,-32600,'请使用 MCP POST 请求。',405);
+ let body;
+ try{body=JSON.parse(await readLimited(request.body,8192));}catch(_){return rpcError(null,-32700,'曲库请求格式不正确。',400);}
+ const validID=typeof body?.id==='string'||(typeof body?.id==='number'&&Number.isFinite(body.id));
+ if(!object(body)||body.jsonrpc!=='2.0'||(!validID&&!(body.method==='notifications/initialized'&&body.id===undefined)))return rpcError(null,-32600,'曲库请求缺少有效标识。',400);
+ const result=value=>Response.json({jsonrpc:'2.0',id:body.id,result:value});
+ if(body.method==='notifications/initialized')return new Response(null,{status:202});
+ const serverInfo={name:'Spotify 公开曲库（仅搜歌）',version:'1'};
+ if(body.method==='initialize')return result({protocolVersion:'2025-11-25',serverInfo,capabilities:{tools:{}}});
+ if(body.method==='ping')return result({});
+ if(body.method==='tools/list')return result({tools:[spotifySearchTool]});
+ if(body.method==='server/discover')return result({supportedVersions:['2026-07-28'],serverInfo,capabilities:{tools:{}},tools:[spotifySearchTool]});
+ if(body.method!=='tools/call'||body.params?.name!=='spotify_search')return rpcError(body.id,-32601,'此连接只提供公开歌曲搜索。',400);
+ let args;try{args=spotifyArgs(body.params.arguments);}catch(e){return rpcError(body.id,-32602,e.message,400);}
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let session='';
+ const send=async(method,params,id)=>{
+  const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25',...(session?{'Mcp-Session-Id':session}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,...(params?{params}:{})})});
+  if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
+  if(id===undefined){await response.body?.cancel();return;}
+  const data=await readRpc(response,id);
+  if(data?.jsonrpc!=='2.0'||data.id!==id||data.error||!object(data.result))throw Error('catalog_response_invalid');
+  if(method==='initialize'){
+   if(data.result.protocolVersion!=='2025-11-25')throw Error('catalog_protocol_invalid');
+   const next=response.headers.get('Mcp-Session-Id');if(next){if(next.length>512||/[\x00-\x20\x7f]/.test(next))throw Error('catalog_session_invalid');session=next;}
+  }return data.result;
+ };
+ try{
+  await send('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'SmallPhone Public Catalog',version:'1'}},'catalog-init');
+  await send('notifications/initialized');
+  const data=publicTracks(await send('tools/call',{name:'spotify_search',arguments:args},'catalog-search'),args);
+  return result({content:[{type:'text',text:JSON.stringify(data)}]});
+ }catch(_){return rpcError(body.id,-32603,'公开曲库暂未返回有效结果，请稍后手动重试；个人账号连接未改变。',502);}
+ finally{clearTimeout(timer);}
+}

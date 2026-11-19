@@ -52,3 +52,12 @@ Workers 用量与账号内其他项目共享，套餐内额度有限。不得为
 2026-11-19 MCP_GMAIL_SEND_V1：本人要求角色直接发测试邮件到指定邮箱，不再创建草稿。原网关只有查询/草稿而无发送工具，是角色无法发信的确定缺口。新增send_email，沿用已授权gmail.compose和mcp:write，to/subject/body必填，限制1至10个普通邮箱，固定messages/send一次POST；禁止头部注入、未知字段及自动重试，不开放删除。Google接受发送不代表收件人已收到。两项旧实现失败，25项服务测试通过。实际C调用/确认/发送及投递仍待验。工具说明重复读取已复现但代码根因未证实，未放松循环保护。网页代发不算角色测试通过。已有三个维护DOCX XML不可解析，当前在对应TXT保留记录，原件保留待无损处理。
 
 2026-11-19 发信链路继续核验：全量5481/5481通过，MCP/永久保护1393通过，Gmail服务25通过。提交3deba734已部署现有Worker，版本85688e66-08c1-494f-af27-3838ed504588，原KV与10ms配置不变。发现客户端仍缓存旧Google预览目录：草稿schema约4001字节、搜索约7399字节。正式API迁移后未刷新目录，标签读取成功不能证明写操作签名一致。现已通过验证连接刷新，云修订5保存6个正式工具，草稿schema610字节，发送259字节；仍connected及ask，先生和C原授权保留。同账号手机应拉取该云修订，不重建登录。旧网页邮件地址核对正确，发件箱有记录且当时未发现退信，不代表收件人已收到。Mac在进入C实际发送前锁屏，已请本人解锁；C尚未发送，不能称测试通过，iPhone仍585，未推送网页。八个本轮可重建测试/Worker缓存文件已按明确路径清理，用户备份与恢复证据保留。
+
+
+## Spotify 公开搜歌（2026-11-19）
+
+MCP_SPOTIFY_PUBLIC_SEARCH_V1：本人优先个人账号；现有 Free 登录不满足自建开发应用拥有者 Premium 要求，因此按本人已批准的退路接入公开曲库。保留个人 Spotify 浏览器登录，不购买会员，不声称已连接个人歌单。独立 `/spotify/mcp` 使用独立 `SPOTIFY_CATALOG_TOKEN_SHA256` Worker Secret（仅保存随机 Bearer 的 SHA-256 摘要，原文仅在小手机安全存储）；该凭据不能用于 Gmail。设置连接名称为“Spotify 公开曲库（仅搜歌）”，地址 PUBLIC_URL + /spotify/mcp，Bearer 授权，只勾选 C、执行前确认。
+
+唯一工具 spotify_search：只搜索公开 track 元数据，不开放播放、收藏、歌单、共享目录或 Pipeworx 的其他工具。固定上游 https://gateway.pipeworx.io/spotify/mcp （上游项目 https://github.com/pipeworx-io/mcp-spotify）。不转发客户端 Authorization、Cookie、会话、角色提示词或聊天全文；只发本次获批的 query/market/limit/offset。初始化声明与任意上游指令不传给角色；结果仅取歌曲/歌手/专辑名、时长、校验后的官方曲目ID链接。每次最多10项、25秒共用超时，SSE按匹配ID收尾；失败不自动重试。上游目前匿名额度有限，不保证长期免费或可用，额度不足时如实失败，不自动订阅。原 Gmail OAuth、KV、CPU和套餐不改。
+
+新增服务直接回归旧实现失败，涵盖认证隔离、参数拒绝、固定Host、不转发凭据、结果来源、重定向/错ID/失败不重放；实际 workerd 覆盖独立路由、Origin/CORS、Gmail令牌边界。角色实际验收另记，不以HTTP直测冒充。

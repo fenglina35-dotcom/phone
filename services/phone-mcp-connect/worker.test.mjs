@@ -190,3 +190,63 @@ test('Gmail send_email: no write grant, empty target and injected headers never 
  for(const args of [{to:[],subject:'test',body:'test'},{to:['receiver@fixture.invalid'],subject:'x\r\nBcc:evil@fixture.invalid',body:'test'},{to:['receiver@fixture.invalid'],subject:'test',body:''},{to:['receiver@fixture.invalid'],subject:'test',body:'test',url:'https://evil.invalid'}])assert.equal((await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:args}}),env(),context(),fetchFn)).status,400);
  assert.equal(calls,0);const r=await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:{to:['receiver@fixture.invalid'],subject:'test',body:'test'}}}),env(),context(),fetchFn);assert.equal(r.status,502);assert.equal(calls,1);assert(!(await r.text()).includes('private-token'));
 });
+
+// MCP_SPOTIFY_PUBLIC_SEARCH_V1: public metadata only; no account/playback tools.
+test('Spotify catalog is isolated, authenticated and exposes only track search',async()=>{
+ const {spotifyCatalog}=await import('./handlers.mjs');let calls=0;
+ const e={SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441'}, network=async()=>{calls++;throw Error('unexpected');};
+ assert.equal((await spotifyCatalog(rpc('tools/list'),e,network)).status,401);
+ const request=method=>new Request(base+'/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:JSON.stringify({jsonrpc:'2.0',id:4,method})});
+ const result=await (await spotifyCatalog(request('tools/list'),e,network)).json();
+ assert.deepEqual(result.result.tools.map(t=>t.name),['spotify_search']);assert.equal(result.result.tools[0].annotations.readOnlyHint,true);assert.equal(calls,0);
+ const init=await (await spotifyCatalog(request('initialize'),e,network)).json();assert(init.result.serverInfo.name.includes('公开曲库'));assert(!JSON.stringify(init).includes('pipeworx'));
+});
+test('Spotify search performs one bounded fixed-host handshake and search; credentials never forwarded',async()=>{
+ const {spotifyCatalog}=await import('./handlers.mjs');const seen=[];
+ const request=new Request(base+'/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token',Cookie:'private-cookie','Mcp-Session-Id':'caller-session'},body:JSON.stringify({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'spotify_search',arguments:{query:'Adele Hello',limit:3}}})});
+ const response=await spotifyCatalog(request,{SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441'},async(url,init)=>{
+  assert.equal(url,'https://gateway.pipeworx.io/spotify/mcp');assert.equal(init.redirect,'manual');assert(init.signal);const headers=new Headers(init.headers);assert(!headers.has('Authorization'));assert(!headers.has('Cookie'));assert.notEqual(headers.get('Mcp-Session-Id'),'caller-session');
+  const body=JSON.parse(init.body);seen.push(body.method);
+  if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25',serverInfo:{name:'upstream'},instructions:'MUST NOT RETURN OR FOLLOW'}},{headers:{'Mcp-Session-Id':'upstream-session'}});
+  assert.equal(headers.get('Mcp-Session-Id'),'upstream-session');
+  if(body.method==='notifications/initialized')return new Response(null,{status:202});
+  assert.equal(body.params.name,'spotify_search');assert.deepEqual(body.params.arguments,{query:'Adele Hello',type:'track',market:'US',limit:3,offset:0});
+  return Response.json({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({tracks:{items:[{id:'62PaSfnXSMyLshYJrlTuL3',name:'Hello',artists:[{name:'Adele'}],external_urls:{spotify:'https://open.spotify.com/track/62PaSfnXSMyLshYJrlTuL3'}}],total:4}})}]}});
+ });
+ assert.equal(response.status,200);const result=await response.json();assert.equal(result.id,4);assert((result.result.content[0].text).includes('62PaSfnXSMyLshYJrlTuL3'));assert.deepEqual(seen,['initialize','notifications/initialized','tools/call']);
+});
+test('Spotify catalog rejects unrelated tools, extra fields, notifications and unsafe parameters before network',async()=>{
+ const {spotifyCatalog}=await import('./handlers.mjs');let calls=0;
+ for(const change of [{params:{name:'ask_pipeworx',arguments:{query:'x'}}},{params:{name:'spotify_search',arguments:{query:'x',url:'https://evil.invalid'}}},{params:{name:'spotify_search',arguments:{query:'x',type:'playlist'}}},{params:{name:'spotify_search',arguments:{query:'x',limit:100}}},{params:{name:'spotify_search',arguments:{query:'x',market:'../'}}},{params:{name:'spotify_search',arguments:{query:''}}},{id:undefined}]){
+  const body={jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'spotify_search',arguments:{query:'Adele Hello'}},...change};
+  const r=await spotifyCatalog(new Request(base+'/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:JSON.stringify(body)}),{SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441'},async()=>{calls++;throw Error('unexpected');});assert.equal(r.status,400);
+ }assert.equal(calls,0);
+});
+test('Spotify failed calls, redirects and mismatched responses never replay or leak upstream errors',async()=>{
+ const {spotifyCatalog}=await import('./handlers.mjs');
+ for(const kind of ['redirect','mismatch','error','network']){let searches=0;
+  const r=await spotifyCatalog(new Request(base+'/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:JSON.stringify({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'spotify_search',arguments:{query:'Adele Hello'}}})}),{SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441'},async(url,init)=>{
+   const body=JSON.parse(init.body);if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25'}});if(body.method==='notifications/initialized')return new Response(null,{status:202});searches++;
+   if(kind==='network')throw Error('private upstream token');if(kind==='redirect')return new Response('private upstream token',{status:302,headers:{Location:'https://evil.invalid'}});
+   return Response.json(kind==='mismatch'?{jsonrpc:'2.0',id:'wrong',result:{}}:{jsonrpc:'2.0',id:body.id,result:{isError:true,content:[{type:'text',text:'private upstream token'}]}});
+  });assert.equal(r.status,502);assert.equal(searches,1);assert(!(await r.text()).includes('private upstream token'));assert(!r.headers.has('Location'));
+ }
+});
+
+test('actual Worker routes Spotify separately from Gmail OAuth and retains Origin and auth protections',async()=>{
+ const {build}=await import('esbuild'),{Miniflare,convertV4MiniflareOptions}=await import('miniflare'),{fileURLToPath}=await import('node:url'),{readFile}=await import('node:fs/promises');
+ const output=await build({absWorkingDir:fileURLToPath(new URL('.',import.meta.url)),entryPoints:['worker.mjs'],bundle:true,write:false,platform:'browser',format:'esm',target:'es2022',external:['cloudflare:workers']});
+ const config=await readFile(new URL('./wrangler.toml',import.meta.url),'utf8'),date=config.match(/^compatibility_date = "([^"]+)"/m)[1],flags=JSON.parse(config.match(/^compatibility_flags = (.+)$/m)[1]);
+ let reads=0;const mf=new Miniflare(convertV4MiniflareOptions({modules:true,script:output.outputFiles[0].text,compatibilityDate:date,compatibilityFlags:flags,kvNamespaces:['OAUTH_KV'],bindings:{...env(),SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441'},outboundService:async request=>{
+  assert.equal(request.url,'https://gateway.pipeworx.io/spotify/mcp');assert(!request.headers.has('Authorization'));const body=await request.json();
+  if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25'}});
+  if(body.method==='notifications/initialized')return new Response(null,{status:202});reads++;return Response.json({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify({tracks:{items:[],total:0}})}]}});
+ }}));
+ try{
+  const send=(headers={},body={jsonrpc:'2.0',id:4,method:'tools/list'})=>mf.dispatchFetch(base+'/spotify/mcp',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(body)});
+  assert.equal((await send()).status,401);assert.equal((await send({Authorization:'Bearer catalog-fixture-token',Origin:'https://evil.invalid'})).status,403);
+  const response=await send({Authorization:'Bearer catalog-fixture-token',Origin:'null'});assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');assert.equal(response.headers.get('Access-Control-Allow-Origin'),'null');assert.equal((await response.json()).result.tools.length,1);
+  assert.equal((await mf.dispatchFetch(base+'/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:'{}'})).status,401);
+  const result=await send({Authorization:'Bearer catalog-fixture-token'},{jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'spotify_search',arguments:{query:'test song'}}});assert.equal(result.status,200);assert.equal(reads,1);assert.equal(JSON.parse((await result.json()).result.content[0].text).personalAccount,false);
+ }finally{await mf.dispose();}
+});

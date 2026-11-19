@@ -1,5 +1,5 @@
 import OAuthProvider, { OAuthError, AuthorizationError, CimdFetchError } from '@cloudflare/workers-oauth-provider';
-import { defaultHandler, gmailProxy, refreshGoogle, registrationPolicy, SCOPES, oauthFailurePage } from './handlers.mjs';
+import { defaultHandler, gmailProxy, refreshGoogle, registrationPolicy, SCOPES, oauthFailurePage, spotifyCatalog } from './handlers.mjs';
 const ALLOWED_ORIGINS=new Set(['https://fenglina35-dotcom.github.io','http://127.0.0.1:8774','null']);
 function provider(env){
  return new OAuthProvider({
@@ -25,7 +25,7 @@ export default {
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin||'*','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id, Mcp-Method, Mcp-Name','Access-Control-Max-Age':'600','Vary':'Origin'}});
   if(url.pathname==='/register'&&(!env.SETUP_KEY||request.headers.get('Authorization')!=='Bearer '+env.SETUP_KEY))return Response.json({error:'access_denied'},{status:403});
   let response;
-  try{response=await provider(env).fetch(request,env,context);}
+  try{response=url.pathname==='/spotify/mcp'?await spotifyCatalog(request,env):await provider(env).fetch(request,env,context);}
   catch(error){if(error instanceof AuthorizationError||error instanceof CimdFetchError||['invalid_grant','temporarily_unavailable','google_client_configuration'].includes(error.code))response=oauthFailurePage(error.code);else throw error;}
   const headers=new Headers(response.headers);
   headers.set('Cache-Control',url.pathname==='/client-metadata.json'?'public, max-age=300':'no-store');headers.set('Referrer-Policy','no-referrer');headers.set('X-Content-Type-Options','nosniff');
