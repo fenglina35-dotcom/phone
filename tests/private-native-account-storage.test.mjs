@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import cp from 'node:child_process';
-import {read} from './_helpers.mjs';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import {read,ROOT} from './_helpers.mjs';
 
 test('rollback followed by upgrade never silently picks a stale parallel owner directory', {skip:process.platform!=='darwin'},()=>{
  const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
@@ -425,6 +427,23 @@ precondition(nextToken != token)
 var final=next
 for _ in 0..<2000 {final=try jobs.status(owner:owner,token:nextToken);if final["phase"] as? String=="ready" || final["phase"] as? String=="failed" {break};Thread.sleep(forTimeInterval:0.01)}
 precondition(final["phase"] as? String=="ready",String(describing:final))
+// A killed previous generation has no proof. Retry must retain its unique bytes.
+try jobs.remove(owner:owner,token:nextToken,confirmed:true)
+for _ in 0..<2000 {if try jobs.status(owner:owner,token:nextToken)["phase"] as? String != "removing" {break};Thread.sleep(forTimeInterval:0.01)}
+let stageRoot=library.appendingPathComponent("Application Support/SmallPhoneReadOnlyBackup")
+let failedStage=stageRoot.appendingPathComponent("Snapshot")
+try f.createDirectory(at:failedStage,withIntermediateDirectories:true)
+let unique=Data("unique-interrupted-evidence".utf8)
+try unique.write(to:failedStage.appendingPathComponent("evidence.bin"))
+try JSONSerialization.data(withJSONObject:["owner":owner]).write(to:stageRoot.appendingPathComponent("job.json"))
+let blocked=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner)
+precondition(blocked["phase"] as? String=="failed")
+let retry=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner,retryFailed:true)
+var retried=retry
+for _ in 0..<2000 {retried=try jobs.status(owner:owner,token:(retry["token"] as! String));if retried["phase"] as? String=="ready" || retried["phase"] as? String=="failed" {break};Thread.sleep(forTimeInterval:0.01)}
+precondition(retried["phase"] as? String=="ready",String(describing:retried))
+precondition((try! Data(contentsOf:stageRoot.appendingPathComponent("FailedSnapshot/evidence.bin")))==unique)
+precondition((try! Data(contentsOf:store.appendingPathComponent("__core_state.json")))==coreBefore)
 print("snapshot-job-zip-owner-evidence-verified")
 `;
  const output=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});assert(output.includes('snapshot-job-zip-owner-evidence-verified'));
@@ -444,4 +463,22 @@ precondition(defaultStore.lastPathComponent=="WebsiteData" && defaultStore != sc
 print("snapshot-owner-path-verified")
 `;
  assert(cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000}).includes('snapshot-owner-path-verified'));
+});
+
+
+test('native snapshot hashing has bounded resident memory for a large file and preserves its SHA', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),a=source.indexOf('    static func digest('),b=source.indexOf('    static func checked(',a),fixture=ROOT+'/.codex_tmp/snapshot-hash-memory-fixture';
+ fs.mkdirSync(ROOT+'/.codex_tmp',{recursive:true});const handle=fs.openSync(fixture,'wx',0o600);fs.ftruncateSync(handle,256*1024*1024);fs.closeSync(handle);
+ const hash=crypto.createHash('sha256'),chunk=Buffer.alloc(1024*1024);for(let i=0;i<256;i++)hash.update(chunk);const expected=hash.digest('hex');
+ const program='import Foundation\nimport CryptoKit\nimport Darwin\nenum Reader {\n'+source.slice(a,b)+'}\n'+String.raw`
+func resident()->UInt64 {var info=mach_task_basic_info_data_t();var count=mach_msg_type_number_t(MemoryLayout<mach_task_basic_info_data_t>.size/MemoryLayout<natural_t>.size);let code=withUnsafeMutablePointer(to:&info){$0.withMemoryRebound(to:integer_t.self,capacity:Int(count)){task_info(mach_task_self_,task_flavor_t(MACH_TASK_BASIC_INFO),$0,&count)}};precondition(code==KERN_SUCCESS);return info.resident_size}
+`+`let file=URL(fileURLWithPath:${JSON.stringify(fixture)})\n`+String.raw`
+let result=try autoreleasepool { () throws -> [String:Any] in
+ let before=resident(),sha=try Reader.digest(file),after=resident()
+ return ["sha256":sha,"growthMiB":Double(after>before ? after-before:0)/1048576]
+}
+print(String(data:try JSONSerialization.data(withJSONObject:result),encoding:.utf8)!)
+`;
+ try{const result=JSON.parse(cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024}));assert.equal(result.sha256,expected);console.log(JSON.stringify({snapshotHashFixtureMiB:256,residentGrowthMiB:result.growthMiB}));assert(result.growthMiB<64,'256 MiB file hashing retained '+result.growthMiB.toFixed(1)+' MiB; each block must drain its Foundation autorelease pool');}
+ finally{fs.unlinkSync(fixture);}
 });

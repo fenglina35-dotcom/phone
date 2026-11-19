@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
+import {read as readVersioned,fnSource} from './_helpers.mjs';
 
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const bridge = fs.readFileSync(
@@ -27,7 +29,7 @@ test('phone account UI is private-app only and preserves local data before a cho
   assert.match(app, /当前本机不会在确认前发生任何变化/);
   assert.match(app, /S=mergeStateData\(d\);normalizeLoadedState\(\);phoneFriendState\(\)/);
   assert.match(app, /PRIVATE_PHONE_RESTORE_ROLLBACK_KEY='__private_phone_restore_rollback'/);
-  assert.match(app, /before=await fullBackupState\(\);await imgPut\(PRIVATE_PHONE_RESTORE_ROLLBACK_KEY/);
+  assert.match(app, /before=await fullBackupState\(\);verify\(\);await imgPut\(PRIVATE_PHONE_RESTORE_ROLLBACK_KEY/);
   assert.match(app, /撤回上次恢复/);
   assert.match(app, /async function privatePhoneCloudRestoreRollback\(\)/);
 });
@@ -104,4 +106,19 @@ test('private phone account can claim the sole companion controller without unpa
   assert.match(app, /async function companionRpc\([^\n]+if\(claimError&&unlinked\)throw claimError/,'first-time or genuinely unlinked devices still require the private account claim');
   assert.match(app, /name!==['"]phone_companion_begin_pairing['"]/);
   assert.match(bridge, /companion\.controller\.claim/);
+});
+
+
+test('cloud restore cannot publish or roll back an old account after async preparation changes owner',async()=>{
+ const source=readVersioned('app.js');let finish;
+ const current={settings:{model:'current'},_deviceSyncOwner:'a'},other={settings:{model:'other'},_deviceSyncOwner:'b'},incoming={settings:{model:'old'},_deviceSyncOwner:'a'};
+ const c={S:current,_privatePhoneAccount:{userId:'a'},_privatePhoneRestoreCandidate:incoming,_privatePhoneRestoreOwner:'a',PRIVATE_PHONE_RESTORE_ROLLBACK_KEY:'rollback',closeModal(){},toast(){},fullBackupState:()=>new Promise(r=>{finish=r;}),imgPut:async()=>{},backupPreserveLocalMedia:async x=>x,mergeStateData:x=>x,normalizeLoadedState(){},phoneFriendState(){},saveNowAsync:async()=>true,stack:[],home(){},render(){},setTimeout(){}};
+ c.window=c;vm.createContext(c);vm.runInContext(fnSource(source,'privatePhoneCloudRestoreConfirm'),c);
+ const pending=c.privatePhoneCloudRestoreConfirm();c._privatePhoneAccount.userId='b';c.S=other;finish(current);await pending;
+ assert.equal(c.S,other,'neither the restored state nor error rollback may replace the new account');
+});
+test('cloud partial restore reuses the actual same-owner missing-media preservation path',async()=>{
+ const source=readVersioned('app.js'),image='data:image/png;base64,YQ==',current={settings:{},_deviceSyncOwner:'a',messages:{role:[{id:'kept',image}]}},incoming={settings:{},_deviceSyncOwner:'a',messages:{role:[{id:'kept',image:'idb:missing'}]},_backupMedia:{version:1,missing:[{ref:'idb:missing',path:['messages','role',0,'image']}]}};
+ const c={S:current,_privatePhoneAccount:{userId:'a'},_privatePhoneRestoreCandidate:incoming,_privatePhoneRestoreOwner:'a',PRIVATE_PHONE_RESTORE_ROLLBACK_KEY:'rollback',closeModal(){},toast(){},fullBackupState:async()=>current,imgPut:async()=>{},imgGet:async()=>null,albumBackupImage:async()=>null,mergeStateData:x=>x,normalizeLoadedState(){},phoneFriendState(){},saveNowAsync:async()=>true,stack:[],home(){},render(){},setTimeout(){}};
+ c.window=c;vm.createContext(c);for(const name of ['backupPreserveLocalMedia','privatePhoneCloudRestoreConfirm'])vm.runInContext(fnSource(source,name),c);await c.privatePhoneCloudRestoreConfirm();assert.equal(c.S.messages.role[0].image,image);assert.equal(c._privatePhoneRestoreCandidate,null);
 });

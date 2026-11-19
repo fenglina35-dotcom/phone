@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import {createRequire} from 'node:module';
+import os from 'node:os';
 import { REL, vre, iosProject } from './_helpers.mjs';
 
 const root=path.resolve(import.meta.dirname,'..');
@@ -42,6 +44,7 @@ test('web backup sends bounded ordered chunks and records a day only after confi
 });
 
 test('native bridge persists account-bound backup chunks and confirms a small manifest',()=>{
+  const dispatch=bridge.slice(bridge.indexOf('case "account.status"'),bridge.indexOf('case "robot.speech.transcribe"'));assert(dispatch.includes('"account.backup.capabilities"'),'capability probe must reach native account dispatch');
   for(const action of ['begin','chunk','commit','abort'])assert.match(bridge,new RegExp(`account\\.backup\\.file\\.${action}`));
   assert.match(bridge,/static let contractVersion = 42/);
   assert.match(bridge,/private actor PrivateBackupFileStore/);
@@ -70,4 +73,51 @@ test('native bridge persists account-bound backup chunks and confirms a small ma
   assert.match(bridge,/await PrivateBackupFileStore\.shared\.remove\(token: token\)/);
   assert.match(webView,/action === 'account\.backup\.file\.commit' \? 1800000 : 60000/);
   assert.match(backup,/account\.backup\.file\.commit',\{token\},1920000/);
+});
+
+
+test('actual backup SQL retains full backups, isolates partial snapshots and protects lost-ACK objects',async()=>{
+ const require=createRequire(import.meta.url),{PGlite}=require(path.join(os.homedir(),'AppData/Local/CodexHardwareTests/robot-voice-sql-runtime/node_modules/@electric-sql/pglite/dist/index.cjs'));
+ const db=new PGlite(),u='10000000-0000-0000-0000-000000000001',s='20000000-0000-0000-0000-000000000001',secondary='20000000-0000-0000-0000-000000000002';
+ try{
+  await db.exec(`create schema auth;create schema storage;create role anon;create role authenticated;create role service_role bypassrls;
+   create table auth.users(id uuid primary key);insert into auth.users values('${u}');
+   create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('test.owner',true),'')::uuid$$;
+   create function auth.jwt() returns jsonb language sql stable as $$select jsonb_build_object('session_id',current_setting('test.session',true))$$;
+   grant usage on schema auth,storage to authenticated;
+   create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);
+   create table storage.objects(name text primary key,bucket_id text,owner_id text);alter table storage.objects enable row level security;
+   grant select,insert,delete on storage.objects to authenticated;
+   create function storage.foldername(text) returns text[] language sql immutable as $$select string_to_array($1,'/')$$;`);
+  for(const f of ['202608110001_private_phone_accounts.sql','202609210001_private_phone_backup_files.sql','202611170001_private_phone_device_sync.sql','202611170003_private_phone_primary_device.sql'])await db.exec(read('supabase/migrations/'+f));
+  const phone=(await db.query("select public.private_phone_sync_device($1,$2,'iOS','phone',null) value",[u,s])).rows[0].value.id;
+  await db.query("select public.private_phone_sync_device($1,$2,'macOS','secondary',null)",[u,secondary]);
+  await db.query('insert into private_phone_sync_primary(user_id,device_id) values($1,$2)',[u,phone]);
+  const oldMode=process.env.FIX_TEST_OLD==='1';
+  if(!oldMode)await db.exec(read('supabase/migrations/202611190002_private_phone_backup_preservation.sql'));
+  await db.query("select set_config('test.owner',$1,false),set_config('test.session',$2,false)",[u,s]);
+  const prefix=n=>u+'/'+String(n).padStart(8,'0')+'-0000-0000-0000-000000000000';
+  for(let i=1;i<=6;i++)await db.query("insert into storage.objects values($1,'private-phone-backups',$2)",[prefix(i)+'/part-00000.bin',u]);
+  await db.exec('set role authenticated');
+  const commit=async(n,missing=0)=>{const args=[new Date(1700000000000+n*1000).toISOString(),'fixture','a'.repeat(64),100,prefix(n),1,100];return (await db.query('select * from public.'+(oldMode?'save_private_phone_backup_manifest':'save_private_phone_backup_manifest_v2')+'('+args.map((_,i)=>'$'+(i+1)).join(',')+(oldMode?'':',$8')+')',oldMode?args:[...args,missing])).rows[0];};
+  assert.equal((await commit(1)).saved,true);assert.equal((await commit(2)).saved,true);
+  const deleted=await db.query('delete from storage.objects where name=$1 returning name',[prefix(1)+'/part-00000.bin']);
+  assert.equal(deleted.rows.length,0,'the previous backup must survive old-client cleanup');
+  assert.equal((await commit(3,177)).saved,true);
+  assert.equal((await db.query('select storage_prefix from private_phone_backup_files')).rows[0].storage_prefix,prefix(2),'partial never overwrites full backup');
+  assert.equal((await commit(4,178)).saved,true);
+  for(const n of [1,2,3,4])assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(n)+'/part-00000.bin'])).rows.length,0);
+  const info=(await db.query('select public.private_phone_backup_info_v2() value')).rows[0].value;
+  assert.equal(info.backup.missing_images,178);assert.equal(info.backup.storage_prefix,prefix(4));
+  assert.equal((await commit(4,178)).saved,true,'retry of exact manifest is idempotent');
+  assert.equal((await commit(3,177)).saved,false,'older partial cannot replace latest');
+  await assert.rejects(db.query("update private_phone_backup_files set storage_prefix='foreign'"),/permission denied/);
+  await db.query("select set_config('test.session',$1,false)",[secondary]);
+  await assert.rejects(commit(5),/backup_primary_required/);
+  await assert.rejects(db.query('select * from save_private_phone_backup_manifest($1,$2,$3,$4,$5,$6,$7)',[new Date().toISOString(),'old','b'.repeat(64),100,prefix(5),1,100]),/backup_primary_required/);
+  await db.query("select set_config('test.session',$1,false)",[s]);
+  assert.equal((await commit(5)).saved,true);
+  assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(5)+'/part-00000.bin'])).rows.length,0,'lost commit ACK cleanup cannot delete committed data');
+  assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(6)+'/part-00000.bin'])).rows.length,1,'unreferenced failed uploads remain cleanable');
+ }finally{await db.close();}
 });

@@ -131,7 +131,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.593 (593)"
+    private static let build = "1.0.594 (594)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -312,7 +312,14 @@ enum PrivateReadOnlySnapshot {
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
         var hash = SHA256()
-        while let block = try input.read(upToCount: 1024 * 1024), !block.isEmpty { try check(); hash.update(data: block) }
+        // PRIVATE_SNAPSHOT_HASH_POOL_V1: Foundation's NSData temporaries must drain per block.
+        // One work-item pool otherwise retains the entire multi-GB input on iPhone.
+        while try autoreleasepool(invoking: {
+            try check()
+            guard let block = try input.read(upToCount: 1024 * 1024), !block.isEmpty else { return false }
+            hash.update(data: block)
+            return true
+        }) {}
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
     static func checked(_ url: URL, inside root: URL) throws -> URL {
@@ -434,13 +441,13 @@ enum PrivateReadOnlySnapshot {
             try files.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
             if let db = readers[url.path] { try copyDatabase(db, to: target, check: check) }
             else {
-                let before = try digest(url)
+                let before = try digest(url, check: check)
                 try files.copyItem(at: url, to: target)
-                guard try digest(target) == before, try digest(url) == before else { throw failure("媒体文件在复制时变化，未认证完整备份") }
+                guard try digest(target, check: check) == before, try digest(url, check: check) == before else { throw failure("媒体文件在复制时变化，未认证完整备份") }
             }
             try files.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
             let bytes = (try files.attributesOfItem(atPath: target.path)[.size] as? NSNumber)?.int64Value ?? 0
-            rows.append(["path": String(relative), "bytes": bytes, "sha256": try digest(target)])
+            rows.append(["path": String(relative), "bytes": bytes, "sha256": try digest(target, check: check)])
             progress(index + 1, ordered.count)
         }
         try check()
@@ -452,7 +459,7 @@ enum PrivateReadOnlySnapshot {
         // Detect an overwrite after an earlier non-database file was copied.
         for url in ordered where readers[url.path] == nil {
             let relative = "Library/" + url.standardizedFileURL.path.dropFirst(library.standardizedFileURL.path.count + 1)
-            guard try digest(url) == rows.first(where: { $0["path"] as? String == String(relative) })?["sha256"] as? String else {
+            guard try digest(url, check: check) == rows.first(where: { $0["path"] as? String == String(relative) })?["sha256"] as? String else {
                 throw failure("备份源变化，未认证完整备份")
             }
         }
@@ -504,7 +511,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     private func update(_ phase: String, detail: String = "", done: Int = 0, total: Int = 0) {
         lock.lock(); self.phase = phase; self.detail = detail; self.done = done; self.total = total; lock.unlock()
     }
-    func begin(library: URL, store: URL, webRoot: URL, extras: [URL], owner: String) throws -> [String: Any] {
+    func begin(library: URL, store: URL, webRoot: URL, extras: [URL], owner: String, retryFailed: Bool = false) throws -> [String: Any] {
         lock.lock()
         if ["copying", "packaging", "sharing", "removing"].contains(phase) {
             let same = self.owner == owner; lock.unlock()
@@ -524,6 +531,24 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
                 guard let data = try? Data(contentsOf: receipt),
                       let previous = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                       previous["owner"] as? String == owner else { throw PrivateReadOnlySnapshot.failure("已有备份来源不一致，已保留且未覆盖") }
+                // PRIVATE_SNAPSHOT_RETRY_PRESERVE_V1: explicit retry keeps one failed generation in place.
+                if retryFailed {
+                    let failed = root.appendingPathComponent("FailedSnapshot", isDirectory: true)
+                    let failedReceipt = root.appendingPathComponent("FailedJob.json")
+                    let failedArchive = root.appendingPathComponent("FailedArchive.zip")
+                    let proof = (try? Data(contentsOf: stage.appendingPathComponent("backup-manifest.json")))
+                        .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                    guard previous["complete"] as? Bool != true, proof?["verified"] as? Bool != true,
+                          files.fileExists(atPath: stage.path) || files.fileExists(atPath: archive.path),
+                          !files.fileExists(atPath: failed.path), !files.fileExists(atPath: failedReceipt.path),
+                          !files.fileExists(atPath: failedArchive.path) else {
+                        throw PrivateReadOnlySnapshot.failure("已有副本需要核查，未覆盖或删除；不能重复保留失败副本")
+                    }
+                    // Renames stay on the same volume. Partial rename failures still preserve every byte.
+                    if files.fileExists(atPath: stage.path) { try files.moveItem(at: stage, to: failed) }
+                    if files.fileExists(atPath: archive.path) { try files.moveItem(at: archive, to: failedArchive) }
+                    try files.moveItem(at: receipt, to: failedReceipt)
+                }
                 if files.fileExists(atPath: stage.path) || files.fileExists(atPath: archive.path) {
                     let proofData = try? Data(contentsOf: stage.appendingPathComponent("backup-manifest.json"))
                     let proof = proofData.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
@@ -946,7 +971,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performLicenseRequest(requestID: requestID, arguments: arguments)
         case "account.status", "account.password.signup",
              "account.password.signin",
-             "account.signout", "account.backup.info", "account.sync", "account.mcp",
+             "account.signout", "account.backup.info", "account.backup.capabilities", "account.sync", "account.mcp",
              "account.backup.upload", "account.backup.restore",
              "account.backup.file.begin", "account.backup.file.chunk",
              "account.backup.file.commit", "account.backup.file.progress",
@@ -1237,7 +1262,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     let accounts = library.appendingPathComponent("Application Support/SmallPhonePrivateAccounts")
                     let extras = ["sync-source.v2.json", "legacy-owner.v1"].map { accounts.appendingPathComponent($0) }
                         .filter { FileManager.default.fileExists(atPath: $0.path) }
-                    reply(requestID: requestID, result: try jobs.begin(library: library, store: store, webRoot: web, extras: extras, owner: owner))
+                    reply(requestID: requestID, result: try jobs.begin(library: library, store: store, webRoot: web, extras: extras, owner: owner, retryFailed: arguments["retryFailed"] as? Bool == true))
                 case "storage.snapshot.status": reply(requestID: requestID, result: try jobs.status(owner: owner, token: token))
                 case "storage.snapshot.cancel":
                     try jobs.cancel(owner: owner, token: token); reply(requestID: requestID, result: ["ok": true])
@@ -2781,6 +2806,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         throw NSError(domain: "PrivatePhoneAccount", code: 409)
                     }
                     self.reply(requestID: requestID, result: result)
+                case "account.backup.capabilities":
+                    let session = try await self.validPrivateAccountSession()
+                    let response = try await self.privateAccountJSONRequest(path: "/rest/v1/rpc/private_phone_backup_info_v2", method: "POST", body: [:], bearer: session.accessToken)
+                    guard response.status >= 200, response.status < 300,
+                          let info = response.body as? [String: Any], info["preservationVersion"] as? Int == 1 else {
+                        throw NSError(domain: "PrivateBackupManifest", code: response.status, userInfo: [NSLocalizedDescriptionKey: "云端安全备份规则尚未确认可用，旧备份保留"])
+                    }
+                    self.reply(requestID: requestID, result: ["ok": true, "preservationVersion": 1])
                 case "account.backup.info":
                     let session = try await self.validPrivateAccountSession()
                     if let fileRow = try await self.privateBackupFileMetadata(
@@ -2813,7 +2846,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     let captured = (arguments["capturedAt"] as? NSNumber)?.doubleValue ?? 0
                     let token = try await PrivateBackupFileStore.shared.begin(
                         owner: session.userID, size: size, capturedAt: captured,
-                        build: String((arguments["sourceBuild"] as? String ?? "").prefix(80)))
+                        build: String((arguments["sourceBuild"] as? String ?? "").prefix(80)),
+                        missingImages: (arguments["missingImages"] as? NSNumber)?.intValue ?? 0)
                     SmallPhoneDiagnosticsStore.append("backup.file.begin", fields: ["bytes": size])
                     self.reply(requestID: requestID, result: ["ok": true, "token": token])
                 case "account.backup.file.chunk":
@@ -2942,7 +2976,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                             .withFractionalSeconds
                         ]
                         let manifestResponse = try await self.privateAccountJSONRequest(
-                            path: "/rest/v1/rpc/save_private_phone_backup_manifest",
+                            path: "/rest/v1/rpc/save_private_phone_backup_manifest_v2",
                             method: "POST",
                             body: [
                                 "p_captured_at": formatter.string(
@@ -2956,7 +2990,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                                 "p_byte_count": file.bytes,
                                 "p_storage_prefix": uploadedPrefix,
                                 "p_part_count": partCount,
-                                "p_chunk_size": chunkSize
+                                "p_chunk_size": chunkSize,
+                                "p_missing_images": file.missingImages
                             ],
                             bearer: session.accessToken
                         )
@@ -2981,7 +3016,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                             "ok": true,
                             "saved": true,
                             "byteCount": file.bytes,
-                            "message": "云备份已保存"
+                            "missingImages": file.missingImages,
+                            "message": file.missingImages > 0 ? "当前资料已单独备份；缺失图片未恢复，旧备份保留" : "云备份已保存；上一份保留"
                         ])
                         let previousPrefix = row?["previous_storage_prefix"] as? String ?? ""
                         let previousParts = (row?["previous_part_count"] as? NSNumber)?.intValue ?? 0
@@ -3289,6 +3325,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     private func privateBackupFileMetadata(
         session: PrivateAccountSession
     ) async throws -> [String: Any]? {
+        let protected = try await privateAccountJSONRequest(
+            path: "/rest/v1/rpc/private_phone_backup_info_v2", method: "POST", body: [:], bearer: session.accessToken)
+        if protected.status >= 200, protected.status < 300,
+           let info = protected.body as? [String: Any], info["preservationVersion"] as? Int == 1 {
+            return info["backup"] as? [String: Any]
+        }
+        guard protected.status == 404 else {
+            throw NSError(domain: "PrivateBackupManifest", code: protected.status,
+                userInfo: [NSLocalizedDescriptionKey: "云备份索引暂时无法确认，未认定为空"])
+        }
         let response = try await privateAccountJSONRequest(
             path: "/rest/v1/private_phone_backup_files" +
                 "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count,storage_prefix,part_count,chunk_size" +
@@ -4116,6 +4162,7 @@ private actor PrivateBackupFileStore {
         let capturedAt: Double
         let build: String
         let checksum: String
+        let missingImages: Int
     }
     struct Progress: Sendable {
         let phase: String
@@ -4124,7 +4171,7 @@ private actor PrivateBackupFileStore {
     }
     private struct Job {
         let token: String; let owner: String; let url: URL; let handle: FileHandle
-        let size: Int64; let capturedAt: Double; let build: String
+        let size: Int64; let capturedAt: Double; let build: String; let missingImages: Int
         var written: Int64 = 0; var hash = SHA256(); var prepared = false
         var uploadSent: Int64 = 0; var uploadExpected: Int64 = 0
     }
@@ -4132,9 +4179,9 @@ private actor PrivateBackupFileStore {
     private func failure(_ message: String) -> NSError {
         NSError(domain: "PrivateBackup", code: 400, userInfo: [NSLocalizedDescriptionKey: message])
     }
-    func begin(owner: String, size: Int64, capturedAt: Double, build: String) throws -> String {
+    func begin(owner: String, size: Int64, capturedAt: Double, build: String, missingImages: Int = 0) throws -> String {
         guard job == nil else { throw failure("原生备份仍在进行，请稍后刷新状态") }
-        guard size > 1, capturedAt.isFinite, capturedAt > 0 else { throw failure("备份大小或时间无效") }
+        guard size > 1, capturedAt.isFinite, capturedAt > 0, (0...1_000_000).contains(missingImages) else { throw failure("备份大小或时间无效") }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("NorthPrivateBackupStaging", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         // Only our own staging files; a process restart makes old transfers unrecoverable.
@@ -4145,7 +4192,7 @@ private actor PrivateBackupFileStore {
         guard FileManager.default.createFile(atPath: url.path, contents: nil) else { throw failure("无法创建备份临时文件") }
         do {
             let handle = try FileHandle(forWritingTo: url)
-            job = Job(token: token, owner: owner, url: url, handle: handle, size: size, capturedAt: capturedAt, build: build)
+            job = Job(token: token, owner: owner, url: url, handle: handle, size: size, capturedAt: capturedAt, build: build, missingImages: missingImages)
             return token
         } catch { try? FileManager.default.removeItem(at: url); throw error }
     }
@@ -4168,7 +4215,8 @@ private actor PrivateBackupFileStore {
             bytes: current.size,
             capturedAt: current.capturedAt,
             build: current.build,
-            checksum: checksum
+            checksum: checksum,
+            missingImages: current.missingImages
         )
     }
     func readPart(

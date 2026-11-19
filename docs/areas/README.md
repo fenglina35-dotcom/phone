@@ -1365,7 +1365,7 @@ GUI核验一度因异步重绘导致旧AX索引落到清空数据确认页，立
 
 已核验冷副本可通过 `NORTH_RAW_PRIMARY_DIR` 指向独立主设备备份目录，再运行同一检查脚本。工具要求目录内 `backup-manifest.json` 明确已验证，并核对当前源钉选、账号、核心/图片库哈希；只展开主存档明确引用的三个聊天归档，未引用的旧 `__messages` 不自动拼回。未知结构、截断字符串、混合未处理尾巴、未核验来源均拒绝。生成的 `core-restore-audit.json` 是隔离验收材料，故意没有普通导入所需的顶层 settings，不能误当一键媒体恢复包。正文只在本机一次性存储处理，记录仅保存栏目哈希与计数。
 
-`src/app/045-momentEditorPeopleJump.js` 的 `exportData` 使用 `fullBackupFileBlob(progress, stats)` 分段生成 JSON，不拼整份超大字符串。显式传入本地导出统计时，缺失/读取抛错的 `idb:` 图片和 `album:` 原件保留原引用，并追加 `_backupMedia` 缺失清单、报告数量及无法完整恢复图片，聊天及其他可读取内容继续导出；不改当前 S、图片引用或原始存储。不能把“读不到”直接认定为原件永久损坏。聊天归档读取/JSON 失败仍中止，不伪造完整聊天。自动云备份调用不带 stats，相册原件缺失、图片原件缺失或媒体读取抛错仍失败，避免不完整备份覆盖旧的可用云备份。
+`src/app/045-momentEditorPeopleJump.js` 的 `exportData` 使用 `fullBackupFileBlob(progress, stats)` 分段生成 JSON，不拼整份超大字符串。显式传入本地导出统计时，缺失/读取抛错的 `idb:` 图片和 `album:` 原件保留原引用，并追加 `_backupMedia` 缺失清单、报告数量及无法完整恢复图片，聊天及其他可读取内容继续导出；不改当前 S、图片引用或原始存储。不能把“读不到”直接认定为原件永久损坏。聊天归档读取/JSON 失败仍中止，不伪造完整聊天。私人云备份只有核实服务端 preservationVersion=1 后才传 stats：缺图时保留原引用和缺失清单，上传到独立 partial 槽位，不替换既有无缺图文件备份或 legacy JSON；旧服务器仍拒绝此上传。公开版和普通严格调用不变。
 
 `beautySaveFile` 区分系统分享、取消、网页下载和原生待保存。Apple 分享失败必须保留失败，不能转网页下载后宣称已导出。iPhone 的 `LocalPhoneWebView.Coordinator` 与 Mac 的 `MacPhoneBridge` 仅接收内置主文档发起的 Blob 下载，使用 WKDownload 将文件落到独立本机临时位置，完成后交给系统分享/保存面板；远端链接与子框架不获得此能力。面板完成或失败只清理该次导出的临时文件，不碰存档。文件生成不等于已保存，必须区分系统面板和真正交付。
 
@@ -1451,3 +1451,8 @@ Spotify个人账号接入与公开曲库两种路线已向本人询问选择，�
 PRIVATE_ACTIVITY_ICON_REFRESH_V1：Family Controls 的 Label(token) 保持原令牌。管理页和两组 App 行按可见项目加载，激活页面或点“刷新图标”只更新显示 identity，不修改 selection、手动锁、每日限额、App Group 或伴生指令。仅用于私人版，不能以公开版代码替换私人管控。592的图标空白在系统Safari图标生成后由本人确认恢复；这是缓存/显示链路异常的线索，不能保证永不复发。核对到：2026-11-19。
 
 只读快照补充：显示固定副本生成时间，再次点击不会替换已有副本。用户确认已另存核验后可移除本功能生成的固定目录；分享期间拒绝清理，主库与云备份不在删除路径。空间检查包含固定副本、协调器临时ZIP与目标ZIP。命名账号目录优先小写UUID，只接受同UUID的旧大写目录，不回退默认账号。账号同步模式下，手动和自动整库云备份都要求已验证主设备；副设备只导出本地文件。明确成为主设备的Mac可手动备份，Mac自动上传仍关闭。
+
+2026-11-19 备份保全补充：PRIVATE_SNAPSHOT_HASH_POOL_V1 每个 1MiB Foundation 读取块结束释放 autorelease 对象，并逐块核查取消；256MiB 实际生产 Swift 函数旧实现常驻内存增长约257MiB，修后约2.45MiB、SHA相同。不可只用小文件回归替代大文件内存验证。PRIVATE_SNAPSHOT_RETRY_PRESERVE_V1 只在本人明确点“保留失败副本并重试”后，同一账号原地改名保留一代 FailedSnapshot/FailedJob/FailedArchive，拒绝覆盖已有失败证据或完整证明。云备份与独立备份互斥，不在聊天回复未保存时开始独立复制。
+PRIVATE_BACKUP_PRESERVATION_V1 服务端按 JWT session 与既有主设备登记校验，并与主设备转移共用账号事务锁。完整图片 JSON 保留当前和上一代，缺图 JSON 独立保留当前与上一代；legacy JSON 保持只读。仍被任一槽位引用的 Storage 对象不能由客户端清理，防止提交成功但丢回执后误删；只返回已退出保护槽位的文件前缀作尽力清理，不保证网络中断孤儿文件自动清理。云 JSON 范围是聊天/记忆/设置/可读图片，不能称包含本地音频歌曲原件的完整原库备份。新客户端只在服务端规则可用时启用部分图片上传；实际部署、真机生成、手机外文件核验分别验收。PRIVATE_BACKUP_INFO_KNOWN_V1 未查询或查询失败不当作云端为空，同账号保留已知元数据，切账号清除；异步返回重查账号，刷新节流只在授权与数据。
+
+PRIVATE_BACKUP_RESTORE_OWNER_V1：云恢复候选绑定读取时账号；准备保护快照、保存保护副本、读取缺图补偿后均重查owner与当前S引用。只回滚本次仍在当前账号发布的候选，不能用旧账号保护副本覆盖已切换的新账号。private-phone-account实际函数异步切账号回归旧HEAD失败，新实现通过。

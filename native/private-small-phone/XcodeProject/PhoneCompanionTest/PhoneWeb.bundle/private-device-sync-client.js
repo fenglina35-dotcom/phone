@@ -336,7 +336,7 @@
   if(!status||status.ok===false)throw new Error(status?.message||'暂时无法读取本机账号，原登录已保留');
   const previous=typeof _privatePhoneAccount!=='undefined'?String(_privatePhoneAccount.userId||''):'';
   if(previous&&previous!==String(status.userId||'')){accountRecoveryExpanded=false;cancelReplies();if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();for(const task of [typeof _coreMirrorWrite==='undefined'?null:_coreMirrorWrite,typeof _messageArchiveWrite==='undefined'?null:_messageArchiveWrite])if(task)await Promise.resolve(task).catch(()=>{});}
-  if(typeof _privatePhoneAccount!=='undefined')Object.assign(_privatePhoneAccount,{loaded:true,loggedIn:!!status.loggedIn,userId:status.userId||'',maskedPhone:status.maskedPhone||'',error:''});
+  if(typeof _privatePhoneAccount!=='undefined')Object.assign(_privatePhoneAccount,previous!==String(status.userId||'')?{backup:null,backupError:''}:{} ,{loaded:true,loggedIn:!!status.loggedIn,userId:status.userId||'',maskedPhone:status.maskedPhone||'',error:''});
   if(!status.loggedIn)return;
   if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise)try{await _bootImagesPromise;}catch(error){
    if(!privateAccountStorageReady())throw error;
@@ -566,7 +566,7 @@
  const automaticBackup=root.privatePhoneCloudAutoBackup;if(typeof automaticBackup==='function')root.privatePhoneCloudAutoBackup=function(){if(!client.backgroundAllowed())return Promise.resolve(false);return automaticBackup.apply(this,arguments);};
  // Hooks execute only in this private entry; the public build keeps its original account/backup flow.
  root.privatePhoneAccountAfterLogin=async()=>{client.accountChanged(String(_privatePhoneAccount.userId||''),true);};
- root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged(String(_privatePhoneAccount.userId||''));}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};
+ root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&root.NorthPrivateCloudBackup?.refreshInfo)await root.NorthPrivateCloudBackup.refreshInfo(true);if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged(String(_privatePhoneAccount.userId||''));}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};
  const originalSignOut=root.privatePhoneAccountSignOut;
  if(typeof originalSignOut==='function')root.privatePhoneAccountSignOut=async function(){await client.flush().catch(()=>{});const result=await originalSignOut.apply(this,arguments);client.accountChanged();return result;};
   // PRIVATE_BACKUP_DETAILS_EXPANSION_V1: transient UI state stays outside S.

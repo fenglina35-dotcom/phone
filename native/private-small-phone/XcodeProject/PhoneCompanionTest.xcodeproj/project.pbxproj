@@ -632,7 +632,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -643,7 +643,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -661,7 +661,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
@@ -672,7 +672,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -690,7 +690,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -701,7 +701,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -719,7 +719,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
@@ -730,7 +730,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -748,7 +748,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -759,7 +759,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -777,7 +777,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
@@ -788,7 +788,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -805,7 +805,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -816,7 +816,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -833,7 +833,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RoleNotificationService/Info.plist;
@@ -844,7 +844,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -983,7 +983,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1006,7 +1006,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1026,7 +1026,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1049,7 +1049,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1067,7 +1067,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneScreenBroadcast/PhoneScreenBroadcast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneScreenBroadcast/Info.plist;
@@ -1077,7 +1077,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.ScreenBroadcast;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1091,7 +1091,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = PhoneScreenBroadcast/PhoneScreenBroadcast.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 593;
+				CURRENT_PROJECT_VERSION = 594;
 				DEVELOPMENT_TEAM = 32H9FL4NK7;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = PhoneScreenBroadcast/Info.plist;
@@ -1101,7 +1101,7 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.593;
+				MARKETING_VERSION = 1.0.594;
 				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.ScreenBroadcast;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1111,8 +1111,8 @@ F20000000000000000000012 = {isa = PBXSourcesBuildPhase; buildActionMask = 214748
 			name = Release;
 		};
 F20000000000000000000015 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = PhoneCompanionMac.entitlements; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 32H9FL4NK7;
-				CURRENT_PROJECT_VERSION = 593;
-				MARKETING_VERSION = 1.0.593;
+				CURRENT_PROJECT_VERSION = 594;
+				MARKETING_VERSION = 1.0.594;
  SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0;
  INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
  PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.SmallPhoneMac; PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1122,8 +1122,8 @@ F20000000000000000000015 = {isa = XCBuildConfiguration; buildSettings = {CODE_SI
  SWIFT_VERSION = 5.0; ENABLE_APP_SANDBOX = YES; ENABLE_HARDENED_RUNTIME = YES; ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
  LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks");}; name = Debug; };
 F20000000000000000000016 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_ENTITLEMENTS = PhoneCompanionMac.entitlements; CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 32H9FL4NK7;
-				CURRENT_PROJECT_VERSION = 593;
-				MARKETING_VERSION = 1.0.593;
+				CURRENT_PROJECT_VERSION = 594;
+				MARKETING_VERSION = 1.0.594;
  SDKROOT = macosx; SUPPORTED_PLATFORMS = macosx; MACOSX_DEPLOYMENT_TARGET = 14.0;
  INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
  PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.SmallPhoneMac; PRODUCT_NAME = "$(TARGET_NAME)";
