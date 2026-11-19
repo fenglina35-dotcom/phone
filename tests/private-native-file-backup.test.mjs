@@ -119,5 +119,13 @@ test('actual backup SQL retains full backups, isolates partial snapshots and pro
   assert.equal((await commit(5)).saved,true);
   assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(5)+'/part-00000.bin'])).rows.length,0,'lost commit ACK cleanup cannot delete committed data');
   assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(6)+'/part-00000.bin'])).rows.length,1,'unreferenced failed uploads remain cleanable');
+  await db.exec('reset role');
+  const mac=(await db.query('select id from private_phone_sync_devices where session_id=$1',[secondary])).rows[0].id;
+  await db.query('select public.private_phone_sync_promote($1,$2,$3,1)',[u,secondary,mac]);await db.exec('set role authenticated');
+  await assert.rejects(commit(6),/backup_primary_required/,'a primary transfer invalidates the old phone at commit time');
+  await db.query("select set_config('test.session',$1,false)",[secondary]);assert.equal((await commit(6)).saved,true);
+  await db.exec('reset role');await db.query('update private_phone_sync_devices set revoked_at=now() where id=$1',[mac]);await db.exec('set role authenticated');
+  await assert.rejects(commit(7),/backup_primary_not_verified/);await assert.rejects(db.query('select private_phone_backup_info_v2()'),/backup_session_unavailable/);
+
  }finally{await db.close();}
 });
