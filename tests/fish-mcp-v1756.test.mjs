@@ -634,6 +634,7 @@ test('MCP ordinary chat: connected tools do not intercept listening, greetings o
    Object.assign(s.ctx,{note:'',_md:{},id:'role-a',_lu:{role:'user',content},replyToken:1,replyAccount:'main',replyStale:()=>false});
    vm.runInContext(hook,s.ctx);assert.equal(s.ctx._md.mcpContext,null,content);
   }
+  for(const type of ['image','file','sys']){Object.assign(s.ctx,{_md:{},_lu:{role:'user',type,content:'用 MCP 发送 Gmail 邮件'}});vm.runInContext(hook,s.ctx);assert.equal(s.ctx._md.mcpContext,null,'an attachment is not an instruction');}
   for(const content of ['查一下 Gmail 最近的邮件','帮我发送邮件给 beiye5912@gmail.com','用 MCP 搜索歌曲 Hello','查一下云端额度']){
    Object.assign(s.ctx,{_md:{},_lu:{role:'user',content}});vm.runInContext(hook,s.ctx);
    assert(s.ctx._md.mcpContext,content);

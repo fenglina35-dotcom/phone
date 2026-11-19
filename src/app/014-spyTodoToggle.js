@@ -252,6 +252,7 @@ const MCPTools=(()=>{
  const chatClarifications=new Map();
  function chatContext(roleId,valid,sourceMessage){
   const text=String(sourceMessage&&sourceMessage.content||'').trim(),pendingKey=scope()+'|'+String(roleId),pending=chatClarifications.get(pendingKey);chatClarifications.delete(pendingKey);
+  if(sourceMessage&&sourceMessage.type&&!['text','voice'].includes(sourceMessage.type))return null;
   if(!text||/^(?:算了|不用了|取消|晚安[呀啦了]?|听听[看吧]?|嗯|好[的吧]?)[。！!]*$/.test(text))return null;
   if(pending&&pending.root===S&&pending.expires>Date.now()&&typeof msgs==='function'){const rows=msgs(roleId),at=rows.indexOf(sourceMessage),previous=at>0?rows[at-1]:null;if(previous&&previous.role==='assistant'&&String(previous.content||'')===pending.question&&rows.includes(pending.source))return context(roleId,valid,sourceMessage);}
   const action=/(?:查询|查一下|查下|查查|查看|查(?=\s|我的|外部|邮箱|邮件|笔记|项目|仓库)|搜索|搜一下|搜歌|找一首|帮我找|获取|读取|核对|列出|发送|发邮件|发给|创建|新建|更新|修改|改成|改为|改这|改一下|删除|调用|使用|用一下|用\s*(?:MCP|工具)|通过\s*MCP|帮我查|\b(?:search|find|list|read|send|create|update|delete|call)\b)/i;

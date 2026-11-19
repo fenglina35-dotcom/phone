@@ -19,14 +19,15 @@
   function invalidate(){permits.clear();context?.journal?.close();context=null;epoch++;host.cancelReplies?.();}
   async function saveCodec(ctx,pendingView){await write(ctx,'codec',{version:1,records:ctx.codec.dump(),pendingView:!!pendingView});}
   async function visible(ctx,retainLocal){
-   check(ctx);if(!ctx.authorized||!ctx.viewPending||host.isBusy())return false;
+   check(ctx);if(!ctx.authorized||!ctx.authority||!ctx.viewPending||host.isBusy())return false;
+   if(ctx.authority.isPrimary&&ctx.hasBase&&!ctx.applyingExplicit){ctx.viewPending=false;ctx.dirtySeq++;await saveCodec(ctx,false);return false;}
    ctx.applyingRemote=true;try{
    const unpacked=await ctx.codec.materialize();check(ctx);if(!unpacked.complete)return false;
    if(ctx.observedSeed?.phase!=='ready'&&ctx.seed?.phase!=='ready')return false;
    if(ctx.pullMore)return false;
    let incoming=unpacked.state;
    // Local edits made while an HTTP request was in flight are overlaid as records, never lost to a full S replacement.
-   if(ctx.hasBase&&ctx.visibleRecords){
+   if(ctx.authority.isPrimary&&ctx.hasBase&&ctx.visibleRecords){
     const local=await host.snapshot();check(ctx);const projected=await ctx.codec.project(local),delta=[];
     for(const key of new Set([...Object.keys(ctx.visibleRecords),...Object.keys(projected)])){
      if(core.canonical(projected[key])===core.canonical(ctx.visibleRecords[key]))continue;
@@ -39,13 +40,13 @@
    await host.replaceState(preserved,()=>check(ctx));check(ctx);
    ctx.visibleRecords=await ctx.codec.project(await host.snapshot());check(ctx);
    await write(ctx,'local',{version:1,owner:ctx.owner,state:await host.snapshot()});
-   ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.localTrusted=true;ctx.canPublish=true;
+   ctx.viewPending=false;await saveCodec(ctx,false);ctx.hasBase=true;ctx.ready=true;ctx.localTrusted=true;ctx.canPublish=ctx.authority.isPrimary===true;
    host.reveal?.(ctx.owner,Math.max(1,ctx.codec.dump().filter(x=>x.key.startsWith('state/')).length));
    return true;
    }finally{ctx.applyingRemote=false;}
   }
   async function capture(ctx){
-   check(ctx);if(ctx.dirtySeq===ctx.capturedSeq)return null;
+   check(ctx);if(ctx.dirtySeq===ctx.capturedSeq&&!Object.values(ctx.journal?.state()?.pending||{}).some(x=>x.blocked))return null;
    const stamp=ctx.dirtySeq,snapshot=await host.snapshot();check(ctx);
    const projected=await ctx.codec.project(snapshot);check(ctx);
    if(typeof ctx.codec.setLocalProjection==='function')ctx.codec.setLocalProjection(projected,ctx.visibleRecords);
@@ -67,6 +68,7 @@
     const local=await read(ctx,'local');if(local?.owner===user&&local.state&&!host.meaningful(host.getState()))await host.replaceState(local.state,()=>check(ctx));
    }
    await host.bindOwner(user);check(ctx);
+   const explicit=await read(ctx,'resolution_local');if(explicit?.owner===user&&explicit.records?.['state/schema']){ctx.explicitResolutionBase=explicit.records;ctx.explicitResolutionId=explicit.id;}
    const cached=await read(ctx,'codec');if(cached?.version===1){ctx.codec.load(cached.records);ctx.viewPending=!!cached.pendingView;}
    let previous=await read(ctx,'journal');if(previous?.initialized&&(!cached?.records?.length||!cached.records.some(row=>row.key==='state/schema'))){previous={...previous,cursor:0,initialized:false,known:{},inbox:null};await write(ctx,'journal',previous);}ctx.seed=previous?.seed||null;ctx.observedSeed=ctx.seed;ctx.pullMore=previous?.initialized!==true;
    const locallyOwned=host.boundOwner()===user&&(host.meaningful(host.getState())||previous?.initialized===true&&previous.seed?.phase==='ready'&&cached?.records?.length);
@@ -74,10 +76,18 @@
    if(ctx.hasBase)ctx.visibleRecords=await ctx.codec.project(await host.snapshot());
    ctx.journal=core.createJournal({owner:user,platform:host.platform,label:host.label,getOwner:()=>owner,
     canPublish:()=>current(ctx)&&ctx.canPublish,
+    authoritative:()=>current(ctx)&&ctx.authority?.isPrimary===true,
     transport:body=>native(ctx,body),
     storage:{read:()=>read(ctx,'journal'),write:(_,value)=>write(ctx,'journal',value)},
     snapshot:()=>capture(ctx),
-    async apply(rows,guard,retainLocal){check(ctx);guard();if(host.isBusy()){const error=new Error('等待本机当前回复保存后继续同步');error.deviceSyncBusy=true;throw error;}ctx.codec.accept(rows);ctx.viewPending=true;await saveCodec(ctx,true);check(ctx);guard();await visible(ctx,retainLocal);}
+    async apply(rows,guard,retainLocal,meta){check(ctx);guard();if(host.isBusy())throw busyError();
+     if(ctx.authority?.isPrimary&&ctx.hasBase){
+      if(!meta?.explicitResolution||meta.conflictId!==ctx.explicitResolutionId||!ctx.explicitResolutionBase){ctx.dirtySeq++;return;}
+      ctx.codec.setLocalProjection(ctx.explicitResolutionBase);ctx.visibleRecords=ctx.explicitResolutionBase;ctx.applyingExplicit=true;
+     }
+     try{ctx.codec.accept(rows);ctx.viewPending=true;await saveCodec(ctx,true);check(ctx);guard();await visible(ctx,retainLocal);}
+     finally{ctx.applyingExplicit=false;}
+    }
    });
    // PRIVATE_TRUSTED_LOCAL_RESUME_V1: an existing verified account can open its
    // own local data while background authentication is pending. New/unproven
@@ -89,9 +99,15 @@
   }
   async function sync(ctx){
    check(ctx);if(host.isBusy()){schedule(1500);return;}
-   if(ctx.viewPending)await visible(ctx);
+   ctx.canPublish=false; // Authority is checked afresh before recovering or submitting any mutation.
    if(ctx.needsRegister){await ctx.journal.reregister();check(ctx);ctx.needsRegister=false;}
    const info=await ctx.journal.inspect();check(ctx);ctx.authorized=true;ctx.seed=info.seed||null;ctx.observedSeed=ctx.seed;ctx.authority={isPrimary:info.isPrimary===true,primaryDeviceId:info.primaryDeviceId||null,primaryRevision:String(info.primaryRevision||'0')};ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;
+   /* PRIVATE_PRIMARY_ONLY_DATA_V1: the primary owns every shared field; a follower opens by pulling it. */
+   if(ctx.seed?.phase==='ready'&&!ctx.authority.isPrimary&&!ctx.followingPrimary){
+    if(!await read(ctx,'secondary_before_primary'))await write(ctx,'secondary_before_primary',{version:1,owner:ctx.owner,state:await host.snapshot()});
+    const reset=await ctx.journal.followPrimary();check(ctx);if(reset){ctx.codec.load([]);ctx.pullMore=true;}ctx.viewPending=true;ctx.visibleRecords=null;ctx.followingPrimary=true;await saveCodec(ctx,true);
+   }
+   if(ctx.authority.isPrimary)ctx.followingPrimary=false;
    if(ctx.access?.revoked){await write(ctx,'access',{revoked:false});ctx.access={revoked:false};}
    if(ctx.hasBase)ctx.localTrusted=true;
    // A fresh or previously removed account view requires server acceptance.
@@ -103,7 +119,7 @@
     if(host.platform==='iOS'){
      let allowed=host.meaningful(host.getState());
      if(!allowed){const old=await host.native('account.backup.info',{});check(ctx);allowed=old?.ok===true&&old.found===false;}
-     if(allowed){announce('saving');ctx.seed=await ctx.journal.seed(false);ctx.observedSeed=ctx.seed;ctx.hasBase=true;ctx.canPublish=true;ctx.visibleRecords=await ctx.codec.project(await host.snapshot());}
+     if(allowed){announce('saving');ctx.seed=await ctx.journal.seed(false);ctx.observedSeed=ctx.seed;const seeded=await ctx.journal.inspect();check(ctx);ctx.authority={isPrimary:seeded.isPrimary===true,primaryDeviceId:seeded.primaryDeviceId||null,primaryRevision:String(seeded.primaryRevision||'0')};if(!ctx.authority.isPrimary)throw new Error('请先确认主设备，原有本机数据已保留');ctx.hasBase=true;ctx.canPublish=true;ctx.visibleRecords=await ctx.codec.project(await host.snapshot());}
     }
     if(!ctx.seed){announce('waiting');await ctx.journal.cycle();return;}
    }
@@ -115,9 +131,11 @@
     if(ctx.pullMore||!ctx.journal.canFinishSeed()){schedule(40);return;}
     ctx.seed=await ctx.journal.seed(true);ctx.observedSeed=ctx.seed;ctx.viewPending=true;ctx.pullMore=false;await visible(ctx);ctx.seeding=false;
    }else{
-    ctx.canPublish=ctx.hasBase;announce('pulling');const result=await ctx.journal.cycle();check(ctx);
+    ctx.canPublish=ctx.hasBase&&ctx.authority.isPrimary;announce('pulling');const result=await ctx.journal.cycle();check(ctx);
     if(result.more||result.pushed&&result.pending>0){schedule(40);return;}
+    if(!ctx.authority.isPrimary)ctx.viewPending=true;
     if(ctx.viewPending)await visible(ctx);
+    if(ctx.authority.isPrimary&&ctx.dirtySeq!==ctx.capturedSeq)schedule(40);
    }
    check(ctx);ctx.conflicts=new Set([...ctx.conflictItems.map(x=>x.id),...Object.values(ctx.journal.state()?.pending||{}).map(x=>x.blocked).filter(Boolean)]).size;
    announce(ctx.ready?'ready':'waiting');
@@ -134,6 +152,7 @@
     account=status||{loggedIn:false};await host.onAccount?.(account);
     if(!account.loggedIn||!UUID.test(String(account.userId||''))){if(owner){invalidate();owner='';}announce('authentication');return;}
     let ctx=context;if(!ctx||owner!==String(account.userId))ctx=await build(account);
+    if(reason==='local'&&ctx.ready&&ctx.authority?.isPrimary===false){announce('ready');return;}
     if(reason==='local'&&ctx.ready&&ctx.journal.deviceId()){
      if(host.isBusy()){waiting=true;waitingReason='local';return;}
      const local=await ctx.journal.collectLocal();check(ctx);
@@ -143,9 +162,10 @@
      localDeferredUntil=0;
     }
     if(reason==='check'&&ctx.ready&&ctx.authorized){
-     const info=await ctx.journal.check();check(ctx);
+     const priorAuthority=JSON.stringify(ctx.authority);const info=await ctx.journal.check();check(ctx);
      ctx.authority={isPrimary:info.isPrimary===true,primaryDeviceId:info.primaryDeviceId||null,primaryRevision:String(info.primaryRevision||'0')};
-     if(info.changed!==true){retryCount=0;retryAt=0;announce('ready');return;}
+     if(!ctx.authority.isPrimary)ctx.canPublish=false;
+     if(info.changed!==true&&priorAuthority===JSON.stringify(ctx.authority)){retryCount=0;retryAt=0;announce('ready');return;}
     }
     await sync(ctx);if(reason==='local')lastLocalNetworkAt=Date.now();retryCount=0;retryAt=0;
    }catch(e){
@@ -220,7 +240,11 @@
    async makePrimary(password,primaryRevision){await api.waitForIdle();const ctx=context;if(!ctx?.ready||typeof password!=='string'||!/^\d+$/.test(String(primaryRevision)))throw new Error('请重新读取登录设备');const result=await ctx.journal.request({action:'primary',password,primaryRevision:String(primaryRevision)});check(ctx);ctx.authority={isPrimary:result.isPrimary===true,primaryDeviceId:result.primaryDeviceId,primaryRevision:result.primaryRevision};schedule(0);return result;},
    async conflicts(){await api.waitForIdle();const ctx=context;if(!ctx?.ready)throw new Error('账号内容仍在同步，请稍后查看');check(ctx);const info=await ctx.journal.inspect();check(ctx);ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;announce(phase);return copy(ctx.conflictItems);},
    async conflict(id){await api.waitForIdle();const ctx=context;if(!ctx?.ready||!UUID.test(String(id)))throw new Error('这项修改已变化，请刷新列表');const result=await ctx.journal.request({action:'conflict',conflictId:id});check(ctx);return result;},
-   async resolveConflict(id,choice,revision){await api.waitForIdle();const ctx=context;if(!ctx?.ready||host.isBusy())throw new Error('请等当前回复或保存完成后再处理');if(!UUID.test(String(id))||!['server','candidate'].includes(choice)||!/^\d+$/.test(String(revision)))throw new Error('修改信息已变化，请重新查看');check(ctx);if(typeof ctx.journal.resolve!=='function')throw new Error('同步服务仍在更新，请稍后重试');const result=await ctx.journal.resolve(id,choice,String(revision));check(ctx);if(result?.ok!==true)throw new Error('此次选择尚未确认，两份修改仍然保留');const info=await ctx.journal.inspect();check(ctx);ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;announce(phase);schedule(0);return result;},
+   async resolveConflict(id,choice,revision){await api.waitForIdle();const ctx=context;if(!ctx?.ready||host.isBusy())throw new Error('请等当前回复或保存完成后再处理');if(ctx.authority?.isPrimary!==true)throw new Error('请在主设备确认这一项修改');if(!UUID.test(String(id))||!['server','candidate'].includes(choice)||!/^\d+$/.test(String(revision)))throw new Error('修改信息已变化，请重新查看');check(ctx);
+    ctx.explicitResolutionBase=await ctx.codec.project(await host.snapshot());ctx.explicitResolutionId=id;await write(ctx,'resolution_local',{version:1,owner:ctx.owner,id,records:ctx.explicitResolutionBase});
+    const result=await ctx.journal.resolve(id,choice,String(revision));check(ctx);if(result?.ok!==true)throw new Error('此次选择尚未确认，两份修改仍然保留');
+    ctx.explicitResolutionBase=null;ctx.explicitResolutionId='';await write(ctx,'resolution_local',null);const info=await ctx.journal.inspect();check(ctx);ctx.conflictItems=info.conflicts||[];ctx.conflicts=ctx.conflictItems.length;announce(phase);schedule(0);return result;
+   },
 
    context:()=>context,
    flush:async()=>{if(!context)return false;const more=await context.journal.flush();await visible(context);return !more;}
@@ -454,6 +478,7 @@
       const local=item.deviceId===ctx.journal.state()?.deviceId,candidateLabel=local?'本机修改':'另一设备修改';open.textContent=conflictType(candidate.value||current?.value,item.key)+' · 收起详情';
       detail=document.createElement('div');detail.style.cssText='display:grid;gap:12px';const text=document.createElement('div');text.style.cssText='display:grid;gap:12px;font-size:14px;line-height:1.65;overflow-wrap:anywhere';
       for(const [label,row] of [[candidateLabel,candidate],['云端当前内容',current]]){const section=document.createElement('div'),title=document.createElement('b'),summary=document.createElement('p');title.textContent=label;title.style.color='#a8ceff';summary.textContent=conflictSummary(row);summary.style.cssText='margin:4px 0 0;color:#d0d0d6;white-space:pre-wrap';section.append(title,summary);text.appendChild(section);}detail.appendChild(text);
+      if(ctx.authority?.isPrimary!==true){const hint=document.createElement('p');hint.textContent='请在主设备确认这一项修改。副设备不会覆盖主设备。';detail.appendChild(hint);card.appendChild(detail);return;}
       const actions=document.createElement('div');actions.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px';detail.appendChild(actions);const confirmation=document.createElement('div');confirmation.hidden=true;detail.appendChild(confirmation);
       for(const [choice,label] of [['candidate',local?'保留本机修改':'保留这份修改'],['server','采用云端内容']]){const button=conflictButton(label,choice==='candidate'?'p':'g');actions.appendChild(button);button.addEventListener('click',()=>{if(!isCurrent()||conflictOperation)return;confirmation.replaceChildren();confirmation.hidden=false;confirmation.style.cssText='border-top:1px solid #37373c;padding-top:12px;display:grid;gap:10px';const prompt=document.createElement('p');prompt.textContent='确认'+label+'？仅处理上面这一项，结果将同步到同账号的其他设备。';prompt.style.cssText='margin:0;color:#b4b4bd;line-height:1.6';const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px';const cancel=conflictButton('返回','g'),confirm=conflictButton('确认采用','p');buttons.append(cancel,confirm);confirmation.append(prompt,buttons);cancel.addEventListener('click',()=>{confirmation.hidden=true;confirmation.style.display='none';});confirm.addEventListener('click',async()=>{
        if(!isCurrent()||conflictOperation)return;if(isBusy()){conflictNote('请等当前回复或保存完成后再确认。');return;}conflictOperation=true;conflictPanel.querySelectorAll('button:not([data-conflict-close])').forEach(x=>x.disabled=true);conflictNote('正在保存你的选择…');
@@ -483,7 +508,7 @@
   async function load(){
    const info=await client.devices();if(!current())return;list.replaceChildren();transfer.replaceChildren();
    const devices=(info.devices||[]).filter(x=>!x.revokedAt);
-   note.textContent='此账号有 '+devices.length+' 台登录设备。'+(info.isPrimary?'本机是主设备，可以移除其他设备。':'本机是副设备，可以同步数据；设备管理由主设备负责。');
+   note.textContent='此账号有 '+devices.length+' 台登录设备。'+(info.isPrimary?'本机是主设备，可以移除其他设备。':'本机是副设备，打开时读取主设备数据；本机修改不会覆盖主设备。');
    for(const item of devices){
     const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid rgba(255,255,255,.12);background:#1a1a1e;border-radius:17px';
     const text=document.createElement('div'),name=document.createElement('b'),detail=document.createElement('small');name.textContent=String(item.label||item.platform||'登录设备')+(item.id===info.deviceId?' · 本机':'');detail.textContent=(item.id===info.primaryDeviceId?'主设备':'副设备')+(item.lastSeenAt?' · 最近连接 '+privatePhoneAccountDate(item.lastSeenAt):'');detail.style.cssText='display:block;color:#999aa4;margin-top:5px;line-height:1.5';text.append(name,detail);row.appendChild(text);

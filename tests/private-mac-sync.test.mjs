@@ -188,7 +188,7 @@ test('revoked JWT cannot read or overwrite legacy backups while normal sessions 
  }finally{await db.close();}
 });
 
-test('actual account client: automatic first migration, fresh login, two-way messages, interrupted pages and account switch',async()=>{
+test('actual account client: primary-only data, automatic follower opening, interrupted pages and account switch',async()=>{
  const require=createRequire(import.meta.url),{PGlite}=require(path.join(os.homedir(),'AppData/Local/CodexHardwareTests/robot-voice-sql-runtime/node_modules/@electric-sql/pglite/dist/index.cjs'));
  const db=new PGlite(),user='10000000-0000-0000-0000-000000000001',second='10000000-0000-0000-0000-000000000002';
  let timer=0;const ctx=vm.createContext({crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,setTimeout:()=>++timer,clearTimeout:()=>{}});
@@ -198,13 +198,13 @@ test('actual account client: automatic first migration, fresh login, two-way mes
  try{
   await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${user}'),('${second}');`);
   await db.exec(read('supabase/migrations/202611170001_private_phone_device_sync.sql'));
-  if(!process.env.FIX_TEST_OLD)await db.exec(read('supabase/migrations/202611170003_private_phone_primary_device.sql'));
+  await db.exec(read('supabase/migrations/202611170003_private_phone_primary_device.sql'));
   const identities={phone:{userID:user,sessionID:'20000000-0000-0000-0000-000000000001'},mac:{userID:user,sessionID:'20000000-0000-0000-0000-000000000002'},other:{userID:second,sessionID:'20000000-0000-0000-0000-000000000003'}};
   const store={async key(owner,candidate){await db.query('insert into private_phone_sync_keys(user_id,wrapped_key) values($1,$2) on conflict(user_id) do nothing',[owner,candidate]);return (await db.query('select wrapped_key from private_phone_sync_keys where user_id=$1',[owner])).rows[0].wrapped_key;},
    async rpc(name,args){return (await db.query('select public.'+name+'('+Object.keys(args).map((k,i)=>k+'=>$'+(i+1)).join(',')+') value',Object.values(args).map(x=>Array.isArray(x)?JSON.stringify(x):x))).rows[0].value;}};
   const server=createSyncHandler({store,authenticate:async token=>identities[token],masterKey:'d'.repeat(43),cryptoAPI:webcrypto});
   function make(token,initial,platform,advisoryOwner=''){
-   let state=copy(initial),bound=advisoryOwner,offline=false,pushes=0,cutAt=Infinity,onPull=null,reveals=0;const disk=new Map(),calls=[];
+   let state=copy(initial),bound=advisoryOwner,offline=false,pushes=0,cutAt=Infinity,onPull=null,onResolve=null,reveals=0;const disk=new Map(),calls=[];
    const host={core:ctx.NorthPrivateDeviceSyncCore,platform,label:platform,read:async key=>disk.has(key)?copy(disk.get(key)):null,write:async(key,value)=>disk.set(key,copy(value)),snapshot:async()=>copy(state),getState:()=>state,
     legacyOwner:()=>platform==='iOS'?identities[token].userID:'',nativeOwner:()=>identities[token].userID,hasPersistedSource:()=>platform==='iOS',
     stateOwner:()=>state._deviceSyncOwner||'',boundOwner:()=>state._deviceSyncOwner||bound,async bindOwner(owner){state._deviceSyncOwner=owner;bound=owner;},emptyState:empty,
@@ -215,11 +215,11 @@ test('actual account client: automatic first migration, fresh login, two-way mes
      assert.equal(action,'account.sync','sync never sends any model request');if(offline)throw new Error('fixture network offline');
      if(body.action==='push'&&++pushes>cutAt)throw new Error('fixture network interrupted');
      const response=await server(new Request('https://fixture.test/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({protocolVersion:2,...body})}));
-     const result=await response.json();if(body.action==='pull'&&onPull){const callback=onPull;onPull=null;await callback();}return result;}
+     const result=await response.json();if(body.action==='pull'&&onPull){const callback=onPull;onPull=null;await callback();}if(body.action==='resolve'&&onResolve){const callback=onResolve;onResolve=null;await callback();}return result;}
    };
    let client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);devices.push(()=>client.stop());
    return {get state(){return state;},get client(){return client;},get reveals(){return reveals;},disk,calls,
-    cutAfter(n){cutAt=n;},resume(){cutAt=Infinity;offline=false;},offline(){offline=true;},onPull(fn){onPull=fn;},
+    cutAfter(n){cutAt=n;},resume(){cutAt=Infinity;offline=false;},offline(){offline=true;},onPull(fn){onPull=fn;},onResolve(fn){onResolve=fn;},
     reopen(){client.stop();client=ctx.NorthPrivateDeviceSyncRuntime.createClient(host);},switchAccount(){token='other';client.accountChanged();}};
   }
   const original=empty();original.settings.hist=32;original.contacts=[{id:'a',name:'角色甲',persona:'原有人设'},{id:'b',name:'角色乙',persona:'另一人设'}];
@@ -234,16 +234,32 @@ test('actual account client: automatic first migration, fresh login, two-way mes
   assert(Object.values(phone.client.context().journal.state().pending).some(x=>x.value?.path?.[0]==='roleBody'),'a newer in-flight body tick remains durable after the initial checkpoint');
   await phone.client.syncNow();
   await mac.client.syncNow();assert.equal(mac.client.status().ready,true);assert.equal(mac.state.contacts.length,2);assert.equal(mac.state.messages.a.length,420);assert.equal(mac.state.settings.hist,32);
-  mac.state.messages.a.push({id:'mac-new',role:'user',content:'Mac追加',time:500});mac.client.markDirty();await mac.client.syncNow();await phone.client.syncNow();
-  assert.equal(phone.state.messages.a.filter(x=>x.id==='mac-new').length,1);
-  phone.state.messages.a.push({id:'phone-new',role:'user',content:'手机追加',time:501});phone.client.markDirty();await phone.client.syncNow();await mac.client.syncNow();
-  assert.equal(mac.state.messages.a.filter(x=>x.id==='phone-new').length,1);
-  // A local edit during a remote pull must retain its old base, not silently overwrite the remote edit.
-  mac.state.settings.hist=48;mac.client.markDirty();await mac.client.syncNow();
-  phone.onPull(()=>{phone.state.settings.hist=40;phone.client.markDirty();});await phone.client.syncNow();await phone.client.syncNow();
-  assert.equal(phone.state.settings.hist,40);assert.equal(mac.state.settings.hist,48);
-  assert((await db.query('select count(*) as n from private_phone_sync_conflicts')).rows[0].n>=1,'in-flight edit is a retained conflict');
-  mac.reopen();await mac.client.syncNow();assert.equal(mac.state.messages.a.length,422,'reopen uses same account content');
+  // Simulate a value published by an older secondary before the policy migration.
+  const hist=mac.client.context().codec.dump().find(x=>x.value?.kind==='field'&&JSON.stringify(x.value.path)==='["settings","hist"]');assert(hist);
+  await mac.client.context().journal.request({action:'push',changes:[{key:hist.key,value:{...hist.value,value:48},deleted:false,mutationId:webcrypto.randomUUID(),baseRevision:mac.client.context().journal.state().known[hist.key].revision}]});
+  if(!process.env.FIX_TEST_OLD)await db.exec(read('supabase/migrations/202611190001_private_phone_primary_writes.sql'));
+  await phone.client.syncNow();assert.equal(phone.state.settings.hist,32,'an existing primary never imports the old secondary setting');
+  await phone.client.syncNow();await mac.client.syncNow();assert.equal(mac.state.settings.hist,32,'the primary repairs the older cloud value');
+  const macPushes=mac.calls.filter(x=>x.body?.action==='push').length;
+  mac.state.messages.a.push({id:'mac-new',role:'user',content:'Mac追加',time:500});mac.state.settings.hist=48;mac.client.markDirty();await mac.client.syncNow();await phone.client.syncNow();
+  assert.equal(phone.state.messages.a.filter(x=>x.id==='mac-new').length,0,'secondary messages cannot overwrite or append to the primary');assert.equal(phone.state.settings.hist,32);
+  assert.equal(mac.calls.filter(x=>x.body?.action==='push').length,macPushes,'a secondary does not publish any state changes');
+  await assert.rejects(mac.client.context().journal.request({action:'push',changes:[{key:hist.key,value:hist.value,deleted:false,mutationId:webcrypto.randomUUID(),baseRevision:'1'}]}),/primary_required/,'the server also blocks an older or bypassing secondary client');
+  phone.state.messages.a.splice(0,1);phone.state.settings.hist=40;phone.client.markDirty();await phone.client.syncNow();await mac.client.syncNow();
+  assert.equal(mac.state.messages.a.some(x=>x.id==='m0'),false,'intentional primary deletion propagates');assert.equal(mac.state.settings.hist,40);
+  mac.state.messages.a.push({id:'m0',role:'user',content:'副设备旧消息',time:1});mac.state.settings.hist=99;mac.client.markDirty();
+  const oldJournalKey='__device_sync_v2_'+user+'_journal',oldJournal=copy(mac.disk.get(oldJournalKey)),oldValue={...hist.value,value:99};
+  oldJournal.pending[hist.key]={key:hist.key,value:oldValue,deleted:false,hash:await ctx.NorthPrivateDeviceSyncCore.hash(oldValue),mutationId:webcrypto.randomUUID(),baseRevision:oldJournal.known[hist.key].revision,submitted:true};mac.disk.set(oldJournalKey,oldJournal);
+  const beforeReopenPushes=mac.calls.filter(x=>x.body?.action==='push').length;
+  mac.reopen();await mac.client.syncNow();assert.equal(mac.state.messages.a.length,419,'opening the follower automatically reapplies the primary without resurrecting deletions');assert.equal(mac.state.settings.hist,40);
+  assert.equal(phone.state.messages.a.some(x=>x.id==='m0'),false);assert.equal(mac.calls.filter(x=>x.body?.action==='push').length,beforeReopenPushes,'a legacy submitted outbox never replays on the follower');assert(Object.values(mac.client.context().journal.state().suspendedWrites||{}).some(x=>x.pending[hist.key]?.value?.value===99),'the previous outbox is preserved locally as inactive evidence');
+  // A fresh explicit field-level choice on the primary is the sole exception.
+  const conflict=(await phone.client.context().journal.request({action:'push',changes:[{key:hist.key,value:{...hist.value,value:56},deleted:false,mutationId:webcrypto.randomUUID(),baseRevision:'0'}]})).outcomes[0];assert.equal(conflict.status,'conflict');
+  const detail=await phone.client.context().journal.request({action:'conflict',conflictId:conflict.conflictId});
+  const untouched=copy(phone.state);phone.onResolve(()=>{phone.state.settings.hist=57;phone.client.markDirty();});
+  await phone.client.resolveConflict(conflict.conflictId,'candidate',detail.current.revision);assert.equal(phone.state.settings.hist,57,'a newer primary edit during explicit resolution survives');
+  untouched.settings.hist=57;assert.deepEqual(phone.state,untouched,'a field-level choice cannot replace unrelated state');
+  for(let n=0;n<3;n++)await phone.client.syncNow();await mac.client.syncNow();assert.equal(mac.state.settings.hist,57);
   mac.switchAccount();await mac.client.syncNow();assert.equal(mac.state.contacts.length,0);assert.equal(Object.keys(mac.state.messages).length,0);
   assert.equal((await db.query('select count(*) as n from private_phone_sync_records where user_id=$1',[second])).rows[0].n,0,'account A content never uploads to B');
   assert(!mac.calls.some(x=>/model|chat.completions/.test(x.action)));
@@ -897,7 +913,7 @@ test('media reads stay responsive during a durable push and reject late replies 
   native:async(action,body)=>{
    if(action==='account.status')return {ok:true,loggedIn:true,userId:owner};
    if(body.action==='register')return {ok:true,device:{id:deviceId}};
-   if(body.action==='inspect')return {ok:true,seed,isPrimary:false,conflicts:[]};
+   if(body.action==='inspect')return {ok:true,seed,isPrimary:true,primaryDeviceId:deviceId,primaryRevision:'1',conflicts:[]};
    if(body.action==='pull')return {ok:true,seed,records:[],cursor:'0',more:false};
    if(body.action==='push'){if(holdPush){pushStarted();await new Promise(resolve=>{releasePush=resolve;});}return {ok:true,outcomes:body.changes.map(x=>({key:x.key,mutationId:x.mutationId,status:'applied',revision:'1'}))};}
    if(body.action==='media.get'){if(holdMedia)await new Promise(resolve=>{releaseMedia=resolve;});return {ok:true,hash:body.hash,base64:'Zml4dHVyZQ'};}

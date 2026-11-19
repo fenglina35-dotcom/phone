@@ -19,7 +19,7 @@
   async function persist(next,token){ensure(token);await storage.write(owner,clone(next));ensure(token);state=next;}
   async function call(body,token){ensure(token);const result=await transport({...clone(body),protocolVersion:2});ensure(token);if(!result||result.ok!==true)throw new Error(String(result&&result.error||'设备同步未完成'));return result;}
   async function init(token){
-   if(state){await recover(token);await recoverResolutions(token);return;}
+   if(state){await recover(token);if(options.canPublish())await recoverResolutions(token);return;}
    const previous=await storage.read(owner);ensure(token);
    if(previous&&(previous.owner!==owner||previous.version!==1))throw new Error('同步日志与当前账号不一致，未读取');
    const next=previous?clone(previous):{version:1,owner,cursor:'0',deviceId:'',initialized:false,known:{},pending:{}};
@@ -28,7 +28,7 @@
    next.deviceId=result.device.id;
    await persist(next,token);
    await recover(token);
-   await recoverResolutions(token);
+   if(options.canPublish())await recoverResolutions(token);
   }
   async function recover(token){
    if(!state.inbox)return;
@@ -42,13 +42,13 @@
     }
     inbox.rows=inbox.rows.filter(row=>!blockedKeys.has(row.key));await persist({...clone(state),inbox:clone(inbox)},token);
    }
-   ensure(token);await apply(inbox.rows,()=>ensure(token),retainLocal);ensure(token);
+   ensure(token);await apply(inbox.rows,()=>ensure(token),retainLocal,{explicitResolution:inbox.explicitResolution===true,conflictId:inbox.conflictId||''});ensure(token);
    inbox.next.deviceId=state.deviceId;
    await persist(inbox.next,token);
   }
   // PRIVATE_SYNC_CONFLICT_RESOLUTION_V1: choices are durable before HTTP; resolved candidates
   // enter the same crash-safe inbox as ordinary records, including on the original blocked device.
-  async function adoptResolution(detail,conflictId,token){
+  async function adoptResolution(detail,conflictId,token,explicit=false){
    const conflict=detail?.conflict,row=detail?.current;
    if(!conflict||conflict.id!==conflictId||!conflict.resolvedAt||!row||row.key!==conflict.key
       ||typeof row.revision!=='string'||!/^\d+$/.test(row.revision)||typeof row.deleted!=='boolean')throw new Error('冲突处理回执不完整，原修改已保留');
@@ -58,7 +58,7 @@
    if(next.resolutions)delete next.resolutions[conflictId];
    next.known[key]={revision:row.revision,deleted:row.deleted,hash:fingerprint};
    if(next.pending[key]){await persist(next,token);return;}
-   await persist({...clone(state),inbox:{rows:[clone(row)],next}},token);
+   await persist({...clone(state),inbox:{rows:[clone(row)],next,explicitResolution:explicit,conflictId}},token);
    await recover(token);
   }
   async function finishResolution(conflictId,item,token){
@@ -71,7 +71,7 @@
     if(!detail.conflict?.resolvedAt)throw error;
     result={...detail,resolved:true};
    }
-   if(result.resolved===true){await adoptResolution(result,conflictId,token);return result;}
+   if(result.resolved===true){await adoptResolution(result,conflictId,token,item.explicit===true);return result;}
    if(result.resolved!==false||result.reason!=='revision_changed')throw new Error('冲突处理尚未确认，原修改已保留');
    const next=clone(state);if(next.resolutions)delete next.resolutions[conflictId];await persist(next,token);
    return result;
@@ -92,7 +92,8 @@
    const next=clone(state),keys=new Set(Object.keys(local));
    for(const key of keys){
     safeKey(key);const value=local[key],fingerprint=await hash(value);ensure(token);
-    const pending=next.pending[key],known=next.known[key];
+    let pending=next.pending[key];const known=next.known[key];
+    if(pending?.blocked&&options.authoritative?.()){delete next.pending[key];pending=null;}
     if(pending&&!pending.deleted&&pending.hash===fingerprint)continue;
     if(!pending&&known&&!known.deleted&&known.hash===fingerprint)continue;
     next.pending[key]={key,value:clone(value),deleted:false,hash:fingerprint,mutationId:root.crypto.randomUUID(),
@@ -100,7 +101,7 @@
    }
    // A partial initial download must never be interpreted as a local mass deletion.
    if(next.initialized)for(const key of Object.keys(next.known)){
-    const known=next.known[key],pending=next.pending[key];
+    const known=next.known[key];let pending=next.pending[key];if(pending?.blocked&&options.authoritative?.()){delete next.pending[key];pending=null;}
     if(key.startsWith('blob/')||key.startsWith('state/media/')||keys.has(key)||known.deleted||pending&&pending.deleted)continue;
     next.pending[key]={key,deleted:true,hash:'',mutationId:root.crypto.randomUUID(),baseRevision:pending?pending.baseRevision:known.revision};
    }
@@ -112,6 +113,7 @@
    await persist(next,token);
   }
   async function push(token){
+   if(!options.canPublish())return false;
    const rows=[];let size=0;
    const available=Object.values(state.pending).filter(x=>!x.blocked),chunks=available.filter(x=>x.key.startsWith('blob/record/'));
    for(const item of chunks.length?chunks:available){
@@ -183,6 +185,13 @@
   }
   return Object.freeze({
    canFinishSeed,
+   // PRIVATE_PRIMARY_FOLLOWER_REBASE_V1: dormant writes are retained locally but never replayed.
+   followPrimary:()=>run(async token=>{await init(token);if(state.primaryFollowerPolicy===1&&!Object.keys(state.pending).length&&!Object.keys(state.resolutions||{}).length&&!state.inbox)return false;const next=clone(state);
+    if(Object.keys(next.pending).length||Object.keys(next.resolutions||{}).length||next.inbox){
+     next.suspendedWrites=next.suspendedWrites||{};next.suspendedWrites[root.crypto.randomUUID()]={pending:next.pending,resolutions:next.resolutions||{},inbox:next.inbox||null};
+    }
+    next.pending={};next.resolutions={};next.inbox=null;next.known={};next.cursor='0';next.initialized=false;next.primaryFollowerPolicy=1;await persist(next,token);return true;
+   }),
    // PRIVATE_SYNC_LOCAL_COLLECTION_V1: dirty notifications can be inspected and
    // journaled locally without performing any network request.
    collectLocal:()=>run(async token=>{if(!state)return {needsConnect:true,pending:0};await capture(token);const pending=Object.values(state.pending).filter(x=>!x.blocked);return {needsConnect:false,pending:pending.length,urgent:pending.some(x=>['message','thread','contact','contactField'].includes(x.value?.kind))};}),
@@ -199,7 +208,7 @@
     const revision=expectedRevision===undefined?detail.current?.revision:expectedRevision;
     if(typeof revision!=='string'||!/^\d+$/.test(revision))throw new Error('请重新查看最新的云端修改');
     const next=clone(state);if(!next.resolutions)next.resolutions={};
-    const item={choice,baseRevision:revision,mutationId:root.crypto.randomUUID()};next.resolutions[conflictId]=item;
+    const item={choice,baseRevision:revision,mutationId:root.crypto.randomUUID(),explicit:true};next.resolutions[conflictId]=item;
     await persist(next,token);return finishResolution(conflictId,item,token);
    }),
    reregister:()=>run(async token=>{state=null;await init(token);return {ok:true};}),

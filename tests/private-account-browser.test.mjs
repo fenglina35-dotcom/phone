@@ -54,6 +54,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await db.exec(`create schema auth;create table auth.users(id uuid primary key);create role anon;create role authenticated;create role service_role bypassrls;insert into auth.users values('${ownerA}'),('${ownerB}');`);
   await db.exec(read('supabase/migrations/202611170001_private_phone_device_sync.sql'));
   await db.exec(read('supabase/migrations/202611170003_private_phone_primary_device.sql'));
+  await db.exec(read('supabase/migrations/202611190001_private_phone_primary_writes.sql'));
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
   browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
   // Use a real default state/role as the schema baseline, without enabling sync.
@@ -187,36 +188,13 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.locator('#chatbg').getByText('认证超时期间仍能正常回复。',{exact:true}).waitFor({timeout:15000});await page.waitForFunction(()=>!replyGenerationBusy('cloud-a'));assert.equal(modelCalls.length,7,'one manual local reply is never retried by synchronization');
   await page.reload();await page.waitForFunction(()=>window.__northBootReady&&NorthPrivateDeviceSyncClient?.gateAllowed(),null,{timeout:10000});assert(await page.evaluate(()=>S.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。')),'the offline reply survives reopening');
   authOutage=false;await page.evaluate(()=>NorthPrivateDeviceSyncClient.syncNow());await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.status().phase==='ready',null,{timeout:10000});await source.journal.cycle();
-  assert(source.state.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。'),'the saved offline reply uploads after reconnection');assert.equal(modelCalls.length,7);assert.equal(nativeCalls.filter(x=>x.action==='account.signout').length,0);
-  // Resolve a genuine same-field CAS conflict through the shipped UI, in each
-  // direction. Source and browser retain their independent old revisions.
-  source.state.settings.hist=48;await source.journal.flush();
-  await page.evaluate(async()=>{S.settings.hist=40;save();await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();privatePhoneSyncConflictsOpen();});
-  const conflicts=page.locator('#privateSyncConflictOverlay');
-  async function histConflict(){await conflicts.locator('article[data-conflict-id]').first().waitFor();for(const article of await conflicts.locator('article[data-conflict-id]').all()){await article.getByRole('button',{name:/查看不同修改/}).click();await article.getByText('云端当前内容',{exact:true}).waitFor();if((await article.innerText()).includes('设置 · 上下文长度'))return article;}throw new Error('hist conflict was not found');}
-  const firstHist=await histConflict();assert((await firstHist.innerText()).includes('40'));assert((await firstHist.innerText()).includes('48'));
-  assert(await conflicts.locator('[data-conflict-list]').evaluate(el=>getComputedStyle(el).overflowY==='auto'&&el.clientHeight<=innerHeight*.56));
-  await firstHist.getByRole('button',{name:'采用云端内容',exact:true}).click();await firstHist.getByRole('button',{name:'确认采用',exact:true}).click();
-  await page.waitForFunction(()=>S.settings.hist===48&&!Object.values(NorthPrivateDeviceSyncClient.context().journal.state().pending).some(x=>x.blocked&&x.value?.path?.at(-1)==='hist'));
-  await source.journal.cycle();source.state.settings.hist=64;await source.journal.flush();
-  await page.evaluate(async()=>{S.settings.hist=56;save();await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();privatePhoneSyncConflictsOpen();});
-  const secondHist=await histConflict();await secondHist.getByRole('button',{name:'保留本机修改',exact:true}).click();
-  const heldResolution=new Promise(resolve=>{resolveSignal=resolve;});holdResolve=true;await secondHist.getByRole('button',{name:'确认采用',exact:true}).click();
-  await Promise.race([heldResolution,new Promise((_,reject)=>setTimeout(()=>reject(new Error('fixture resolve did not enter native boundary')),3000))]);
-  await page.evaluate(()=>{S.settings.hist=57;save();});resolveRelease();resolveRelease=null;
-  await page.waitForFunction(()=>S.settings.hist===57&&Object.values(NorthPrivateDeviceSyncClient.context().journal.state().pending).some(x=>x.value?.path?.at(-1)==='hist'&&x.value.value===57));
-  await source.journal.cycle();assert.equal(source.state.settings.hist,56,'the selected candidate is durable on the source while the newer local edit remains pending');
-  assert.equal(await page.evaluate(()=>S.settings.hist),57,'an edit made while resolve ACK is in flight is never overwritten');
-  await page.evaluate(()=>document.getElementById('privateSyncConflictOverlay')?.remove());
-  // Real media hooks upload two encrypted 1 MiB-bounded chunks, then restore the
-  // missing local image/audio through the account-scoped backend on demand.
-  await page.evaluate(async()=>{window.fixtureImage='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4l0AAAAASUVORK5CYII=';await imgPut('fixture-sync-avatar',fixtureImage);S.me.avatar='idb:fixture-sync-avatar';const bytes=Uint8Array.from({length:1200000},(_,i)=>i%251);await mPut('fixture-sync-song',new Blob([bytes],{type:'audio/wav'}));S.music=S.music||{};S.music.songs=S.music.songs||[];S.music.songs.push({id:'fixture-sync-song',title:'同步媒体夹具',src:{t:'idb'}});save();await NorthPrivateDeviceSyncClient.syncNow();});
-  try{await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar')&&NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song')?.parts.length===2,null,{timeout:15000});}catch(error){console.log('media diagnostic',JSON.stringify({calls:nativeCalls.filter(x=>x.action==='account.sync'&&x.body.action.startsWith('media.')).map(x=>({action:x.body.action,bytes:x.body.base64?.length,result:x.result})),state:await page.evaluate(()=>({status:NorthPrivateDeviceSyncClient.status(),keys:NorthPrivateDeviceSyncClient.context()?.codec.dump().filter(x=>x.value?.kind==='media').map(x=>x.value.localKey),image:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar'),audio:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song'),busy:replyGenerationStore()}))}));throw error;}
-  const restoredMedia=await page.evaluate(async()=>{await new Promise(async(resolve,reject)=>{const db=await imgDB(),tx=db.transaction('img','readwrite');tx.objectStore('img').delete('fixture-sync-avatar');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});await mDelIDB('fixture-sync-song');const image=await imgGet('fixture-sync-avatar'),audio=await mGet('fixture-sync-song'),bytes=new Uint8Array(await audio.arrayBuffer());return{image:image===fixtureImage,size:bytes.length,bytes:bytes.every((b,i)=>b===i%251)};});
-  assert.deepEqual(restoredMedia,{image:true,size:1200000,bytes:true});assert(objects.size>=3,'image and both audio parts are stored as encrypted account objects');
-  await page.evaluate(async()=>{const key='__role_call_loop_v1_fixture';await imgPutIDBWithRetry(key,new Blob([Uint8Array.from([1,2,3,4])],{type:'video/mp4'}));S.contacts.find(x=>x.id==='cloud-a').callLoopVideo={key,name:'既有通话视频',type:'video/mp4',size:4};save();await NorthPrivateDeviceSyncClient.syncNow();});
-  await page.waitForFunction(()=>!!NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('__role_call_loop_v1_fixture'));
-  const loopRestored=await page.evaluate(async()=>{await imgDel('__role_call_loop_v1_fixture');const blob=await imgGet('__role_call_loop_v1_fixture');return Array.from(new Uint8Array(await blob.arrayBuffer()));});assert.deepEqual(loopRestored,[1,2,3,4],'an existing raw-key call video also synchronizes without a new upload action');
+  assert(!source.state.messages['cloud-a'].some(x=>x.content==='认证超时期间仍能正常回复。'),'a saved secondary reply never uploads to overwrite primary data');assert.equal(modelCalls.length,7);assert.equal(nativeCalls.filter(x=>x.action==='account.signout').length,0);
+  // Secondary state is local only; a manual pull applies the primary, including deletions.
+  source.state.settings.hist=64;await source.journal.flush();
+  const beforeSecondaryPushes=nativeCalls.filter(x=>x.action==='account.sync'&&x.body.action==='push').length;
+  await page.evaluate(async()=>{S.settings.hist=40;save();await NorthPrivateDeviceSyncClient.syncNow();});
+  assert.equal(await page.evaluate(()=>S.settings.hist),64);assert.equal(source.state.settings.hist,64);
+  assert.equal(nativeCalls.filter(x=>x.action==='account.sync'&&x.body.action==='push').length,beforeSecondaryPushes);
   // Exercise the actual device-management UI, including server-side password and authority gates.
   const spare=(await transport('spareA',{action:'register',platform:'macOS',label:'待移除的电脑'})).device.id;
   await page.evaluate(()=>privatePhoneSyncDevicesOpen());
@@ -239,6 +217,33 @@ const devicePanel=page.locator('#privateSyncDevicesOverlay');
   await page.waitForFunction(()=>!document.getElementById('privateSyncDevicesOverlay').textContent.includes('待移除的电脑'));
   assert.equal((await transport('spareA',{action:'inspect',deviceId:spare})).error,'device_revoked_or_unknown');
   await devicePanel.getByRole('button',{name:'关闭',exact:true}).click();await page.evaluate(()=>{window.uiConfirm=fixtureOriginalConfirm;delete window.fixtureOriginalConfirm;});
+  // An explicit, confirmed single-field choice is still available on the primary.
+  async function createHistConflict(value){return page.evaluate(async value=>{
+   const ctx=NorthPrivateDeviceSyncClient.context(),row=ctx.codec.dump().find(x=>x.value?.kind==='field'&&JSON.stringify(x.value.path)==='["settings","hist"]');
+   const result=await ctx.journal.request({action:'push',changes:[{key:row.key,value:{...row.value,value},deleted:false,baseRevision:'0',mutationId:crypto.randomUUID()}]});
+   await privatePhoneSyncConflictsOpen();return result.outcomes[0].conflictId;
+  },value);}
+  const conflicts=page.locator('#privateSyncConflictOverlay');
+  async function histConflict(id){const article=conflicts.locator('article[data-conflict-id="'+id+'"]');await article.getByRole('button',{name:/查看不同修改/}).click();await article.getByText('云端当前内容',{exact:true}).waitFor();return article;}
+  const firstId=await createHistConflict(40),firstHist=await histConflict(firstId);assert((await firstHist.innerText()).includes('40'));assert((await firstHist.innerText()).includes('64'));
+  assert(await conflicts.locator('[data-conflict-list]').evaluate(el=>getComputedStyle(el).overflowY==='auto'&&el.clientHeight<=innerHeight*.56));
+  await firstHist.getByRole('button',{name:'采用云端内容',exact:true}).click();await firstHist.getByRole('button',{name:'确认采用',exact:true}).click();
+  await firstHist.waitFor({state:'detached'});assert.equal(await page.evaluate(()=>S.settings.hist),64);
+  const secondId=await createHistConflict(56),secondHist=await histConflict(secondId);await secondHist.getByRole('button',{name:'保留本机修改',exact:true}).click();
+  const heldResolution=new Promise(resolve=>{resolveSignal=resolve;});holdResolve=true;await secondHist.getByRole('button',{name:'确认采用',exact:true}).click();
+  await Promise.race([heldResolution,new Promise((_,reject)=>setTimeout(()=>reject(new Error('fixture resolve did not enter native boundary')),3000))]);
+  await page.evaluate(()=>{S.settings.hist=57;save();});resolveRelease();resolveRelease=null;
+  await secondHist.waitFor({state:'detached'});assert.equal(await page.evaluate(()=>S.settings.hist),57,'a newer primary edit survives an explicit field-level resolution');
+  await page.evaluate(async()=>{for(let n=0;n<3;n++)await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
+  await conflicts.getByRole('button',{name:'关闭',exact:true}).click();
+  await page.evaluate(async()=>{window.fixtureImage='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j4l0AAAAASUVORK5CYII=';await imgPut('fixture-sync-avatar',fixtureImage);S.me.avatar='idb:fixture-sync-avatar';const bytes=Uint8Array.from({length:1200000},(_,i)=>i%251);await mPut('fixture-sync-song',new Blob([bytes],{type:'audio/wav'}));S.music=S.music||{};S.music.songs=S.music.songs||[];S.music.songs.push({id:'fixture-sync-song',title:'同步媒体夹具',src:{t:'idb'}});save();await NorthPrivateDeviceSyncClient.syncNow();});
+  try{await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar')&&NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song')?.parts.length===2,null,{timeout:15000});}catch(error){console.log('media diagnostic',JSON.stringify({calls:nativeCalls.filter(x=>x.action==='account.sync'&&x.body.action.startsWith('media.')).map(x=>({action:x.body.action,bytes:x.body.base64?.length,result:x.result})),state:await page.evaluate(()=>({status:NorthPrivateDeviceSyncClient.status(),keys:NorthPrivateDeviceSyncClient.context()?.codec.dump().filter(x=>x.value?.kind==='media').map(x=>x.value.localKey),image:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('fixture-sync-avatar'),audio:NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('music:fixture-sync-song'),busy:replyGenerationStore()}))}));throw error;}
+  const restoredMedia=await page.evaluate(async()=>{await new Promise(async(resolve,reject)=>{const db=await imgDB(),tx=db.transaction('img','readwrite');tx.objectStore('img').delete('fixture-sync-avatar');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});await mDelIDB('fixture-sync-song');const image=await imgGet('fixture-sync-avatar'),audio=await mGet('fixture-sync-song'),bytes=new Uint8Array(await audio.arrayBuffer());return{image:image===fixtureImage,size:bytes.length,bytes:bytes.every((b,i)=>b===i%251)};});
+  assert.deepEqual(restoredMedia,{image:true,size:1200000,bytes:true});assert(objects.size>=3,'image and both audio parts are stored as encrypted account objects');
+  await page.evaluate(async()=>{const key='__role_call_loop_v1_fixture';await imgPutIDBWithRetry(key,new Blob([Uint8Array.from([1,2,3,4])],{type:'video/mp4'}));S.contacts.find(x=>x.id==='cloud-a').callLoopVideo={key,name:'既有通话视频',type:'video/mp4',size:4};save();await NorthPrivateDeviceSyncClient.syncNow();});
+  await page.waitForFunction(()=>!!NorthPrivateDeviceSyncClient.context()?.codec.mediaManifest('__role_call_loop_v1_fixture'));
+  const loopRestored=await page.evaluate(async()=>{await imgDel('__role_call_loop_v1_fixture');const blob=await imgGet('__role_call_loop_v1_fixture');return Array.from(new Uint8Array(await blob.arrayBuffer()));});assert.deepEqual(loopRestored,[1,2,3,4],'an existing raw-key call video also synchronizes without a new upload action');
+
   await page.evaluate(async({owner})=>{await NorthPrivateDeviceSyncClient.prepareAccountSwitch();fixtureToken='browserB';__SMALL_PHONE_NATIVE_ACCOUNT__={loggedIn:true,userId:owner};NorthPrivateDeviceSyncClient.accountChanged();}, {owner:ownerB});
   await page.waitForFunction(()=>NorthPrivateDeviceSyncClient.status().owner==='10000000-0000-0000-0000-000000000002'&&NorthPrivateDeviceSyncClient.status().ready&&S.contacts.some(x=>x.id==='cloud-b'),{timeout:30000});
   assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['cloud-b']);assert(!(await page.evaluate(()=>JSON.stringify(S))).includes('云端角色甲的云端历史消息'));
