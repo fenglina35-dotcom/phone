@@ -127,6 +127,22 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
  }finally{await db.close();}
 });
 
+test('legacy non-expiring managed connections remain readable and metadata updates preserve credentials',async()=>{
+ for(const auth of ['none','bearer']){
+  const owner='10000000-0000-0000-0000-000000000001',id='legacy-'+auth,masterKey='c'.repeat(43),calls=[];let wrapped,ciphertext,preparedCipher;
+  const value={id,name:'已验证连接',provider:'cloudflare',url:'https://docs.mcp.cloudflare.com/mcp',auth,token:auth==='bearer'?'fixture-credential-must-survive':'',refresh:'',clientSecret:'',enabled:true,roles:['role-a'],disabledTools:[],mode:'ask',state:'connected',rev:2,tools:[{name:'read',inputSchema:{type:'object'},annotations:{readOnlyHint:true}}],description:'保留原文 {"exp":undefined}'};
+  const store={key:async(_,candidate)=>wrapped||(wrapped=candidate),rpc:async(name,args)=>{calls.push(name);if(name==='private_phone_sync_assert_device')return {};if(name==='private_phone_mcp_read')return args.p_id?{connection:{id,active:true,deleted:false,revision:'2',ciphertext}}:{connections:[{id,active:true,deleted:false,revision:'2',ciphertext}],nextCursor:null};if(name==='private_phone_mcp_put'){preparedCipher=args.p_ciphertext;return {};}throw new Error('unexpected RPC');}};
+  const cipher=createAccountCipher({store,masterKey,cryptoAPI:webcrypto}),keys=await cipher.accountKeys(owner),aad='private-phone-mcp/connection/'+owner+'/main/'+id;
+  ciphertext=await cipher.seal(keys.aes,JSON.stringify(value).slice(0,-1)+',"exp":undefined}',aad);
+  const handler=createVaultHandler({store,authenticate:async()=>({userID:owner,sessionID:'20000000-0000-0000-0000-000000000001'}),masterKey,cryptoAPI:webcrypto});
+  const send=async body=>{const r=await handler(new Request('https://fixture.test/vault',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer fixture'},body:JSON.stringify({deviceId:'30000000-0000-0000-0000-000000000001',accountId:'main',...body})}));return {status:r.status,json:await r.json()};};
+  const result=await send({action:'list'});assert.equal(result.status,200,JSON.stringify(result.json));assert.equal(result.json.connections[0].description,value.description);assert.equal(result.json.connections[0].token,'');assert.deepEqual(result.json.connections[0].roles,['role-a']);assert(!calls.includes('private_phone_mcp_put'),'reading old format never rewrites existing encrypted credentials');
+  const migrated=await send({action:'put',phase:'prepare',migrationId:'50000000-0000-0000-0000-000000000001',baseRevision:'2',connection:{...result.json.connections[0],mode:'auto'}});assert.equal(migrated.status,200,JSON.stringify(migrated.json));
+  const restored=JSON.parse(await cipher.open(keys.aes,preparedCipher,aad,1800000));assert.equal(restored.token,value.token);assert.equal(restored.description,value.description);assert(!Object.hasOwn(restored,'exp'));
+  ciphertext=await cipher.seal(keys.aes,JSON.stringify(value).slice(0,-1)+',"other":undefined}',aad);assert.equal((await send({action:'list'})).status,503,'no general tolerant parser for arbitrary malformed credentials');
+ }
+});
+
 test('MCP vault Auth outages remain temporary instead of impersonating expired login',async()=>{
  for(const status of [429,500,502,503]){
   let calls=0;const handler=createSupabaseVault({url:'https://fixture.supabase.co',serviceKey:'fixture-server-only',masterKey:'c'.repeat(43),fetchAPI:async url=>{calls++;assert.equal(new URL(url).pathname,'/auth/v1/user');return Response.json({message:'fixture-secret-upstream'},{status});}});

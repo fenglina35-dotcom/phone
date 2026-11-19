@@ -59,6 +59,7 @@ test('private account sync retains automatic content hydration, scoped native st
  assert(read(PRIVATE).includes('MCP_VERIFY_SYNC_STAGE_V1'));
  for(const file of [WEB,PRIVATE])assert(read(file).includes('MCP_VERIFIED_CONNECTION_RETAIN_V1'));
  assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('PRIVATE_MCP_AUTH_OUTAGE_V1'));
+ assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('PRIVATE_MCP_LEGACY_EXP_V1'));
  assert(native.includes('PRIVATE_STORAGE_SOURCE_COLLISION_V1'));
  assert(native.includes('PRIVATE_NATIVE_CORE_CAS_V1'));
  assert(read('supabase/migrations/202611170003_private_phone_primary_device.sql').includes('PRIVATE_PRIMARY_DEVICE_V1'));

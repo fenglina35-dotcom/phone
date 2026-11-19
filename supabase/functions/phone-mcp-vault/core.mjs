@@ -18,7 +18,28 @@ const errors=new Set(['device_revoked','device_revoked_or_unknown','connection_c
 class VaultError extends Error {constructor(code,status=400){super(code);this.status=status;}}
 function check(ok,code='invalid_request',status=400){if(!ok)throw new VaultError(code,status);}
 function object(v){return !!v&&typeof v==='object'&&!Array.isArray(v);}
-function canonical(v){if(v===null||typeof v!=='object')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';}
+function canonical(v){if(v===null||typeof v!=='object')return JSON.stringify(v);if(Array.isArray(v))return '['+v.map(canonical).join(',')+']';return '{'+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';}
+// PRIVATE_MCP_LEGACY_EXP_V1: v1 metadata updates inserted one bare undefined
+// at the root exp field for non-expiring connections. Recover only that exact
+// old representation, after authenticated decryption; never repair other JSON.
+function connectionJSON(text){
+ try{return JSON.parse(text);}catch(original){
+  let depth=0,legacy=-1,expKeys=0;
+  for(let i=0;i<text.length;i++){
+   const ch=text[i];if(ch==='"'){
+    const start=i;for(i++;i<text.length;i++){if(text[i]==='\\'){i++;continue;}if(text[i]==='"')break;}
+    if(depth!==1)continue;let end=i+1;while(/\s/.test(text[end]||'')&&end<text.length)end++;
+    if(text[end]!==':'||JSON.parse(text.slice(start,i+1))!=='exp')continue;
+    expKeys++;end++;while(/\s/.test(text[end]||'')&&end<text.length)end++;
+    if(text.slice(end,end+9)==='undefined'&&/^[\s,}]/.test(text.slice(end+9,end+10)))legacy=end;
+   }else if(ch==='{'||ch==='[')depth++;else if(ch==='}'||ch===']')depth--;
+  }
+  if(legacy<0||expKeys!==1)throw original;
+  const value=JSON.parse(text.slice(0,legacy)+'null'+text.slice(legacy+9));
+  if(!object(value)||value.exp!==null)throw original;delete value.exp;return value;
+ }
+}
+
 function b64(v){let s='';for(let at=0;at<v.length;at+=8192)s+=String.fromCharCode(...v.subarray(at,at+8192));return btoa(s).replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');}
 function unb64(v){check(typeof v==='string'&&/^[A-Za-z0-9_-]+$/.test(v),'invalid_approval');try{return Uint8Array.from(atob(v.replaceAll('-','+').replaceAll('_','/')+'='.repeat((4-v.length%4)%4)),x=>x.charCodeAt(0));}catch{throw new VaultError('invalid_approval');}}
 function destination(raw){let u;try{u=new URL(raw);}catch{throw new VaultError('unsupported_destination');}check(u.protocol==='https:'&&hosts.has(u.hostname)&&(!u.port||u.port==='443')&&!u.username&&!u.password&&!u.hash&&!Array.from(u.searchParams.keys()).some(k=>/token|key|secret|password|authorization/i.test(k)),'unsupported_destination');return u.href;}
@@ -41,7 +62,7 @@ function sanitizeConnection(input,previous){
   }
   check(typeof(c[key]||'')==='string'&&String(c[key]||'').length<=16000&&!/[\r\n]/.test(String(c[key]||'')),'invalid_credential');
  }
- if(c.accountManaged&&previous&&!input.token)c.exp=previous.exp;
+ if(c.accountManaged&&previous&&!input.token){if(previous.exp===undefined)delete c.exp;else c.exp=previous.exp;}
  if(c.oauth?.token_endpoint){destination(c.oauth.token_endpoint);check((tokenHosts[new URL(c.url).hostname]||[]).includes(new URL(c.oauth.token_endpoint).hostname),'unsupported_oauth_destination');}
  if(c.oauthResource){destination(c.oauthResource);check(new URL(c.oauthResource).origin===new URL(c.url).origin,'unsupported_oauth_resource');}
  if(c.auth==='oauth'&&c.refresh)check(c.oauth?.token_endpoint&&typeof c.clientId==='string'&&['none','client_secret_basic','client_secret_post'].includes(c.clientAuth||'none'),'invalid_oauth');
@@ -80,7 +101,7 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    diagnosticStage='device-authorization';await store.rpc('private_phone_sync_assert_device',{p_user:scope.p_user,p_session:scope.p_session,p_device:scope.p_device});
    diagnosticStage='account-key';keys=await accountKeys(scope.p_user);
    const aad=id=>'private-phone-mcp/connection/'+scope.p_user+'/'+scope.p_account+'/'+id;
-   const decrypt=async row=>row?.ciphertext?JSON.parse(await open(keys.aes,row.ciphertext,aad(row.id),1800000)):null;
+   const decrypt=async row=>row?.ciphertext?connectionJSON(await open(keys.aes,row.ciphertext,aad(row.id),1800000)):null;
    async function read(id){return(await store.rpc('private_phone_mcp_read',{...scope,p_id:id,p_after:''})).connection;}
    diagnosticStage=['list','put','remove','rpc'].includes(body.action)?'connection-'+body.action:'invalid-action';
    if(body.action==='list'){
@@ -135,7 +156,7 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
    const outcomeAAD='private-phone-mcp/outcome/'+scope.p_user+'/'+scope.p_account+'/'+connId+'/'+operation;
    if(claim.state==='complete')return reply(JSON.parse(await open(keys.aes,claim.ciphertext,outcomeAAD,outcomeEnvelopeLimit)));
    check(claim.state==='claimed','operation_result_unknown',409);
-   diagnosticStage='rpc-claim-decrypt';c=JSON.parse(await open(keys.aes,claim.ciphertext,aad(connId),1800000));
+   diagnosticStage='rpc-claim-decrypt';c=connectionJSON(await open(keys.aes,claim.ciphertext,aad(connId),1800000));
    const progress=(phase,ciphertext=null)=>store.rpc('private_phone_mcp_progress',{...scope,p_id:connId,p_operation:operation,p_lease:lease,p_phase:phase,p_ciphertext:ciphertext});
    if(c.auth==='oauth'&&c.token&&c.exp&&now()>=c.exp){
     check(c.refresh&&c.oauth?.token_endpoint,'reauthorization_required',401);
