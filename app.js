@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1946'){
+if(window.__NORTH_SHELL_BUILD__!=='1947'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -621,7 +621,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1946 · 修复本机存档状态冲突与迟到保存';
+const APP_VER='v1947 · 存档回执安全核验';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2354,7 +2354,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1946&r=v1946-owner-todo-report-1';
+  const url='sw.js?v=1947&r=v1947-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -21818,8 +21818,8 @@ function checkStorageWarn(){refreshStorageEstimate();if(_storeWarned)return;cons
   openModal(`<h3>${realDanger?'手机存储快满了':'核心存档偏大'}</h3><div style="font-size:14px;line-height:1.9;color:#333">${realDanger?`${si.native?'手机总空间':'浏览器总空间'}已经用了 <b style="color:#fa5151">${si.native?si.nativePct:si.devicePct}%</b>。`:`核心存档用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB</b>，最近没有确认保存成功。`}<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 用「清理缓存垃圾」或删一些旧聊天图片</div>
     <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
 let _storageFailureToastAt=0,_storageFailureModalAt=0;
-function storageSaveFailure(e,largeStore){const now=Date.now(),msg=largeStore?'浏览器大容量存储暂时不可用，刚才的改动可能尚未落盘':'保存失败，先别退出并尽快导出备份';if(now-_storageFailureToastAt>60000){_storageFailureToastAt=now;toast(msg);}if(now-_storageFailureModalAt>300000){_storageFailureModalAt=now;storageFullAlert(e,largeStore);}}
-function storageFullAlert(e,largeStore){const quota=isQuotaError(e),largeReason=privateNativeAppOn()?'<br>这表示原生主存档与备用数据库本次都没有确认写入；不等于手机总空间已满，可能是 WebKit 数据库或原生存储桥暂时中断。':'<br>这通常是无痕/隐私模式、浏览器禁止网站存储，或系统正在回收站点空间。';openModal(`<h3>${largeStore?'大容量存档保存失败':quota?'核心存档写不进去了':'保存失败'}</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能确认写入。${largeStore?largeReason:quota?'<br>核心存档会自动尝试迁入大容量存储，不代表手机总存储真的满。':''}<br><br>建议：<br>1️⃣ 保持本页开启并点下面导出备份<br>2️⃣ 退出无痕模式，确认浏览器允许网站保存数据</div>
+function storageSaveFailure(e,largeStore){const now=Date.now(),msg=largeStore?(privateNativeAppOn()?'本次保存尚未确认，请保持小手机开启':'浏览器大容量存储暂时不可用，刚才的改动可能尚未落盘'):'保存失败，先别退出并尽快导出备份';try{if(privateNativeAppOn()&&typeof window.__smallPhoneNativeDiag==='function'){const text=String(e&&e.message||''),category=e&&e.code==='CORE_REVISION_CHANGED'?'mirror_revision_changed':/storage_revision_changed/.test(text)?'native_revision_changed':/storage_account_changed/.test(text)?'account_changed':/超时|timeout/i.test(text)?'native_timeout':isQuotaError(e)?'quota':'unconfirmed';window.__smallPhoneNativeDiag('storage.save.unconfirmed',{category,largeStore:!!largeStore},0);}}catch(_){}if(now-_storageFailureToastAt>60000){_storageFailureToastAt=now;toast(msg);}if(now-_storageFailureModalAt>300000){_storageFailureModalAt=now;storageFullAlert(e,largeStore);}}
+function storageFullAlert(e,largeStore){const quota=isQuotaError(e),largeReason=privateNativeAppOn()?'<br>本次保存没有完成核验，不能据此判断所有数据丢失或手机空间已满。已保存的数据会保留；尚未确认的改动请先保留在当前页面。':'<br>这通常是无痕/隐私模式、浏览器禁止网站存储，或系统正在回收站点空间。';openModal(`<h3>${largeStore?(privateNativeAppOn()?'本次保存尚未确认':'大容量存档保存失败'):quota?'核心存档写不进去了':'保存失败'}</h3><div style="font-size:14px;line-height:1.9;color:inherit">刚才有内容没能确认写入。${largeStore?largeReason:quota?'<br>核心存档会自动尝试迁入大容量存储，不代表手机总存储真的满。':''}<br><br>建议：<br>1️⃣ 保持本页开启并点下面导出备份<br>${privateNativeAppOn()?'2️⃣ 暂时不要卸载、清除数据或用旧备份覆盖；若提示持续出现，请保留诊断供排查':'2️⃣ 退出无痕模式，确认浏览器允许网站保存数据'}</div>
   <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">立即导出备份</button></div>`);}
 
 /* ---------- 私人 App / 网页硬隔离 ---------- */

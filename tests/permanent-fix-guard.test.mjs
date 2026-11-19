@@ -2234,3 +2234,6 @@ test('Spotify public catalog stays separate from personal account and Gmail gran
 test('both bundles retain named provider ranking in the bounded MCP catalog',()=>{for(const file of [WEB,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])assert(read(file).includes('MCP_CATALOG_PROVIDER_ORDER_V1'),file);});
 
 test('Mac card hosting preserves iPhone capability and native main-frame boundaries',()=>{for(const file of [WEB,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){assert(read(file).includes('MCP_MAC_OFFICIAL_HOST_V1'),file);assert(read(file).includes('MCP_OFFICIAL_CARD_LINK_V1'),file);}const mac=read('native/private-small-phone/XcodeProject/PhoneCompanionMac/MacPhoneBridge.swift');assert(mac.includes('message.frameInfo.isMainFrame'));assert(mac.includes('mainDocument(message.frameInfo.request.url)'));});
+
+
+test('native core lost receipts require exact readback without adopting competing revisions',()=>{assert(read(PRIVATE).includes('PRIVATE_CORE_RECEIPT_READBACK_V1'));});

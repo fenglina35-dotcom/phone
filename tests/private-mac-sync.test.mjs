@@ -1094,3 +1094,21 @@ test('account changes release predecessor bodies and pending review from another
  const source=read(PRIV_DIR+'app.js'),first='10000000-0000-0000-0000-000000000001',second='10000000-0000-0000-0000-000000000002';
  const ctx=vm.createContext({window:{__SMALL_PHONE_NATIVE_ACCOUNT__:{userId:second}},_privateNativeCoreHeads:new Map([[first+'|__core_state|json','PRIVATE_PREDECESSOR'],[first+'|__core_state','a'.repeat(64)]]),_privateCoreBootConflict:{owner:first}});vm.runInContext(fnSource(source,'privateAccountDataIdentity'),ctx);assert.equal(ctx.privateAccountDataIdentity(),second);assert(!ctx._privateNativeCoreHeads.has(first+'|__core_state|json'));assert.equal(ctx._privateCoreBootConflict,null);
 });
+
+test('lost native save receipt is reconciled only against the exact committed operation',async()=>{
+ const source=read(PRIV_DIR+'app.js'),owner='10000000-0000-0000-0000-000000000001',parent='a'.repeat(64),head='b'.repeat(64),json=JSON.stringify({_deviceSyncOwner:owner,contacts:[{id:'kept'}],messages:{__idb:'messages'}}),digest=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(json))).toString('hex');
+ for(const mismatch of ['', 'body','parent','version','time','digest','account','missing']){
+  let activeOwner=owner,puts=0,gets=0;
+  const heads=new Map([[owner+'|__core_state',parent],[owner+'|__core_state|json','previous']]);
+  const ctx=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true,SmallPhoneNative:{async request(action,args){
+   if(action==='storage.put'){puts++;if(puts===1)throw new Error('原生请求超时：storage.put');throw new Error('storage_revision_changed');}
+   assert.equal(action,'storage.get');gets++;assert.equal(args.primaryOnly,true);
+   if(mismatch==='account')activeOwner='other';
+   return {found:mismatch!=='missing',primaryOnly:true,ver:mismatch==='version'?2:1,savedAt:mismatch==='time'?201:200,stateJSON:mismatch==='body'?json+' ':json,contentSHA256:head,stateSHA256:mismatch==='digest'?'c'.repeat(64):digest,parentSHA256:mismatch==='parent'?'d'.repeat(64):parent};
+  }}},_privateNativeCoreHeads:heads,privateAccountStateIdentity:()=>activeOwner,privateAccountLegacyIdentity:()=>owner,CORE_IDB_KEY:'__core_state',crypto:webcrypto,TextEncoder,Uint8Array,setTimeout:fn=>{fn();}});
+  for(const name of ['privateNativeCorePut','privateNativeCoreGet','privateVerifyCoreMirror'])vm.runInContext(fnSource(source,name),ctx);
+  const pending=ctx.privateNativeCorePut('__core_state',{owner,ver:1,savedAt:200,json});
+  if(!mismatch){const result=await pending;assert.equal(result.contentSHA256,head);assert.equal(result.previousJSON,'previous');assert.equal(puts,1,'already committed write must not be replayed');assert.equal(gets,1);assert.equal(heads.get(owner+'|__core_state'),head);}
+  else{await assert.rejects(pending,/storage_revision_changed|storage_account_changed/);assert.equal(heads.get(owner+'|__core_state'),parent,mismatch+' must not silently adopt another CAS head');assert.equal(heads.get(owner+'|__core_state|json'),'previous');}
+ }
+});
