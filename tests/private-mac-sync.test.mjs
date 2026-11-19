@@ -1048,3 +1048,11 @@ test('quiet server check returns no chat, media or key material and enforces the
  const response=await rest(new Request('https://fixture.invalid/sync',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({protocolVersion:2,action:'check',deviceId,cursor:'42'})}));assert.equal(response.status,200);assert.equal((await response.json()).changed,false);assert.equal(requests.length,4);
 
 });
+
+test('same-owner sync publication rebinds the live composer without weakening account or role guards',()=>{
+ const old={_deviceSyncOwner:'owner-a'},next={_deviceSyncOwner:'owner-a'},ta={isConnected:true,_chatOwner:old,_chatId:'r',_chatAccount:'main',value:'draft'},page={p:'chat',id:'r'};let paints=0;
+ const c=vm.createContext({S:next,cur:()=>page,actId:()=> 'main',getC:()=>({id:'r'}),document:{getElementById:()=>ta},chatComposerStateSync:()=>{paints++;}});
+ vm.runInContext(fnSource(read(PRIV_DIR+'private-device-sync-client.js'),'adoptPublishedComposer'),c);
+ c.adoptPublishedComposer(old,'owner-a');assert.equal(ta._chatOwner,next);assert.equal(ta.value,'draft');assert.equal(paints,1);
+ for(const mismatch of ['owner','wechat','role']){ta._chatOwner=old;ta._chatAccount=mismatch==='wechat'?'other':'main';page.id=mismatch==='role'?'other':'r';c.S=mismatch==='owner'?{_deviceSyncOwner:'other'}:next;c.adoptPublishedComposer(old,'owner-a');assert.equal(ta._chatOwner,old);assert.equal(paints,1);}
+});

@@ -125,6 +125,7 @@ test('private HTML account sync: real hydration, secondary manual tools, stable 
   await page.evaluate(async()=>{await NorthPrivateDeviceSyncClient.syncNow();await NorthPrivateDeviceSyncClient.waitForIdle();});
   await page.locator('#chatbg').getByText('另一设备新增的消息',{exact:true}).waitFor();
   assert(await page.evaluate(()=>fixtureComposer===document.querySelector('#cinput')&&document.activeElement===fixtureComposer&&fixtureComposer.value==='尚未发送的草稿'),'remote arrival preserves draft, node and focus');
+  await input.fill('同步后回车发送验证');await input.press('Enter');await page.locator('#chatbg').getByText('同步后回车发送验证',{exact:true}).waitFor({timeout:5000});assert.equal(modelCalls.length,0,'sending after remote publication keeps manual-reply mode');
   await page.evaluate(()=>openSettings('data'));
   await page.getByText('额外备份与恢复',{exact:true}).click();
   await page.evaluate(()=>{window.fixtureRefreshContext=NorthPrivateDeviceSyncClient.context();});

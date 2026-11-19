@@ -2213,3 +2213,5 @@ test('Mac export can use the user-selected save panel inside the sandbox',()=>{c
 test('MCP modern routes preserve required headers and Supabase discovery',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['MCP_MODERN_ROUTING_HEADERS_V1','MCP_SUPABASE_MODERN_DISCOVERY_V1','MCP_PROVIDER_ERROR_DETAIL_V1'])assert(read(file).includes(marker));assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('MCP_MODERN_ROUTING_HEADERS_V1'));});
 
 test('private Gmail keeps the formal API path without adding send or delete tools',()=>{const src=read('services/phone-mcp-connect/handlers.mjs');assert(src.includes('MCP_GMAIL_REST_V1'));assert(src.includes('https://gmail.googleapis.com/gmail/v1/users/me'));assert(!src.includes('gmailmcp.googleapis.com'));assert(src.includes("const WRITE = new Set(['create_draft'])"));});
+
+test('private sync keeps the focused same-account composer usable after publication',()=>{assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js').includes('PRIVATE_SYNC_COMPOSER_OWNER_V1'));});

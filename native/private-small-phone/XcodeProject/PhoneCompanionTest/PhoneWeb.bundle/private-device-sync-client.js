@@ -286,15 +286,22 @@
  }
  function installMediaHooks(){for(const [getName,putName,prefix] of [['imgGet','imgPut',''],['mGet','mPut','music:'],['cinGet','cinPut','cinema:']]){const originalGet=mediaOriginal[getName],originalPut=mediaOriginal[putName];if(typeof originalGet==='function')root[getName]=async function(key,owner){const active=String(S._deviceSyncOwner||privateAccountDataIdentity()),value=await originalGet.apply(this,arguments);if(value!=null||owner&&owner!==active||!mediaAllowed(prefix+key))return value;try{return await fetchMedia(prefix+key);}catch(_){return null;}};if(typeof originalPut==='function')root[putName]=async function(key,value,owner){const captured=String(owner||value?.owner||S._deviceSyncOwner||privateAccountDataIdentity()),result=await originalPut.apply(this,arguments);if(captured===String(S._deviceSyncOwner||privateAccountDataIdentity()))queueMedia(prefix+key,true);return result;};}}
  function isBusy(){return !!(activeModels||typeof replyGenerationStore==='function'&&Object.keys(replyGenerationStore()).length>waitingReplies+finishingReplies||typeof _fullBackupImportBusy!=='undefined'&&_fullBackupImportBusy||typeof _off!=='undefined'&&_off?.busy||typeof _call!=='undefined'&&_call||typeof _momentReplyBusy!=='undefined'&&_momentReplyBusy.size);}
+ // PRIVATE_SYNC_COMPOSER_OWNER_V1: preserve the editor session while adopting only a verified same-owner publication.
+ function adoptPublishedComposer(previous,owner){
+  if(!owner||String(previous?._deviceSyncOwner||'')!==owner||String(S._deviceSyncOwner||'')!==owner||typeof cur!=='function'||typeof actId!=='function')return;
+  const page=cur(),ta=typeof document.getElementById==='function'?document.getElementById('cinput'):null,role=page?.p==='chat'&&typeof getC==='function'?getC(page.id):null;
+  if(!ta||!ta.isConnected||!role||role.deleted||ta._chatOwner!==previous||ta._chatId!==page.id||ta._chatAccount!==actId())return;
+  ta._chatOwner=S;if(typeof chatComposerStateSync==='function')chatComposerStateSync(ta);
+ }
  async function replaceState(next,guard){
   guard();const previous=S;applying=true;
   try{
    const user=client.status().owner;if(String(previous._deviceSyncOwner||'')!==user){_imgCache={};_imgRev=new Map();_imgReady=new Set();_heavy={};_heavyStamp={};_heavyReady=new Set();}
-   S=mergeStateData(next);S._deviceSyncOwner=user;normalizeLoadedState();guard();if(!await saveNowAsync())throw new Error('账号内容保存未完成');guard();if(typeof phoneFriendState==='function')phoneFriendState();
+   S=mergeStateData(next);S._deviceSyncOwner=user;normalizeLoadedState();guard();if(!await saveNowAsync())throw new Error('账号内容保存未完成');guard();if(typeof phoneFriendState==='function')phoneFriendState();adoptPublishedComposer(previous,user);
    if(typeof cur==='function'&&cur().p==='chat'&&typeof refreshChatMessages==='function')refreshChatMessages(cur().id);
    else if(!document.activeElement?.matches?.('input,textarea,select,[contenteditable="true"]')&&typeof render==='function')render();
   }
-  catch(e){S=previous;throw e;}finally{applying=false;}
+  catch(e){const failed=S;S=previous;adoptPublishedComposer(failed,String(previous._deviceSyncOwner||''));throw e;}finally{applying=false;}
  }
  function cancelReplies(){closeConflictPanel();closeDevicePanel();try{const aids=(S.me?.accounts||[]).map(x=>x.id);if(!aids.length)aids.push('main');for(const contact of S.contacts||[])for(const aid of aids)if(typeof replyTouch==='function')replyTouch(contact.id,aid);}catch(_){} }
  async function onAccount(status){
