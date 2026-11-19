@@ -451,6 +451,22 @@ test('MCP budget: persona and recent context take priority over unrelated module
  assert.equal(await s.M.roleReply([{role:'system',content:'unrelated-module-private-context'},{role:'user',content:'昨天说想去植物园'},{role:'assistant',content:'我记着。'},{role:'user',content:'帮我查笔记。'}],{mcpContext:ctx}),'给你查好了。');
 });
 
+test('MCP catalog ranks a named provider despite a decorated connection label and a large earlier catalog',async()=>{
+ for(const variant of ['web','private']){
+  const search={name:'spotify_search',description:'只读搜索公开歌曲',inputSchema:{type:'object',properties:{query:{type:'string'}},required:['query']},annotations:{readOnlyHint:true}};
+  const s=guideSandbox((url,init,body)=>body?.method==='tools/list'?reply({jsonrpc:'2.0',id:body.id,result:{tools:url.includes('music.fixture')?[search]:Array.from({length:20},(_,i)=>({...readTool,name:'cloudflare_read_'+i,description:'Cloudflare 文档工具 '+('资料说明'.repeat(40))}))}}):null,variant);
+  await connected(s);const c=s.M.add({provider:'spotify',name:'Spotify 公开曲库（仅搜歌）',url:'https://music.fixture.invalid/mcp',auth:'none'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode:'ask'});
+  const source={id:'music-request',role:'user',content:'帮我用 Spotify 搜 Adele 的 Hello'},ctx=s.M.context('role-a',()=>true,source),settings=JSON.stringify(s.state.settings);let n=0;
+  const alias=ctx.catalog.find(x=>x.c.id===c.id).alias;
+  s.ctx.chatAPI=async rows=>{n++;if(n===1){const catalogRow=rows.find(x=>x.content.startsWith('<tool_catalog>'));assert(catalogRow.content.includes('spotify_search'),'named service must be visible before any read or external call');return call(alias,{query:'Adele Hello'});}return '已按真实回执找到歌曲。';};
+  const work=s.M.roleReply([{role:'user',content:source.content}],{mcpContext:ctx});work.catch(()=>{});
+  for(let i=0;i<30&&!s.panels.length;i++)await new Promise(r=>setImmediate(r));
+  if(!s.panels.length){await work;assert.fail('expected per-call approval');}
+  assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);const approval=s.panels.at(-1).id.replace('mcp-confirm-','');s.M.approve(approval,true);
+  assert.equal(await work,'已按真实回执找到歌曲。');const calls=s.calls.filter(x=>x.body?.method==='tools/call');assert.equal(calls.length,1);assert.equal(calls[0].body.params.name,'spotify_search');assert.equal(ctx.catalog.length,21);assert.equal(JSON.stringify(s.state.settings),settings);
+ }
+});
+
 test('MCP cards: Spotify uses its official player and preserves legacy direct-audio API compatibility',async()=>{
  const track={id:'4uLU6hMCjMI75M1A2tKUQC',type:'track',name:'真实返回的歌名',artists:[{name:'真实歌手'}],preview_url:'https://p.scdn.co/mp3-preview/fixture',external_urls:{spotify:'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'}},s=sandbox((u,i,b)=>b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result:{structuredContent:{tracks:{items:[track]}},content:[]}}):null);
  const c=await connected(s);s.M.configure(c.id,{provider:'spotify'});const message={id:'song-source',role:'user',content:'推荐音乐'},ctx=s.M.context('role-a',()=>true,message);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});
