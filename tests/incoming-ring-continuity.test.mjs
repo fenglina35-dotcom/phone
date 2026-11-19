@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import vm from 'node:vm';
+import {read as currentRead, fnSource, BUNDLES} from './_helpers.mjs';
 
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const source=read('app.js');
@@ -82,4 +84,29 @@ test('sound-off incoming calls do not start ringtone playback',()=>{
   const selected=start.indexOf("incomingRingKey()==='music'");
   const fallback=start.indexOf('incomingRingAssetStart(incomingRingUrl(),false)');
   assert.ok(soundCheck>=0&&selected>soundCheck&&fallback>soundCheck);
+});
+
+for(const [name,file] of BUNDLES)test(`${name}: missed calls require the presented session and current account`,()=>{
+ const src=currentRead(file),rows=[],timers=[],events=[],role={id:'r',name:'角色'};let aid='main',banner={className:'',innerHTML:''};
+ const c=vm.createContext({S:{me:{name:'测试'},settings:{}},Date,Math,actId:()=>aid,uid:()=>String(timers.length+1),
+  cohabCallRestricted:()=>false,roleOnlineProactiveBlocked:()=>false,cinemaRoleOccupied:()=>false,getC:()=>role,
+  $:()=>banner,av:()=>'',esc:v=>v,svgIc:()=>'',roleServerPushCallStarted:()=>{},initAudio:()=>{},ringStart:()=>{},appNotify:()=>{},
+  setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout:()=>{},ringStop:()=>{},endCallTimers:()=>{},audioRouteReset:()=>{},hideCallBanner:()=>{},callClearPersist:()=>{},renderCall:()=>{},roleServerPushCallEnded:()=>{},phAddRecent:()=>{},phRoleNumber:()=>'',msgs:()=>rows,save:()=>{},cur:()=>({p:'home'}),completedTurnContinuation:()=>'',wechatNaturalCallEventNote:v=>v,scheduleFeatureReply:(...args)=>events.push(args)});
+ vm.runInContext('var _call=null,_callMissT=0,_callBusy=false,_callPend=null,_callVisionPend=[],_callStatePend=null,_callStateEpoch=0;',c);
+ for(const fn of ['incomingCall','showCallBanner','callMissed'])vm.runInContext(fnSource(src,fn),c);
+ banner=null;assert.equal(c.incomingCall('r','voice'),false);assert.equal(c._call,null);assert.equal(timers.length,0);
+ banner={className:'',innerHTML:''};assert.equal(c.incomingCall('r','voice'),true);assert.equal(banner.className,'msgbanner show');
+ const oldSession=c._call.session;c._call.session='newer-session';timers[0]();assert.equal(rows.length,0,'a queued timeout from another call must not create a missed event');
+ aid='other';c.callMissed('r','newer-session');assert.equal(rows.length,0,'call events never cross accounts');aid='main';
+ c.callMissed('r','newer-session');c.callMissed('r',oldSession);assert.equal(rows.length,1);assert.equal(events.length,1);assert.equal(c._call,null);
+ for(let i=0;i<2;i++){assert.equal(c.incomingCall('r','voice'),true);c.callMissed('r',c._call.session);}
+ assert.equal(rows.length,3);assert.equal(c.incomingCall('r','video'),false,'three real unanswered calls exhaust the existing limit');aid='other';assert.equal(c.incomingCall('r','voice'),true,'another account has its own sequence');c.callMissed('r',c._call.session);aid='main';role._cbTries=0;assert.equal(c.incomingCall('r','video'),true,'a new user interaction allows a new real series');
+});
+
+for(const [name,file] of BUNDLES)test(`${name}: call facts distinguish real system records from model claims`,()=>{
+ const rows=[{role:'assistant',type:'text',content:'我打了电话，你又没接'}],c=vm.createContext({msgsForAccount:()=>rows,actId:()=> 'main',_call:null});vm.runInContext(fnSource(currentRead(file),'wechatCallTruthPrompt'),c);
+ assert.match(c.wechatCallTruthPrompt('r','main'),/没有系统确认的未接或拒接记录/);
+ rows.push({role:'user',type:'sys',content:'未接来电 · 视频通话',time:12});assert.match(c.wechatCallTruthPrompt('r','main'),/12 未接来电/);
+ c._call={id:'r',accountId:'other',state:'incoming',presented:true};assert.match(c.wechatCallTruthPrompt('r','main'),/没有正在响铃/);
+ c._call.accountId='main';assert.match(c.wechatCallTruthPrompt('r','main'),/正在显示的来电邀请/);
 });

@@ -82,7 +82,7 @@ assert.ok(onlineFinallyLine,'online reply finally must attach real action outcom
 assert.doesNotMatch(onlineFinallyLine,/roleInterceptDiagnosticOnlyHandled/,'finally must not infer success from a tag name alone');
 assert.match(onlineFinallyLine,/roleInterceptDiagnosticTurnOutcome\(_replyAudit,\{handled:_replyAuditHandled\?1:0,failed:_replyAuditPartial\?1:0\}\);roleInterceptDiagnosticTurnFinish/);
 assert.match(source,/forceRequestedVoiceReply[\s\S]{0,160}if\(_replyActionOutcome\.handled\)_replyAuditHandled=true;if\(_replyActionOutcome\.failed\)_replyAuditPartial=true;/);
-assert.match(source,/_queueReplyIncoming=kind=>\{const pending=new Promise[\s\S]{0,700}roleInterceptDiagnosticTurnRememberFailure/);
+assert.match(source,/_queueReplyIncoming=kind=>\{if\(_replyDeferredIncoming\.length\)return _replyDeferredIncoming\[0\];const pending=new Promise[\s\S]{0,700}roleInterceptDiagnosticTurnRememberFailure/);
 assert.match(source,/content=content\.replace\([^\n]+来电[^\n]+_queueReplyIncoming\(k==='视频'\?'video':'voice'\);return '';/);
 assert.match(source,/hiddenThoughtTags=\[\.\.\.String\(line\|\|''\)\.matchAll[\s\S]{0,420}hiddenThoughtFailed=hiddenThoughtTags\.some[\s\S]{0,260}if\(hiddenThoughtFailed\)_replyAuditPartial=true;else _replyAuditHandled=true;/);
 assert.match(source,/\[心情值\\\|[\s\S]{0,180}if\(adjMood\(id,parseInt\(mm\[1\],10\)\|\|0\)\)_replyAuditHandled=true;else _replyAuditPartial=true;/);
@@ -195,13 +195,13 @@ const settleIncomingLine=source.split(/\r?\n/).find(line=>line.includes('const c
 assert.ok(queueAssignment&&inlineIncomingCallLine&&settleIncomingLine,'deferred incoming-call producer, consumer and result settlement must all exist');
 async function runInlineIncoming(callResult){
   let calls=0,rememberedFailures=0;const ctx={
-    Promise,
+    Promise,replyStale:()=>false,actId:()=> 'main',
     setTimeout:fn=>{fn();return 1;},
     incomingCall:()=>{calls++;return callResult;},
     roleInterceptDiagnosticTurnRememberFailure:()=>{rememberedFailures++;return true;}
   };
   vm.createContext(ctx);
-  vm.runInContext(`this.run=async function(raw){const c={id:'a'},_explicitCallTurn=false,_replyAudit={},_replyDeferredIncoming=[];let content=raw,_replyAuditHandled=false,_replyAuditPartial=false;let ${queueAssignment};${inlineIncomingCallLine.trim()}${settleIncomingLine.trim()}return{content,handled:_replyAuditHandled,partial:_replyAuditPartial};};`,ctx);
+  vm.runInContext(`this.run=async function(raw){const c={id:'a'},id='a',replyToken=0,replyAccount='main',_explicitCallTurn=false,_replyAudit={},_replyDeferredIncoming=[];let content=raw,_replyAuditHandled=false,_replyAuditPartial=false;let ${queueAssignment};${inlineIncomingCallLine.trim()}${settleIncomingLine.trim()}return{content,handled:_replyAuditHandled,partial:_replyAuditPartial};};`,ctx);
   return{result:await ctx.run('先等等[来电|视频]'),calls,rememberedFailures};
 }
 {

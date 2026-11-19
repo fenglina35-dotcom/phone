@@ -2197,3 +2197,7 @@ test('unreadable media cannot abort file export and native shells keep a save pa
  for(const file of [WEB,PRIVATE])assert(read(file).includes('BACKUP_UNREADABLE_MEDIA_V1'),file);
  for(const file of ['PhoneCompanionTest/LocalPhoneWebView.swift','PhoneCompanionMac/MacPhoneBridge.swift']){const src=read('native/private-small-phone/XcodeProject/'+file);assert(src.includes('PRIVATE_LOCAL_FILE_EXPORT_V1'));assert(src.includes('WKDownloadDelegate'));assert(src.includes('downloadDidFinish'));}
 });
+
+test('long chat loading and call events retain one-shot ownership in both builds',()=>{
+ for(const file of [WEB,PRIVATE]){const src=read(file);for(const marker of ['MSG_ARCHIVE_BOOT_RACE_V1','CALL_EVENT_CONSUME_ONCE_V1','CALL_MISSED_SESSION_V1','CALL_REDIAL_THREE_V1','CALL_REAL_FACTS_V1'])assert(src.includes(marker),file+': '+marker);}
+});

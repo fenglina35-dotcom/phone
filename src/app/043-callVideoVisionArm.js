@@ -75,16 +75,19 @@ function ringStop(){_ringLoadToken++;if(_ringPreviewTimer){clearTimeout(_ringPre
 function incomingRingPreview(){if(_call){toast('通话中不能试听微信来电铃声');return false;}ringStop();audioUnlock();if(incomingRingKey()==='music'){incomingRingMusicStart(true);return true;}return incomingRingAssetStart(incomingRingUrl(),true);}
 function ringPreviewStop(){ringStop();toast('已停止试听');}
 function blip(freq,dur){playMediaTone([[freq,dur]],{key:'blip-'+freq+'-'+dur,level:.35});}
-function incomingCall(id,kind,opt){opt=opt&&typeof opt==='object'?opt:{};const cohabRestricted=cohabCallRestricted(id);if(roleOnlineProactiveBlocked(id)&&!(cohabRestricted&&opt.requestedByUser))return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;
-  _call={id,accountId:actId(),kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null,_suspicionEvent:opt.suspicionEvent||''};roleServerPushCallStarted(id);initAudio();ringStart();showCallBanner(c);
+// CALL_REAL_FACTS_V1: model dialogue is not proof that a phone action happened.
+function wechatCallTruthPrompt(id,aid){const rows=msgsForAccount(id,aid||actId()),events=rows.filter(m=>m&&m.type==='sys'&&/^(?:未接来电 · |你拒绝了(?:语音|视频)通话|通话结束 · )/.test(String(m.content||''))).slice(-3),ringing=_call&&_call.id===id&&_call.accountId===(aid||actId())&&_call.state==='incoming'&&_call.presented;return '\n\n# 来电的真实执行状态\n'+(ringing?'当前确有正在显示的来电邀请，尚未接听不等于已经未接。':'当前没有正在响铃的来电。')+(events.length?'最近系统电话记录（历史，不代表本轮又发生）：'+events.map(m=>String(m.time||'')+' '+m.content).join('；')+'。':'当前聊天没有系统确认的未接或拒接记录。')+'只有本轮明确提供的新电话事件才是刚发生的事实；你过去说过“打了电话、你没接”不是实际拨打记录，不能当成每轮新事件。你仍可按本人判断和原有最多三次连续来电规则发起 [来电|语音] 或 [来电|视频]，标签表示请求执行，未执行成功不能声称对方没接。';}
+function incomingCall(id,kind,opt){opt=opt&&typeof opt==='object'?opt:{};const cohabRestricted=cohabCallRestricted(id);if(roleOnlineProactiveBlocked(id)&&!(cohabRestricted&&opt.requestedByUser))return false;if(cinemaRoleOccupied(id))return false;const c=getC(id);if(!c||c.blocked||_call)return false;const tries=c._cbTriesAccount&&c._cbTriesAccount!==actId()?0:(+c._cbTries||0);if(tries>=3)return false;
+  _call={id,accountId:actId(),kind,state:'incoming',dir:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null,_suspicionEvent:opt.suspicionEvent||''};if(!showCallBanner(c)){_call=null;return false;}_call.presented=true;c._cbTries=tries+1;c._cbTriesAccount=actId();save();roleServerPushCallStarted(id);initAudio();ringStart();
   appNotify(c.remark||c.name,(kind==='video'?'视频':'语音')+'通话邀请',{tag:'call-'+id,renotify:true,requireInteraction:true,vibrate:[400,200,400,200,400],data:{type:'open',target:'call',id:id}});
-  clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id),15000);return true;}// 来电只先弹横幅；15秒没接=未接
-function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const label=_call.kind==='video'?'视频':'语音';
+  const session=_call.session;clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id,session),15000);return true;}// 来电只先弹横幅；15秒没接=未接
+function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return false;const label=_call.kind==='video'?'视频':'语音';
   b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
-  b.className='msgbanner show';}
+  b.className='msgbanner show';return true;}
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
 function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCallBanner();renderCall();}
-function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();audioRouteReset(false);hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话',susEvent=_call._suspicionEvent||'';_call=null;_callBusy=false;_callPend=null;_callVisionPend=[];_callStatePend=null;_callStateEpoch++;callClearPersist();renderCall();
+// CALL_MISSED_SESSION_V1: only the presented incoming session may create a missed-call event.
+function callMissed(id,session){if(!_call||_call.id!==id||_call.state!=='incoming'||!_call.presented||session&&session!==_call.session||_call.accountId!==actId())return;ringStop();endCallTimers();audioRouteReset(false);hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话',susEvent=_call._suspicionEvent||'';_call=null;_callBusy=false;_callPend=null;_callVisionPend=[];_callStatePend=null;_callStateEpoch++;callClearPersist();renderCall();
   roleServerPushCallEnded(id);
   const cc0=getC(id);if(cc0)phAddRecent(phRoleNumber(cc0),'in','missed',kindTxt.indexOf('视频')>=0?'video':'voice',0);
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
@@ -134,7 +137,7 @@ function maybeCallBack(id,kind,forced,rejected){const c=getC(id);if(!c||c.blocke
   const mv=(c.moodVal==null?70:c.moodVal);
   let p;if(forced&&tries===0)p=eff/100;else{p=(0.55-(tries-1)*0.2)*(eff/45);if(mv<40)p+=0.12;else if(mv>82)p+=0.05;}
   p=Math.max(0,Math.min(.95,p));
-  c._cbTries=tries+1;save();
+  // CALL_REDIAL_THREE_V1: incomingCall counts only a call that really presents.
   if(eff>0&&Math.random()<p){const delay=4000+Math.floor(Math.random()*5000);
     setTimeout(()=>{const cc=getC(id);if(actId()!==_replyAid||_call||!cc||cc.blocked||(S.jail&&S.jail.active))return;
       msgs(id).push({role:'user',type:'sys',content:(cc.remark||cc.name)+'又拨过来了…',time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();

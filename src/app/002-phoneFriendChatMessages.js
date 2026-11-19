@@ -237,9 +237,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1939 · 同步刷新与调用节流保护';
+const APP_VER='v1940 · 备份与聊天保护、连接保持';
 //@@ private
-const APP_VER='v1938 · 同步刷新与调用节流保护';
+const APP_VER='v1939 · 备份与聊天保护、连接保持';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

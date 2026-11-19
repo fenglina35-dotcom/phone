@@ -1352,3 +1352,12 @@ MCP 验证分服务握手/工具目录与账号托管同步两阶段。后阶段
 已同步MCP连接保留规则：已托管、无待发布配置/迁移/冲突时，重新验证不再强制账号list；临时验证失败保留上次connected、工具目录、角色授权和凭据。只能以真实认证拒绝/明确撤权等结果改变认证可用性，网络故障不冒充断开。对应private-mcp-vault受控回归证明账号list失败仍不阻塞已同步验证，rpc临时故障不改变连接内容。核对到：2026-11-18。
 
 MCP_NONEXPIRING_V1：无到期时间连接在旧元数据更新中被写入裸exp:undefined，导致整个账号连接列表503。新写入遵守JSON有效性；旧密文仅兼容顶层唯一exp字段的该历史格式，不匹配字符串、不接受其他损坏JSON，读取不重写凭据。真实AES夹具旧失败新通过并核对原token/角色/工具保留。核对到：2026-11-18。
+
+
+## 长库启动竞态与电话事件（2026-11-18候选）
+
+MSG_ARCHIVE_BOOT_RACE_V1：长库占位尚未展开时不写删，读后核对同一S/messages并重新计算added。避免读取期间新尾巴删库或误标已入库。message-archive-no-wipe旧四项失败，新9/9通过。
+
+CALL_EVENT_CONSUME_ONCE_V1：明确静默及已显示回复消费精确事件，私人只来电动作也等待执行结果。CALL_MISSED_SESSION_V1要求横幅实际呈现及相同session、账号才记未接。CALL_REAL_FACTS_V1只把系统记录作为来电事实，模型自己说过不作依据。CALL_REDIAL_THREE_V1把原三次上限接到当前入口，显示成功才计数，正常独立重拨允许，既有新用户互动及正常结束清零保留。私人专属伴生和网页审计差异不覆盖。
+
+NORTH_CALL_EVENT_REPLAY=1复用check_chat_authorized_phone：真实双端aiReply（只模拟HTTP模型）核对静默消费、只来电成功、320/430横幅、未接一条、后续聊天无旧事件。incoming-ring-continuity测旧session、无横幅、账号及三次。未声称真机或实模已重现。

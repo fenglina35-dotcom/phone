@@ -2,17 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
-import {read,fnSource} from './_helpers.mjs';
+import {read,fnSource,BUNDLES} from './_helpers.mjs';
 const src=read('app.js');
 const start=src.indexOf('// 文件备份按块读写');
 const code=src.slice(start<0?src.indexOf('let _fullBackupExportBusy'):start,src.indexOf('async function applyFullBackupData('));
-function setup(state={},extras={}){
+function setup(state={},extras={},source=src){
  const db=new Map(),events=[];let saved;
  const c=vm.createContext({Blob,Date,JSON,TextDecoder,TextEncoder,Uint8Array,crypto:webcrypto,setTimeout,clearTimeout,Promise,Map,Set,Math,Object,Array,
   S:state,_bootImagesPromise:null,fullBackupState:async()=>state,
   imgGet:async k=>db.get(k),imgPut:async(k,v)=>db.set(k,v),imgDel:async k=>db.delete(k),isBigImg:v=>typeof v==='string'&&v.startsWith('data:image')&&v.length>2000,
   toast:s=>events.push(s),beautySaveFile:async b=>{saved=b;return 'downloaded';},...extras});
- vm.runInContext(code,c);return{c,db,events,get saved(){return saved;}};
+ const start=source.indexOf('// 文件备份按块读写');const body=source.slice(start<0?source.indexOf('let _fullBackupExportBusy'):start,source.indexOf('async function applyFullBackupData('));
+ vm.runInContext(body,c);return{c,db,events,get saved(){return saved;}};
 }
 test('unreadable image and album entries do not abort or alter a backup',async()=>{
  const state={settings:{},messages:{a:[{content:'原文保留',img:'idb:broken'},{content:'相册保留',img:'album:missing'},{img:'idb:good'}]}},original=JSON.stringify(state);
@@ -91,4 +92,12 @@ test('file import waits for the previous archive restoration before applying new
  const importing=vm.runInContext('readJsonFile(fixture,apply)',env.c);await new Promise(r=>setTimeout(r,30));
  const earlyCalls=calls;finishBoot();await importing;
  assert.equal(earlyCalls,0,'old boot restoration can overwrite an import that applies before it finishes');assert.equal(calls,1);
+});
+
+for(const [name,file] of BUNDLES)test(`${name}: missing album originals export readable chat JSON using the real album reader`,async()=>{
+ const source=read(file),state={me:{name:'备份夹具'},contacts:[{id:'r',name:'角色'}],messages:{r:[{id:'text',role:'user',content:'缺图也必须保存这句',img:'album:gone'}]},offline:{r:{msgs:[{content:'线下仍在'}]}}};
+ const env=setup(state,{},source);vm.runInContext(fnSource(source,'albumBackupImage'),env.c);
+ await env.c.exportData();assert.ok(env.saved);const result=JSON.parse(await env.saved.text());
+ assert.equal(result.messages.r[0].content,state.messages.r[0].content);assert.equal(result.messages.r[0].img,'');assert.equal(result.offline.r.msgs[0].content,'线下仍在');
+ assert.equal(state.messages.r[0].img,'album:gone');assert.ok(env.events.some(x=>x.includes('1 张图片')));
 });

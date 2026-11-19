@@ -5,6 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {read, BUNDLES as CURRENT_BUNDLES} from './_helpers.mjs';
 import vm from 'node:vm';
 
 const BUNDLES={
@@ -29,7 +30,8 @@ function functionSource(source,name){
 }
 
 function load(url,{archive}){
-  const source=readFileSync(url,'utf8');
+  const file=CURRENT_BUNDLES.find(([name])=>BUNDLES[name].href===url.href)[1];
+  const source=read(file);
   const calls={del:[],put:[]},timers=[];
   const store={__messages:archive};
   const context=vm.createContext({
@@ -118,3 +120,37 @@ test('private: the safe merge reads a candidate that autosaved after the scan',a
   for(const call of ['recoveryReadCandidateRaw(candidate,{allowNewer:true})','recoveryReadCandidateRaw(row.x,{allowNewer:true})','recoveryReadCandidateRaw(fresh.candidate,{allowNewer:true})'])
     assert.ok(source.includes(call),`safe merge must use ${call}`);
 });
+
+// MSG_ARCHIVE_BOOT_RACE_V1: saving while the long archive is still loading must
+// neither delete it nor certify new in-memory rows as already written there.
+for(const [name,url] of Object.entries(BUNDLES)){
+  test(`${name}: a slow boot read cannot delete the archive or lose newly arrived rows`,async()=>{
+    const original=JSON.stringify(oldChats),env=load(url,{archive:original});
+    let finish,started;
+    const waiting=new Promise(resolve=>{started=resolve;});
+    env.context.imgGetIDB=async()=>{started();return new Promise(resolve=>{finish=resolve;});};
+    env.context.S={me:{},messages:{__idb:'messages'}};
+    const boot=env.context.bootImages();await waiting;
+    env.context.S.messages.ciqgj7n2=[{id:'during-boot',role:'user',content:'读取期间的新消息',time:9000}];
+    await env.context.persistWechatMessagesNow();await env.context._messageArchiveWrite;
+    assert.ok(env.store.__messages===original,'a partial live tail must not delete or overwrite the unread archive');
+    finish(original);await boot;
+    assert.equal(env.context.S.messages.ciqgj7n2.length,401);
+    const saved=env.context._imgReplacer('messages',env.context.S.messages);
+    await env.context._messageArchiveWrite;
+    if(saved.__idb)assert.equal(JSON.parse(env.store.__messages).ciqgj7n2.length,401,'a placeholder is safe only after all merged rows are durable');
+    await env.context.persistWechatMessagesNow();await env.context._messageArchiveWrite;
+    assert.equal(JSON.parse(env.store.__messages).ciqgj7n2.length,401);
+  });
+  test(`${name}: a late boot read cannot replace a newly selected state`,async()=>{
+    const env=load(url,{archive:JSON.stringify(oldChats)});let finish,started;
+    const waiting=new Promise(resolve=>{started=resolve;});
+    env.context.imgGetIDB=async()=>{started();return new Promise(resolve=>{finish=resolve;});};
+    env.context.S={me:{},messages:{__idb:'messages'}};
+    const boot=env.context.bootImages();await waiting;
+    const selected={me:{},messages:{other:[{id:'keep',content:'新来源'}]}};env.context.S=selected;
+    finish(JSON.stringify(oldChats));await boot;
+    assert.equal(env.context.S,selected);assert.equal(env.context.S.messages.other[0].id,'keep');
+    assert.equal(env.context.S.messages.ciqgj7n2,undefined,'old state must never cross into the new selection');
+  });
+}

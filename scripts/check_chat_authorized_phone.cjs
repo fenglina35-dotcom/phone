@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
-const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');let body=fs.readFileSync(file);if(process.env.NORTH_CHECKIN_BASELINE==='1'&&file.endsWith('phone-shortcuts.js')){const source=body.toString('utf8'),marker=source.indexOf('/* CHECKIN_SHORTCUTS_V1:');if(marker>=0)body=Buffer.from(source.slice(0,marker));}if(process.env.NORTH_TASK_PHOTO_BASELINE==='1'&&file.endsWith('task-notes.js'))body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root});if(process.env.NORTH_OWNER_TODO_BASELINE==='1'&&path.basename(file)==='app.js')body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root,maxBuffer:32*1024*1024});res.end(body);});
+const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');let body=fs.readFileSync(file);if(process.env.NORTH_CHECKIN_BASELINE==='1'&&file.endsWith('phone-shortcuts.js')){const source=body.toString('utf8'),marker=source.indexOf('/* CHECKIN_SHORTCUTS_V1:');if(marker>=0)body=Buffer.from(source.slice(0,marker));}if(process.env.NORTH_TASK_PHOTO_BASELINE==='1'&&file.endsWith('task-notes.js'))body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root});if((process.env.NORTH_OWNER_TODO_BASELINE==='1'||process.env.NORTH_CALL_EVENT_BASELINE==='1')&&path.basename(file)==='app.js')body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root,maxBuffer:32*1024*1024});res.end(body);});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
@@ -43,6 +43,32 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(typeof NorthTravelTrain==='undefined'){tvInit().trips.push({id:'missing-component-saved-train',accountId:'main',railV2:true,from:'北京',to:'上海',date:'2099-10-05',dep:'09:00',arr:'11:00',cls:'second',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
+
+  if(process.env.NORTH_CALL_EVENT_REPLAY==='1'){
+   const quiet=await page.evaluate(async()=>{
+    window.callEventNote=wechatNaturalCallEventNote('刚刚这通语音来电没有接通，当前没有新的用户话语。');
+    featureEventQueueAdd(testId,callEventNote,'main');fixtureRaw='[保持安静]';
+    const before=testCalls.length,result=await aiReply(testId,callEventNote,replyEpoch(testId),'main','user');
+    return{result,pending:featureEventQueueEntries(testId,'main').length,calls:testCalls.length-before};
+   });
+   assert.deepEqual(quiet,{result:true,pending:0,calls:1},'a deliberate silent call-event decision must be consumed once instead of replayed on every turn');
+   const callOnly=await page.evaluate(async()=>{
+    window.callEventNote=wechatNaturalCallEventNote('刚结束的电话，角色按自己的判断决定是否再次来电。');featureEventQueueAdd(testId,callEventNote,'main');fixtureRaw='[来电|语音]';
+    const before=testCalls.length,result=await aiReply(testId,callEventNote,replyEpoch(testId),'main','user');
+    return{result,pending:featureEventQueueEntries(testId,'main').length,calls:testCalls.length-before,state:_call&&_call.state};
+   });
+   assert.deepEqual(callOnly,{result:true,pending:0,calls:1,state:'incoming'},'a real call-only result is a completed action, never an empty reply to retry');
+   assert(await page.locator('#callBanner').isVisible(),'the incoming call must really appear');
+   for(const width of [320,430]){await page.setViewportSize({width,height:850});assert(await page.locator('#callBanner .cbtn.green').isVisible());}
+   const missed=await page.evaluate(async()=>{
+    fixtureRaw='[保持安静]';const session=_call.session;callMissed(testId,session);
+    await new Promise(resolve=>setTimeout(resolve,2300));return{pending:featureEventQueueEntries(testId,'main').length,state:_call&&_call.state,missed:msgs(testId).filter(m=>m.type==='sys'&&/未接来电/.test(m.content)).length};
+   });
+   assert.deepEqual(missed,{pending:0,state:null,missed:1});
+   const ordinary=await page.evaluate(async()=>{fixtureRaw='我在。';pushMsg(testId,{role:'user',type:'text',content:'现在正常聊天',time:Date.now(),id:uid()});const before=testCalls.length;await aiReply(testId,undefined,replyEpoch(testId),'main','user');return{calls:testCalls.length-before,pending:featureEventQueueEntries(testId,'main').length,note:testCalls.at(-1).messages.some(m=>String(m.content).includes('当前唯一新事件'))};});
+   assert.deepEqual(ordinary,{calls:1,pending:0,note:false});assert.deepEqual(errors,[]);
+   console.log(JSON.stringify({privateApp,callEventReplay:true,quiet,callOnly,missed,ordinary,pageErrors:0}));await page.close();continue;
+  }
 
   if(process.env.NORTH_MCP_TOOLS==='1'||process.env.NORTH_MCP_LAYOUT_ONLY==='1'){
    await page.evaluate(()=>{document.getElementById('gate')?.remove();S.me.locked=false;renderLockScreen();go('settings');});
