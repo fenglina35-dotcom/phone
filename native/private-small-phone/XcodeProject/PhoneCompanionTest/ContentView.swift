@@ -27,6 +27,8 @@ struct ContentView: View {
     @State private var statusText = "正在检查授权状态"
     @State private var isScreenTimeAuthorized = false
     @State private var isPickerPresented = false
+    // PRIVATE_ACTIVITY_ICON_REFRESH_V1: view identity only; never regenerate stored application tokens.
+    @State private var activityLabelGeneration = UUID()
     @State private var selection: FamilyActivitySelection
     @State private var selectionNoticeText = ""
     @State private var lockedAppTokens: Set<ApplicationToken>
@@ -171,7 +173,7 @@ struct ContentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 26) {
+            LazyVStack(spacing: 26) {
                 screenTimeSection
 
                 Divider()
@@ -216,6 +218,7 @@ struct ContentView: View {
         .onChange(of: scenePhase) {
             if scenePhase == .active {
                 refreshAuthorizationStatus()
+                activityLabelGeneration = UUID()
             }
         }
     }
@@ -275,11 +278,18 @@ struct ContentView: View {
             .buttonStyle(.borderedProminent)
             .tint(.green)
             .disabled(!isScreenTimeAuthorized)
+
+            Button("刷新图标") {
+                activityLabelGeneration = UUID()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .accessibilityHint("只刷新显示，保留软件选择和所有管控设置")
         }
     }
 
     private var individualAppControlSection: some View {
-        VStack(spacing: 18) {
+        LazyVStack(spacing: 18) {
             Text("逐个 App 控制")
                 .font(.title2)
                 .bold()
@@ -298,6 +308,7 @@ struct ContentView: View {
                 ) { token in
                     HStack(spacing: 12) {
                         Label(token)
+                            .id(activityLabelGeneration)
                             .labelStyle(.titleAndIcon)
                             .frame(
                                 maxWidth: .infinity,
@@ -364,7 +375,7 @@ struct ContentView: View {
     }
 
     private var dailyLimitSection: some View {
-        VStack(spacing: 18) {
+        LazyVStack(spacing: 18) {
             Text("每日使用时长限制")
                 .font(.title2)
                 .bold()
@@ -387,6 +398,7 @@ struct ContentView: View {
                 ) { token in
                     VStack(spacing: 12) {
                         Label(token)
+                            .id(activityLabelGeneration)
                             .labelStyle(.titleAndIcon)
                             .frame(
                                 maxWidth: .infinity,

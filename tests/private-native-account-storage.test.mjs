@@ -409,7 +409,39 @@ let repeated=try jobs.begin(library:library,store:store,webRoot:web,extras:[],ow
 precondition(repeated["phase"] as? String == "ready")
 precondition((try! PrivateReadOnlySnapshot.digest(archive))==before,"existing archive may not be replaced on another click")
 let process=Process();process.executableURL=URL(fileURLWithPath:"/usr/bin/unzip");process.arguments=["-tqq",archive.path];let output=Pipe();process.standardOutput=output;process.standardError=output;try process.run();process.waitUntilExit();precondition(process.terminationStatus==0)
+
+precondition((status["capturedAt"] as? Double ?? 0)>0)
+denied=false;do{try jobs.remove(owner:owner,token:token,confirmed:false)}catch{denied=true};precondition(denied)
+_ = try jobs.archive(owner:owner,token:token,beginSharing:true)
+denied=false;do{try jobs.remove(owner:owner,token:token,confirmed:true)}catch{denied=true};precondition(denied,"a sharing file cannot be deleted")
+jobs.finishSharing(owner:owner,token:token)
+let coreBefore=try Data(contentsOf:store.appendingPathComponent("__core_state.json"))
+try jobs.remove(owner:owner,token:token,confirmed:true)
+for _ in 0..<2000 {if try jobs.status(owner:owner,token:token)["phase"] as? String != "removing" {break};Thread.sleep(forTimeInterval:0.01)}
+precondition(!f.fileExists(atPath:archive.path))
+precondition((try! Data(contentsOf:store.appendingPathComponent("__core_state.json")))==coreBefore,"explicit staging cleanup must never delete or alter the live core")
+let next=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner),nextToken=next["token"] as! String
+precondition(nextToken != token)
+var final=next
+for _ in 0..<2000 {final=try jobs.status(owner:owner,token:nextToken);if final["phase"] as? String=="ready" || final["phase"] as? String=="failed" {break};Thread.sleep(forTimeInterval:0.01)}
+precondition(final["phase"] as? String=="ready",String(describing:final))
 print("snapshot-job-zip-owner-evidence-verified")
 `;
  const output=cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000,maxBuffer:1024*1024});assert(output.includes('snapshot-job-zip-owner-evidence-verified'));
+});
+
+
+test('snapshot WebKit paths select canonical account UUIDs and never fall back to the default owner', {skip:process.platform!=='darwin'},()=>{
+ const source=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),start=source.indexOf('enum PrivateNativeWebsiteStoreIdentity {'),end=source.indexOf('\nextension Notification.Name',start);
+ const program='import Foundation\n'+source.slice(start,end)+String.raw`
+let library=FileManager.default.temporaryDirectory.appendingPathComponent("missing-snapshot-owner-"+UUID().uuidString)
+let owner=UUID(uuidString:"abcdef00-0000-0000-0000-000000000001")!
+let scoped=PrivateNativeWebsiteStoreIdentity.snapshotDirectory(library:library,identifier:owner)
+precondition(scoped.lastPathComponent==owner.uuidString.lowercased())
+precondition(scoped.path.contains("/WebsiteDataStore/"))
+let defaultStore=PrivateNativeWebsiteStoreIdentity.snapshotDirectory(library:library,identifier:nil)
+precondition(defaultStore.lastPathComponent=="WebsiteData" && defaultStore != scoped)
+print("snapshot-owner-path-verified")
+`;
+ assert(cp.execFileSync('swift',['-'],{input:program,encoding:'utf8',timeout:60000}).includes('snapshot-owner-path-verified'));
 });

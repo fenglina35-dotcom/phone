@@ -49,7 +49,7 @@ test('manual phone-account backup finishes after one file upload even when web m
 
 function primaryFixture(source=readSource(path+'private-cloud-backup.js')){
  const f=fixture(source);f.c.__SMALL_PHONE_ACCOUNT_SYNC__=true;f.c.__northBootReady=true;f.c.S._deviceSyncOwner='owner-a';
- f.c.NorthPrivateDeviceSyncClient={automaticStateAllowed:()=>true,backgroundAllowed:()=>true};
+ f.c.NorthPrivateDeviceSyncClient={status:()=>({owner:"owner-a"}),automaticStateAllowed:()=>true,backgroundAllowed:()=>true};
  f.setCloud({captured_at:new Date().toISOString()});return f;
 }
 test('a verified current primary resumes daily backup when old per-browser confirmation is absent',async()=>{
@@ -82,4 +82,15 @@ test('independent snapshot starts only after a manual click and confirmed curren
  assert.equal(requests[0].action,'storage.snapshot.begin');assert.equal(requests[0].payload.owner,'owner-a');
  await f.c.NorthPrivateReadOnlyBackup.save();assert.equal(requests[1].action,'storage.snapshot.save');assert.equal(requests[1].payload.token,'job-token');
  const prior=requests.length;f.c._privatePhoneAccount.userId='owner-b';await f.c.NorthPrivateReadOnlyBackup.save();assert.equal(requests.length,prior);
+});
+
+
+test('secondary manual account backup cannot replace the primary cloud recovery copy',async()=>{
+ const f=primaryFixture();f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false;f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
+ assert.equal(await f.c.privatePhoneCloudBackup(false,false),false);assert.equal(f.commits,0);assert(!f.calls.some(x=>x.action.endsWith('.begin')));
+});
+
+test('a verified Mac primary can explicitly back up without enabling automatic Mac uploads',async()=>{
+ const f=primaryFixture();f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
+ assert.equal(await f.c.privatePhoneCloudBackup(false,false),true);assert.equal(f.commits,1);
 });

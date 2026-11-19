@@ -102,6 +102,16 @@ enum PrivateNativeStorageNamespace {
 
 // PRIVATE_ACCOUNT_WEBSTORE_V1: the original owner retains default WebKit data; other identities never share it.
 enum PrivateNativeWebsiteStoreIdentity {
+    // PRIVATE_SNAPSHOT_SCOPED_WEBROOT_V1: WebKit uses canonical lowercase UUID folders.
+    // An uppercase legacy spelling is accepted only for the same UUID, never another account/default store.
+    static func snapshotDirectory(library: URL, identifier: UUID?) -> URL {
+        guard let identifier else { return library.appendingPathComponent("WebKit/WebsiteData") }
+        let parent = library.appendingPathComponent("WebKit/WebsiteDataStore")
+        let lower = parent.appendingPathComponent(identifier.uuidString.lowercased())
+        let upper = parent.appendingPathComponent(identifier.uuidString)
+        return FileManager.default.fileExists(atPath: lower.path) ? lower
+            : FileManager.default.fileExists(atPath: upper.path) ? upper : lower
+    }
     static func identifier(owner: String?, legacyOwner: String?) -> UUID? {
         let current = owner.flatMap(UUID.init(uuidString:))
         let legacy = legacyOwner.flatMap(UUID.init(uuidString:))
@@ -402,7 +412,7 @@ enum PrivateReadOnlySnapshot {
             sum + ((try files.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.int64Value ?? 0)
         }
         if let available = try library.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage,
-           available < estimated * 2 + 1024 * 1024 * 1024 { throw failure("独立备份空间不足，原件已保留；请预留副本和压缩包空间") }
+           available < estimated * 3 + 1024 * 1024 * 1024 { throw failure("独立备份空间不足，原件已保留；请预留副本和压缩包空间") }
         guard list.contains(where: { $0.lastPathComponent == "IndexedDB.sqlite3" }) else { throw failure("当前账号媒体数据库未找到") }
         var readers: [String: OpaquePointer] = [:]
         defer { for db in readers.values { sqlite3_exec(db, "ROLLBACK", nil, nil, nil); sqlite3_close(db) } }
@@ -463,6 +473,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     private let worker = DispatchQueue(label: "com.smallphone.readonly-snapshot", qos: .utility)
     private var owner = "", token = "", phase = "idle", detail = ""
     private var done = 0, total = 0, cancelled = false
+    private var capturedAt: Double = 0
     private var directory: URL?
     private var observers: [NSObjectProtocol] = []
     private init() {
@@ -479,7 +490,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     func status(owner: String, token: String? = nil) throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         guard owner == self.owner, token == nil || token == self.token else { throw PrivateReadOnlySnapshot.failure("备份账号或任务已变化") }
-        return ["ok": true, "token": self.token, "phase": phase, "done": done, "total": total, "detail": detail]
+        return ["ok": true, "token": self.token, "phase": phase, "done": done, "total": total, "detail": detail, "capturedAt": capturedAt]
     }
     func cancel(owner: String, token: String) throws {
         lock.lock(); defer { lock.unlock() }
@@ -495,7 +506,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     }
     func begin(library: URL, store: URL, webRoot: URL, extras: [URL], owner: String) throws -> [String: Any] {
         lock.lock()
-        if phase == "copying" || phase == "packaging" {
+        if ["copying", "packaging", "sharing", "removing"].contains(phase) {
             let same = self.owner == owner; lock.unlock()
             guard same else { throw PrivateReadOnlySnapshot.failure("另一账号的备份尚未结束") }
             return try status(owner: owner)
@@ -514,15 +525,17 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
                       let previous = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                       previous["owner"] as? String == owner else { throw PrivateReadOnlySnapshot.failure("已有备份来源不一致，已保留且未覆盖") }
                 if files.fileExists(atPath: stage.path) || files.fileExists(atPath: archive.path) {
-                    guard let data = try? Data(contentsOf: stage.appendingPathComponent("backup-manifest.json")),
-                          let proof = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                          proof["verified"] as? Bool == true, proof["owner"] as? String == owner,
-                          files.fileExists(atPath: archive.path) else { throw PrivateReadOnlySnapshot.failure("已有未完成的独立备份已保留，请先核查，未覆盖") }
-                    guard previous["complete"] as? Bool == true,
+                    let proofData = try? Data(contentsOf: stage.appendingPathComponent("backup-manifest.json"))
+                    let proof = proofData.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                    self.owner = owner; self.token = UUID().uuidString; directory = root; cancelled = false; capturedAt = 0
+                    guard proof?["verified"] as? Bool == true, proof?["owner"] as? String == owner,
+                          files.fileExists(atPath: archive.path), previous["complete"] as? Bool == true,
                           let archiveHash = previous["archiveSHA256"] as? String, archiveHash.count == 64,
                           let manifestHash = previous["manifestSHA256"] as? String else {
-                        throw PrivateReadOnlySnapshot.failure("已有备份尚未完成验收，原文件已保留")
+                        phase = "failed"; detail = "已有未完成副本已保留；请先核查，未覆盖或认证成功"
+                        lock.unlock(); held = false; return try status(owner: owner)
                     }
+                    capturedAt = (proof?["capturedAt"] as? NSNumber)?.doubleValue ?? 0
                     _ = try PrivateReadOnlySnapshot.checked(archive, inside: library)
                     self.owner = owner; self.token = UUID().uuidString; directory = root; phase = "copying"; cancelled = false
                     detail = "正在校验已有独立备份"; lock.unlock(); held = false
@@ -545,13 +558,15 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
             #endif
             var values = URLResourceValues(); values.isExcludedFromBackup = true; var excluded = root; try excluded.setResourceValues(values)
             try JSONSerialization.data(withJSONObject: ["owner": owner, "purpose": "readonly-independent-backup"]).write(to: receipt, options: .atomic)
-            self.owner = owner; token = UUID().uuidString; directory = root; phase = "copying"; detail = "正在生成固定副本，请保持前台并暂停聊天"; cancelled = false; done = 0; total = 0
+            self.owner = owner; token = UUID().uuidString; directory = root; phase = "copying"; detail = "正在生成固定副本，请保持前台并暂停聊天"; cancelled = false; done = 0; total = 0; capturedAt = 0
             lock.unlock(); held = false
             worker.async { [self] in
                 do {
                     try PrivateReadOnlySnapshot.create(library: library, store: store, webRoot: webRoot, extras: extras,
                         destination: stage, owner: owner, check: { try self.check() },
                         progress: { self.update("copying", detail: "正在校验存档和媒体原件", done: $0, total: $1) })
+                    let proof = try JSONSerialization.jsonObject(with: Data(contentsOf: stage.appendingPathComponent("backup-manifest.json"))) as? [String: Any]
+                    lock.lock(); capturedAt = (proof?["capturedAt"] as? NSNumber)?.doubleValue ?? 0; lock.unlock()
                     try check(); update("packaging", detail: "固定副本已生成，正在打包")
                     var coordinationError: NSError?, copyError: Error?
                     NSFileCoordinator().coordinate(readingItemAt: stage, options: .forUploading, error: &coordinationError) { zipped in
@@ -575,12 +590,32 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
             return try status(owner: owner)
         } catch { if held { lock.unlock() }; throw error }
     }
-    func archive(owner: String, token: String) throws -> URL {
+    func archive(owner: String, token: String, beginSharing: Bool = false) throws -> URL {
         lock.lock(); defer { lock.unlock() }
         guard owner == self.owner, token == self.token, phase == "ready", let directory else {
             throw PrivateReadOnlySnapshot.failure("独立备份尚未完成")
         }
+        if beginSharing { phase = "sharing" }
         return directory.appendingPathComponent("SmallPhone-Independent-Backup.zip")
+    }
+    func finishSharing(owner: String, token: String) {
+        lock.lock(); defer { lock.unlock() }
+        if self.owner == owner, self.token == token, phase == "sharing" { phase = "ready" }
+    }
+    // Explicit user cleanup of this generated copy only; no caller-supplied path is accepted.
+    func remove(owner: String, token: String, confirmed: Bool) throws {
+        lock.lock(); defer { lock.unlock() }
+        guard confirmed, self.owner == owner, self.token == token,
+              ["ready", "failed"].contains(phase), let directory,
+              directory.lastPathComponent == "SmallPhoneReadOnlyBackup",
+              directory.deletingLastPathComponent().lastPathComponent == "Application Support",
+              let receipt = try JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("job.json"))) as? [String: Any],
+              receipt["owner"] as? String == owner else { throw PrivateReadOnlySnapshot.failure("副本移除尚未确认或任务仍在使用") }
+        phase = "removing"; detail = "正在移除这次生成的本机副本，原存档保留"
+        worker.async { [self] in
+            do { try FileManager.default.removeItem(at: directory); lock.lock(); capturedAt = 0; lock.unlock(); update("idle", detail: "本机备份副本已移除；原存档保留，可重新生成") }
+            catch { update("failed", detail: "副本未能移除，已保留") }
+        }
     }
 }
 
@@ -1184,7 +1219,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             } catch {
                 reply(requestID: requestID, error: "music_audio_unavailable")
             }
-        case "storage.snapshot.begin", "storage.snapshot.status", "storage.snapshot.cancel", "storage.snapshot.save":
+        case "storage.snapshot.begin", "storage.snapshot.status", "storage.snapshot.cancel", "storage.snapshot.save", "storage.snapshot.remove":
             guard message.frameInfo.isMainFrame, message.webView === webView, webView?.url?.isFileURL == true,
                   let scope = currentNativeStorageScope(), let owner = scope.owner,
                   let arguments = payload["payload"] as? [String: Any], arguments["owner"] as? String == owner else {
@@ -1198,8 +1233,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                           let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first,
                           let store = nativeStorageDirectory(scope: scope) else { throw PrivateReadOnlySnapshot.failure("请保持小手机在前台") }
                     let identity = PrivateNativeWebsiteStoreIdentity.identifier(owner: owner, legacyOwner: legacyStorageOwner)
-                    let web = identity.map { library.appendingPathComponent("WebKit/WebsiteDataStore/" + $0.uuidString) }
-                        ?? library.appendingPathComponent("WebKit/WebsiteData")
+                    let web = PrivateNativeWebsiteStoreIdentity.snapshotDirectory(library: library, identifier: identity)
                     let accounts = library.appendingPathComponent("Application Support/SmallPhonePrivateAccounts")
                     let extras = ["sync-source.v2.json", "legacy-owner.v1"].map { accounts.appendingPathComponent($0) }
                         .filter { FileManager.default.fileExists(atPath: $0.path) }
@@ -1207,14 +1241,18 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 case "storage.snapshot.status": reply(requestID: requestID, result: try jobs.status(owner: owner, token: token))
                 case "storage.snapshot.cancel":
                     try jobs.cancel(owner: owner, token: token); reply(requestID: requestID, result: ["ok": true])
+                case "storage.snapshot.remove":
+                    try jobs.remove(owner: owner, token: token, confirmed: arguments["confirmed"] as? Bool == true)
+                    reply(requestID: requestID, result: ["ok": true])
                 default:
-                    let archive = try jobs.archive(owner: owner, token: token)
                     var presenter = webView?.window?.rootViewController
                     while let next = presenter?.presentedViewController { presenter = next }
                     guard let presenter else { throw PrivateReadOnlySnapshot.failure("保存面板暂不可用") }
+                    let archive = try jobs.archive(owner: owner, token: token, beginSharing: true)
                     let share = UIActivityViewController(activityItems: [archive], applicationActivities: nil)
                     if let popover = share.popoverPresentationController { popover.sourceView = presenter.view; popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1) }
                     share.completionWithItemsHandler = { [weak self] _, completed, _, error in
+                        jobs.finishSharing(owner: owner, token: token)
                         Task { @MainActor in
                             self?.replyScopedStorage(scope, requestID: requestID,
                                 result: ["ok": error == nil, "completed": completed, "cancelled": !completed && error == nil])
