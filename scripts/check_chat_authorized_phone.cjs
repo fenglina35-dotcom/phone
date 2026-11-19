@@ -187,6 +187,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return{ok:true,json:async()=>false,text:async()=>'false'};const body=JSON.parse(opt.body);mcpBudgetRequests.push(body);const final=body.messages.some(m=>String(m.content).includes('[外部工具真实回执')),content=final?'工具独立额度验证完成。':JSON.stringify({mcp_call:{tool:mcpTestConnection+'__read_doc',arguments:{query:'独立额度'}}});return{ok:true,json:async()=>({choices:[{message:{content},finish_reason:mcpBudgetRequests.length===1?'length':'stop'}]})};};
      pushMsg(testId,{id:uid(),role:'user',type:'text',content:'请用工具查询独立额度记录。',time:Date.now()});window.mcpBudgetTurn=aiReply(testId);
     });
+    await page.locator('.mcp-approval').waitFor();assert.equal(await page.evaluate(()=>mcpRequests.filter(x=>x.method==='tools/call').length),1,'the new read also waits for its own approval');await page.locator('.mcp-approval').getByRole('button',{name:'允许本次',exact:true}).click();
     await page.evaluate(()=>mcpBudgetTurn);assert(await page.locator('#chatbg').getByText('工具独立额度验证完成。',{exact:true}).isVisible());
     assert(await page.evaluate(()=>mcpBudgetRequests.length===3&&mcpBudgetRequests[0].max_tokens===4096&&mcpBudgetRequests[1].max_tokens===8192&&mcpBudgetRequests.every(x=>new TextEncoder().encode(JSON.stringify(x.messages)).length<=16000)));
     assert.equal(await page.evaluate(()=>mcpRequests.filter(x=>x.method==='tools/call').length),2,'valid-looking truncated JSON must not dispatch a duplicate read');
