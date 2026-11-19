@@ -1363,3 +1363,5 @@ CALL_EVENT_CONSUME_ONCE_V1：明确静默及已显示回复消费精确事件，
 NORTH_CALL_EVENT_REPLAY=1复用check_chat_authorized_phone：真实双端aiReply（只模拟HTTP模型）核对静默消费、只来电成功、320/430横幅、未接一条、后续聊天无旧事件。incoming-ring-continuity测旧session、无横幅、账号及三次。未声称真机或实模已重现。
 
 2026-11-18最终核验：5460/5460，普通/查岗/MCP/电话事件双端门禁通过。手机和Mac585已安装；手机21250消息逐条原文一致、23联系人保留，新增3家MCP连接已实际取回。没有代选角色；第三方业务未替本人执行。
+
+网页v1940已发布：Pages构建44482368648成功，线上app.js/小手机.html/sw.js/index.html与候选逐字节一致；手机先安装验证后发布网页，私人功能分离保持。
