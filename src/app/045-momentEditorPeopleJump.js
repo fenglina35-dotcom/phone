@@ -170,13 +170,15 @@ async function backupJsonBlob(root,resolve,onProgress){
 async function fullBackupFileBlob(onProgress,stats){const _fullBackupSkippedImages=new Set();typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-wait-boot');
   if(onProgress)onProgress('正在等待原存档读取完成');if(_bootImagesPromise)await _bootImagesPromise;
   // 直接分段读取当前存档：每个容器进入时固定键或数组长度，避免十万级数组先建整张键表并复制整份状态。
-  const state=S;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(onProgress)onProgress('正在分段生成完整备份');let lastKey='',lastImage='',imageReads=0;
-  return backupJsonBlob(state,async(v,path)=>{
+  const state=S,missing=[],manifest={version:1,complete:false,missing},root=Object.assign({},state);Object.defineProperty(root,'_backupMedia',{enumerable:true,get:()=>missing.length?manifest:undefined});const recordMissing=(ref,path)=>{missing.push({ref,path:path.slice()});_fullBackupSkippedImages.add(ref);if(stats)stats.skippedImages=_fullBackupSkippedImages.size;};typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(onProgress)onProgress('正在分段生成完整备份');let lastKey='',lastImage='',lastMissing=false,imageReads=0;
+  // BACKUP_MISSING_MEDIA_REFERENCES_V1: preserve unresolved references and list omissions; never serialize them as empty data.
+  return backupJsonBlob(root,async(v,path)=>{
+    if(path[0]==='_backupMedia')return v;
     // BACKUP_UNREADABLE_MEDIA_V1: isolate media read errors, never swallow an
     // archive/JSON error or modify the live reference while exporting.
-    if(typeof v==='string'&&v.indexOf('album:')===0){if(!stats)return await albumBackupImage(v);try{const image=await albumBackupImage(v);if(typeof image==='string'&&image&&!image.startsWith('album:'))return image;}catch(_){} _fullBackupSkippedImages.add(v);stats.skippedImages=_fullBackupSkippedImages.size;return ''; }
+    if(typeof v==='string'&&v.indexOf('album:')===0){if(!stats)return await albumBackupImage(v);try{const image=await albumBackupImage(v);if(typeof image==='string'&&image&&!image.startsWith('album:'))return image;}catch(_){} recordMissing(v,path);return v; }
     if(typeof v==='string'&&v.indexOf('idb-audio:')===0&&path.some(p=>p==='favorites'||p==='_favorite')){const data=await imgGet('__audio_'+v.slice(10));if(typeof data!=='string'||!data)throw new Error('收藏原音频无法读取，请检查收藏后重试备份');return data;}
-    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-image-read');let image;try{image=await imgGet(key);}catch(e){if(!stats)throw e;image=null;}typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(typeof image!=='string'||!image){_fullBackupSkippedImages.add(key);if(stats)stats.skippedImages=_fullBackupSkippedImages.size;lastKey=key;lastImage='';if(onProgress)onProgress('有 '+_fullBackupSkippedImages.size+' 张图片暂时读不到，跳过后继续备份');return lastImage;}lastKey=key;lastImage=image;if(onProgress)onProgress('正在读取备份图片：'+(++imageReads)+' 次');}return lastImage;}
+    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-image-read');let image;try{image=await imgGet(key);}catch(e){if(!stats)throw e;image=null;}typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-serialize');if(typeof image!=='string'||!image){if(!stats)throw new Error('图片原件暂时无法读取，未覆盖云端备份');lastKey=key;lastImage=v;lastMissing=true;}else{lastKey=key;lastImage=image;lastMissing=false;if(onProgress)onProgress('正在读取备份图片：'+(++imageReads)+' 次');}}if(lastMissing){recordMissing(v,path);if(onProgress)onProgress('有 '+_fullBackupSkippedImages.size+' 张图片暂时读不到，已保留引用并继续备份');}return lastImage;}
     if(v&&typeof v==='object'&&v.__idb){let key='';const p=state.me&&state.me.phoneFriend;
       if(path.length===1&&path[0]==='messages'&&v.__idb==='messages')key='__messages';
       if(path.join('.')==='me.phoneFriend.messages'&&v.__idb==='phoneFriendMessages')key='__pf_messages_'+(v.id||p.id||'main');
@@ -214,8 +216,8 @@ async function readBackupJson(file,onString,onProgress){
 let _backupImportPins=new Set(),_fullBackupImportBusy=false;
 
 let _fullBackupExportBusy=false,_fullBackupExportProgress='';
-// BACKUP_SAVE_GESTURE_V1: Safari needs a fresh click after async file generation.
-function backupOfferSave(blob,name,note){if(typeof beautyAppleDevice!=='function'||!beautyAppleDevice()||typeof privateNativeAppOn==='function'&&privateNativeAppOn())return false;
+// BACKUP_SAVE_GESTURE_V1 / NATIVE_BACKUP_SAVE_GESTURE_V1: Apple web and native downloads need a fresh save click after async generation.
+function backupOfferSave(blob,name,note){if(typeof beautyAppleDevice!=='function'||!beautyAppleDevice())return false;
  openModal('<h3>备份已生成</h3><p class="hint" id="backup-save-hint">点击保存备份，在系统面板中选择存储到文件。</p><div class="btns"><button class="btn p" id="backup-save-ready">保存备份</button><button class="btn g" id="backup-save-download" style="display:none">下载备份</button></div>');
  const button=document.getElementById('backup-save-ready'),fallback=document.getElementById('backup-save-download'),hint=document.getElementById('backup-save-hint');
  button.onclick=async()=>{button.disabled=true;try{const mode=await beautySaveFile(blob,name);if(mode==='cancelled'){hint.textContent='已取消保存，可以再次点击。';return;}closeModal();toast('备份文件已交给系统，请完成存储'+note,7000);}catch(e){hint.textContent='系统没有允许分享，请点击下载备份后在系统界面存储。';fallback.style.display='';}finally{button.disabled=false;}};
@@ -228,7 +230,7 @@ async function exportData(){
   const stats={skippedImages:0};
   try{const blob=await fullBackupFileBlob(progress,stats);
     typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-download');const name='North备份_'+new Date().toISOString().slice(0,10)+'.json';
-    const skipped=+stats.skippedImages||0,note=skipped?('；有 '+skipped+' 张图片暂时读不到，已跳过；聊天和其余可读取内容已保留'):'';
+    const skipped=+stats.skippedImages||0,note=skipped?('；缺少 '+skipped+' 张图片原件（引用已保留），这份备份不能完整恢复这些图片'):'';
     if(backupOfferSave(blob,name,note)){toast('备份已生成，请点击保存备份'+note,7000);return;}const mode=await beautySaveFile(blob,name);
     if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”'+note,skipped?7000:undefined);else if(mode==='pending')toast('备份文件已生成，正在打开系统保存面板'+note,7000);else toast('已导出'+note,skipped?7000:undefined);
   }catch(e){typeof northBrowserDiagnosticError==='function'&&northBrowserDiagnosticError('backup-export',e);toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-export-ended');}
@@ -245,8 +247,22 @@ async function readJsonFile(f,onData){
   finally{for(const key of staged){if(!applying)try{await imgDel(key);}catch(_){} _backupImportPins.delete(key);}hashes.clear();_fullBackupImportBusy=false;typeof northBrowserDiagnosticMark==='function'&&northBrowserDiagnosticMark('backup-import-ended');}
 }
 
-async function applyFullBackupData(d){if(!d||!d.settings)throw new Error('不是小手机备份或美化包');const previous=S;let committed=false;try{S=mergeStateData(d,{keepPhoneFriend:true});normalizeLoadedState();phoneFriendState();toast('正在安全整理完整备份，请保持页面开启');await prepareImportedStateForSave();const stagedAt=Date.now();S._persistedAt=stagedAt;const compactJson=northNativeTimedJSON(S,_imgReplacer,'backup-import'),stats=recoveryStateStats(S);if(recoveryStateMeaningful(stats)&&!await queueRecoverySnapshot(compactJson,stagedAt,true))throw new Error('导入后的安全恢复快照写入失败，请检查浏览器存储空间');if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');committed=true;render();return true;}catch(e){if(!committed){S=previous;normalizeLoadedState();phoneFriendState();try{render();}catch(_){}}throw e;}}
-function importData(){pickFile('.json,.txt,application/json,text/plain',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}await applyFullBackupData(d);toast('完整备份已安全导入');}));}
+// BACKUP_MISSING_MEDIA_IMPORT_V1: only exact owner + stable record identity can preserve a newer local image.
+async function backupPreserveLocalMedia(d,previous){
+ const meta=d&&d._backupMedia;if(!meta||meta.version!==1||!Array.isArray(meta.missing))return d;
+ const sameOwner=typeof d._deviceSyncOwner==='string'&&d._deviceSyncOwner&&d._deviceSyncOwner===previous._deviceSyncOwner;
+ const available=async v=>{if(typeof v!=='string'||!v)return false;if(v.startsWith('data:image/'))return true;try{if(v.startsWith('idb:')){const image=await imgGet(v.slice(4));return typeof image==='string'&&!!image&&!image.startsWith('idb:');}if(v.startsWith('album:')){const image=await albumBackupImage(v);return typeof image==='string'&&!!image&&!image.startsWith('album:');}}catch(_){}return false;};
+ if(sameOwner)for(const row of meta.missing){
+  if(!row||typeof row.ref!=='string'||!Array.isArray(row.path)||!row.path.length||row.path.length>256||row.path.some(k=>!(typeof k==='string'||Number.isInteger(k))||['__proto__','prototype','constructor','_backupMedia'].includes(String(k))))continue;
+  let incoming=d,local=previous,valid=true;
+  for(let i=0;i<row.path.length-1;i++){const key=row.path[i];if(!incoming||!Object.prototype.hasOwnProperty.call(incoming,key)){valid=false;break;}const next=incoming[key];if(Array.isArray(incoming)){if(!next||typeof next!=='object'||!next.id||!Array.isArray(local)){valid=false;break;}local=local.find(x=>x&&x.id===next.id);}else local=local&&Object.prototype.hasOwnProperty.call(local,key)?local[key]:null;incoming=next;}
+  const key=row.path[row.path.length-1];if(!valid||!incoming||incoming[key]!==row.ref||!local||!Object.prototype.hasOwnProperty.call(local,key))continue;
+  if(!await available(row.ref)&&await available(local[key]))incoming[key]=local[key];
+ }
+ const result=Object.assign({},d);delete result._backupMedia;return result;
+}
+async function applyFullBackupData(d){if(!d||!d.settings)throw new Error('不是小手机备份或美化包');const previous=S,account=actId();let committed=false;try{d=await backupPreserveLocalMedia(d,previous);if(S!==previous||actId()!==account)throw new Error('导入期间账号或存档已变化，未替换数据');S=mergeStateData(d,{keepPhoneFriend:true});normalizeLoadedState();phoneFriendState();toast('正在安全整理完整备份，请保持页面开启');await prepareImportedStateForSave();const stagedAt=Date.now();S._persistedAt=stagedAt;const compactJson=northNativeTimedJSON(S,_imgReplacer,'backup-import'),stats=recoveryStateStats(S);if(recoveryStateMeaningful(stats)&&!await queueRecoverySnapshot(compactJson,stagedAt,true))throw new Error('导入后的安全恢复快照写入失败，请检查浏览器存储空间');if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');committed=true;render();return true;}catch(e){if(!committed){S=previous;normalizeLoadedState();phoneFriendState();try{render();}catch(_){}}throw e;}}
+function importData(){pickFile('.json,.txt,application/json,text/plain',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}const missing=d&&d._backupMedia&&Array.isArray(d._backupMedia.missing)?d._backupMedia.missing:[];if(missing.length&&!await uiConfirm('这份备份缺少部分图片原件，不能完整恢复图片。\n\n将保留缺图引用；同账号、相同记录里本机仍可读取的图片会保留。请先保留当前备份。是否继续导入？'))return;await applyFullBackupData(d);toast(missing.length?'已导入，缺图引用已保留；缺失原件未恢复':'完整备份已安全导入');}));}
 let _aiMemoryMovePreview=null,_aiMemoryZipLoading=null;
 function aiMemoryFileExt(name){const m=String(name||'').toLowerCase().match(/\.([a-z0-9]+)$/);return m?m[1]:'';}
 function aiMemoryDecodeEntities(v){const box=document.createElement('textarea');box.innerHTML=String(v||'');return box.value;}

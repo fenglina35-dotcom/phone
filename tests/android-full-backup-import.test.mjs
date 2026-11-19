@@ -58,7 +58,7 @@ test('a large Android backup is split before its first core snapshot',async()=>{
 test('full-backup apply writes recovery before core and rolls memory back on staging failure',async()=>{
   const events=[];
   const context=vm.createContext({
-    S:{settings:{},marker:'before'},Date,JSON,
+    S:{settings:{},marker:'before'},Date,JSON,actId:()=> 'main',
     mergeStateData:data=>({...data}),normalizeLoadedState(){},phoneFriendState(){},toast(){},
     prepareImportedStateForSave:async()=>{events.push('prepare');},
     _imgReplacer(_key,value){return value;},
@@ -68,7 +68,7 @@ test('full-backup apply writes recovery before core and rolls memory back on sta
     saveNowAsync:async()=>{events.push('save');return true;},
     render(){events.push('render');},
   });
-  vm.runInContext(functionSource('applyFullBackupData'),context);
+  vm.runInContext(functionSource('backupPreserveLocalMedia')+'\n'+functionSource('applyFullBackupData'),context);
   await vm.runInContext(`applyFullBackupData({settings:{},marker:'after'})`,context);
   assert.deepEqual(events,['prepare','snapshot:true','save','render']);
   assert.equal(context.S.marker,'after');

@@ -20,7 +20,7 @@ test('unreadable image and album entries do not abort or alter a backup',async()
  const env=setup(state,{imgGet:async key=>{if(key==='broken')throw new Error('image read failure');return 'data:image/png;base64,good';},albumBackupImage:async()=>{throw new Error('album missing');}});
  await vm.runInContext('exportData()',env.c);
  assert.ok(env.saved,'a failed image read must still produce a parseable file');
- const exported=JSON.parse(await env.saved.text());assert.equal(exported.messages.a[0].content,'原文保留');assert.equal(exported.messages.a[0].img,'');assert.equal(exported.messages.a[1].img,'');assert.equal(exported.messages.a[2].img,'data:image/png;base64,good');assert.equal(JSON.stringify(state),original);
+ const exported=JSON.parse(await env.saved.text());assert.equal(exported.messages.a[0].content,'原文保留');assert.equal(exported.messages.a[0].img,'idb:broken');assert.equal(exported.messages.a[1].img,'album:missing');assert.equal(exported.messages.a[2].img,'data:image/png;base64,good');assert.equal(JSON.stringify(state),original);
 });
 test('Apple share failures cannot silently report a successful download',async()=>{
  let downloads=0;const env=vm.createContext({File,Blob,navigator:{share:async()=>{throw new DOMException('needs gesture','NotAllowedError');}},beautyAppleDevice:()=>true,privateNativeAppOn:()=>false,downloadBlob:()=>{downloads++;}});
@@ -63,7 +63,7 @@ test('export hydrates stored media and all three archives without touching live 
  await vm.runInContext('exportData()',env.c);const d=JSON.parse(await env.saved.text());assert.equal(d.messages.a[0].img,env.db.get('pic'));assert.equal(d.me.phoneFriend.messages.f[0].text,'friend');assert.equal(d.me.phoneFriend.groupMessages.g[0].text,'group');assert.equal(state.messages.__idb,'messages');
  /* 坏图不再中止整份备份：照常导出、跳过读不出的图片，并如实告知跳过了几张。 */
  env.db.delete('pic');await vm.runInContext('exportData()',env.c);assert.ok(env.saved,'坏图时仍然要产出备份文件');
- const missing=JSON.parse(await env.saved.text());assert.equal(missing.messages.a[0].img,'','读不出的图片留空，其余内容照常');
+ const missing=JSON.parse(await env.saved.text());assert.equal(missing.messages.a[0].img,'idb:pic','读不出的图片保留引用，其余内容照常');
  assert.equal(missing.me.phoneFriend.messages.f[0].text,'friend');
  assert.ok(env.events.some(x=>x.includes('张图片')),'必须告诉用户跳过了几张图片');
 });
@@ -98,7 +98,7 @@ for(const [name,file] of BUNDLES)test(`${name}: missing album originals export r
  const source=read(file),state={me:{name:'备份夹具'},contacts:[{id:'r',name:'角色'}],messages:{r:[{id:'text',role:'user',content:'缺图也必须保存这句',img:'album:gone'}]},offline:{r:{msgs:[{content:'线下仍在'}]}}};
  const env=setup(state,{},source);vm.runInContext(fnSource(source,'albumBackupImage'),env.c);
  await env.c.exportData();assert.ok(env.saved);const result=JSON.parse(await env.saved.text());
- assert.equal(result.messages.r[0].content,state.messages.r[0].content);assert.equal(result.messages.r[0].img,'');assert.equal(result.offline.r.msgs[0].content,'线下仍在');
+ assert.equal(result.messages.r[0].content,state.messages.r[0].content);assert.equal(result.messages.r[0].img,'album:gone');assert.equal(result.offline.r.msgs[0].content,'线下仍在');
  assert.equal(state.messages.r[0].img,'album:gone');assert.ok(env.events.some(x=>x.includes('1 张图片')));
 });
 
@@ -107,3 +107,29 @@ test('native export bypasses Web Share even when the platform exposes an unusabl
  vm.runInContext(fnSource(src,'beautySaveFile'),ctx);await Promise.resolve();
  assert.equal(await ctx.beautySaveFile(new Blob(['{"messages":{}}']),'backup.json'),'pending');assert.equal(shares,0);assert.equal(downloads,1);
 });
+
+test('native backup waits for a fresh save click after asynchronous generation',async()=>{
+ const nodes=new Map(['backup-save-ready','backup-save-download','backup-save-hint'].map(id=>[id,{style:{},disabled:false}]));let downloads=0,gesture=false;
+ const ctx=vm.createContext({beautyAppleDevice:()=>true,privateNativeAppOn:()=>true,openModal(){},closeModal(){},toast(){},document:{getElementById:id=>nodes.get(id)},beautySaveFile:async()=>{assert(gesture,'native download must start inside the new click');downloads++;return 'pending';}});
+ vm.runInContext(fnSource(src,'backupOfferSave'),ctx);
+ assert.equal(ctx.backupOfferSave(new Blob(['{}']),'backup.json',''),true);assert.equal(downloads,0);
+ gesture=true;await nodes.get('backup-save-ready').onclick();assert.equal(downloads,1);
+});
+
+ test('unreadable media keeps its reference and a partial manifest instead of an empty replacement',async()=>{
+ const state={settings:{},_deviceSyncOwner:'owner-a',messages:{r:[{id:'m1',img:'idb:missing'}]}};
+ const e=setup(state);await e.c.exportData();const d=JSON.parse(await e.saved.text());
+ assert.equal(d.messages.r[0].img,'idb:missing');assert.equal(d._backupMedia.complete,false);
+ assert.equal(d._backupMedia.missing[0].ref,'idb:missing');assert.equal(state.messages.r[0].img,'idb:missing');
+ });
+
+test('partial import preserves available local images by owner and message ID, not array position',async()=>{
+ const previous={_deviceSyncOwner:'a',messages:{r:[{id:'new',img:'idb:unrelated'},{id:'m1',img:'idb:good'}]}};
+ const backup=()=>({_deviceSyncOwner:'a',messages:{r:[{id:'m1',img:'idb:missing'}]},_backupMedia:{version:1,missing:[{ref:'idb:missing',path:['messages','r',0,'img']}]}});
+ const c=vm.createContext({imgGet:async k=>k==='good'?'data:image/png;base64,ok':null});vm.runInContext(fnSource(src,'backupPreserveLocalMedia'),c);
+ let d=await c.backupPreserveLocalMedia(backup(),previous);assert.equal(d.messages.r[0].img,'idb:good');assert(!d._backupMedia);assert.equal(previous.messages.r[0].img,'idb:unrelated');
+ const other=backup();other._deviceSyncOwner='b';d=await c.backupPreserveLocalMedia(other,previous);assert.equal(d.messages.r[0].img,'idb:missing');
+ const unknown=backup();unknown.messages.r[0].id='unmatched';d=await c.backupPreserveLocalMedia(unknown,previous);assert.equal(d.messages.r[0].img,'idb:missing');
+});
+
+test('strict cloud backup cannot replace a readable backup with missing image originals',async()=>{const e=setup({settings:{},img:'idb:gone'});await assert.rejects(()=>e.c.fullBackupFileBlob(),/图片原件/);});
