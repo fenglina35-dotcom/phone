@@ -1370,6 +1370,8 @@ MCP_NONEXPIRING_V1：无到期时间连接在旧元数据更新中被写入裸ex
 
 ## 长库启动竞态与电话事件（2026-11-18候选）
 
+PRIVATE_CORE_CONFLICT_EVIDENCE_V1：私人启动存档冲突仅追加本机诊断指纹、数量和固定栏目，不记录正文或密钥、不自动选择任何来源。必须区分进程启动成功与页面/真实存档验收；不得按时间戳绕过冲突保护。
+
 MSG_ARCHIVE_BOOT_RACE_V1：长库占位尚未展开时不写删，读后核对同一S/messages并重新计算added。避免读取期间新尾巴删库或误标已入库。message-archive-no-wipe旧四项失败，新9/9通过。
 
 CALL_EVENT_CONSUME_ONCE_V1：明确静默及已显示回复消费精确事件，私人只来电动作也等待执行结果。CALL_MISSED_SESSION_V1要求横幅实际呈现及相同session、账号才记未接。CALL_REAL_FACTS_V1只把系统记录作为来电事实，模型自己说过不作依据。CALL_REDIAL_THREE_V1把原三次上限接到当前入口，显示成功才计数，正常独立重拨允许，既有新用户互动及正常结束清零保留。私人专属伴生和网页审计差异不覆盖。

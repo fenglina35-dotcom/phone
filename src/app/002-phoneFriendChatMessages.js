@@ -473,13 +473,26 @@ async function privateVerifyCoreMirror(record){
   if(digest!==record.stateSHA256)throw new Error('备用存档指纹与内容不符，已停止自动读取');
   return Object.assign({},record,{stateHashVerified:true});
 }
+/* PRIVATE_CORE_CONFLICT_EVIDENCE_V1: 只记本机指纹/数量/固定栏目，不选档、不写存档、不记录正文或密钥。 */
+function privateLogCoreConflict(a,b,left,right){
+  try{
+    if(!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')return;
+    const digest=x=>/^[a-f0-9]{64}$/.test(x||'')?x:'missing',first=JSON.parse(left||'{}'),second=JSON.parse(right||'{}');
+    const emit=(event,fields)=>{Promise.resolve(window.SmallPhoneNative.request('diagnostics.append',{payload:{event,fields}})).catch(()=>{});};
+    emit('boot.core.conflict.fingerprints',{nativeHash:digest(a&&a.contentSHA256),mirrorHash:digest(b&&b.contentSHA256),nativeParent:digest(a&&a.parentSHA256),mirrorParent:digest(b&&b.parentSHA256),nativeState:digest(a&&a.stateSHA256),mirrorState:digest(b&&b.stateSHA256),mirrorVerified:!!(b&&b.stateHashVerified)});
+    const count=v=>Array.isArray(v)?v.length:0;
+    emit('boot.core.conflict.counts',{nativeTime:+(a&&a.savedAt)||0,mirrorTime:+(b&&b.savedAt)||0,nativeContacts:count(first.contacts),mirrorContacts:count(second.contacts),nativeNotes:count(first.me&&first.me.lifeNotes),mirrorNotes:count(second.me&&second.me.lifeNotes),nativeArchived:!!(first.messages&&first.messages.__idb),mirrorArchived:!!(second.messages&&second.messages.__idb)});
+    const keys=['settings','me','contacts','messages','moments','couple','mail','cohabitation','presence','weather','roleBody','friendDiscovery','groups'];
+    emit('boot.core.conflict.sections',{changedKeys:keys.filter(k=>JSON.stringify(first[k])!==JSON.stringify(second[k])).join(','),chatConfigSame:JSON.stringify(first.settings&&first.settings.chat)===JSON.stringify(second.settings&&second.settings.chat),messagesSame:JSON.stringify(first.messages)===JSON.stringify(second.messages)});
+  }catch(_){}
+}
 function privateSelectStoredCore(a,b){
   const parse=record=>{if(!record)return null;let state;try{state=JSON.parse(record.json);}catch(_){throw new Error('本机核心存档无法完整核对，已停止自动读取');}if(!state||!state.settings||!privateAccountShellMatches(state))throw new Error('本机存档账号归属不符，已停止自动读取');const content=Object.assign({},state);delete content._persistedAt;delete content._deviceSyncOwner;delete content.__coreIdb;return JSON.stringify(content);};
   const left=parse(a),right=parse(b);
   if(a&&/^[a-f0-9]{64}$/.test(a.sourceApproval||'')){const before=b?Object.assign({},b):null;if(before)delete before.stateHashVerified;return Object.assign({},a,{approvedBefore:before});}
   // PRIVATE_CORE_LINEAGE_V1: only a verified predecessor permits crash repair.
   if(a&&b&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(b.contentSHA256||'')&&a.parentSHA256===b.contentSHA256)return Object.assign({},a,{repairMirror:true});
-  if(a&&b&&left!==right)throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');
+  if(a&&b&&left!==right){if(typeof privateLogCoreConflict==='function')privateLogCoreConflict(a,b,left,right);throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');}
   return a&&b?((+b.savedAt||0)>(+a.savedAt||0)?b:a):a||b||null;
 }
 //@@ end

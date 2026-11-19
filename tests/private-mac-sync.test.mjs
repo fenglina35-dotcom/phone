@@ -1072,3 +1072,12 @@ test('same-owner sync publication rebinds the live composer without weakening ac
  c.adoptPublishedComposer(old,'owner-a');assert.equal(ta._chatOwner,next);assert.equal(ta.value,'draft');assert.equal(paints,1);
  for(const mismatch of ['owner','wechat','role']){ta._chatOwner=old;ta._chatAccount=mismatch==='wechat'?'other':'main';page.id=mismatch==='role'?'other':'r';c.S=mismatch==='owner'?{_deviceSyncOwner:'other'}:next;c.adoptPublishedComposer(old,'owner-a');assert.equal(ta._chatOwner,old);assert.equal(paints,1);}
 });
+
+test('boot conflict evidence contains only fixed metadata and never writes either data source',()=>{
+ const source=read(PRIV_DIR+'app.js'),events=[];
+ const ctx=vm.createContext({window:{SmallPhoneNative:{request(action,body){assert.equal(action,'diagnostics.append');events.push(body.payload);return Promise.resolve({});}}},privateAccountShellMatches:()=>true});
+ for(const name of ['privateLogCoreConflict','privateSelectStoredCore'])vm.runInContext(fnSource(source,name),ctx);
+ const a={savedAt:20,contentSHA256:'a'.repeat(64),parentSHA256:'b'.repeat(64),json:JSON.stringify({settings:{chat:{key:'SECRET_MUST_NOT_LOG'}},contacts:[{id:'PRIVATE_ROLE'}],messages:{__idb:'messages'},me:{lifeNotes:[{text:'PRIVATE_NOTE'}]}})},b={savedAt:10,json:JSON.stringify({settings:{chat:{key:'OTHER_SECRET'}},contacts:[],messages:{__idb:'messages'},me:{lifeNotes:[]}})};
+ const before=JSON.stringify([a,b]);assert.throws(()=>ctx.privateSelectStoredCore(a,b),/不一致/);assert.equal(JSON.stringify([a,b]),before);
+ assert.equal(events.length,3);const text=JSON.stringify(events);for(const secret of ['SECRET_MUST_NOT_LOG','PRIVATE_ROLE','PRIVATE_NOTE','OTHER_SECRET'])assert(!text.includes(secret));assert.equal(events[0].fields.nativeParent,'b'.repeat(64));assert.equal(events[1].fields.nativeNotes,1);assert.equal(events[2].fields.messagesSame,true);
+});
