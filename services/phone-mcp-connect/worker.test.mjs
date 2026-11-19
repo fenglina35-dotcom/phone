@@ -229,7 +229,7 @@ test('Spotify failed calls, redirects and mismatched responses never replay or l
    const body=JSON.parse(init.body);if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:'2025-11-25'}});if(body.method==='notifications/initialized')return new Response(null,{status:202});searches++;
    if(kind==='network')throw Error('private upstream token');if(kind==='redirect')return new Response('private upstream token',{status:302,headers:{Location:'https://evil.invalid'}});
    return Response.json(kind==='mismatch'?{jsonrpc:'2.0',id:'wrong',result:{}}:{jsonrpc:'2.0',id:body.id,result:{isError:true,content:[{type:'text',text:'private upstream token'}]}});
-  });assert.equal(r.status,502);assert.equal(searches,1);assert(!(await r.text()).includes('private upstream token'));assert(!r.headers.has('Location'));
+  });assert.equal(r.status,502);assert.equal(searches,1);const data=await r.json();assert(!JSON.stringify(data).includes('private upstream token'));assert.equal(data.error.data.stage,kind==='mismatch'?'search-response':kind==='error'?'result-shape':'search-request');assert.equal(data.error.data.upstreamStatus,kind==='network'?0:kind==='redirect'?302:200);assert(!r.headers.has('Location'));
  }
 });
 

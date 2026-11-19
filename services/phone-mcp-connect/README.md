@@ -61,3 +61,5 @@ MCP_SPOTIFY_PUBLIC_SEARCH_V1：本人优先个人账号；现有 Free 登录不�
 唯一工具 spotify_search：只搜索公开 track 元数据，不开放播放、收藏、歌单、共享目录或 Pipeworx 的其他工具。固定上游 https://gateway.pipeworx.io/spotify/mcp （上游项目 https://github.com/pipeworx-io/mcp-spotify）。不转发客户端 Authorization、Cookie、会话、角色提示词或聊天全文；只发本次获批的 query/market/limit/offset。初始化声明与任意上游指令不传给角色；结果仅取歌曲/歌手/专辑名、时长、校验后的官方曲目ID链接。每次最多10项、25秒共用超时，SSE按匹配ID收尾；失败不自动重试。上游目前匿名额度有限，不保证长期免费或可用，额度不足时如实失败，不自动订阅。原 Gmail OAuth、KV、CPU和套餐不改。
 
 新增服务直接回归旧实现失败，涵盖认证隔离、参数拒绝、固定Host、不转发凭据、结果来源、重定向/错ID/失败不重放；实际 workerd 覆盖独立路由、Origin/CORS、Gmail令牌边界。角色实际验收另记，不以HTTP直测冒充。
+
+线上排查补充：小手机native目录验证成功，C已显示并批准spotify_search，但实际调用未获有效回执；直接网关同查询502，故尚不算角色搜歌通过。新增error.data仅报告固定stage与上游HTTP状态，不含上游原文、查询、凭据或异常堆栈，客户端仍显示原简短错误。原始Bearer仅在小手机安全存储；本轮诊断以RSA-OAEP密封移交到临时进程内使用，不写文件或打印。

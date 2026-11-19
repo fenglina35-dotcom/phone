@@ -255,12 +255,13 @@ export async function spotifyCatalog(request,env,fetchFn=fetch){
  if(body.method==='server/discover')return result({supportedVersions:['2026-07-28'],serverInfo,capabilities:{tools:{}},tools:[spotifySearchTool]});
  if(body.method!=='tools/call'||body.params?.name!=='spotify_search')return rpcError(body.id,-32601,'此连接只提供公开歌曲搜索。',400);
  let args;try{args=spotifyArgs(body.params.arguments);}catch(e){return rpcError(body.id,-32602,e.message,400);}
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let session='';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let session='',stage='initialize-request',upstreamStatus=0;
  const send=async(method,params,id)=>{
+  stage=method==='initialize'?'initialize-request':method==='notifications/initialized'?'initialized-request':'search-request';upstreamStatus=0;
   const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25',...(session?{'Mcp-Session-Id':session}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,...(params?{params}:{})})});
-  if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
+  upstreamStatus=response.status;if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
   if(id===undefined){await response.body?.cancel();return;}
-  const data=await readRpc(response,id);
+  stage=method==='initialize'?'initialize-response':'search-response';const data=await readRpc(response,id);
   if(data?.jsonrpc!=='2.0'||data.id!==id||data.error||!object(data.result))throw Error('catalog_response_invalid');
   if(method==='initialize'){
    if(data.result.protocolVersion!=='2025-11-25')throw Error('catalog_protocol_invalid');
@@ -270,8 +271,8 @@ export async function spotifyCatalog(request,env,fetchFn=fetch){
  try{
   await send('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'SmallPhone Public Catalog',version:'1'}},'catalog-init');
   await send('notifications/initialized');
-  const data=publicTracks(await send('tools/call',{name:'spotify_search',arguments:args},'catalog-search'),args);
+  const raw=await send('tools/call',{name:'spotify_search',arguments:args},'catalog-search');stage='result-shape';const data=publicTracks(raw,args);
   return result({content:[{type:'text',text:JSON.stringify(data)}]});
- }catch(_){return rpcError(body.id,-32603,'公开曲库暂未返回有效结果，请稍后手动重试；个人账号连接未改变。',502);}
+ }catch(_){return Response.json({jsonrpc:'2.0',id:body.id,error:{code:-32603,message:'公开曲库暂未返回有效结果，请稍后手动重试；个人账号连接未改变。',data:{stage,upstreamStatus}}},{status:502});}
  finally{clearTimeout(timer);}
 }
