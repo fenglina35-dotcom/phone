@@ -17,12 +17,9 @@ test('registration requires owner setup key, public PKCE client and exact own ca
  assert.equal(registrationPolicy(e,args),undefined);
  for(const a of [{...args,request:new Request(base+'/register')},{...args,clientMetadata:{...metadata,redirect_uris:['https://evil.invalid/callback']}},{...args,clientMetadata:{...metadata,token_endpoint_auth_method:'client_secret_post'}}])assert.equal(registrationPolicy(e,a).status,403);
 });
-test('real tool catalog is filtered; read annotations are based on allowed tool semantics',async()=>{
- let calls=0;const response=await gmailProxy(rpc('tools/list'),env(),context(),async(url,init)=>{
-  calls++;assert.equal(url,UPSTREAM);assert.equal(init.headers.get('Authorization'),'Bearer fixture-google-token');assert(!init.headers.has('Cookie'));assert.equal(init.redirect,'manual');
-  return json({jsonrpc:'2.0',id:7,result:{tools:[{name:'gmail.search_threads',inputSchema:{type:'object'}},{name:'create_draft',annotations:{readOnlyHint:true}},{name:'send_message'},{name:'delete_thread'}]}});
- });
- const data=await response.json();assert.deepEqual(data.result.tools.map(t=>t.name),['gmail.search_threads','create_draft']);assert.equal(data.result.tools[0].annotations.readOnlyHint,true);assert.equal(data.result.tools[1].annotations.readOnlyHint,false);assert.equal(calls,1);
+test('REST tool catalog exposes five implemented tools without the preview service',async()=>{
+ let calls=0;const response=await gmailProxy(rpc('tools/list'),env(),context(),async()=>{calls++;throw Error('catalog must be local');});
+ const data=await response.json();assert.deepEqual(data.result.tools.map(t=>t.name),['list_labels','search_threads','get_thread','list_drafts','create_draft']);assert(data.result.tools.slice(0,4).every(t=>t.annotations.readOnlyHint));assert.equal(data.result.tools[4].annotations.readOnlyHint,false);assert.equal(calls,0);
 });
 test('send/delete tools, missing write scope and oversized input are blocked before dispatch',async()=>{
  let calls=0;const fetchFn=async()=>{calls++;throw Error('unexpected');};
@@ -31,21 +28,20 @@ test('send/delete tools, missing write scope and oversized input are blocked bef
  const large=rpc('tools/call',{params:{name:'create_draft',arguments:{text:'x'.repeat(70000)}}});assert.equal((await gmailProxy(large,env(),context(),fetchFn)).status,400);assert.equal(calls,0);
 });
 test('a failed write is never retried and upstream errors do not echo credentials',async()=>{
- let calls=0;const response=await gmailProxy(rpc('tools/call',{params:{name:'create_draft',arguments:{text:'private-body'}}}),env(),context(),async()=>{calls++;throw Error('fixture-secret private-body');});
+ let calls=0;const response=await gmailProxy(rpc('tools/call',{params:{name:'create_draft',arguments:{body:'private-body'}}}),env(),context(),async()=>{calls++;throw Error('fixture-secret private-body');});
  assert.equal(response.status,502);assert.equal(calls,1);const body=await response.text();assert(!body.includes('fixture-secret'));assert(!body.includes('private-body'));
 });
 test('upstream redirects never receive forwarded credentials or trigger another request',async()=>{
- let calls=0;const r=await gmailProxy(rpc('tools/list'),env(),context(),async(url,init)=>{calls++;assert.equal(url,UPSTREAM);assert.equal(init.redirect,'manual');return new Response('',{status:302,headers:{Location:'https://evil.invalid/collect'}});});assert.equal(r.status,502);assert.equal(calls,1);assert(!r.headers.has('Location'));
+ let calls=0;const r=await gmailProxy(rpc('tools/call',{params:{name:'list_labels',arguments:{}}}),env(),context(),async(url,init)=>{calls++;assert.equal(url,UPSTREAM+'/labels');assert.equal(init.redirect,'manual');return new Response('',{status:302,headers:{Location:'https://evil.invalid/collect'}});});assert.equal(r.status,502);assert.equal(calls,1);assert(!r.headers.has('Location'));
 });
 
 test('matching SSE final response closes the upstream stream without waiting for EOF',async()=>{
  let cancelled=false;
  const stream=new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('data: '+JSON.stringify({jsonrpc:'2.0',id:7,result:{content:[{type:'text',text:'actual-result'}]}})+'\n\n'));},cancel(){cancelled=true;}});
- const response=await gmailProxy(rpc('tools/call',{params:{name:'get_thread',arguments:{}}}),env(),context(),async()=>new Response(stream,{headers:{'Content-Type':'text/event-stream','Mcp-Session-Id':'upstream-session'}}));
- assert.equal((await response.json()).result.content[0].text,'actual-result');assert(cancelled);assert.equal(response.headers.get('Mcp-Session-Id'),'upstream-session');
+ const result=await readRpc(new Response(stream,{headers:{'Content-Type':'text/event-stream'}}),7);assert.equal(result.result.content[0].text,'actual-result');assert(cancelled);
 });
 test('response mismatches and upstream 403 do not replay calls',async()=>{
- for(const kind of ['mismatch','403']){let n=0;const response=await gmailProxy(rpc('tools/list'),env(),context(),async()=>{n++;return kind==='403'?new Response('sensitive-upstream-error',{status:403}):json({jsonrpc:'2.0',id:8,result:{}});});assert.equal(n,1);assert.equal(response.status,kind==='403'?403:502);assert(!(await response.text()).includes('sensitive-upstream-error'));}
+ for(const kind of ['mismatch','403']){let n=0;const response=await gmailProxy(rpc('tools/call',{params:{name:'list_labels',arguments:{}}}),env(),context(),async()=>{n++;return kind==='403'?new Response('sensitive-upstream-error',{status:403}):json({jsonrpc:'2.0',id:8,result:{}});});assert.equal(n,1);assert.equal(response.status,kind==='403'?403:502);assert(!(await response.text()).includes('sensitive-upstream-error'));}
 });
 test('Google refresh rotates credentials; revoked grants are distinguished from transient failures',async()=>{
  const e=env(),props=context().props;
@@ -103,7 +99,7 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
    return Response.json({access_token:renewal?'renewed-google-token':'initial-google-token',refresh_token:'google-refresh',expires_in:3600,token_type:'Bearer',scope:'openid email https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose'});
   }
   if(url.origin==='https://openidconnect.googleapis.com')return Response.json({sub:'subject',email:'owner@fixture.invalid',email_verified:true});
-  if(url.href===UPSTREAM){reads++;assert(/^Bearer (?:initial|renewed)-google-token$/.test(request.headers.get('Authorization')));const body=await request.json();return Response.json({jsonrpc:'2.0',id:body.id,result:{tools:[{name:'get_thread',inputSchema:{type:'object'}},{name:'send_message'}]}});}
+  if(url.href===UPSTREAM+'/labels'){reads++;assert(/^Bearer (?:initial|renewed)-google-token$/.test(request.headers.get('Authorization')));assert.equal(request.method,'GET');return Response.json({labels:[{id:'INBOX',name:'INBOX'}]});}
   throw Error('External network forbidden: '+url.origin);
  };
  const {readFile}=await import('node:fs/promises'),config=await readFile(new URL('./wrangler.toml',import.meta.url),'utf8'),date=config.match(/^compatibility_date = "([^"]+)"/m)[1],flags=JSON.parse(config.match(/^compatibility_flags = (.+)$/m)[1]);
@@ -125,7 +121,7 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
   r=await send(callback,{headers:{Cookie:cookies()}});assert.equal(r.status,302,await r.clone().text());const receipt=new URL(r.headers.get('Location'));assert.equal(receipt.searchParams.get('state'),'client-state');
   const exchange={client_id:client.client_id,grant_type:'authorization_code',code:receipt.searchParams.get('code'),redirect_uri:base+'/client-callback',code_verifier:verifier,resource:base+'/mcp'};
   r=await send('/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(exchange).toString()});assert.equal(r.status,200,await r.clone().text());const token=await r.json();assert(token.access_token);assert(token.refresh_token);assert(!token.access_token.includes('google-token'));
-  const list=async value=>{const response=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:10,method:'tools/list'})});assert.equal(response.status,200,await response.clone().text());assert.deepEqual((await response.json()).result.tools.map(t=>t.name),['get_thread']);};
+  const list=async value=>{const response=await send('/mcp',{method:'POST',headers:{Authorization:'Bearer '+value,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:10,method:'tools/call',params:{name:'list_labels',arguments:{}}})});assert.equal(response.status,200,await response.clone().text());assert.equal(JSON.parse((await response.json()).result.content[0].text).labels[0].id,'INBOX');};
   await list(token.access_token);
   r=await send('/oauth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:client.client_id,grant_type:'refresh_token',refresh_token:token.refresh_token,resource:base+'/mcp'}).toString()});assert.equal(r.status,200,await r.clone().text());const next=await r.json();assert.equal(renewals,1);await list(next.access_token);assert.equal(reads,2);
   for(const [failure,status,marker] of [['invalid_client',502,'GMAIL_CLIENT_CONFIG'],['invalid_grant',400,'GMAIL_CODE_REJECTED'],['server_error',503,'GMAIL_TOKEN_UNAVAILABLE']]){
@@ -137,4 +133,47 @@ test('actual workerd OAuth PKCE flow, browser binding and Google refresh',async(
    assert.equal(r.status,status);const errorPage=await r.text();assert(errorPage.includes(marker));assert(!errorPage.includes('fixture-secret'));assert(!errorPage.includes('google-fixture-code'));assert.equal(reads,2);
   }
  }finally{await mf.dispose();}
+});
+
+test('Gmail REST: existing OAuth grant lists labels without preview MCP',async()=>{
+ let n=0;const r=await gmailProxy(rpc('tools/call',{params:{name:'list_labels',arguments:{}}}),env(),context(),async(url,init)=>{n++;assert.equal(String(url),'https://gmail.googleapis.com/gmail/v1/users/me/labels');assert.equal(new Headers(init.headers).get('Authorization'),'Bearer fixture-google-token');assert(!new Headers(init.headers).has('Cookie'));return json({labels:[{id:'INBOX',name:'INBOX'}]});});
+ assert.equal(r.status,200);assert.equal(n,1);assert.deepEqual(JSON.parse((await r.json()).result.content[0].text).labels,[{id:'INBOX',name:'INBOX'}]);
+});
+test('Gmail REST: a draft writes once and never uses a send endpoint',async()=>{
+ let n=0;const r=await gmailProxy(rpc('tools/call',{params:{name:'create_draft',arguments:{to:['friend@fixture.invalid'],subject:'中文主题',body:'草稿正文'}}}),env(),context(),async(url,init)=>{n++;assert.equal(String(url),'https://gmail.googleapis.com/gmail/v1/users/me/drafts');assert.equal(init.method,'POST');const raw=JSON.parse(init.body).message.raw;assert(Buffer.from(raw,'base64url').toString('utf8').includes('MIME-Version: 1.0'));return json({id:'draft1',message:{id:'msg1'}});});
+ assert.equal(r.status,200);assert.equal(n,1);assert.equal(JSON.parse((await r.json()).result.content[0].text).id,'draft1');
+});
+
+test('Gmail REST: search and draft listing preserve pagination without reading message bodies',async()=>{
+ for(const name of ['search_threads','list_drafts']){
+  const seen=[];const response=await gmailProxy(rpc('tools/call',{params:{name,arguments:{query:'subject:中文',pageSize:3,pageToken:'next+/='}}}),env(),context(),async(url,init)=>{seen.push(new URL(url));assert.equal(init.method,'GET');return json(name==='search_threads'?{threads:[{id:'thread1',snippet:'summary'}],nextPageToken:'later',resultSizeEstimate:1}:{drafts:[{id:'draft1',message:{id:'m1',threadId:'t1'}}],nextPageToken:'later'});});
+  assert.equal(response.status,200);assert.equal(seen.length,1);assert.equal(seen[0].searchParams.get('maxResults'),'3');assert.equal(seen[0].searchParams.get('pageToken'),'next+/=');assert(seen[0].searchParams.get('q').includes('subject:中文'));assert.equal(JSON.parse((await response.json()).result.content[0].text).nextPageToken,'later');
+ }
+});
+test('Gmail REST: full thread decodes Unicode plain text and keeps attachments as references',async()=>{
+ let n=0;const payload={mimeType:'multipart/mixed',parts:[{mimeType:'text/plain',body:{data:Buffer.from('原文😀').toString('base64url')}},{mimeType:'text/html',body:{data:Buffer.from('<b>HTML</b>').toString('base64url')}},{mimeType:'image/png',body:{attachmentId:'attachment1',size:99}}]};
+ const response=await gmailProxy(rpc('tools/call',{params:{name:'get_thread',arguments:{threadId:'t1',messageFormat:'PLAIN_TEXT'}}}),env(),context(),async url=>{n++;assert.equal(new URL(url).pathname,'/gmail/v1/users/me/threads/t1');assert.equal(new URL(url).searchParams.get('format'),'full');return json({id:'t1',messages:[{id:'m1',payload}]});});
+ const data=JSON.parse((await response.json()).result.content[0].text);assert.equal(n,1);assert.deepEqual(data.messages[0].textParts,[{mimeType:'text/plain',text:'原文😀'}]);assert.equal(data.messages[0].payload.parts[2].body.attachmentId,'attachment1');assert(!JSON.stringify(data).includes('data:'));
+});
+test('Gmail REST: header injection, fabricated URL IDs and invalid page sizes never reach Google',async()=>{
+ let n=0;const network=async()=>{n++;throw Error('not permitted');};
+ for(const params of [{name:'create_draft',arguments:{subject:'subject\r\nBcc: other@fixture.invalid'}},{name:'create_draft',arguments:{to:['a@fixture.invalid\r\nBcc:b@fixture.invalid']}},{name:'get_thread',arguments:{threadId:'https://evil.invalid/token'}},{name:'search_threads',arguments:{pageSize:500}},{name:'create_draft',arguments:{includeSignature:true}}]){
+  const response=await gmailProxy(rpc('tools/call',{params}),env(),context(),network);assert.equal(response.status,400);assert.equal((await response.json()).error.code,-32602);
+ }
+ assert.equal(n,0);
+});
+test('Gmail REST: notifications cannot create a draft without a request ID',async()=>{
+ let n=0;const request=new Request(base+'/mcp',{method:'POST',body:JSON.stringify({jsonrpc:'2.0',method:'tools/call',params:{name:'create_draft',arguments:{body:'draft'}}})});
+ assert.equal((await gmailProxy(request,env(),context(),async()=>{n++;})).status,400);assert.equal(n,0);
+});
+test('Gmail REST: a reply draft uses real message identity and creates only one draft with attachments',async()=>{
+ const seen=[];const response=await gmailProxy(rpc('tools/call',{params:{name:'create_draft',arguments:{replyToMessageId:'m1',to:['friend@fixture.invalid'],body:'正文😀',htmlBody:'<p>正文😀</p>',attachments:[{filename:'附件.txt',mimeType:'text/plain',content:Buffer.from('附件原文').toString('base64'),inline:true}]}}}),env(),context(),async(url,init)=>{
+  seen.push({url,method:init.method});if(init.method==='GET')return json({id:'m1',threadId:'t1',payload:{headers:[{name:'Message-ID',value:'<m1@fixture.invalid>'},{name:'Subject',value:'原主题'}]}});
+  const message=JSON.parse(init.body).message,raw=Buffer.from(message.raw,'base64url').toString('utf8');assert.equal(message.threadId,'t1');assert(raw.includes('In-Reply-To: <m1@fixture.invalid>'));assert(raw.includes('multipart/alternative'));assert(raw.includes('Content-ID: <att0>'));assert(raw.includes("filename*=UTF-8''"));return json({id:'draft1',message:{id:'m2',threadId:'t1'}});
+ });
+ assert.equal(response.status,200);assert.deepEqual(seen.map(x=>x.method),['GET','POST']);assert(seen.every(x=>!x.url.includes('/send')));
+});
+test('Gmail REST: disabled API is distinguished from lost login without leaking Google details',async()=>{
+ const response=await gmailProxy(rpc('tools/call',{params:{name:'list_labels',arguments:{}}}),env(),context(),async()=>new Response(JSON.stringify({error:{details:[{reason:'SERVICE_DISABLED'}],message:'fixture-google-token private-data'}}),{status:403}));
+ const text=await response.text();assert.equal(response.status,403);assert(text.includes('尚未启用正式 Gmail API'));assert(!text.includes('fixture-google-token'));assert(!text.includes('private-data'));assert(!text.includes('重新登录'));
 });

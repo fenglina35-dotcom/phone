@@ -9,7 +9,7 @@ export const clientMetadata = env => ({
  redirect_uris:[env.PUBLIC_URL+'/client-callback'],grant_types:['authorization_code','refresh_token'],
  response_types:['code'],token_endpoint_auth_method:'none',token_endpoint_auth_methods_supported:['none']
 });
-export const UPSTREAM = 'https://gmailmcp.googleapis.com/mcp/v1';
+export const UPSTREAM = 'https://gmail.googleapis.com/gmail/v1/users/me';
 export const GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token';
 export const GOOGLE_SCOPES = ['openid','email','https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.compose'];
 export const SCOPES = ['mcp:read','mcp:write','offline_access'];
@@ -63,35 +63,108 @@ export async function refreshGoogle(env,props,fetchFn=fetch){
 function scopeAllowed(context,scope){return Array.isArray(context.auth?.scope)&&context.auth.scope.includes(scope);}
 function rpcError(id,code,message,status=200){return Response.json({jsonrpc:'2.0',id:id??null,error:{code,message}},{status,headers:{'Cache-Control':'no-store'}});}
 function redact(value,env,props){let out=JSON.stringify(value);for(const secret of [env.GOOGLE_CLIENT_SECRET,props.googleAccessToken,props.googleRefreshToken])if(secret)out=out.split(secret).join('[凭据已隐藏]');return JSON.parse(out);}
+// MCP_GMAIL_REST_V1: retain the existing OAuth grant, mailbox and five tools.
+// All Google paths are fixed here; no caller-supplied URL or send/delete route.
+const textField={type:'string',maxLength:4000};
+const pageFields={query:textField,pageToken:{type:'string',maxLength:2048},pageSize:{type:'integer',minimum:1,maximum:50}};
+const tools=[
+ {name:'list_labels',description:'只读列出当前已授权邮箱的标签，不读取邮件正文。',inputSchema:{type:'object',properties:{},additionalProperties:false}},
+ {name:'search_threads',description:'只读搜索邮件会话。query 使用 Gmail 搜索语法，默认仅返回会话标识与摘要；继续读取正文必须调用 get_thread。',inputSchema:{type:'object',properties:{...pageFields,includeTrash:{type:'boolean'},view:{type:'string',enum:['THREAD_VIEW_UNSPECIFIED','THREAD_VIEW_METADATA_ONLY','THREAD_VIEW_MINIMAL','THREAD_VIEW_IDS_ONLY','THREAD_VIEW_SUMMARY']}},additionalProperties:false}},
+ {name:'get_thread',description:'只读获取已知 threadId 的会话。默认读取正文；只需元数据时选择 METADATA_ONLY，不能猜测 ID。',inputSchema:{type:'object',required:['threadId'],properties:{threadId:{type:'string',maxLength:256},messageFormat:{type:'string',enum:['MESSAGE_FORMAT_UNSPECIFIED','MINIMAL','FULL_CONTENT','METADATA_ONLY','PLAIN_TEXT']}},additionalProperties:false}},
+ {name:'list_drafts',description:'只读列出草稿。默认仅草稿和会话标识；DRAFT_VIEW_METADATA_ONLY 读取元数据，DRAFT_VIEW_FULL 才读取正文，不发送或修改草稿。',inputSchema:{type:'object',properties:{...pageFields,view:{type:'string',enum:['DRAFT_VIEW_UNSPECIFIED','DRAFT_VIEW_METADATA_ONLY','DRAFT_VIEW_FULL']}},additionalProperties:false}},
+ {name:'create_draft',description:'仅创建邮件草稿，绝不发送。支持纯文本、HTML、收件人、附件及回复已有消息。签名请写入正文；不读取邮箱签名设置。',inputSchema:{type:'object',properties:{subject:textField,body:{type:'string'},htmlBody:{type:'string'},to:{type:'array',items:{type:'string'}},cc:{type:'array',items:{type:'string'}},bcc:{type:'array',items:{type:'string'}},replyToMessageId:{type:'string',maxLength:256},attachments:{type:'array',maxItems:10,items:{type:'object',required:['content'],properties:{content:{type:'string'},filename:{type:'string'},mimeType:{type:'string'},inline:{type:'boolean'}},additionalProperties:false}}},additionalProperties:false}}
+].map(t=>({...t,annotations:{readOnlyHint:t.name!=='create_draft',destructiveHint:false,idempotentHint:t.name!=='create_draft',openWorldHint:true}}));
+const object=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+function invalid(message){const e=new Error(message);e.invalid=true;throw e;}
+function stringArg(value,name,max=4000){if(value===undefined)return '';if(typeof value!=='string'||value.length>max)invalid(name+' 格式不正确。');return value;}
+function googleID(value){if(typeof value!=='string'||!/^[-a-zA-Z0-9_]{1,256}$/.test(value))invalid('请提供真实的邮件或会话 ID。');return encodeURIComponent(value);}
+function pageArgs(args){const n=args.pageSize??20;if(!Number.isInteger(n)||n<1||n>50)invalid('pageSize 必须为 1 到 50。');const token=stringArg(args.pageToken,'pageToken',2048),query=stringArg(args.query,'query');return {maxResults:String(n),...(token?{pageToken:token}:{}),...(query?{q:query}:{})};}
+function base64(text){const bytes=new TextEncoder().encode(text);let raw='';for(const byte of bytes)raw+=String.fromCharCode(byte);return btoa(raw);}
+const wrapped=value=>value.match(/.{1,76}/g)?.join('\r\n')||'';
+function header(value){if(typeof value!=='string'||/[\r\n\x00]/.test(value)||value.length>4000)invalid('邮件标题或头部格式不正确。');return value;}
+function addresses(value){if(value===undefined)return '';if(!Array.isArray(value)||value.length>100||value.some(x=>typeof x!=='string'||!/^[^\s@<>(),;:"\\\x00-\x1f\x7f-\uffff]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(x)))invalid('收件人必须是普通邮箱地址数组。');return value.join(', ');}
+function mimeBody(args){
+ const part=(type,body)=>'Content-Type: '+type+'; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n'+wrapped(base64(body));
+ const plain=stringArg(args.body,'body',64000),html=stringArg(args.htmlBody,'htmlBody',64000),attachments=args.attachments??[];
+ if(!Array.isArray(attachments)||attachments.length>10)invalid('附件格式不正确。');
+ let content=part('text/plain',plain);
+ const combine=(type,parts)=>{const boundary='north_'+crypto.randomUUID();return 'Content-Type: multipart/'+type+'; boundary="'+boundary+'"\r\n\r\n'+parts.map(x=>'--'+boundary+'\r\n'+x).join('\r\n')+'\r\n--'+boundary+'--';};
+ if(html)content=plain?combine('alternative',[content,part('text/html',html)]):part('text/html',html);
+ if(attachments.length){const parts=[content];for(const [i,a] of attachments.entries()){
+  if(!object(a)||typeof a.content!=='string'||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(a.content))invalid('附件内容必须是有效的 Base64。');
+  const type=a.mimeType??'application/octet-stream';if(typeof type!=='string'||!/^[-a-zA-Z0-9!#$&^_.+]+\/[-a-zA-Z0-9!#$&^_.+]+$/.test(type))invalid('附件类型不正确。');
+  const name=encodeURIComponent(header(a.filename??'attachment')).replace(/'/g,'%27');
+  parts.push('Content-Type: '+type+'\r\nContent-Disposition: '+(a.inline?'inline':'attachment')+"; filename*=UTF-8''"+name+'\r\n'+(a.inline?'Content-ID: <att'+i+'>\r\n':'')+'Content-Transfer-Encoding: base64\r\n\r\n'+wrapped(a.content));
+ }content=combine('mixed',parts);}return content;
+}
+function readableMessage(message,plainOnly=false){
+ const parts=[];const walk=p=>{if(!p||parts.length>=100)return;if(p.body?.data&&['text/plain','text/html'].includes(p.mimeType)&&(!plainOnly||p.mimeType==='text/plain')){const raw=atob(p.body.data.replace(/-/g,'+').replace(/_/g,'/'));parts.push({mimeType:p.mimeType,text:new TextDecoder().decode(Uint8Array.from(raw,c=>c.charCodeAt(0)))});}for(const c of p.parts||[])walk(c);};walk(message.payload);
+ const clean=p=>{if(!p)return p;const {body,parts,...rest}=p;return {...rest,...(body?{body:{size:body.size,...(body.attachmentId?{attachmentId:body.attachmentId}:{})}}:{}),...(parts?{parts:parts.map(clean)}:{})};};
+ return {...message,payload:clean(message.payload),textParts:parts};
+}
+async function gmailAPI(body,props,fetchFn,signal){
+ const name=String(body.params.name).replace(/^gmail[._/]/,''),args=body.params.arguments;
+ const definition=tools.find(t=>t.name===name),allowed=new Set(Object.keys(definition.inputSchema.properties));
+ for(const key of Object.keys(args))if(!allowed.has(key)&&!(key==='includeSignature'&&args[key]===false))invalid('此工具不支持参数 '+key+'。');
+ const api=async(path,params={},payload)=>{
+  const url=new URL(UPSTREAM+'/'+path);url.search=new URLSearchParams(params).toString();
+  const response=await fetchFn(url.href,{method:payload?'POST':'GET',headers:{Authorization:'Bearer '+props.googleAccessToken,Accept:'application/json',...(payload?{'Content-Type':'application/json'}:{})},...(payload?{body:JSON.stringify(payload)}:{}),redirect:'manual',signal});
+  if(!response.ok){let reason='';try{const value=JSON.parse(await readLimited(response.body,32768));reason=value.error?.errors?.[0]?.reason||value.error?.details?.find(x=>x.reason)?.reason||'';}catch(_){}
+   const e=new Error(response.status===401?'Google 明确拒绝了当前登录，请刷新授权。':/SERVICE_DISABLED|accessNotConfigured/i.test(reason)?'此 Google 项目尚未启用正式 Gmail API，现有登录仍保留。':response.status===403?'Google 拒绝了本次 API 权限，请核对已授权范围。':'Google Gmail API 请求未完成（HTTP '+response.status+'），未自动重试。');e.status=response.status>=300&&response.status<400?502:response.status;throw e;
+  }
+  const data=JSON.parse(await readLimited(response.body));if(!object(data)||data.jsonrpc)throw new Error('invalid_gmail_response');return data;
+ };
+ if(name==='list_labels'){const data=await api('labels');if(!Array.isArray(data.labels))throw new Error('invalid_labels_response');return data;}
+ if(name==='get_thread'){
+  const format=args.messageFormat??'FULL_CONTENT';if(!['MESSAGE_FORMAT_UNSPECIFIED','MINIMAL','FULL_CONTENT','METADATA_ONLY','PLAIN_TEXT'].includes(format))invalid('messageFormat 不正确。');
+  const value=await api('threads/'+googleID(args.threadId),{format:format==='MINIMAL'?'minimal':format==='METADATA_ONLY'?'metadata':'full'});
+  return ['MINIMAL','METADATA_ONLY'].includes(format)?value:{...value,messages:(value.messages||[]).map(m=>readableMessage(m,format==='PLAIN_TEXT'))};
+ }
+ if(name==='search_threads'){
+  if(args.includeTrash!==undefined&&typeof args.includeTrash!=='boolean')invalid('includeTrash 必须为布尔值。');
+  if(args.view!==undefined&&!definition.inputSchema.properties.view.enum.includes(args.view))invalid('view 不正确。');
+  const p=pageArgs(args);p.q=[p.q||'','-in:drafts','-in:spam',args.includeTrash?'':'-in:trash'].filter(Boolean).join(' ');p.includeSpamTrash=String(!!args.includeTrash);
+  const value=await api('threads',p);if(!args.view||['THREAD_VIEW_IDS_ONLY','THREAD_VIEW_UNSPECIFIED','THREAD_VIEW_MINIMAL'].includes(args.view))return value;
+  const threads=[];for(const t of value.threads||[]){const x=await api('threads/'+googleID(t.id),{format:'metadata'});if(args.view==='THREAD_VIEW_METADATA_ONLY'){delete x.snippet;for(const m of x.messages||[])delete m.snippet;}if(args.view==='THREAD_VIEW_SUMMARY')x.messages=(x.messages||[]).slice(-1);threads.push(x);}return {...value,threads};
+ }
+ if(name==='list_drafts'){
+  if(args.view!==undefined&&!definition.inputSchema.properties.view.enum.includes(args.view))invalid('view 不正确。');
+  const value=await api('drafts',pageArgs(args));if(!args.view||args.view==='DRAFT_VIEW_UNSPECIFIED')return value;const drafts=[];for(const d of value.drafts||[]){const x=await api('drafts/'+googleID(d.id),{format:args.view==='DRAFT_VIEW_FULL'?'full':'metadata'});drafts.push(args.view==='DRAFT_VIEW_FULL'?{...x,message:readableMessage(x.message)}:x);}return {...value,drafts};
+ }
+ if(name==='create_draft'){
+  const heads=['MIME-Version: 1.0'];for(const key of ['to','cc','bcc']){const value=addresses(args[key]);if(value)heads.push(key+': '+value);}let subject=stringArg(args.subject,'subject');const message={};
+  if(args.replyToMessageId){const original=await api('messages/'+googleID(args.replyToMessageId),{format:'metadata'}),headers=original.payload?.headers||[],id=headers.find(h=>h.name.toLowerCase()==='message-id')?.value;
+   if(!original.threadId||!id)invalid('原邮件缺少可确认的回复标识，未创建草稿。');message.threadId=original.threadId;heads.push('In-Reply-To: '+header(id));const refs=headers.find(h=>h.name.toLowerCase()==='references')?.value||'';heads.push('References: '+header((refs+' '+id).trim()));if(!subject)subject='Re: '+(headers.find(h=>h.name.toLowerCase()==='subject')?.value||'');
+  }
+  heads.push('Subject: =?UTF-8?B?'+base64(header(subject))+'?=');const raw=heads.join('\r\n')+'\r\n'+mimeBody(args);message.raw=base64(raw).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');const data=await api('drafts',{}, {message});if(typeof data.id!=='string'||!data.message?.id)throw new Error('draft_outcome_unknown');return data;
+ }
+ invalid('此连接没有开放该工具。');
+}
 export async function gmailProxy(request,env,context,fetchFn=fetch){
  const props=context.props||{};
  if(!ownerAllowed(env,props.email)||!props.subject||!scopeAllowed(context,'mcp:read'))return rpcError(null,-32001,'连接授权无效，请重新登录。',403);
  if(request.method!=='POST')return rpcError(null,-32600,'仅支持本次工具请求。',405);
  let body;try{body=JSON.parse(await readLimited(request.body,64*1024));}catch(_){return rpcError(null,-32700,'请求格式无效。',400);}
- if(body.jsonrpc!=='2.0'||!METHODS.has(body.method))return rpcError(body.id,-32601,'此连接只开放邮件查询与草稿工具。');
+ if(!object(body)||body.jsonrpc!=='2.0'||!METHODS.has(body.method))return rpcError(body?.id,-32601,'此连接只开放邮件查询与草稿工具。');
  if(body.method==='tools/call'){
+  if(!(typeof body.id==='string'&&body.id.length<=100||Number.isSafeInteger(body.id)))return rpcError(null,-32600,'工具调用必须包含有效的请求 ID。',400);
   const kind=toolKind(body.params?.name);
   if(!kind)return rpcError(body.id,-32601,'此连接没有开放该工具。');
   if(kind==='write'&&!scopeAllowed(context,'mcp:write'))return rpcError(body.id,-32001,'本次授权不包含创建草稿。',403);
   if(!body.params.arguments||typeof body.params.arguments!=='object'||Array.isArray(body.params.arguments))return rpcError(body.id,-32602,'工具参数必须是对象。');
  }
  if(!props.googleAccessToken||Number(props.googleExpiresAt)<=Date.now()+5000)return rpcError(body.id,-32001,'Google 授权已过期，请刷新连接或重新登录。',401);
- const headers=new Headers({'Authorization':'Bearer '+props.googleAccessToken,'Content-Type':'application/json','Accept':'application/json, text/event-stream'});
- for(const name of ['MCP-Protocol-Version','Mcp-Session-Id','Mcp-Method','Mcp-Name']){const v=request.headers.get(name);if(v)headers.set(name,v);}
+ const result=value=>Response.json({jsonrpc:'2.0',id:body.id??null,result:redact(value,env,props)},{headers:{'Cache-Control':'no-store'}});
+ if(body.method==='initialize')return result({protocolVersion:'2025-11-25',serverInfo:{name:'SmallPhone Gmail API',version:'1'},capabilities:{tools:{}}});
+ if(body.method==='notifications/initialized')return new Response(null,{status:202});
+ if(body.method==='ping')return result({});
+ const available=tools.filter(t=>t.name!=='create_draft'||scopeAllowed(context,'mcp:write'));
+ if(body.method==='tools/list')return result({tools:available});
+ if(body.method==='server/discover')return result({supportedVersions:['2026-07-28'],serverInfo:{name:'SmallPhone Gmail API',version:'1'},capabilities:{tools:{}},tools:available});
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);
  try{
-  const response=await fetchFn(UPSTREAM,{method:'POST',headers,body:JSON.stringify(body),redirect:'manual',signal:controller.signal});
-  if(!response.ok){await response.body?.cancel();return rpcError(body.id,-32002,response.status===401?'Google 登录已失效，请重新授权。':response.status===403?'Google 拒绝了访问，请核对 AI 应用、授权范围与预览资格。':response.status===429?'Google 调用额度暂时不足，请稍后再试。':'Google 暂时没有完成请求，请核对回执，不要重复提交修改。',(response.status>=300&&response.status<400)?502:response.status);}
-  if(body.id===undefined){await response.body?.cancel();return new Response(null,{status:202});}
-  const result=await readRpc(response,body.id);
-  if(result.id!==body.id||result.jsonrpc!=='2.0')throw new Error('rpc_mismatch');
-  if((body.method==='tools/list'||body.method==='server/discover')&&Array.isArray(result.result?.tools)){
-   result.result.tools=result.result.tools.filter(t=>toolKind(t.name)).map(t=>({...t,annotations:{...t.annotations,readOnlyHint:toolKind(t.name)==='read'}}));
-  }
-  const out=new Headers({'Content-Type':'application/json','Cache-Control':'no-store'});
-  const session=response.headers.get('Mcp-Session-Id');if(session)out.set('Mcp-Session-Id',session);
-  return Response.json(redact(result,env,props),{headers:out});
- }catch(_){return rpcError(body.id,-32603,'本次请求未能确认结果，请查看外部服务；不会自动重试。',502);}
+  const data=await gmailAPI(body,props,fetchFn,controller.signal);return result({content:[{type:'text',text:JSON.stringify(data)}]});
+ }catch(e){return rpcError(body.id,e.invalid?-32602:-32603,e.invalid||e.status?e.message:'本次请求未能确认结果，请查看外部服务；不会自动重试。',e.invalid?400:e.status||502);}
  finally{clearTimeout(timer);}
 }
 export async function defaultHandler(request,env,fetchFn=fetch){

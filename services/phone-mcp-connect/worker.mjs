@@ -22,7 +22,7 @@ export default {
   const url=new URL(request.url),origin=request.headers.get('Origin');
   if(!env.PUBLIC_URL||url.origin!==env.PUBLIC_URL)return new Response('Invalid service origin',{status:400});
   if(origin&&!ALLOWED_ORIGINS.has(origin)&&origin!==url.origin)return new Response('Origin not allowed',{status:403});
-  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin||'*','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id','Access-Control-Max-Age':'600','Vary':'Origin'}});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{'Access-Control-Allow-Origin':origin||'*','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type, MCP-Protocol-Version, Mcp-Session-Id, Mcp-Method, Mcp-Name','Access-Control-Max-Age':'600','Vary':'Origin'}});
   if(url.pathname==='/register'&&(!env.SETUP_KEY||request.headers.get('Authorization')!=='Bearer '+env.SETUP_KEY))return Response.json({error:'access_denied'},{status:403});
   let response;
   try{response=await provider(env).fetch(request,env,context);}
