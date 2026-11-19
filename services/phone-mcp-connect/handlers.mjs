@@ -216,7 +216,7 @@ export async function defaultHandler(request,env,fetchFn=fetch){
 
 
 // MCP_SPOTIFY_PUBLIC_SEARCH_V1: isolated public metadata, never personal Spotify OAuth.
-const SPOTIFY_CATALOG_UPSTREAM='https://gateway.pipeworx.io/spotify/mcp';
+const SPOTIFY_CATALOG_UPSTREAM='https://gateway.pipeworx.io/v1/tools/spotify_search';
 const spotifySearchTool={name:'spotify_search',description:'只读搜索 Spotify 公开歌曲曲库，返回歌曲、歌手及 Spotify 官方链接。没有登录个人 Spotify，不读取收藏、歌单或控制播放。',inputSchema:{type:'object',required:['query'],properties:{query:{type:'string',minLength:1,maxLength:256},type:{type:'string',enum:['track']},market:{type:'string',pattern:'^[A-Z]{2}$',default:'US'},limit:{type:'integer',minimum:1,maximum:10,default:3},offset:{type:'integer',minimum:0,maximum:1000,default:0}},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:true}};
 function spotifyArgs(args){
  if(!object(args)||Object.keys(args).some(k=>!Object.hasOwn(spotifySearchTool.inputSchema.properties,k)))invalid('搜歌参数不正确。');
@@ -255,24 +255,15 @@ export async function spotifyCatalog(request,env,fetchFn=fetch){
  if(body.method==='server/discover')return result({supportedVersions:['2026-07-28'],serverInfo,capabilities:{tools:{}},tools:[spotifySearchTool]});
  if(body.method!=='tools/call'||body.params?.name!=='spotify_search')return rpcError(body.id,-32601,'此连接只提供公开歌曲搜索。',400);
  let args;try{args=spotifyArgs(body.params.arguments);}catch(e){return rpcError(body.id,-32602,e.message,400);}
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let session='',stage='initialize-request',upstreamStatus=0;
- const send=async(method,params,id)=>{
-  stage=method==='initialize'?'initialize-request':method==='notifications/initialized'?'initialized-request':'search-request';upstreamStatus=0;
-  const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25',...(session?{'Mcp-Session-Id':session}:{})},body:JSON.stringify({jsonrpc:'2.0',...(id===undefined?{}:{id}),method,...(params?{params}:{})})});
-  upstreamStatus=response.status;if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
-  if(id===undefined){await response.body?.cancel();return;}
-  stage=method==='initialize'?'initialize-response':'search-response';const data=await readRpc(response,id);
-  if(data?.jsonrpc!=='2.0'||data.id!==id||data.error||!object(data.result))throw Error('catalog_response_invalid');
-  if(method==='initialize'){
-   if(data.result.protocolVersion!=='2025-11-25')throw Error('catalog_protocol_invalid');
-   const next=response.headers.get('Mcp-Session-Id');if(next){if(next.length>512||/[\x00-\x20\x7f]/.test(next))throw Error('catalog_session_invalid');session=next;}
-  }return data.result;
- };
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let stage='search-request',upstreamStatus=0;
  try{
-  await send('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'SmallPhone Public Catalog',version:'1'}},'catalog-init');
-  await send('notifications/initialized');
-  const raw=await send('tools/call',{name:'spotify_search',arguments:args},'catalog-search');stage='result-shape';const data=publicTracks(raw,args);
+  // The documented public HTTP tool endpoint needs no MCP session or meta tools.
+  const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(args)});
+  upstreamStatus=response.status;if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
+  stage='search-response';const value=JSON.parse(await readLimited(response.body,1024*1024));
+  stage='result-shape';const data=publicTracks({structuredContent:value},args);
   return result({content:[{type:'text',text:JSON.stringify(data)}]});
  }catch(_){return Response.json({jsonrpc:'2.0',id:body.id,error:{code:-32603,message:'公开曲库暂未返回有效结果，请稍后手动重试；个人账号连接未改变。',data:{stage,upstreamStatus}}},{status:502});}
+
  finally{clearTimeout(timer);}
 }
