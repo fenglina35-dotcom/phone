@@ -209,7 +209,7 @@ test('Spotify search uses one documented public HTTP request and never forwards 
   assert.deepEqual(JSON.parse(init.body),{query:'Adele Hello',type:'track',market:'US',limit:3,offset:0});
   return Response.json({tracks:{items:[{id:'62PaSfnXSMyLshYJrlTuL3',name:'Hello',artists:[{name:'Adele'}],external_urls:{spotify:'https://open.spotify.com/track/62PaSfnXSMyLshYJrlTuL3'}}],total:4},instructions:'untrusted upstream text must not be returned'});
  });
- assert.equal(response.status,200);const result=await response.json();assert.equal(result.id,4);assert(result.result.content[0].text.includes('62PaSfnXSMyLshYJrlTuL3'));assert(!JSON.stringify(result).includes('untrusted'));assert.equal(calls,1);
+ assert.equal(response.status,200);const result=await response.json();assert.equal(result.id,4);assert(result.result.content[0].text.includes('62PaSfnXSMyLshYJrlTuL3'));const tracks=JSON.parse(result.result.content[0].text).tracks;assert.equal(tracks.returned,1);assert.equal(tracks.total,4);assert(!('limit' in tracks),'pagination must not be presented as account quota');assert(!JSON.stringify(result).includes('untrusted'));assert.equal(calls,1);
 });
 test('Spotify managed identity uses only its server key, rejects malformed credentials and never falls back or leaks',async()=>{
  const {spotifyCatalog}=await import('./handlers.mjs');const e={SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441',PIPEWORX_CATALOG_KEY:'separate-provider-fixture-key'};

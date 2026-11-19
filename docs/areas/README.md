@@ -36,6 +36,8 @@
 
 ## MCP 工具中心
 
+2026-11-19 公开Spotify现由本人批准的免费Pipeworx身份查询：GitHub仅read:user/user:email，服务密钥allowlist限定spotify、每日200次，0充值/0订阅/自动充值关闭。独立 /spotify/mcp 保持旧小手机Bearer/仅C/ask，内部固定一次公开HTTP查询并使用服务端密钥，失败不降级匿名或重试。Mac588角色真实搜索已成功返回Adele Hello官方链接；个人Spotify账号未直连。MCP_SPOTIFY_SEARCH_RESULT_V1避免把分页limit当账户额度，API到双端渲染旧失败/新通过。
+
 2026-11-19 MCP_CATALOG_PROVIDER_ORDER_V1：C实际首查未出现确认；三次规划HTTP200却始终声称只有Cloudflare。确定原因是目录首段被Cloudflare占满，原排序只匹配工具全名/连接全名，“Spotify”未命中“Spotify 公开曲库（仅搜歌）”。排序现兼容已选provider的标准ID与名字，只改变预览顺序；21项多连接回归旧失败、新两版均通过且只执行获批搜索一次。所有工具、权限、预算和普通聊天入口不变。
 
 2026-11-19 Spotify 公开搜歌：本人优先个人账号、同意不可行时使用公开曲库。独立网关 `/spotify/mcp` + 独立 Bearer，只提供 spotify_search，不复用 Gmail 授权、不发送个人 Spotify 登录。固定 Pipeworx 公共元数据上游、参数与结果收窄、25秒超时、不重放；C 的执行前确认保持。原个人浏览器登录保留，不声称个人歌单接通。配置与测试见 services/phone-mcp-connect/README.md；服务部署及角色查询状态另记。

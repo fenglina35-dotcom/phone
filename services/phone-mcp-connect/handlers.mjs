@@ -225,6 +225,7 @@ function spotifyArgs(args){
  if(type!=='track'||typeof market!=='string'||!/^([A-Z]{2})$/.test(market)||!Number.isInteger(limit)||limit<1||limit>10||!Number.isInteger(offset)||offset<0||offset>1000)invalid('搜歌范围或数量不正确。');
  return{query:args.query.trim(),type,market,limit,offset};
 }
+// MCP_SPOTIFY_SEARCH_RESULT_V1: paging counts are not account usage/quota.
 function publicTracks(result,args){
  if(result?.isError)throw Error('catalog_unavailable');
  let value=result?.structuredContent;
@@ -235,7 +236,7 @@ function publicTracks(result,args){
   if(!/^[A-Za-z0-9]{22}$/.test(t?.id)||typeof t.name!=='string'||!Array.isArray(t.artists))throw Error('catalog_track_invalid');
   return{id:t.id,type:'track',name:small(t.name,300),artists:t.artists.slice(0,10).map(a=>({name:small(a.name,200)})),album:{name:small(t.album?.name,300)},...(Number.isFinite(t.duration_ms)?{duration_ms:t.duration_ms}:{}),external_urls:{spotify:'https://open.spotify.com/track/'+t.id}};
  });
- return{source:'Spotify 公开曲库',personalAccount:false,tracks:{items,limit:args.limit,offset:args.offset,...(Number.isInteger(value.tracks.total)&&value.tracks.total>=0?{total:value.tracks.total}:{})}};
+ return{source:'Spotify 公开曲库',personalAccount:false,tracks:{items,returned:items.length,offset:args.offset,...(Number.isInteger(value.tracks.total)&&value.tracks.total>=0?{total:value.tracks.total}:{})}};
 }
 export async function spotifyCatalog(request,env,fetchFn=fetch){
  const token=request.headers.get('Authorization')?.match(/^Bearer ([^\s]{16,256})$/)?.[1];

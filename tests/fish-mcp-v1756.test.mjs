@@ -474,6 +474,17 @@ test('MCP cards: Spotify uses its official player and preserves legacy direct-au
  let modal='',played='';s.ctx.msgsForAccount=()=>[message];s.ctx.cur=()=>({p:'chat',id:'role-a'});s.ctx.openModal=x=>{modal=x;};s.ctx.musicInit=()=>{s.state.music=s.state.music||{songs:[]};};s.ctx.musicPlay=async id=>{played=id;};await s.M.openCard('role-a',message._mcpTrace.id,0);assert.equal(modal,'');assert(played);assert.equal(s.state.music.songs[0].src.url,track.preview_url);assert.equal(s.state.music.songs[0].mcpAccount,'main');const count=s.state.music.songs.length;await s.M.openCard('role-a',message._mcpTrace.id,0);assert.equal(s.state.music.songs.length,count);s.state.me.active='other';played='';await s.M.openCard('role-a',message._mcpTrace.id,0);assert.equal(played,'');
 });
 
+test('Spotify gateway results render as songs without turning page size into account quota',async()=>{
+ const {spotifyCatalog}=await import('data:text/javascript;base64,'+Buffer.from(readProject('services/phone-mcp-connect/handlers.mjs')).toString('base64'));
+ const track={id:'62PaSfnXSMyLshYJrlTuL3',type:'track',name:'Hello',artists:[{name:'Adele'}],external_urls:{spotify:'https://open.spotify.com/track/62PaSfnXSMyLshYJrlTuL3'}};
+ const response=await spotifyCatalog(new Request('https://fixture.invalid/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:JSON.stringify({jsonrpc:'2.0',id:8,method:'tools/call',params:{name:'spotify_search',arguments:{query:'Adele Hello',limit:3}}})}),{SPOTIFY_CATALOG_TOKEN_SHA256:crypto.createHash('sha256').update('catalog-fixture-token').digest('hex')},async()=>Response.json({tracks:{items:[track],limit:3,offset:0,total:4}}));
+ assert.equal(response.status,200);const result=(await response.json()).result;
+ for(const variant of ['web','private']){
+  const s=guideSandbox((u,i,b)=>b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result}):null,variant),c=await connected(s);s.M.configure(c.id,{provider:'spotify'});const message={role:'user',id:'music-only'},ctx=s.M.context('role-a',()=>true,message);await s.M.execute(ctx,ctx.catalog[0],{id:'1'});
+  assert.equal(message._mcpTrace.cards.filter(c=>c.kind==='music').length,1);assert.equal(message._mcpTrace.cards.filter(c=>c.kind==='data').length,0,'search pagination is not service usage or a spending quota');
+ }
+});
+
 test('MCP cards: a Gmail draft has an honest view destination and never claims it was sent',async()=>{
  const s=sandbox((u,i,b)=>b?.method==='tools/list'?reply({jsonrpc:'2.0',id:b.id,result:{tools:[{...writeTool,name:'create_draft'}]}}):b?.method==='tools/call'?reply({jsonrpc:'2.0',id:b.id,result:{structuredContent:{id:'draft-only-api-id',message:{id:'message-api-id',snippet:'private-body-must-not-be-in-card'}},content:[]}}):null);
  const c=await connected(s,'auto');s.M.configure(c.id,{provider:'gmail'});const message={id:'draft-source',role:'user',content:'写草稿'},ctx=s.M.context('role-a',()=>true,message);await s.M.execute(ctx,ctx.catalog[0],{text:'新邮件'});

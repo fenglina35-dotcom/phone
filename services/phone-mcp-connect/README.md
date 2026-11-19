@@ -69,3 +69,5 @@ MCP_SPOTIFY_PUBLIC_SEARCH_V1：本人优先个人账号；现有 Free 登录不�
 当前实测：a176c112已部署63bc65b5-80ee-43f4-8161-bdb57262bf3c；同查询服务器端HTTP429，而本机直连公开端200。匿名额度按IP，不能保证服务器稳定查询。停止继续修改匿名链路，改为准备注册官方免费账号的独立额度，需本人同意新账号条款及GitHub基本资料传输；未注册、未授权仓库/Spotify私有数据，未订阅/充值。C在588已出现真实spotify_search参数确认，批准后仅一次外部请求、失败未重试；无真实曲目返回，所以不算角色搜歌通过。原个人Spotify Free登录保留。
 
 本人已明确允许使用GitHub免费注册并接受条款。实际GitHub授权范围仅read:user、user:email，无仓库；新账号已登录，余额0，auto-refill关闭，未订阅/充值。通过官方API将密钥allowlist限定spotify一个pack、spotify每日200上限，并GET读回restricted/capped；个人Spotify浏览器登录不变。独立Worker Secret PIPEWORX_CATALOG_KEY只发固定公开HTTP搜索上游，不交给小手机或角色；小手机Bearer仍只用于本网关认证。认证失败不回退匿名、不重试，错误不包含服务密钥。31项服务回归通过，角色复验待配置部署。
+
+角色实测已通过（Mac588，08:46）：自然要求Spotify公开搜Adele Hello，C先显示spotify_search query/type/limit参数确认；本次允许后真实返回三项官方链接，两项Hello发行版本和一项Someone Like You，并按真实曲库回答。随后发现分页limit=3被现有通用用量卡识别为额度上限3；MCP_SPOTIFY_SEARCH_RESULT_V1改用returned计数保留total/offset。API→两版真实渲染回归旧实现生成1张错误额度卡，新实现只生成歌曲；不修改通用额度、音乐播放器或核心聊天。31项服务测试通过；去噪后的角色复验另记。
