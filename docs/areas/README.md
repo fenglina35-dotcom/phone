@@ -1361,3 +1361,5 @@ MSG_ARCHIVE_BOOT_RACE_V1：长库占位尚未展开时不写删，读后核对�
 CALL_EVENT_CONSUME_ONCE_V1：明确静默及已显示回复消费精确事件，私人只来电动作也等待执行结果。CALL_MISSED_SESSION_V1要求横幅实际呈现及相同session、账号才记未接。CALL_REAL_FACTS_V1只把系统记录作为来电事实，模型自己说过不作依据。CALL_REDIAL_THREE_V1把原三次上限接到当前入口，显示成功才计数，正常独立重拨允许，既有新用户互动及正常结束清零保留。私人专属伴生和网页审计差异不覆盖。
 
 NORTH_CALL_EVENT_REPLAY=1复用check_chat_authorized_phone：真实双端aiReply（只模拟HTTP模型）核对静默消费、只来电成功、320/430横幅、未接一条、后续聊天无旧事件。incoming-ring-continuity测旧session、无横幅、账号及三次。未声称真机或实模已重现。
+
+2026-11-18最终核验：5460/5460，普通/查岗/MCP/电话事件双端门禁通过。手机和Mac585已安装；手机21250消息逐条原文一致、23联系人保留，新增3家MCP连接已实际取回。没有代选角色；第三方业务未替本人执行。
