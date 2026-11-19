@@ -17,9 +17,9 @@ test('registration requires owner setup key, public PKCE client and exact own ca
  assert.equal(registrationPolicy(e,args),undefined);
  for(const a of [{...args,request:new Request(base+'/register')},{...args,clientMetadata:{...metadata,redirect_uris:['https://evil.invalid/callback']}},{...args,clientMetadata:{...metadata,token_endpoint_auth_method:'client_secret_post'}}])assert.equal(registrationPolicy(e,a).status,403);
 });
-test('REST tool catalog exposes five implemented tools without the preview service',async()=>{
+test('REST tool catalog exposes implemented read, draft and send tools without the preview service',async()=>{
  let calls=0;const response=await gmailProxy(rpc('tools/list'),env(),context(),async()=>{calls++;throw Error('catalog must be local');});
- const data=await response.json();assert.deepEqual(data.result.tools.map(t=>t.name),['list_labels','search_threads','get_thread','list_drafts','create_draft']);assert(data.result.tools.slice(0,4).every(t=>t.annotations.readOnlyHint));assert.equal(data.result.tools[4].annotations.readOnlyHint,false);assert.equal(calls,0);
+ const data=await response.json();assert.deepEqual(data.result.tools.map(t=>t.name),['list_labels','search_threads','get_thread','list_drafts','create_draft','send_email']);assert(data.result.tools.slice(0,4).every(t=>t.annotations.readOnlyHint));assert.equal(data.result.tools[4].annotations.readOnlyHint,false);assert.equal(calls,0);
 });
 test('send/delete tools, missing write scope and oversized input are blocked before dispatch',async()=>{
  let calls=0;const fetchFn=async()=>{calls++;throw Error('unexpected');};
@@ -176,4 +176,17 @@ test('Gmail REST: a reply draft uses real message identity and creates only one 
 test('Gmail REST: disabled API is distinguished from lost login without leaking Google details',async()=>{
  const response=await gmailProxy(rpc('tools/call',{params:{name:'list_labels',arguments:{}}}),env(),context(),async()=>new Response(JSON.stringify({error:{details:[{reason:'SERVICE_DISABLED'}],message:'fixture-google-token private-data'}}),{status:403}));
  const text=await response.text();assert.equal(response.status,403);assert(text.includes('尚未启用正式 Gmail API'));assert(!text.includes('fixture-google-token'));assert(!text.includes('private-data'));assert(!text.includes('重新登录'));
+});
+
+// MCP_GMAIL_SEND_V1: real send is separate from draft creation and never retries.
+test('Gmail send_email: exact recipient and UTF-8 content go to one messages/send request',async()=>{
+ let calls=0;const response=await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:{to:['receiver@fixture.invalid'],subject:'角色真实发信测试',body:'这是测试正文。'}}}),env(),context(),async(url,init)=>{
+  calls++;assert.equal(url,UPSTREAM+'/messages/send');assert.equal(init.method,'POST');const payload=JSON.parse(init.body);assert(!payload.message);const raw=Buffer.from(payload.raw,'base64url').toString('utf8');assert(raw.includes('to: receiver@fixture.invalid\r\n'));assert(raw.includes(Buffer.from('角色真实发信测试').toString('base64')));assert(raw.includes(Buffer.from('这是测试正文。').toString('base64')));return json({id:'sent-message-1',threadId:'sent-thread-1',labelIds:['SENT']});
+ });assert.equal(response.status,200);assert.equal(calls,1);const result=JSON.parse((await response.json()).result.content[0].text);assert.equal(result.id,'sent-message-1');assert.deepEqual(result.labelIds,['SENT']);
+});
+test('Gmail send_email: no write grant, empty target and injected headers never submit; uncertain send is not retried',async()=>{
+ let calls=0;const fetchFn=async()=>{calls++;throw Error('private-token private-body');};
+ const c=context();c.auth.scope=['mcp:read'];assert.equal((await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:{to:['receiver@fixture.invalid'],subject:'test',body:'test'}}}),env(),c,fetchFn)).status,403);
+ for(const args of [{to:[],subject:'test',body:'test'},{to:['receiver@fixture.invalid'],subject:'x\r\nBcc:evil@fixture.invalid',body:'test'},{to:['receiver@fixture.invalid'],subject:'test',body:''},{to:['receiver@fixture.invalid'],subject:'test',body:'test',url:'https://evil.invalid'}])assert.equal((await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:args}}),env(),context(),fetchFn)).status,400);
+ assert.equal(calls,0);const r=await gmailProxy(rpc('tools/call',{params:{name:'send_email',arguments:{to:['receiver@fixture.invalid'],subject:'test',body:'test'}}}),env(),context(),fetchFn);assert.equal(r.status,502);assert.equal(calls,1);assert(!(await r.text()).includes('private-token'));
 });
