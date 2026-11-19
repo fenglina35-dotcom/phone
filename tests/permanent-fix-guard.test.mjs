@@ -2203,3 +2203,5 @@ test('long chat loading and call events retain one-shot ownership in both builds
 });
 
 test('native backup avoids Web Share and model source survives the sync boundary',()=>{for(const file of [WEB,PRIVATE])assert(read(file).includes('NATIVE_EXPORT_SHARE_BYPASS_V1')&&read(file).includes('BACKUP_SAVE_GESTURE_V1'));const adapter=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js');assert(adapter.includes('MODEL_SOURCE_BEFORE_SYNC_WAIT_V1'));assert(adapter.includes('PRIVATE_USER_EVENT_REPLY_PERMIT_V1'));});
+
+test('MCP ask mode includes read-only calls and no receipt cannot become a result',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['MCP_CONFIRM_ALL_CALLS_V1','MCP_CATALOG_TASK_ORDER_V1','MCP_NO_UNEXECUTED_RESULT_V1'])assert(read(file).includes(marker));assert(read('supabase/functions/phone-mcp-vault/core.mjs').includes('MCP_CONFIRM_ALL_CALLS_V1'));});

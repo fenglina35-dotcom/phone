@@ -140,7 +140,8 @@ export function createVaultHandler({store,authenticate,masterKey,fetchAPI=global
      const approval={...approvalData,expires:now()+120000},payload=b64(utf8.encode(canonical(approval)));
      return reply({ok:true,approvalToken:payload+'.'+await sign(keys.mac,approval)});
     }
-    if(c.mode!=='auto'&&t.annotations.readOnlyHint!==true){
+    /* MCP_CONFIRM_ALL_CALLS_V1: ask mode is not waived by provider annotations. */
+    if(c.mode!=='auto'){
      const parts=String(body.approvalToken||'').split('.');check(parts.length===2,'approval_required',403);let approval;try{approval=JSON.parse(new TextDecoder().decode(unb64(parts[0])));}catch{throw new VaultError('invalid_approval',403);}
      check(Number.isSafeInteger(approval.expires)&&approval.expires>=now()&&approval.expires<=now()+120000,'approval_expired',403);
      const expected={...approvalData,expires:approval.expires};check(canonical(approval)===canonical(expected)&&await cryptoAPI.subtle.verify('HMAC',keys.mac,unb64(parts[1]),utf8.encode(canonical(expected))),'invalid_approval',403);

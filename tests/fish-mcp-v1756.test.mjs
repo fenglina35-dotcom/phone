@@ -131,8 +131,31 @@ function sandbox(handler,override){
  vm.createContext(ctx);vm.runInContext((override||forVariant(source,'web'))+'\nglobalThis.M=MCPTools;globalThis.pkce=mcpPkce;',ctx);
  return{ctx,M:ctx.M,storage,panels,nodes,calls,state};
 }
-async function connected(s,mode='ask'){const c=s.M.add({name:'测试连接',url:'https://mcp.fixture.invalid/mcp',auth:'bearer',token:'fixture-secret-token'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode});return s.M.connection(c.id);}
+async function connected(s,mode='auto'){const c=s.M.add({name:'测试连接',url:'https://mcp.fixture.invalid/mcp',auth:'bearer',token:'fixture-secret-token'});await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode});return s.M.connection(c.id);}
 function call(alias,args={id:'1'}){return JSON.stringify({mcp_call:{tool:alias,arguments:args}});}
+
+test('MCP confirmation: read-only calls in ask mode wait for one approval in both bundles',async()=>{
+ for(const variant of ['web','private']){
+  const s=guideSandbox(null,variant);await connected(s,'ask');const ctx=s.M.context('role-a'),before=s.calls.length;
+  const pending=s.M.execute(ctx,ctx.catalog[0],{id:'1'});await new Promise(r=>setImmediate(r));
+  assert.equal(s.panels.length,1,variant+' must ask even for read-only');assert.equal(s.calls.length,before);
+  s.M.approve(s.panels.at(-1).id.replace('mcp-confirm-',''),false);assert.equal((await pending).isError,true);
+  assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ }
+});
+test('MCP execution: unexecuted prose cannot report a successful tool result',async()=>{
+ const s=guideSandbox();await connected(s,'auto');const ctx=s.M.context('role-a');let n=0;
+ s.ctx.chatAPI=async()=>++n===1?'测试成功，返回一个项目。':n===2?call(ctx.catalog[0].alias):'真实调用已完成。';
+ const out=await s.M.roleReply([{role:'user',content:'实际调用 read_note'}],{mcpContext:ctx});
+ assert.equal(out,'真实调用已完成。');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+});
+test('MCP catalog: a named tool beyond the first 64 remains reachable in the first preview',async()=>{
+ const tools=Array.from({length:80},(_,i)=>({...readTool,name:i===79?'get_me':'read_'+i,description:'只读工具说明。'.repeat(25)}));
+ const s=guideSandbox((u,i,b)=>b?.method==='tools/list'?reply({jsonrpc:'2.0',id:b.id,result:{tools}}):null);await connected(s,'auto');const ctx=s.M.context('role-a');
+ assert.equal(ctx.catalog.length,80);let first=true;
+ s.ctx.chatAPI=async rows=>{if(first){first=false;assert(rows.find(r=>r.content.startsWith('<tool_catalog>')).content.includes('__get_me'));}return '{"mcp_skip":true}';};
+ await s.M.roleReply([{role:'user',content:'请实际调用 get_me'}],{mcpContext:ctx});
+});
 
 test('MCP screenshot: prose plus a tool instruction is repaired before a single dispatch, never sent as chat',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0,ordinary=0;
@@ -366,13 +389,13 @@ test('role uses actual tool result in its next model request, without a separate
 });
 
 test('write confirmation can reject or accept exactly one call; auto mode executes without popup',async()=>{
- const s=sandbox(),c=await connected(s);let ctx=s.M.context('role-a'),item=ctx.catalog[1];const denied=s.M.execute(ctx,item,{text:'new note'});await new Promise(r=>setImmediate(r));assert.equal(s.panels.length,1);let id=s.panels.at(-1).id.replace('mcp-confirm-','');s.M.approve(id,false);assert.equal((await denied).isError,true);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ const s=sandbox(),c=await connected(s,'ask');let ctx=s.M.context('role-a'),item=ctx.catalog[1];const denied=s.M.execute(ctx,item,{text:'new note'});await new Promise(r=>setImmediate(r));assert.equal(s.panels.length,1);let id=s.panels.at(-1).id.replace('mcp-confirm-','');s.M.approve(id,false);assert.equal((await denied).isError,true);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
  ctx=s.M.context('role-a');item=ctx.catalog[1];const accepted=s.M.execute(ctx,item,{text:'new note'});await new Promise(r=>setImmediate(r));s.M.approve(s.panels.at(-1).id.replace('mcp-confirm-',''),true);assert.equal((await accepted).isError,undefined);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
  s.M.configure(c.id,{mode:'auto'});ctx=s.M.context('role-a');const panels=s.panels.length;await s.M.execute(ctx,ctx.catalog[1],{text:'auto write'});assert.equal(s.panels.length,panels);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,2);
 });
 
 test('pending approval is revoked on account switch, role removal or permission change',async()=>{
- for(const revoke of ['account','permission','role']){const s=sandbox(),c=await connected(s),ctx=s.M.context('role-a'),p=s.M.execute(ctx,ctx.catalog[1],{text:'x'});await new Promise(r=>setImmediate(r));if(revoke==='account')s.state.me.active='other';if(revoke==='permission')s.M.configure(c.id,{roles:[]});if(revoke==='role')s.state.contacts[0].deleted=true;s.M.approve(s.panels.at(-1).id.replace('mcp-confirm-',''),true);await assert.rejects(p,/已变化/);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);}
+ for(const revoke of ['account','permission','role']){const s=sandbox(),c=await connected(s,'ask'),ctx=s.M.context('role-a'),p=s.M.execute(ctx,ctx.catalog[1],{text:'x'});await new Promise(r=>setImmediate(r));if(revoke==='account')s.state.me.active='other';if(revoke==='permission')s.M.configure(c.id,{roles:[]});if(revoke==='role')s.state.contacts[0].deleted=true;s.M.approve(s.panels.at(-1).id.replace('mcp-confirm-',''),true);await assert.rejects(p,/已变化/);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);}
 });
 
 test('ambiguous network failure never replays a write and duplicate calls reuse the refusal/result',async()=>{
@@ -387,7 +410,7 @@ test('late tool result cannot go to a changed account or replaced state',async()
 
 test('chat trace follows approval and actual result without storing arguments, credentials or result body',async()=>{
  let release;const s=sandbox((u,i,b)=>b?.method==='tools/call'?new Promise(resolve=>{release=()=>resolve(reply({jsonrpc:'2.0',id:b.id,result:{content:[{type:'text',text:'private-result-body'}]}}));}):null);
- await connected(s);const message={id:'trace-source',role:'user',content:'修改笔记'},ctx=s.M.context('role-a',()=>true,message);let n=0;s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[1].alias,{text:'private-argument'}):'改好了。';
+ await connected(s,'ask');const message={id:'trace-source',role:'user',content:'修改笔记'},ctx=s.M.context('role-a',()=>true,message);let n=0;s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[1].alias,{text:'private-argument'}):'改好了。';
  const turn=s.M.roleReply([{role:'user',content:message.content}],{mcpContext:ctx});while(!s.panels.length)await new Promise(r=>setImmediate(r));assert.equal(message._mcpTrace.state,'awaiting');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
  s.M.approve(s.panels.at(-1).id.replace('mcp-confirm-',''),true);while(!release)await new Promise(r=>setImmediate(r));assert.equal(message._mcpTrace.state,'running');release();assert.equal(await turn,'改好了。');assert.equal(message._mcpTrace.state,'ok');assert(message._mcpTrace.endedAt);
  const persisted=JSON.stringify(message._mcpTrace);for(const secret of ['private-argument','private-result-body','fixture-secret-token'])assert(!persisted.includes(secret));assert(s.M.chatTraceHTML(message,'role-a').includes('已完成'));s.state.me.active='other';assert.equal(s.M.chatTraceHTML(message,'role-a'),'');
@@ -411,7 +434,7 @@ test('chat trace never persists a remote error that echoes submitted arguments',
 });
 
 test('ordinary role reply creates no trace and interrupted persisted trace never displays a false live status',async()=>{
- const s=sandbox();await connected(s);const message={role:'user'},ctx=s.M.context('role-a',()=>true,message);s.ctx.chatAPI=async()=>'普通聊天';assert.equal(await s.M.roleReply([{role:'user',content:'你好'}],{mcpContext:ctx}),'普通聊天');assert.equal(message._mcpTrace,undefined);
+ const s=sandbox();await connected(s);const message={role:'user'},ctx=s.M.context('role-a',()=>true,message);s.ctx.chatAPI=async(rows,opt)=>opt.mcpBudget?'{"mcp_skip":true}':'普通聊天';assert.equal(await s.M.roleReply([{role:'user',content:'你好'}],{mcpContext:ctx}),'普通聊天');assert.equal(message._mcpTrace,undefined);
  for(const [state,label] of [['running','结果待核对'],['awaiting','已取消']]){message._mcpTrace={id:'interrupted',account:'main',roleId:'role-a',state,steps:[{service:'测试',state}]};assert(s.M.chatTraceHTML(message,'role-a').includes(label));}
 });
 
@@ -580,7 +603,7 @@ test('a malformed write reply is marked unknown and cannot be silently resubmitt
 test('Spotify and Gmail presets require real configuration and keep provider branding on a custom Host',async()=>{
  const s=sandbox(),spotify=s.M.catalog.find(x=>x.id==='spotify'),gmail=s.M.catalog.find(x=>x.id==='gmail');assert(spotify&&spotify.requiresHost);assert(!spotify.url,'never invent a public Spotify MCP address');assert.equal(gmail.url,'https://gmailmcp.googleapis.com/mcp/v1');assert.equal(gmail.auth,'bearer');assert.equal(gmail.preview,true);
  let modal='';s.ctx.openModal=html=>{modal=html;};s.M.edit('','spotify');assert(modal.includes('Spotify'));assert(modal.includes('Premium'));assert(modal.includes('name="mcp-provider"'));assert(!modal.includes('client-secret'));const form=modal.match(/id="mcp-url"[^>]*value="([^"]*)"/);assert(form);assert.equal(form[1],'');
- const c=s.M.add({name:'Spotify',provider:'spotify',url:'https://own-music.fixture.invalid/mcp',auth:'none'});assert.equal(s.M.connection(c.id).provider,'spotify');assert.equal(s.M.context('role-a'),null);await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a']});const ctx=s.M.context('role-a'),message={role:'user'};ctx.source=message;let n=0;s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[0].alias):'读取完成';await s.M.roleReply([{role:'user',content:'查音乐'}],{mcpContext:ctx});assert.equal(message._mcpTrace.steps[0].brand,'spotify');assert(s.M.render().includes('mcp-logo-spotify'));
+ const c=s.M.add({name:'Spotify',provider:'spotify',url:'https://own-music.fixture.invalid/mcp',auth:'none'});assert.equal(s.M.connection(c.id).provider,'spotify');assert.equal(s.M.context('role-a'),null);await s.M.connect(c.id);s.M.configure(c.id,{roles:['role-a'],mode:'auto'});const ctx=s.M.context('role-a'),message={role:'user'};ctx.source=message;let n=0;s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[0].alias):'读取完成';await s.M.roleReply([{role:'user',content:'查音乐'}],{mcpContext:ctx});assert.equal(message._mcpTrace.steps[0].brand,'spotify');assert(s.M.render().includes('mcp-logo-spotify'));
 });
 
 test('preset service icons are unmodified embedded official assets and work without image requests',()=>{

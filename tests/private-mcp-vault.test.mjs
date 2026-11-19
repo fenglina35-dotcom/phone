@@ -70,6 +70,11 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
   const accountCipher=createAccountCipher({store,masterKey,cryptoAPI:webcrypto});
   const saved=JSON.parse(await accountCipher.open(keys.aes,(await db.query('select ciphertext from private_phone_mcp_connections')).rows[0].ciphertext,'private-phone-mcp/connection/'+owner+'/main/'+connection.id,1800000));
   assert.equal(saved.refresh,'fixture-refresh-rotated-1');
+  const readApprovalCase={...base,operationId:oid(19),params:{name:'read',arguments:{id:'approval-read'}}};
+  assert.equal((await send('mac',readApprovalCase)).json.error,'approval_required','ask mode includes read-only tools');
+  const readTicket=(await send('mac',{...readApprovalCase,phase:'approval'})).json.approvalToken;
+  const readResult=await send('mac',{...readApprovalCase,approvalToken:readTicket});assert.equal(readResult.status,200);
+
   // Escaped valid provider JSON stays below 1 MiB, but its durable outer outcome
   // exceeds the old 1.8M envelope/2M native limit. A lost ACK must read the stored
   // outcome, not turn into "unknown" or submit the external write again.
@@ -83,8 +88,9 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
   const restCached=await restAdapter(new Request('https://fixture.test/vault',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},body:JSON.stringify({deviceId:devices.phone,accountId:'main',...largeWrite,approvalToken:largeApproval})}));assert.equal(restCached.status,200);assert.deepEqual(await restCached.json(),largeResult.json);assert.equal(writes,beforeLarge+1);
   // A fresh credential update expires at the same time on two devices; only one refresh happens.
   const fresh={...connection,token:'fixture-access-second',refresh:'fixture-refresh-second',rev:2};await activate(await prepare(2,fresh,'1'));
+  async function approvedRead(token,body){const approvalToken=(await send(token,{...body,phase:'approval'})).json.approvalToken;assert(approvalToken);return send(token,{...body,approvalToken});}
   const beforeRefresh=refreshes;
-  const reads=await Promise.all(['phone','mac'].map((token,i)=>send(token,{...base,connectionRevision:'2',method:'tools/call',params:{name:'read',arguments:{id:'parallel-'+i}},operationId:oid(30+i),rpcId:80+i})));
+  const reads=await Promise.all(['phone','mac'].map((token,i)=>approvedRead(token,{...base,connectionRevision:'2',method:'tools/call',params:{name:'read',arguments:{id:'parallel-'+i}},operationId:oid(30+i),rpcId:80+i})));
   assert(reads.every(r=>r.status===200),JSON.stringify(reads));assert.equal(refreshes,beforeRefresh+1,'central rotating refresh is serialized');
   // A submitted external write with no reply is never replayed, including after another device asks.
   toolFail=true;const unknown={...base,connectionRevision:'2',operationId:oid(40),rpcId:90};const ticket=(await send('phone',{...unknown,phase:'approval'})).json.approvalToken;
@@ -94,8 +100,8 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
   // Unknown refresh freezes old credentials instead of reusing a possibly consumed refresh token.
   await activate(await prepare(3,{...connection,rev:3},'2'));refreshFail=true;
   const lostRefresh={...base,connectionRevision:'3',operationId:oid(50),params:{name:'read',arguments:{id:'refresh-unknown'}}};
-  assert.equal((await send('phone',lostRefresh)).json.unknown,true);const frozenCount=refreshes;
-  assert.equal((await send('mac',{...lostRefresh,operationId:oid(51)})).json.error,'refresh_result_unknown');assert.equal(refreshes,frozenCount);
+  assert.equal((await approvedRead('phone',lostRefresh)).json.unknown,true);const frozenCount=refreshes;
+  assert.equal((await approvedRead('mac',{...lostRefresh,operationId:oid(51)})).json.error,'refresh_result_unknown');assert.equal(refreshes,frozenCount);
   refreshFail=false;await activate(await prepare(4,{...connection,rev:4,exp:Date.now()+3600000},'3'));
   const cloud=(await send('phone',{action:'list'})).json.connections[0];
   await activate(await prepare(7,{...cloud,name:'账号共享后的连接名称'},'4'));
@@ -114,7 +120,7 @@ test('private MCP vault: actual SQL/crypto migration, account isolation, approva
   const racePublic=(await send('phone',{action:'list',connectionId:race.id})).json.connection.value;
   const raceStage=await prepare(201,{...racePublic,name:'修改连接名称'},'1');
   const racedRead={...base,connectionId:race.id,connectionRevision:'1',operationId:oid(202),params:{name:'read',arguments:{id:'credential-race'}}};
-  assert.equal((await send('mac',racedRead)).status,200);
+  assert.equal((await approvedRead('mac',racedRead)).status,200);
   assert.equal((await send('phone',{action:'put',phase:'activate',connectionId:race.id,migrationId:raceStage.migrationId,baseRevision:'1',digest:raceStage.digest})).json.error,'credential_changed');
   const rotated=(await send('phone',{action:'list',connectionId:race.id})).json.connection.value;
   await activate(await prepare(203,{...rotated,name:'修改连接名称'},'1'));
