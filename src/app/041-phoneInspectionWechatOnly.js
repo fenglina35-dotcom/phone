@@ -496,8 +496,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _routeIndex=roleChatRouteIndex(c),_md={allowWechatThought:true,roleReplyLanguageGuard:true,routeIndex:_routeIndex,aux:c.model==='aux',complete:true,unfilteredOutput:_rawOutput,roleVoiceFormatRepair:true,roleVoiceRequested:_voiceRequired},_repairMd=Object.assign({},_md,{aux:c.model==='aux'||wechatAuxConfigured(_routeIndex)}),_routeState={fallback:false};// 正常回复走当前角色自己的路线；主模型失败/跳出角色时才用同一路线的副模型重试一次
     _md.deviceSyncManual=typeof window!=='undefined'&&window.NorthPrivateDeviceSyncClient?NorthPrivateDeviceSyncClient.replyPermit(id,replyAccount,replyToken,!note||!!(replyOptions&&replyOptions.reopenCompleted)):'';_repairMd.deviceSyncManual=_md.deviceSyncManual;
 //@@ end
-    _md.reasoningCapture=_reasoningCapture;_repairMd.reasoningCapture=_reasoningCapture;
-    if(!note)_md.mcpContext=MCPTools.context(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu);
+    _md.diagnosticFeatureKey='wechat';_repairMd.diagnosticFeatureKey='wechat';_md.reasoningCapture=_reasoningCapture;_repairMd.reasoningCapture=_reasoningCapture;
+    if(!note)_md.mcpContext=MCPTools.chatContext(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu);
 //@@ web
     let content;try{content=await wechatPrimaryReply([{role:'system',content:_sys},...hist,_pin],_md,_routeState,c);}catch(e){if(e&&e.mcpNoRetry)throw e;if(_roleSongPlan){content=roleSongAttachPlan('',id,_roleSongPlan);toast('开场回复暂不可用，先发送已完成演唱');}else{if(!_naturalOn||_routeState.fallback)throw e;_routeState.fallback=true;wechatModelRouteNotice(c,_repairMd.aux);content=await chatAPI([{role:'system',content:_stableSys},...hist,_pin],_repairMd);}}const _rawPrimaryCandidate=String(content==null?'':content);content=_rawOutput?modelUnfilteredText(content):roleVisibleEnvelopeText(content);if(!await replyHandoffClaimLocal(_handoffTurn)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}if((replyStale(id,replyToken,replyAccount)||(typeof rolePreciseTimeNoteValid==='function'&&!rolePreciseTimeNoteValid(note,id)))||actId()!==replyAccount)return false;
 //@@ private
@@ -920,8 +920,10 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     replyNoVisibleReasonSet(id,replyAccount,replyToken,got?'':replyNoVisibleReasonFromContent(_replyCandidate));
   }catch(e){if(typingEl)typingEl.remove();if((replyStale(id,replyToken,replyAccount)||(typeof rolePreciseTimeNoteValid==='function'&&!rolePreciseTimeNoteValid(note,id)))||actId()!==replyAccount)return;
 //@@ web
+    if(e&&e.mcpStatus){replyNoVisibleReasonSet(id,replyAccount,replyToken,'工具操作未完成，详情见 MCP 回执');if(cur().p==='chat'&&cur().id===id)toast('工具操作未完成，请在 MCP 回执查看详情');return false;}
     const em=String(e&&e.message||'请求失败').slice(0,90);replyNoVisibleReasonSet(id,replyAccount,replyToken,em);chatRequestDiagnostic('turnError',id,replyAccount,em);if(e&&e.code==='reasoning-only'&&cur().p==='chat'&&cur().id===id)toast(em,10000);else if(cur().p==='chat'&&cur().id===id&&!friendAcceptedAutoNote(note))toast('模型未回复：'+em,10000);}finally{if(replyHandoffMarkLocal(_handoffTurn))save();replyHandoffRelease(_handoffTurn);roleInterceptDiagnosticTurnOutcome(_replyAudit,{handled:_replyAuditHandled?1:0,failed:_replyAuditPartial?1:0});roleInterceptDiagnosticTurnFinish(_replyAudit,_replyAuditFinal,{delivered:delivered||_replyAuditHandled,partial:_replyAuditPartial});}
 //@@ private
+    if(e&&e.mcpStatus){replyNoVisibleReasonSet(id,replyAccount,replyToken,'工具操作未完成，详情见 MCP 回执');if(cur().p==='chat'&&cur().id===id)toast('工具操作未完成，请在 MCP 回执查看详情');return false;}
     const em=String(e&&e.message||'请求失败').slice(0,90);replyNoVisibleReasonSet(id,replyAccount,replyToken,em);chatRequestDiagnostic('turnError',id,replyAccount,em);if(cur().p==='chat'&&cur().id===id&&!friendAcceptedAutoNote(note))toast((e&&(e.code==='robot-chinese-conversion'||e.code==='reasoning-only')?'':'模型未回复：')+em,10000);}finally{if(replyHandoffMarkLocal(_handoffTurn))save();replyHandoffRelease(_handoffTurn);}
 //@@ end
   if(actId()===replyAccount)maybeSummarize(id,replyAccount);return delivered;

@@ -2217,3 +2217,5 @@ test('private Gmail keeps the formal API path and explicit non-idempotent sendin
 test('private sync keeps the focused same-account composer usable after publication',()=>{assert(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js').includes('PRIVATE_SYNC_COMPOSER_OWNER_V1'));});
 
 test('Gmail direct sending keeps its non-idempotent write contract',()=>{const src=read('services/phone-mcp-connect/handlers.mjs');assert(src.includes('MCP_GMAIL_SEND_V1'));assert(src.includes("api('messages/send'"));assert(src.includes("destructiveHint:t.name==='send_email'"));});
+
+test('ordinary chat stays outside MCP and internal failures cannot become role speech',()=>{for(const file of [WEB,PRIVATE])for(const marker of ['MCP_ORDINARY_CHAT_ISOLATION_V1','MCP_FAILURE_IS_STATUS_V1','MODEL_FEATURE_EXPLICIT_ORIGIN_V1'])assert(read(file).includes(marker));});

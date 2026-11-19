@@ -153,8 +153,8 @@ test('MCP catalog: a named tool beyond the first 64 remains reachable in the fir
  const tools=Array.from({length:80},(_,i)=>({...readTool,name:i===79?'get_me':'read_'+i,description:'只读工具说明。'.repeat(25)}));
  const s=guideSandbox((u,i,b)=>b?.method==='tools/list'?reply({jsonrpc:'2.0',id:b.id,result:{tools}}):null);await connected(s,'auto');const ctx=s.M.context('role-a');
  assert.equal(ctx.catalog.length,80);let first=true;
- s.ctx.chatAPI=async rows=>{if(first){first=false;assert(rows.find(r=>r.content.startsWith('<tool_catalog>')).content.includes('__get_me'));}return '{"mcp_skip":true}';};
- await s.M.roleReply([{role:'user',content:'请实际调用 get_me'}],{mcpContext:ctx});
+ s.ctx.chatAPI=async rows=>{if(first){first=false;assert(rows.find(r=>r.content.startsWith('<tool_catalog>')).content.includes('__get_me'));}return s.calls.some(x=>x.body?.method==='tools/call')?'账号已读取。':call(ctx.catalog.at(-1).alias,{id:'1'});};
+ assert.equal(await s.M.roleReply([{role:'user',content:'请实际调用 get_me'}],{mcpContext:ctx}),'账号已读取。');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
 });
 
 test('MCP screenshot: prose plus a tool instruction is repaired before a single dispatch, never sent as chat',async()=>{
@@ -166,8 +166,8 @@ test('MCP screenshot: prose plus a tool instruction is repaired before a single 
 test('MCP screenshot: repeated protocol violations stop safely without a raw JSON bubble or dispatch',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
  s.ctx.chatAPI=async()=>{n++;return '正在查询。\n'+call(ctx.catalog[0].alias);};
- const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});
- assert(!out.includes('mcp_call'));assert(out.includes('没有提交'));assert(n<=4);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ await assert.rejects(s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);
+ assert(n<=4);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
 });
 test('MCP screenshot: a skipped planner cannot leak a tool instruction from ordinary chat fallback',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
@@ -204,12 +204,12 @@ test('MCP screenshot: old leaked assistant protocol is excluded from planner his
 test('MCP cost: repeated local reads stop instead of billing the same fragment again',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
  s.ctx.chatAPI=async rows=>{n++;const catalog=rows.find(x=>x.content.startsWith('<tool_catalog>')).content;const ref=catalog.match(/"instructionsRef":"([^"]+)"/)?.[1]||'r1';return JSON.stringify({mcp_read:{ref,offset:0,length:20}});};
- const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert(n<=3,'same local fragment charged '+n+' model requests');assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ await assert.rejects(s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);assert(n<=3,'same local fragment charged '+n+' model requests');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
 });
 test('MCP cost: changing read offsets still shares one eight-request task ceiling',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let n=0;
  s.ctx.chatAPI=async()=>JSON.stringify({mcp_read:{ref:'r1',offset:n++,length:1}});
- const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert(n<=8,'task charged '+n+' model requests');assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ await assert.rejects(s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);assert(n<=8,'task charged '+n+' model requests');assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
 });
 test('MCP cost: a selected definition fitting the input budget arrives in one batch',async()=>{
  const description='工具真实说明。'.repeat(200)+'完整签名必须保留 FINAL-SIGNATURE。';
@@ -225,7 +225,7 @@ test('MCP cost: per-task request identity and phases are visible without secrets
 test('MCP cost: inherited continuations cannot escape the shared task counter',async()=>{
  const s=guideSandbox();await connected(s);const ctx=s.M.context('role-a');let requests=0;
  s.ctx.chatAPI=async(rows,opt)=>{assert.equal(typeof opt.mcpRequestGuard,'function');opt.mcpRequestGuard(opt);requests++;for(;;){opt.mcpRequestGuard(opt);requests++;}};
- const out=await s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx});assert.equal(requests,8);assert(out.includes('停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ await assert.rejects(s.M.roleReply([{role:'user',content:'查账号'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);assert.equal(requests,8);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
  const code=readAppSource();for(const variant of ['web','private'])assert(forVariant(code,variant).includes("if(opt.mcpInternal&&typeof opt.mcpRequestGuard==='function')opt.mcpRequestGuard(opt)"));
 });
 function forVariant(raw,variant){let section='';return raw.split('\n').filter(line=>{const m=line.match(/^\/\/@@ (web|private|end)$/);if(m){section=m[1]==='end'?'':m[1];return false;}return !section||section===variant;}).join('\n');}
@@ -514,7 +514,7 @@ test('MCP budget: explicit skip resumes the exact ordinary chat request and its 
 test('MCP budget: exhausted final model capacity keeps a successful write single and reports its real state',async()=>{
  const s=sandbox();await connected(s,'auto');const sourceMessage={role:'user',content:'写笔记'},ctx=s.M.context('role-a',()=>true,sourceMessage);let n=0;
  s.ctx.chatAPI=async()=>{if(++n===1)return call(ctx.catalog[1].alias,{text:'只写一次'});const e=new Error('maximum context length exceeded');e.status=400;throw e;};
- const out=await s.M.roleReply([{role:'user',content:'写笔记'}],{mcpContext:ctx});assert(out.includes('工具流程已停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);assert(n<=6);assert.equal(sourceMessage._mcpTrace.state,'failed');
+ await assert.rejects(s.M.roleReply([{role:'user',content:'写笔记'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);assert(n<=6);assert.equal(sourceMessage._mcpTrace.state,'failed');
 });
 
 test('MCP budget: even valid JSON with a length finish reason is rejected before execution',async()=>{
@@ -603,7 +603,7 @@ test('a tool error is fed to the role as failure, with no automatic re-execution
 
 test('a rejected final reply guard cannot replay an already submitted operation',async()=>{
  const s=sandbox(),c=await connected(s,'auto'),ctx=s.M.context('role-a');let n=0;s.ctx.chatAPI=async()=>++n===1?call(ctx.catalog[1].alias,{text:'one write'}):'final';s.ctx.chatResultText=async()=>{throw new Error('final reply guard rejected');};
- const out=await s.M.roleReply([{role:'user',content:'write'}],{mcpContext:ctx});assert(out.includes('工具流程已停止'));assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
+ await assert.rejects(s.M.roleReply([{role:'user',content:'write'}],{mcpContext:ctx}),e=>e.mcpStatus===true&&e.mcpNoRetry===true);assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,1);
 });
 
 test('a malformed write reply is marked unknown and cannot be silently resubmitted',async()=>{
@@ -625,8 +625,36 @@ test('invalid endpoints and unrecognized tool envelopes do not dispatch anything
  assert.equal(s.M.parseCall('普通聊天'),null);assert.equal(s.M.parseCall('这是一个例子：'+call('x')),null);assert.throws(()=>s.M.parseCall('{"mcp_call":{"tool":"x"}}'));
 });
 
+test('MCP ordinary chat: connected tools do not intercept listening, greetings or role dialogue',async()=>{
+ for(const variant of ['web','private']){
+  const s=guideSandbox(null,variant);await connected(s);
+  const hook=forVariant(readAppSource(),variant).split('\n').find(x=>x.includes('if(!note)_md.mcpContext='));
+  assert(hook);
+  for(const content of ['听听','晚安','你继续','我想你了','你说你刚才在听音乐吗？','写一封道歉邮件的文案，不要发送']){
+   Object.assign(s.ctx,{note:'',_md:{},id:'role-a',_lu:{role:'user',content},replyToken:1,replyAccount:'main',replyStale:()=>false});
+   vm.runInContext(hook,s.ctx);assert.equal(s.ctx._md.mcpContext,null,content);
+  }
+  for(const content of ['查一下 Gmail 最近的邮件','帮我发送邮件给 beiye5912@gmail.com','用 MCP 搜索歌曲 Hello','查一下云端额度']){
+   Object.assign(s.ctx,{_md:{},_lu:{role:'user',content}});vm.runInContext(hook,s.ctx);
+   assert(s.ctx._md.mcpContext,content);
+  }
+ }
+});
+
+test('MCP clarification is limited to the immediate answer in the same role and account',async()=>{
+ for(const variant of ['web','private'])for(const answer of ['今天','晚安呀']){
+  const s=guideSandbox(null,variant);await connected(s);const source={role:'user',content:'查一下云端额度'},rows=[source];s.ctx.msgs=()=>rows;
+  const ctx=s.M.chatContext('role-a',()=>true,source);assert(ctx);s.ctx.chatAPI=async()=>'{"mcp_ask":"今天还是本月？"}';
+  const question=await s.M.roleReply([{role:'user',content:source.content}],{mcpContext:ctx});rows.push({role:'assistant',content:question});
+  const reply={role:'user',content:answer};rows.push(reply);
+  assert.equal(!!s.M.chatContext('role-a',()=>true,reply),answer==='今天');
+  assert.equal(s.M.chatContext('role-a',()=>true,{role:'user',content:'嗯'}),null,'a clarification is consumed once');
+  assert.equal(s.calls.filter(x=>x.body?.method==='tools/call').length,0);
+ }
+});
+
 test('both bundles include real chat hook, optional context and Cloudflare catalog without native companion changes',()=>{
- for(const [name,file] of BUNDLES){const text=read(file);assert(text.includes(forVariant(source,name)),name);assert(text.includes('if(opt.mcpContext&&!opt.mcpInternal)return MCPTools.roleReply(messages,opt)'));assert(text.includes('if(!note)_md.mcpContext=MCPTools.context(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu)'));assert(text.includes("else if(c.p==='mcp')html=MCPTools.render()"));}
+ for(const [name,file] of BUNDLES){const text=read(file);assert(text.includes(forVariant(source,name)),name);assert(text.includes('if(opt.mcpContext&&!opt.mcpInternal)return MCPTools.roleReply(messages,opt)'));assert(text.includes('if(!note)_md.mcpContext=MCPTools.chatContext(id,()=>!replyStale(id,replyToken,replyAccount)&&actId()===replyAccount,_lu)'));assert(text.includes("else if(c.p==='mcp')html=MCPTools.render()"));}
  assert(source.includes('https://mcp.cloudflare.com/mcp'));assert(source.includes('https://docs.mcp.cloudflare.com/mcp'));
 });
 

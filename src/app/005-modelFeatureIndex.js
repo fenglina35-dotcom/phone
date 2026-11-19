@@ -3,8 +3,10 @@ let _modelFeatureIndex=null,_modelFeatureSeenMap=null,_modelLedgerFilter={featur
 function modelFeatureIndex(){if(_modelFeatureIndex)return _modelFeatureIndex;const byFn={},byKey={};MODEL_FEATURES.forEach(r=>{const info={key:r[0],label:r[1],group:r[2],def:r[3],toggle:r[4]===1,where:typeof r[4]==='string'?r[4]:''};byKey[r[0]]=info;r.slice(5).forEach(n=>{byFn[n]=info;});});return _modelFeatureIndex={byFn,byKey};}
 function modelFeatureFrames(stack){return String(stack||'').split('\n').map(line=>{line=line.trim();let name='',file='',m=line.match(/^at\s+(?:async\s+)?([^\s(]+)\s+\((.*)\)$/);if(m){name=m[1];file=m[2];}else if((m=line.match(/^at\s+(.*)$/)))file=m[1];else if((m=line.match(/^([^@]*)@(.*)$/))){name=m[1];file=m[2];}name=String(name||'').replace(/^async\*/,'').replace(/^.*[.\/]/,'');file=String(file||'').replace(/[?#].*$/,'').replace(/:\d+(?::\d+)?\)?$/,'').replace(/^.*\//,'');return{name,file};}).filter(f=>f.name||f.file);}
 function modelFeatureOf(opt){opt=opt||{};const idx=modelFeatureIndex();
- if(opt._modelFeatureOrigin&&idx.byKey[opt._modelFeatureOrigin.key])return Object.assign({},idx.byKey[opt._modelFeatureOrigin.key]);
  if(opt.roleInterceptPurpose==='length-continuation'&&opt.diagnosticFeatureKey){const info=idx.byKey[opt.diagnosticFeatureKey],base=info?info.label:String(opt.diagnosticFeature||'其他').replace(/（接着写）$/,'');return Object.assign({key:opt.diagnosticFeatureKey,group:'其他',def:0,toggle:false},info||{},{label:base+'（接着写）'});}
+ /* MODEL_FEATURE_EXPLICIT_ORIGIN_V1: callers crossing async boundaries carry a registered source. */
+ if(idx.byKey[opt.diagnosticFeatureKey])return Object.assign({},idx.byKey[opt.diagnosticFeatureKey]);
+ if(opt._modelFeatureOrigin&&idx.byKey[opt._modelFeatureOrigin.key])return Object.assign({},idx.byKey[opt._modelFeatureOrigin.key]);
  let frames=[];try{frames=modelFeatureFrames(new Error().stack);}catch(_){}
  const cont=frames.some(f=>f.name==='chatResultText'||f.name==='spyContinueJson');let first='';
  for(const f of frames){if(MODEL_FEATURE_SKIP.has(f.name))continue;const hit=idx.byFn[f.file+':'+f.name]||idx.byFn[f.name];if(hit)return Object.assign({},hit,{label:hit.label+(cont?'（接着写）':'')});if(!first&&f.name)first=f.name;}

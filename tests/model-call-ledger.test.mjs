@@ -164,3 +164,12 @@ test('a current user reply carrying a feature event keeps its existing secondary
  const ctx={id:'r',aid:'main',token:2,note:'[功能事件即时反应]改备注',options:null,client:{replyPermit:(id,aid,token,manual)=>manual?'existing-permit':''},featureEventNoteActive:n=>n.includes('功能事件'),replyPendingUserText:()=> '当前未回复的新消息'};vm.createContext(ctx);vm.runInContext(code.replaceAll('const ','var '),ctx);assert.equal(ctx.allowed,true);
  ctx.replyPendingUserText=()=>'';vm.runInContext(code.replaceAll('const ','var '),ctx);assert.equal(ctx.allowed,false,'an unattended feature event must not gain the user permit');
 });
+
+for (const [label, dir] of Object.entries(BUNDLES)) {
+ test(`${label}: explicit request source survives an anonymous asynchronous caller`,async()=>{
+  const {api}=load(dir);await Promise.resolve();
+  assert.equal(api.modelFeatureOf({diagnosticFeatureKey:'wechat'}).key,'wechat');
+  assert.equal(api.modelFeatureOf({diagnosticFeatureKey:'mcp_tools',_modelFeatureOrigin:{key:'wechat'}}).key,'mcp_tools');
+  assert.equal(api.modelFeatureOf({roleInterceptPurpose:'length-continuation',diagnosticFeatureKey:'letter'}).label,'信箱·角色写信（接着写）');
+ });
+}
