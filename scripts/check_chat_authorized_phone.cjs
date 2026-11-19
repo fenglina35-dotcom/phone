@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
-const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');let body=fs.readFileSync(file);if(process.env.NORTH_CHECKIN_BASELINE==='1'&&file.endsWith('phone-shortcuts.js')){const source=body.toString('utf8'),marker=source.indexOf('/* CHECKIN_SHORTCUTS_V1:');if(marker>=0)body=Buffer.from(source.slice(0,marker));}if(process.env.NORTH_TASK_PHOTO_BASELINE==='1'&&file.endsWith('task-notes.js'))body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root});if((process.env.NORTH_OWNER_TODO_BASELINE==='1'||process.env.NORTH_CALL_EVENT_BASELINE==='1')&&path.basename(file)==='app.js')body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root,maxBuffer:32*1024*1024});res.end(body);});
+const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');let body=fs.readFileSync(file);if(process.env.NORTH_CONCERT_BASELINE==='1'&&path.basename(file)==='travel-concert-booking.js')body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root});if(process.env.NORTH_CHECKIN_BASELINE==='1'&&file.endsWith('phone-shortcuts.js')){const source=body.toString('utf8'),marker=source.indexOf('/* CHECKIN_SHORTCUTS_V1:');if(marker>=0)body=Buffer.from(source.slice(0,marker));}if(process.env.NORTH_TASK_PHOTO_BASELINE==='1'&&file.endsWith('task-notes.js'))body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root});if((process.env.NORTH_OWNER_TODO_BASELINE==='1'||process.env.NORTH_CALL_EVENT_BASELINE==='1')&&path.basename(file)==='app.js')body=require('node:child_process').execFileSync('git',['show','HEAD:'+path.relative(root,file).replace(/\\/g,'/')],{cwd:root,maxBuffer:32*1024*1024});res.end(body);});
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
@@ -13,7 +13,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   await page.addInitScript(()=>{if(window.speechSynthesis){const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);window.speechSynthesis.speak=utterance=>{utterance.volume=0;return speak(utterance);};}});
   if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/*',r=>(process.env.NORTH_MISSING_FLIGHT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-flight.js')||process.env.NORTH_MISSING_TRAIN==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-train.js'))?r.abort():new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  await page.route('**/*',r=>(process.env.NORTH_MISSING_CONCERT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-concert.js')||process.env.NORTH_MISSING_FLIGHT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-flight.js')||process.env.NORTH_MISSING_TRAIN==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-train.js'))?r.abort():new URL(r.request().url()).origin===origin?r.continue():r.abort());
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview='+(process.env.NORTH_PAGE_ART==='1'?'page-art':'black-home'));
   await page.waitForFunction(()=>window.__northBootReady);
   if(process.env.NORTH_PAGE_ART==='1'){
@@ -31,6 +31,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(!privateApp)assert(await page.evaluate(async()=>{for(const src of window.__NORTH_PAGE_ART__){const r=await fetch(src);if(!r.ok||!(await r.arrayBuffer()).byteLength)return false;}return true;}));
    assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,pageArt:true,decodedBeforeNavigation:decoded,offlineCache:!privateApp,navigation,pageErrors:0}));await page.close();continue;
   }
+  if(process.env.NORTH_MISSING_CONCERT==='1')assert(await page.evaluate(()=>typeof NorthTravelConcert==='undefined'&&typeof NorthConcertBooking!=='undefined'),'concert query absent while real booking module remains loaded');
   if(process.env.NORTH_MISSING_TRAIN==='1')assert(await page.evaluate(()=>typeof NorthTravelTrain==='undefined'&&typeof NorthTrainBooking!=='undefined'),'train query absent while real booking module remains loaded');
   if(process.env.NORTH_MISSING_FLIGHT==='1')assert(await page.evaluate(()=>typeof NorthTravelFlight==='undefined'&&typeof NorthFlightBooking!=='undefined'),'only the optional query component must be absent');
   await page.evaluate(()=>{
@@ -40,6 +41,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    aiCoreOn=()=>false;window.testCalls=[];window.fixtureRaw='[内心|想听你说话]\n我在，慢慢说。';
    fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return{ok:true,json:async()=>false,text:async()=>'false'};testCalls.push(JSON.parse(opt.body));return{ok:true,json:async()=>({choices:[{message:{content:fixtureRaw},finish_reason:'stop'}]})};};
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
+   if(typeof NorthTravelConcert==='undefined'){tvInit().concertOrders=[{id:'missing-component-saved-concert',accountId:'main',concertV2:true,title:'已有模拟演唱会',artist:'王俊凯',city:'上海',venue:'模拟演出馆',date:'2099-10-05',time:'19:30',startAt:+new Date('2099-10-05T19:30:00'),endAt:+new Date('2099-10-05T22:00:00'),area:'stand',count:1,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100}];}
    if(typeof NorthTravelTrain==='undefined'){tvInit().trips.push({id:'missing-component-saved-train',accountId:'main',railV2:true,from:'北京',to:'上海',date:'2099-10-05',dep:'09:00',arr:'11:00',cls:'second',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
@@ -52,6 +54,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    assert.deepEqual(errors,[]);console.log(JSON.stringify({safariFreshSaveGesture:true,actualBackupJSON:true,pageErrors:0}));await page.close();continue;
   }
 
+  if(process.env.NORTH_MISSING_CONCERT==='1')assert(await page.evaluate(()=>buildSystem(getC(testId)).includes('已有模拟演唱会')),'real chat prompt preserves concert history with query script blocked');
   if(process.env.NORTH_CALL_EVENT_REPLAY==='1'){
    const quiet=await page.evaluate(async()=>{
     window.callEventNote=wechatNaturalCallEventNote('刚刚这通语音来电没有接通，当前没有新的用户话语。');
@@ -903,6 +906,7 @@ try{parent.document.body.dataset.stolen="yes"}catch(e){document.body.dataset.par
     return{sys,activity,calls:testCalls.length,rows:msgs(testId).filter(m=>m.role==='assistant').map(m=>m.content),unchanged:before===JSON.stringify(S.me.lifeNotes),busy:replyGenerationBusy(testId,actId()),visible:document.body.innerText.includes('我在，慢慢说。')};
    },{granted,raw,populated});
    assert.equal(result.calls,1,JSON.stringify(result));assert.deepEqual(result.rows,['我在，慢慢说。']);assert(result.visible);assert(result.unchanged);assert(!result.busy);
+   if(process.env.NORTH_MISSING_CONCERT==='1')assert(result.sys.includes('已有模拟演唱会'),'existing concert order must still reach the real model request');
    assert(!result.sys.includes('OTHER_ROLE_SECRET'));assert(!result.sys.includes('OTHER_ACCOUNT_SECRET'));
    assert(!result.activity.includes('OTHER_ROLE_SECRET'));assert(!result.activity.includes('OTHER_ACCOUNT_SECRET'));
    if(populated){assert(result.activity.includes('OWN_NOTE'));assert(result.activity.includes('旧记录保留标记'));}
@@ -938,6 +942,7 @@ try{parent.document.body.dataset.stolen="yes"}catch(e){document.body.dataset.par
   }
   await page.evaluate(async()=>{S.couple.grant={nearby:true};S.couple.locks={nearby:{pwd:'3456',time:Date.now()}};await saveNowAsync();});await page.goto(page.url().split('?')[0]);await page.waitForFunction(()=>window.__northBootReady);
   const restored=await page.evaluate(()=>{const role=S.contacts[0];return{granted:role.spy.granted,reply:msgs(role.id).some(m=>m.content==='我在，慢慢说。'),sys:buildSystem(role).length,nearbyPermission:!!S.couple.grant.nearby,nearbyLock:appLocked('nearby'),streaming:S.settings.chat.streaming===true};});
+  if(process.env.NORTH_MISSING_CONCERT==='1')assert(await page.evaluate(()=>NorthConcertBooking.rows().some(o=>o.id==='missing-component-saved-concert')),'missing query component must not erase persisted orders');
   assert(restored.granted&&restored.reply&&restored.sys>0&&restored.nearbyPermission&&restored.nearbyLock&&restored.streaming);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({privateApp,composerAndManualReply:true,automaticInspection:auto,persisted:true}));
   console.log(JSON.stringify({privateApp,refreshAndSinceAndRevocation:true,pageErrors:errors.length}));

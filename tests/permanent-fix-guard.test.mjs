@@ -100,6 +100,8 @@ const PERMANENT_FIXES = [
   {release:'shell-live-surfaces',scope:'both',least:1,name:'特殊媒体画布安全淡入且独立浮层不复制会话',marker:'/* SHELL_LIVE_SURFACES_V1：'},
   {release:'shell-interaction-motion',scope:'both',least:1,name:'统一导航动效保持即时路由、减少动态效果与账号隔离',marker:'/* SHELL_INTERACTION_MOTION_V1：'},
   {release:"private v1926 / web v1927",scope:"both",least:1,name:"外置语音显示平台具体原因并隐藏反射密钥",marker:"EXTERNAL_TTS_ERROR_DETAIL_V1"},
+  {release:"private v1944 / web v1945",scope:"web",file:"travel-concert-booking.js",least:1,name:"演唱会查询缺载不阻断聊天且不丢订单误扣款",marker:"CONCERT_QUERY_OPTIONAL_V1"},
+  {release:"private v1944 / web v1945",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-concert-booking.js",least:1,name:"演唱会查询缺载不阻断聊天且不丢订单误扣款",marker:"CONCERT_QUERY_OPTIONAL_V1"},
   {release:"private v1925 / web v1926",scope:"web",file:"travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"private v1925 / web v1926",scope:"private",file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-train-booking.js",least:1,name:"火车查询缺载不阻断聊天且保留订单不扣款",marker:"TRAIN_QUERY_OPTIONAL_V1"},
   {release:"web v1925",scope:"web",least:1,name:"网页只导入外部演唱且拒绝转换请求",marker:"ROLE_SONG_EXTERNAL_IMPORT_V1"},

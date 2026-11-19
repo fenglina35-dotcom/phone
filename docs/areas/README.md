@@ -1121,9 +1121,12 @@ CHAT_COMPOSER_SESSION_V1最终本地验证：完整5213/5213及普通/查岗双�
 
 ANDROID_HOME_FULLSCREEN_V1最终范围与验收：不改授权客户端或设备标签，仅改网页manifest与网页体检；完整5220/5220、双端核心聊天通过，页面错误0，私人整个工程与资源未变。未升版/提交/发布，真实安卓新主屏图标效果及苹果实机仍待验收；测试/暂时撤回的附带标签尝试见维护Bug记录。
 
-## 火车查询组件缺载与普通聊天
+## 旅行查询组件缺载与普通聊天
 
 NorthTrainBooking与NorthTravelTrain独立加载。缺查询组件时rolePrompt仍读取既有订单、忽略查询；checkDue保护全局及方法存在；明确订票失败且不扣款。tests/travel-train.test.mjs覆盖缺载/空state/缺people/恢复；NORTH_MISSING_TRAIN=1核心聊天脚本真实阻断查询组件并验证双端请求回复与持久化。具体缺载网络原因未确认。
+
+演唱会同样分为NorthConcertBooking订单模块和NorthTravelConcert查询模块。CONCERT_QUERY_OPTIONAL_V1：rolePrompt必须用安全quote读取，校验people数组；查询缺载/空state时保留当前账号角色知情订单，明确订票返回失败、不扣款、不输出虚假订票成功。订单变化定时刷新先验证active方法；组件恢复后原订票正常。tests/travel-concert.test.mjs双端覆盖缺载/畸形查询/旧订单/钱包/恢复，NORTH_MISSING_CONCERT=1核心门禁实际阻断查询脚本、保留真实buildSystem与myActivity并检验回复/忙碌释放/保存刷新。具体缺载网络/缓存原因未确认。
+
 
 ## 外置语音平台错误原因
 

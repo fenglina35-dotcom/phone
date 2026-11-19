@@ -3412,3 +3412,6 @@ Spotify搜索接入：个人Free登录不等于自建Spotify开发应用可用�
 
 
 2026-11-19 卡片修复交付：最终完整5493/5493通过，0失败0取消0跳过，177638.9ms；普通/查岗核心双端与Mac卡片门禁pageErrors0。两端Release签名严格验证通过，各1917资源与提交036ff2d2逐文件一致。iPhone覆盖安装后系统精确读回1.0.589/build589并启动，Mac覆盖后全部文件与签名产品一致，数据容器未操作。C实际搜Adele Hello，经单次批准返回三张官方卡；Hello播放链接进度12、18、27秒，暂停/继续通过，结束后回到播放键；本人答复手机“能听到声音”。界面官方标注试听，不能当作完整播放或个人账号接通。
+
+
+2026-11-19 演唱会缺载导致请求前聊天失败：截图NorthTravelConcert is not defined，尚未请求模型。NorthConcertBooking.rolePrompt无条件quote调用查询全局，普通buildSystem含订单提示即抛ReferenceError；checkDue签名变化也无保护active，roleDirect依赖state。火车已有保护，演唱会漏覆盖。双端改为安全concertState/quote、people数组校验、定时active保护；无查询组件保留订单及角色账号边界、订票失败不扣款不虚报成功，恢复可继续。旧双端回归2项同名ReferenceError失败；旧真实HTML阻断travel-concert.js后原buildSystem同名失败，首次晚置门禁被日记长度检查间接捕获，提前buildSystem断言后精确复现，没有修改日记产品代码。修后旅行26/26通过。具体缺载网络/缓存来源尚未确认。
