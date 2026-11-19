@@ -255,14 +255,18 @@ export async function spotifyCatalog(request,env,fetchFn=fetch){
  if(body.method==='server/discover')return result({supportedVersions:['2026-07-28'],serverInfo,capabilities:{tools:{}},tools:[spotifySearchTool]});
  if(body.method!=='tools/call'||body.params?.name!=='spotify_search')return rpcError(body.id,-32601,'此连接只提供公开歌曲搜索。',400);
  let args;try{args=spotifyArgs(body.params.arguments);}catch(e){return rpcError(body.id,-32602,e.message,400);}
+ // MCP_SPOTIFY_SCOPED_IDENTITY_V1: optional managed identity stays server-side and never reuses caller/Gmail credentials.
+ const upstreamKey=env.PIPEWORX_CATALOG_KEY;
+ if(upstreamKey&&!/^[-A-Za-z0-9._]{16,4096}$/.test(upstreamKey))return rpcError(body.id,-32603,'曲库服务凭据配置未通过。',503);
+ const headers={'Content-Type':'application/json','Accept':'application/json',...(upstreamKey?{Authorization:'Bearer '+upstreamKey}:{})};
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000);let stage='search-request',upstreamStatus=0;
  try{
   // The documented public HTTP tool endpoint needs no MCP session or meta tools.
-  const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(args)});
+  const response=await fetchFn(SPOTIFY_CATALOG_UPSTREAM,{method:'POST',redirect:'manual',signal:controller.signal,headers,body:JSON.stringify(args)});
   upstreamStatus=response.status;if(!response.ok){await response.body?.cancel();throw Error('catalog_unavailable');}
   stage='search-response';const value=JSON.parse(await readLimited(response.body,1024*1024));
   stage='result-shape';const data=publicTracks({structuredContent:value},args);
-  return result({content:[{type:'text',text:JSON.stringify(data)}]});
+  const text=JSON.stringify(data);return result({content:[{type:'text',text:upstreamKey?text.split(upstreamKey).join('[凭据已隐藏]'):text}]});
  }catch(_){return Response.json({jsonrpc:'2.0',id:body.id,error:{code:-32603,message:'公开曲库暂未返回有效结果，请稍后手动重试；个人账号连接未改变。',data:{stage,upstreamStatus}}},{status:502});}
 
  finally{clearTimeout(timer);}

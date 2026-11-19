@@ -211,6 +211,15 @@ test('Spotify search uses one documented public HTTP request and never forwards 
  });
  assert.equal(response.status,200);const result=await response.json();assert.equal(result.id,4);assert(result.result.content[0].text.includes('62PaSfnXSMyLshYJrlTuL3'));assert(!JSON.stringify(result).includes('untrusted'));assert.equal(calls,1);
 });
+test('Spotify managed identity uses only its server key, rejects malformed credentials and never falls back or leaks',async()=>{
+ const {spotifyCatalog}=await import('./handlers.mjs');const e={SPOTIFY_CATALOG_TOKEN_SHA256:'0e740afe07f722eea955522452638430cc932c6a445cc763d22bbef6462b9441',PIPEWORX_CATALOG_KEY:'separate-provider-fixture-key'};
+ const request=()=>new Request(base+'/spotify/mcp',{method:'POST',headers:{Authorization:'Bearer catalog-fixture-token'},body:JSON.stringify({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'spotify_search',arguments:{query:'Adele Hello'}}})});
+ let calls=0;const network=async(url,init)=>{calls++;assert.equal(url,'https://gateway.pipeworx.io/v1/tools/spotify_search');assert.equal(new Headers(init.headers).get('Authorization'),'Bearer separate-provider-fixture-key');return Response.json({tracks:{items:[{id:'62PaSfnXSMyLshYJrlTuL3',name:'track '+e.PIPEWORX_CATALOG_KEY,artists:[{name:'artist'}]}],total:1}});};
+ const success=await spotifyCatalog(request(),e,network);assert.equal(success.status,200);assert(!(await success.text()).includes(e.PIPEWORX_CATALOG_KEY));assert.equal(calls,1);
+ assert.equal((await spotifyCatalog(request(),{...e,PIPEWORX_CATALOG_KEY:'bad\r\nvalue'},network)).status,503);assert.equal(calls,1);
+ calls=0;const r=await spotifyCatalog(request(),e,async()=>{calls++;return new Response('separate-provider-fixture-key private error',{status:401});});assert.equal(r.status,502);assert.equal(calls,1);assert(!(await r.text()).includes('separate-provider-fixture-key'));
+});
+
 test('Spotify catalog rejects unrelated tools, extra fields, notifications and unsafe parameters before network',async()=>{
  const {spotifyCatalog}=await import('./handlers.mjs');let calls=0;
  for(const change of [{params:{name:'ask_pipeworx',arguments:{query:'x'}}},{params:{name:'spotify_search',arguments:{query:'x',url:'https://evil.invalid'}}},{params:{name:'spotify_search',arguments:{query:'x',type:'playlist'}}},{params:{name:'spotify_search',arguments:{query:'x',limit:100}}},{params:{name:'spotify_search',arguments:{query:'x',market:'../'}}},{params:{name:'spotify_search',arguments:{query:''}}},{id:undefined}]){
