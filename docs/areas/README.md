@@ -1349,6 +1349,10 @@ GUI核验一度因异步重绘导致旧AX索引落到清空数据确认页，立
 
 ## 备份文件导出
 
+独立验收：给既有 `scripts/check_backup_realistic_browser.cjs` 设置 `NORTH_BACKUP_FILE` 为本机备份绝对路径、`NORTH_BACKUP_REPORT` 为已有 JSON 记录路径，再经 `scripts/run_tests_mac.sh --check` 执行。仅用一次性私人浏览器存储，阻断外部请求；真实导入后到无脚本页面读回实际数据库逐栏目比对，再正常重开确认原有资料保留。报告分开记录 `coreRestorePassed` 与 `completeMediaBackup`；音频引用、本地歌曲和放映室元数据不能当作原件已打包。真实文件与凭据不入仓库。无文件参数仍走原有万条聊天及媒体性能测试。
+
+主设备冷保全先由本人安排暂停聊天，并用 CoreDevice 正式 JSON 进程清单确认 App 真正退出；不能靠表格过滤名称判断。固定源前后清单，同时保全数据库、WAL、外置 blob。单文件复制的本地修改时间可能是复制时刻，应以成功回执、大小、SHA256 及源前后稳定性验收，不能因此放开存档版本保护。只接续本轮副本，不覆盖旧唯一证据。原始库保全包不是一键 JSON 导入包，数据库检查及独立还原结果须分别报告。
+
 `src/app/045-momentEditorPeopleJump.js` 的 `exportData` 使用 `fullBackupFileBlob(progress, stats)` 分段生成 JSON，不拼整份超大字符串。显式传入本地导出统计时，缺失/读取抛错的 `idb:` 图片和 `album:` 原件保留原引用，并追加 `_backupMedia` 缺失清单、报告数量及无法完整恢复图片，聊天及其他可读取内容继续导出；不改当前 S、图片引用或原始存储。不能把“读不到”直接认定为原件永久损坏。聊天归档读取/JSON 失败仍中止，不伪造完整聊天。自动云备份调用不带 stats，相册原件缺失、图片原件缺失或媒体读取抛错仍失败，避免不完整备份覆盖旧的可用云备份。
 
 `beautySaveFile` 区分系统分享、取消、网页下载和原生待保存。Apple 分享失败必须保留失败，不能转网页下载后宣称已导出。iPhone 的 `LocalPhoneWebView.Coordinator` 与 Mac 的 `MacPhoneBridge` 仅接收内置主文档发起的 Blob 下载，使用 WKDownload 将文件落到独立本机临时位置，完成后交给系统分享/保存面板；远端链接与子框架不获得此能力。面板完成或失败只清理该次导出的临时文件，不碰存档。文件生成不等于已保存，必须区分系统面板和真正交付。

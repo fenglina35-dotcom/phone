@@ -4,7 +4,61 @@ const {chromium,webkit}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
 const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');fs.createReadStream(file).pipe(res);});
-(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
+// NORTH_BACKUP_FILE audits a user-authorized local export in disposable browser storage.
+// No request may leave the loopback test origin; credentials/content are never logged.
+async function auditExistingBackup(file){
+ const crypto=require('node:crypto'),input=fs.readFileSync(file),expected=JSON.parse(input),digest=x=>crypto.createHash('sha256').update(x).digest('hex');
+ const canonical=v=>v&&typeof v==='object'?(Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]))):v;
+ const hashes=Object.fromEntries(Object.entries(expected).filter(([k])=>!['_persistedAt','_backupMedia','presence','roleBody'].includes(k)).map(([k,v])=>[k,digest(JSON.stringify(canonical(v)))]));
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`,browser=await chromium.launch({headless:true});
+ const reports=[];
+ try{for(const privateApp of [true]){
+  const context=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844},serviceWorkers:'block'}),page=await context.newPage(),errors=[];let externalRequestsBlocked=0;
+  page.on('pageerror',()=>errors.push('pageerror'));await page.route('**/*',r=>{if(new URL(r.request().url()).origin===origin)return r.continue();externalRequestsBlocked++;return r.abort();});
+  if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_MAC__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'audit-native-unavailable'})};});
+  const entry=origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html');
+  await page.goto(entry);await page.waitForFunction(()=>window.__northBootReady);await page.evaluate(()=>_bootImagesPromise);
+  await page.evaluate(()=>{localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));S.me.locked=false;const gate=document.getElementById('gate');if(gate)gate.remove();openSettings('data');closeModal();window.auditNotices=[];const original=toast;toast=t=>{auditNotices.push(String(t));return original(t);};uiConfirm=async()=>true;});
+  await page.evaluate(()=>{const input=document.createElement('input');input.id='auditBackupInput';input.type='file';input.onchange=()=>readJsonFile(input.files[0],async d=>{await applyFullBackupData(d);window.auditImportComplete=true;});document.body.appendChild(input);});
+  await page.locator('#auditBackupInput').setInputFiles(path.resolve(file));
+  await page.waitForFunction(()=>window.auditImportComplete||auditNotices.some(x=>x.startsWith('导入失败')),null,{timeout:240000});
+  assert(await page.evaluate(()=>!!window.auditImportComplete),'local backup import did not complete');
+  const inspect=()=>page.evaluate(async hashes=>{
+   const restored=JSON.parse(await(await fullBackupFileBlob(null,{skippedImages:0})).text()),canonical=v=>v&&typeof v==='object'?(Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]))):v,diffs=[];
+   for(const [key,hash]of Object.entries(hashes)){const text=JSON.stringify(canonical(restored[key]));if(text===undefined){diffs.push(key);continue;}const actual=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,'0')).join('');if(actual!==hash)diffs.push(key);}
+   let audioRefs=0,readableAudioRefs=0;const refs=new Set();(function walk(v){if(typeof v==='string'&&v.startsWith('idb-audio:')){audioRefs++;refs.add(v);}else if(v&&typeof v==='object')for(const x of Object.values(v))walk(x);})(restored);
+   for(const ref of refs)if(await imgGet('__audio_'+ref.slice(10)))readableAudioRefs++;
+   return{differentRoots:diffs,contacts:restored.contacts.length,messages:Object.values(restored.messages).reduce((n,v)=>n+(Array.isArray(v)?v.length:0),0),notes:(restored.me.lifeNotes||[]).length,audioReferences:audioRefs,uniqueAudioReferences:refs.size,readableAudioReferences:readableAudioRefs,missingMediaPositions:restored._backupMedia?.missing?.length||0};
+  },hashes);
+  const afterImport=await inspect();
+  // Read persisted data on an inert page before normal boot updates hardware/runtime fields.
+  await page.goto(origin+'/__backup-audit-storage');
+  const persisted=await page.evaluate(async hashes=>{
+   const db=await new Promise((resolve,reject)=>{const r=indexedDB.open('yibeiImg');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);}),cache=new Map();
+   const get=async key=>{if(cache.has(key))return cache.get(key);const value=await new Promise((resolve,reject)=>{const r=db.transaction('img','readonly').objectStore('img').get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});cache.set(key,value);return value;};
+   try{const shell=JSON.parse(localStorage.getItem('yibei_phone_v2')||'null'),record=await get('__core_state'),state=shell?.__coreIdb?JSON.parse(record.json):shell;
+    async function expand(v){if(typeof v==='string'&&v.startsWith('idb:')){const data=await get(v.slice(4));return typeof data==='string'&&data?data:v;}if(!v||typeof v!=='object')return v;
+     if(v.__idb){const kind=v.__idb,p=state.me?.phoneFriend,key=kind==='messages'?'__messages':kind==='phoneFriendMessages'?'__pf_messages_'+(v.id||p?.id||'main'):kind==='phoneFriendGroupMessages'?'__pf_group_messages_'+(v.id||p?.id||'main'):'';if(key){const data=await get(key);if(typeof data!=='string')throw Error('persisted chat archive unavailable');return expand(JSON.parse(data));}}
+     for(const key of Object.keys(v))v[key]=await expand(v[key]);return v;}
+    const restored=await expand(state),canonical=v=>v&&typeof v==='object'?(Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]))):v,differentRoots=[];
+    for(const [key,expected]of Object.entries(hashes)){const text=JSON.stringify(canonical(restored[key]));const hash=text===undefined?'':Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),x=>x.toString(16).padStart(2,'0')).join('');if(hash!==expected)differentRoots.push(key);}
+    return{differentRoots};
+   }finally{db.close();}
+  },hashes);
+  await page.goto(entry);await page.waitForFunction(()=>window.__northBootReady);await page.evaluate(()=>_bootImagesPromise);const afterReload=await inspect();
+  const changed=Object.fromEntries(afterReload.differentRoots.map(k=>[k,expected[k]]));
+  afterReload.providedFieldDifferences=await page.evaluate(async original=>{const restored=JSON.parse(await(await fullBackupFileBlob(null,{skippedImages:0})).text()),diffs=[];function compare(a,b,p){if(diffs.length>=30)return;if(a&&typeof a==='object'){if(!b||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b)){diffs.push(p.join('/'));return;}if(Array.isArray(a)&&a.length!==b.length)diffs.push(p.join('/')+'/length');for(const k of Object.keys(a))compare(a[k],b[k],p.concat(Array.isArray(a)?Number(k):k));}else if(a!==b)diffs.push(p.join('/'));}for(const k of Object.keys(original))compare(original[k],restored[k],[k]);return{paths:diffs,originalMemoriesRetained:!original.contacts||original.contacts.every(c=>{const after=restored.contacts.find(x=>x.id===c.id);return after&&(!Array.isArray(c.memory)||c.memory.every((m,i)=>JSON.stringify(m)===JSON.stringify(after.memory?.[i])));})};},changed);
+  reports.push({privateApp,afterImport,persisted,afterReload,pageErrors:errors.length,externalRequestsBlocked});console.log(JSON.stringify(reports[reports.length-1]));await context.close();
+ }}finally{await browser.close();await new Promise(r=>server.close(r));}
+ const localMusicFiles=(expected.music?.songs||[]).filter(s=>s?.src?.t==='idb').length,localCinemaFiles=(expected.cinema?.library||[]).filter(s=>s?.source==='idb').length;
+ const report={scope:'core JSON restoration; not a claim that all local media is embedded',backupBytes:input.length,backupSHA256:digest(input),reports,mediaCompleteness:{missingImagePositions:expected._backupMedia?.missing?.length||0,unembeddedAudioReferences:reports[0]?.afterReload.uniqueAudioReferences||0,unembeddedLocalMusicFiles:localMusicFiles,unembeddedLocalCinemaFiles:localCinemaFiles}};
+ report.coreRestorePassed=reports.every(r=>!r.afterImport.differentRoots.length&&!r.persisted.differentRoots.length&&r.afterReload.providedFieldDifferences.originalMemoriesRetained&&!r.afterReload.providedFieldDifferences.paths.some(p=>!/^me\/(?:locked|battery|charging)$/.test(p)&&!/^contacts\/\d+\/memory\/length$/.test(p))&&!r.pageErrors);
+ report.completeMediaBackup=Object.values(report.mediaCompleteness).every(n=>n===0);
+ if(process.env.NORTH_BACKUP_REPORT){const target=process.env.NORTH_BACKUP_REPORT,data=JSON.parse(fs.readFileSync(target,'utf8'));data.backupRestoreValidation=report;fs.writeFileSync(target,JSON.stringify(data,null,2)+'\n');}
+ for(const result of reports){assert.deepEqual(result.afterImport.differentRoots,[]);assert.deepEqual(result.persisted.differentRoots,[]);assert.equal(result.afterReload.providedFieldDifferences.originalMemoriesRetained,true);assert.deepEqual(result.afterReload.providedFieldDifferences.paths.filter(p=>!/^me\/(?:locked|battery|charging)$/.test(p)&&!/^contacts\/\d+\/memory\/length$/.test(p)),[]);assert.equal(result.pageErrors,0);}
+}
+if(process.env.NORTH_BACKUP_FILE)auditExistingBackup(process.env.NORTH_BACKUP_FILE).catch(e=>{console.error(e);server.close();process.exitCode=1;});
+else (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
  try{for(const engine of (process.env.NORTH_BACKUP_ENGINE?[process.env.NORTH_BACKUP_ENGINE]:['edge','webkit'])){
   const browser=await(engine==='edge'?chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'}):webkit.launch({headless:true}));
   try{const context=await browser.newContext({acceptDownloads:true,viewport:{width:390,height:844},userAgent:engine==='webkit'?'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1':'Mozilla/5.0 (Linux; Android 12; Huawei) AppleWebKit/537.36 Chrome/134.0.0.0 Mobile Safari/537.36 EdgA/134.0.0.0'});
