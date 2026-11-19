@@ -476,9 +476,9 @@ async function privateVerifyCoreMirror(record){
 /* PRIVATE_CORE_CONFLICT_EVIDENCE_V1: 只记本机指纹/数量/固定栏目，不选档、不写存档、不记录正文或密钥。 */
 function privateLogCoreConflict(a,b,left,right){
   try{
-    if(!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')return;
+    if(typeof window.__smallPhoneNativeDiag!=='function'&&!(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.smallPhoneNative))return;
     const digest=x=>/^[a-f0-9]{64}$/.test(x||'')?x:'missing',first=JSON.parse(left||'{}'),second=JSON.parse(right||'{}');
-    const emit=(event,fields)=>{Promise.resolve(window.SmallPhoneNative.request('diagnostics.append',{payload:{event,fields}})).catch(()=>{});};
+    const emit=(event,fields)=>{if(typeof window.__smallPhoneNativeDiag==='function'){window.__smallPhoneNativeDiag(event,fields,0);return;}window.webkit.messageHandlers.smallPhoneNative.postMessage({action:'diagnostics.append',payload:{event,fields}});};
     emit('boot.core.conflict.fingerprints',{nativeHash:digest(a&&a.contentSHA256),mirrorHash:digest(b&&b.contentSHA256),nativeParent:digest(a&&a.parentSHA256),mirrorParent:digest(b&&b.parentSHA256),nativeState:digest(a&&a.stateSHA256),mirrorState:digest(b&&b.stateSHA256),mirrorVerified:!!(b&&b.stateHashVerified)});
     const count=v=>Array.isArray(v)?v.length:0;
     emit('boot.core.conflict.counts',{nativeTime:+(a&&a.savedAt)||0,mirrorTime:+(b&&b.savedAt)||0,nativeContacts:count(first.contacts),mirrorContacts:count(second.contacts),nativeNotes:count(first.me&&first.me.lifeNotes),mirrorNotes:count(second.me&&second.me.lifeNotes),nativeArchived:!!(first.messages&&first.messages.__idb),mirrorArchived:!!(second.messages&&second.messages.__idb)});

@@ -1075,7 +1075,7 @@ test('same-owner sync publication rebinds the live composer without weakening ac
 
 test('boot conflict evidence contains only fixed metadata and never writes either data source',()=>{
  const source=read(PRIV_DIR+'app.js'),events=[];
- const ctx=vm.createContext({window:{SmallPhoneNative:{request(action,body){assert.equal(action,'diagnostics.append');events.push(body.payload);return Promise.resolve({});}}},privateAccountShellMatches:()=>true});
+ const ctx=vm.createContext({window:{SmallPhoneNative:{request(){assert.fail('fire-and-forget diagnostics must not use RPC args envelope');}},webkit:{messageHandlers:{smallPhoneNative:{postMessage(body){assert.equal(body.action,'diagnostics.append');assert(body.payload.event);events.push(body.payload);}}}}},privateAccountShellMatches:()=>true});
  for(const name of ['privateLogCoreConflict','privateSelectStoredCore'])vm.runInContext(fnSource(source,name),ctx);
  const a={savedAt:20,contentSHA256:'a'.repeat(64),parentSHA256:'b'.repeat(64),json:JSON.stringify({settings:{chat:{key:'SECRET_MUST_NOT_LOG'}},contacts:[{id:'PRIVATE_ROLE'}],messages:{__idb:'messages'},me:{lifeNotes:[{text:'PRIVATE_NOTE'}]}})},b={savedAt:10,json:JSON.stringify({settings:{chat:{key:'OTHER_SECRET'}},contacts:[],messages:{__idb:'messages'},me:{lifeNotes:[]}})};
  const before=JSON.stringify([a,b]);assert.throws(()=>ctx.privateSelectStoredCore(a,b),/不一致/);assert.equal(JSON.stringify([a,b]),before);
