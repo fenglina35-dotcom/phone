@@ -12,8 +12,12 @@
  function trace(stage,fields){phase=stage;repaint();try{if(root.NorthBrowserDiagnostics)NorthBrowserDiagnostics.mark('private-backup-'+stage);if(root.__smallPhoneNativeDiag)root.__smallPhoneNativeDiag('backup.'+stage,fields||{},0);}catch(_){} }
  function note(text,silent){detail=String(text||'');repaint();if(!silent)toast(detail,5000);}
  async function call(action,payload,timeoutMs){const r=await privatePhoneAccountCall(action,payload,timeoutMs);if(!r||r.ok!==true)throw new Error(r&&r.message||r&&r.error||'私人备份步骤未完成');return r;}
- // PRIVATE_BACKUP_PRIMARY_AUTHORITY_V1: trust only a fully loaded, verified current primary.
- function primaryBackupReady(owner){const client=root.NorthPrivateDeviceSyncClient;return root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&root.__northBootReady===true&&S._deviceSyncOwner===owner&&client&&typeof client.status==='function'&&client.status().owner===owner&&typeof client.automaticStateAllowed==='function'&&client.automaticStateAllowed();}
+ // PRIVATE_BACKUP_PRIMARY_AUTHORITY_V1: only the server can authorize publishing a primary backup.
+ // PRIVATE_BACKUP_SYNC_INDEPENDENT_V1: sync readiness never authorizes or blocks local saving.
+ function localBackupReady(owner){return root.__SMALL_PHONE_ACCOUNT_SYNC__!==true||(root.__northBootReady===true&&S._deviceSyncOwner===owner);}
+ function primaryBackupReady(owner,authority){return localBackupReady(owner)&&authority?.owner===owner&&(root.__SMALL_PHONE_DEVICE_SYNC_RETIRED__===true?authority?.deviceSyncRetired===true:authority?.isPrimary===true);}
+ function automaticHostAllowed(){return root.__SMALL_PHONE_MAC__!==true&&root.__SMALL_PHONE_NATIVE_ACCOUNT__?.platform!=='macOS';}
+
  function waiting(reason){if(autoWait!==reason){autoWait=reason;repaint();}return false;}
  function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
  async function transfer(blob,meta,onProgress,onUploadProgress){
@@ -33,32 +37,32 @@
   if(!privatePhoneAccountAvailable())return false;
   if(root.NorthPrivateReadOnlyBackup?.busy()){note('独立备份正在进行，请完成后再做账号云备份',silent);return false;}
   if(busy||_privatePhoneCloudBusy){note('私人备份仍在进行，请保持 App 在前台，勿重复点击',silent);return false;}
-  busy=true;_privatePhoneCloudBusy=true;detail='正在准备私人云备份';repaint();let uploaded=false;
+  busy=true;_privatePhoneCloudBusy=true;detail='正在准备私人云备份';repaint();let uploaded=false,localSaved=false;
   try{
    if(!_privatePhoneAccount.loaded)await privatePhoneAccountRefresh(false);
    if(!_privatePhoneAccount.loggedIn)throw new Error('请先登录私人手机号账号');
-   const owner=_privatePhoneAccount.userId,local=read();
-   if(silent||firstBind){const info=await call('account.backup.info');const cloudAt=Date.parse(info.backup&&info.backup.captured_at||'')||0;if(info.found&&(!local.allowed||cloudAt>(local.capturedAt||0)+1)&&!(silent&&!firstBind&&primaryBackupReady(owner))){trace('await-owner-confirmation');return false;}}
-   const verifySource=()=>{if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('账号已变化，未上传');if(root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&!primaryBackupReady(owner))throw new Error(root.NorthPrivateDeviceSyncClient?.status?.().secondary===true?'当前为副设备，不能覆盖主设备的账号备份；可导出本地文件':'主设备身份或本机存档仍在核验，稍后在授权与数据重试；未改变设备身份');if(silent&&root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&!root.NorthPrivateDeviceSyncClient.backgroundAllowed())throw new Error('当前设备不执行后台账号备份');};
-   verifySource();
-   if(_bootImagesPromise)await _bootImagesPromise;
+   const owner=_privatePhoneAccount.userId,local=read();let capability=null;
+   const verifyLocal=()=>{if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('账号已变化，未上传');if(!localBackupReady(owner))throw new Error('本机存档尚未读取完成，未生成云备份');};
+   const verifySource=()=>{verifyLocal();if(!primaryBackupReady(owner,capability))throw new Error(root.__SMALL_PHONE_DEVICE_SYNC_RETIRED__===true?'云备份账号暂未确认，本机保存不受影响':'当前设备没有主设备云备份权限；本机文件仍可导出');if(silent&&!automaticHostAllowed())throw new Error('当前设备不执行后台账号备份');};
+   if(_bootImagesPromise)await _bootImagesPromise;verifyLocal();
    if(!recoveryStateMeaningful(recoveryStateStats(S)))throw new Error('本机存档尚未完整恢复，未上传空备份');
    trace('save');note('正在保存本机并生成私人云备份，请保持 App 在前台',silent);
-   if(!await saveNowAsync())throw new Error('本机数据尚未保存完成');
-   const capturedAt=Date.now();trace('prepare');let progressAt=0;
-   const capability=await call('account.backup.capabilities');if(capability.preservationVersion!==1)throw new Error('云端安全备份规则尚未确认可用，旧备份保留');verifySource();const mediaStats={};
+   if(!await saveNowAsync())throw new Error('本机数据尚未保存完成');localSaved=true;verifyLocal();
+   capability=await call('account.backup.capabilities');if(capability.preservationVersion!==1)throw new Error('云端安全备份规则尚未确认可用，旧备份保留');verifySource();
+   if(silent||firstBind){const info=await call('account.backup.info');const cloudAt=Date.parse(info.backup&&info.backup.captured_at||'')||0;if(info.found&&(!local.allowed||cloudAt>(local.capturedAt||0)+1)&&!(silent&&!firstBind&&root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&primaryBackupReady(owner,capability))){trace('await-owner-confirmation');return false;}}
+   const capturedAt=Date.now();trace('prepare');let progressAt=0;const mediaStats={};
    const blob=await fullBackupFileBlob(text=>{if(Date.now()-progressAt>2000){progressAt=Date.now();note(text,silent);}},mediaStats);
    if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('账号已变化，未上传');
-   trace('transfer');let lastUploadPercent=-1;const result=await transfer(blob,{capturedAt,missingImages:+mediaStats.skippedImages||0,validate:verifySource,sourceBuild:String(root.__SMALL_PHONE_PRIVATE_BUILD__||APP_VER)},(done,total)=>{if(done===total){note('备份文件已交给原生端，正在连接云端，请保持 App 在前台',silent);}else if(Date.now()-progressAt>2000){progressAt=Date.now();note('正在交给原生备份 '+Math.floor(done/total*100)+'%，完成后上传云端',silent);}},(sent,total)=>{if(total<=0)return;const percent=Math.max(0,Math.min(100,Math.floor(sent/total*100)));if(percent===lastUploadPercent)return;lastUploadPercent=percent;note(percent>=100?'云端已接收 100%，正在确认保存，请保持 App 在前台':'正在上传私人云备份 '+percent+'%，请保持 App 在前台',silent);});
+   capability=await call('account.backup.capabilities');verifySource();trace('transfer');let lastUploadPercent=-1;const result=await transfer(blob,{capturedAt,missingImages:+mediaStats.skippedImages||0,validate:verifySource,sourceBuild:String(root.__SMALL_PHONE_PRIVATE_BUILD__||APP_VER)},(done,total)=>{if(done===total){note('备份文件已交给原生端，正在连接云端，请保持 App 在前台',silent);}else if(Date.now()-progressAt>2000){progressAt=Date.now();note('正在交给原生备份 '+Math.floor(done/total*100)+'%，完成后上传云端',silent);}},(sent,total)=>{if(total<=0)return;const percent=Math.max(0,Math.min(100,Math.floor(sent/total*100)));if(percent===lastUploadPercent)return;lastUploadPercent=percent;note(percent>=100?'云端已接收 100%，正在确认保存，请保持 App 在前台':'正在上传私人云备份 '+percent+'%，请保持 App 在前台',silent);});
    if(!result.saved)throw new Error('云端已有更新的备份，本次没有覆盖');
    uploaded=true;if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('原账号已备份，当前账号已变化，未更新当前账号标记');write({allowed:true,lastDay:day(),lastSuccess:Date.now(),capturedAt,missingImages:+mediaStats.skippedImages||0});_privatePhoneCloudDirtyAt=0;trace('success');
    // 手机号私人备份和网页镜像是两个入口。这里确认一份账号备份后立即结束，避免再次生成并上传整份大存档。
    note(mediaStats.skippedImages?'当前聊天、记忆、设置和可读图片已单独备份；缺少 '+mediaStats.skippedImages+' 张图片原件，原引用与清单已保留，旧备份未替换':'手机号云备份已更新；今日自动备份已完成；上一份已保留',silent);return true;
-  }catch(e){retryAt=Date.now()+RETRY;trace(uploaded?'local-receipt-failed':'failed');try{if(root.NorthBrowserDiagnostics)NorthBrowserDiagnostics.error('private-backup',e);}catch(_){}note((uploaded?'云端已保存，但本机成功标记写入失败：':'私人云备份未确认成功：')+String(e&&e.message||e),silent);return uploaded;}
+  }catch(e){retryAt=Date.now()+RETRY;trace(uploaded?'local-receipt-failed':'failed');try{if(root.NorthBrowserDiagnostics)NorthBrowserDiagnostics.error('private-backup',e);}catch(_){}note((uploaded?'云端已保存，但本机成功标记写入失败：':localSaved?'本机已保存，云备份未确认成功：':'私人云备份未确认成功：')+String(e&&e.message||e),silent);return uploaded;}
   finally{busy=false;_privatePhoneCloudBusy=false;_privatePhoneAccount.loaded=false;repaint();try{await privatePhoneAccountRefresh(false);await refreshInfo(true);}catch(_){} }
  }
  async function tick(){
-  if(root.__SMALL_PHONE_ACCOUNT_SYNC__===true&&(!root.NorthPrivateDeviceSyncClient||!root.NorthPrivateDeviceSyncClient.backgroundAllowed()))return waiting('等待确认本机为当前主设备');
+  if(!automaticHostAllowed())return waiting('此设备不执行自动云备份；可手动备份本机');
   if(busy)return false;
   if(root.NorthPrivateReadOnlyBackup?.busy())return waiting('等待独立原库备份完成');
   if(document.hidden)return waiting('等待 App 回到前台');
@@ -96,8 +100,8 @@
  function snapshotSection(){
   if(!snapshotAvailable())return '';
   const current=snapshot.owner===_privatePhoneAccount.userId?snapshot:{phase:'idle',detail:''};
-  const running=['copying','packaging','removing'].includes(current.phase),ready=current.phase==='ready';
-  return '<div class="section" id="private_readonly_snapshot"><div class="it"><span>独立原库备份<small style="display:block;margin-top:5px;color:#aaa;font-size:12px;line-height:1.65">'+esc((current.detail||'保留当前存档、数据库和本机媒体原件')+(running&&current.total?'（'+current.done+'/'+current.total+' 项）':'')+(ready&&current.capturedAt?'；固定副本时间：'+privatePhoneAccountDate(current.capturedAt):''))+'</small></span></div><div style="padding:0 14px 12px;display:flex;gap:10px;flex-wrap:wrap">'+(running?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.cancel()">停止生成</button>':ready?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.save()">保存备份文件</button>':'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.begin()">生成或查看独立备份</button>')+(current.token&&current.phase==='failed'?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.begin(true)">保留失败副本并重试</button>':'')+(current.token&&['ready','failed'].includes(current.phase)?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.remove()">移除本机副本</button>':'')+'</div><div class="hint" style="padding:0 14px 14px;line-height:1.65">生成期间请保持前台并暂停聊天。文件生成后还需要保存到手机外；这是原库保全包，不能直接当普通 JSON 导入。历史已缺失的图片不会凭空恢复。</div></div>';
+  const running=['copying','packaging','removing'].includes(current.phase),ready=current.phase==='ready',retry=current.phase==='failed'&&current.token&&current.canRetry===true;
+  return '<div class="section" id="private_readonly_snapshot"><div class="it"><span>独立原库备份<small style="display:block;margin-top:5px;color:#aaa;font-size:12px;line-height:1.65">'+esc((current.detail||'保留当前存档、数据库和本机媒体原件')+(running&&current.total?'（'+current.done+'/'+current.total+' 项）':'')+(ready&&current.capturedAt?'；固定副本时间：'+privatePhoneAccountDate(current.capturedAt):''))+'</small></span></div><div style="padding:0 14px 12px;display:flex;gap:10px;flex-wrap:wrap">'+(running?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.cancel()">停止生成</button>':ready?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.save()">保存备份文件</button>':retry?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.begin(true)">保留失败副本并重试</button>':'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.begin()">生成或查看独立备份</button>')+(current.token&&['ready','failed'].includes(current.phase)?'<button class="minibtn" onclick="NorthPrivateReadOnlyBackup.remove()">移除本机副本</button>':'')+'</div><div class="hint" style="padding:0 14px 14px;line-height:1.65">生成期间请保持前台并暂停聊天。文件生成后还需要保存到手机外；这是原库保全包，不能直接当普通 JSON 导入。历史已缺失的图片不会凭空恢复。</div></div>';
  }
  function snapshotPaint(){const node=document.getElementById('private_readonly_snapshot');if(node)node.outerHTML=snapshotSection();}
  async function snapshotCall(action,extra){

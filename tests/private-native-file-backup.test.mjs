@@ -129,6 +129,21 @@ test('actual backup SQL retains full backups, isolates partial snapshots and pro
   await db.query("select set_config('test.session',$1,false)",[secondary]);assert.equal((await commit(6)).saved,true);
   await db.exec('reset role');await db.query('update private_phone_sync_devices set revoked_at=now() where id=$1',[mac]);await db.exec('set role authenticated');
   await assert.rejects(commit(7),/backup_primary_not_verified/);await assert.rejects(db.query('select private_phone_backup_info_v2()'),/backup_session_unavailable/);
+  await db.exec('reset role');
+  const beforeRetirement=JSON.stringify((await db.query('select * from private_phone_backup_files')).rows);
+  await db.exec(read('supabase/migrations/202611190003_private_phone_backup_authority.sql'));
+  assert.equal(JSON.stringify((await db.query('select * from private_phone_backup_files')).rows),beforeRetirement,'retirement never rewrites backup data');
+  await db.query("insert into storage.objects values($1,'private-phone-backups',$2)",[prefix(7)+'/part-00000.bin',u]);await db.exec('set role authenticated');
+  const local=(await db.query('select private_phone_backup_info_v2() value')).rows[0].value;assert.equal(local.deviceSyncRetired,true);assert.equal(local.owner,u);
+  assert.equal((await commit(7)).saved,true,'valid account backup no longer depends on device synchronization roles');
+  assert.equal((await db.query('delete from storage.objects where name=$1 returning name',[prefix(7)+'/part-00000.bin'])).rows.length,0,'retirement retains published backup protection');
+  await db.query("select set_config('test.session','30000000-0000-0000-0000-000000000099',false)");
+  assert.equal((await db.query('select private_phone_backup_info_v2() value')).rows[0].value.owner,u,'an existing account needs no device registration to inspect its backup');
+  await db.query("select set_config('test.owner','30000000-0000-0000-0000-000000000098',false)");
+  assert.equal((await db.query('select private_phone_backup_info_v2() value')).rows[0].value.backup,null,'removing device policy never exposes another account backup');
+  assert.equal((await db.query('select * from private_phone_backup_preserved')).rows.length,0);
+  await db.query("select set_config('test.owner','',false)");await assert.rejects(commit(8),/authentication required/);
+
 
  }finally{await db.close();}
 });

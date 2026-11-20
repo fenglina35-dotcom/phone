@@ -237,9 +237,9 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
 //@@ web
-const APP_VER='v1949 · 备份分代保全与大文件内存修复';
+const APP_VER='v1950 · 移除设备数据同步';
 //@@ private
-const APP_VER='v1948 · 备份分代保全与大文件内存修复';
+const APP_VER='v1949 · 移除设备数据同步';
 //@@ end
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;

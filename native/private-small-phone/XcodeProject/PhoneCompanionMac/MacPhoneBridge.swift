@@ -259,7 +259,8 @@ final class MacPhoneBridge: NSObject, WKScriptMessageHandler, WKNavigationDelega
     (()=>{
       window.__SMALL_PHONE_PRIVATE__=true;
       window.__SMALL_PHONE_MAC__=true;
-      window.__SMALL_PHONE_ACCOUNT_SYNC__=true;
+      window.__SMALL_PHONE_ACCOUNT_SYNC__=true; // Preserve the existing account storage namespace.
+      window.__SMALL_PHONE_DEVICE_SYNC_RETIRED__=true;
       window.__SMALL_PHONE_MCP_HTTP__=true;
       const account=Object.freeze({userId:'\(identity.uuidString.lowercased())',platform:'macOS'});
       Object.defineProperty(window,'__SMALL_PHONE_ACCOUNT__',{value:account,writable:false,configurable:false});
@@ -346,6 +347,7 @@ actor MacPhoneAccount {
         case "account.sync", "account.mcp":
             let current = generation
             let session = try await validSession()
+            if action == "account.sync", payload["action"] as? String != "register" { throw failure("设备数据同步已移除，本机资料保留") }
             let result = try await PrivateDeviceSyncHTTP.request(payload, platform: "macOS", bearer: session.access, kind: action == "account.mcp" ? .mcp : .sync)
             guard current == generation, try load()?.userID == session.userID else { throw failure("当前账号已变化") }
             return result

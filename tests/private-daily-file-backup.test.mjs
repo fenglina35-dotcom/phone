@@ -7,12 +7,12 @@ const path='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.
 const code=fs.readFileSync(path+'private-cloud-backup.js','utf8');
 const old=fs.readFileSync(path+'app.js','utf8').split('\n').find(x=>x.startsWith('async function privatePhoneCloudBackup('));
 function fixture(source=code,opt={}){
- const data={settings:{},contacts:[{id:'test'}],image:'data:image/png;base64,'+'A'.repeat(700000)},blob=new Blob([JSON.stringify(data)]),store=new Map(),calls=[],notices=[];let cloud=null,parts=[],offset=0,commits=0,fullStateCalls=0,mirrorUploads=0,progressPolls=0,fail=false;
+ const data={settings:{},contacts:[{id:'test'}],image:'data:image/png;base64,'+'A'.repeat(700000)},blob=new Blob([JSON.stringify(data)]),store=new Map(),calls=[],notices=[];let cloud=null,parts=[],offset=0,commits=0,fullStateCalls=0,mirrorUploads=0,progressPolls=0,fail=false,primary=true;
  const c={Blob,Uint8Array,Date,Math,JSON,String,Number,Promise,btoa:x=>Buffer.from(x,'binary').toString('base64'),setInterval(){},setTimeout:opt.realTimers?setTimeout:function(){return 1;},clearTimeout(){},document:{hidden:false},localStorage:{getItem:k=>store.get(k),setItem:(k,v)=>store.set(k,v)},__SMALL_PHONE_PRIVATE__:true,
  _privatePhoneAccount:{userId:'owner-a',loggedIn:true,loaded:true},_privatePhoneCloudBusy:false,_privatePhoneCloudDirtyAt:1,_privatePhoneCloudTimer:null,_privatePhoneLastInteractionAt:0,_bootImagesPromise:Promise.resolve(),APP_VER:'fixture',S:data,
  privatePhoneAccountAvailable:()=>true,privatePhoneAccountRefresh:async()=>{c._privatePhoneAccount.loaded=true;},northNativeMaintenancePaused:()=>false,replyGenerationStore:()=>({}),recoveryStateStats:()=>({}),recoveryStateMeaningful:()=>true,saveNowAsync:async()=>true,fullBackupFileBlob:async()=>new Blob([JSON.stringify(data)]),fullBackupState:async()=>{fullStateCalls++;return data;},cloudUrl:()=>opt.webMirror?'https://cloud.example':'',cloudKey:()=>opt.webMirror?'key':'',privatePrimaryMirrorUpload:async()=>{mirrorUploads++;return {uploaded:true};},toast:t=>notices.push(t),privatePhoneAccountSection:()=>'',esc:x=>String(x),
- privatePhoneAccountCall:async(action,payload={},timeoutMs)=>{calls.push({action,bytes:JSON.stringify(payload).length,timeoutMs});if(action==='account.backup.capabilities')return {ok:true,preservationVersion:1};if(action==='account.backup.info')return {ok:true,found:!!cloud,backup:cloud};if(action==='account.backup.upload')throw new Error('bridge oversized payload');if(action.endsWith('.begin')){parts=[];offset=0;return {ok:true,token:'fixture'};}if(action.endsWith('.chunk')){if(fail)throw new Error('chunk failed');assert.equal(payload.offset,offset);const bytes=Buffer.from(payload.base64,'base64');assert(bytes.length<=192*1024);parts.push(bytes);offset+=bytes.length;return {ok:true};}if(action.endsWith('.progress')){progressPolls++;return {ok:true,sentBytes:50,expectedBytes:100};}if(action.endsWith('.commit')){if(opt.slowCommit)await new Promise(resolve=>setTimeout(resolve,8));if(opt.requireCommitTimeout&&!(timeoutMs>=1800000))throw new Error('outer web timeout expired before multi-part native upload');commits++;assert.deepEqual(JSON.parse(Buffer.concat(parts).toString()),data);return {ok:true,saved:true};}return {ok:true};}};
- c.window=c;vm.createContext(c);vm.runInContext(source,c);return {c,calls,notices,store,get commits(){return commits;},get fullStateCalls(){return fullStateCalls;},get mirrorUploads(){return mirrorUploads;},get progressPolls(){return progressPolls;},setCloud(v){cloud=v;},fail(){fail=true;}};
+ privatePhoneAccountCall:async(action,payload={},timeoutMs)=>{calls.push({action,bytes:JSON.stringify(payload).length,timeoutMs});if(action==='account.backup.capabilities')return {ok:true,preservationVersion:1,owner:c._privatePhoneAccount.userId,isPrimary:primary,deviceSyncRetired:true};if(action==='account.backup.info')return {ok:true,found:!!cloud,backup:cloud};if(action==='account.backup.upload')throw new Error('bridge oversized payload');if(action.endsWith('.begin')){parts=[];offset=0;return {ok:true,token:'fixture'};}if(action.endsWith('.chunk')){if(fail)throw new Error('chunk failed');assert.equal(payload.offset,offset);const bytes=Buffer.from(payload.base64,'base64');assert(bytes.length<=192*1024);parts.push(bytes);offset+=bytes.length;return {ok:true};}if(action.endsWith('.progress')){progressPolls++;return {ok:true,sentBytes:50,expectedBytes:100};}if(action.endsWith('.commit')){if(opt.slowCommit)await new Promise(resolve=>setTimeout(resolve,8));if(opt.requireCommitTimeout&&!(timeoutMs>=1800000))throw new Error('outer web timeout expired before multi-part native upload');commits++;assert.deepEqual(JSON.parse(Buffer.concat(parts).toString()),data);return {ok:true,saved:true};}return {ok:true};}};
+ c.window=c;vm.createContext(c);vm.runInContext(source,c);return {c,calls,notices,store,get commits(){return commits;},get fullStateCalls(){return fullStateCalls;},get mirrorUploads(){return mirrorUploads;},get progressPolls(){return progressPolls;},setCloud(v){cloud=v;},setPrimary(v){primary=v;},fail(){fail=true;}};
 }
 test('regression: the old 12-minute wrapper loses a multi-part commit while the fixed wrapper covers the native upload',async()=>{
  const oldCode=code.replace("account.backup.file.commit',{token},1920000","account.backup.file.commit',{token},720000");
@@ -57,12 +57,12 @@ test('a verified current primary resumes daily backup when old per-browser confi
  assert.equal(f.commits,1);assert.equal(f.c.NorthPrivateCloudBackup.status().phase,'success');
 });
 test('unready core, owner mismatch and secondary authority never inherit primary backup permission',async()=>{
- for(const change of [f=>f.c.__northBootReady=false,f=>f.c.S._deviceSyncOwner='owner-b',f=>f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false,f=>f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false]){
+ for(const change of [f=>f.c.__northBootReady=false,f=>f.c.S._deviceSyncOwner='owner-b',f=>f.setPrimary(false)]){
   const f=primaryFixture();change(f);await f.c.NorthPrivateCloudBackup.tick();assert.equal(f.commits,0);assert(!f.calls.some(x=>x.action.endsWith('.begin')));
  }
 });
 test('revoked primary permission before transfer aborts instead of uploading the generated file',async()=>{
- const f=primaryFixture();f.c.fullBackupFileBlob=async()=>{f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;return new Blob(['{}']);};
+ const f=primaryFixture();f.c.fullBackupFileBlob=async()=>{f.setPrimary(false);return new Blob(['{}']);};
  assert.equal(await f.c.NorthPrivateCloudBackup.tick(),false);assert.equal(f.commits,0);
  assert(!f.calls.some(x=>x.action.endsWith('.begin')));assert.equal(f.c.NorthPrivateCloudBackup.status().lastSuccess,0);
 });
@@ -86,13 +86,13 @@ test('independent snapshot starts only after a manual click and confirmed curren
 
 
 test('secondary manual account backup cannot replace the primary cloud recovery copy',async()=>{
- const f=primaryFixture();f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false;f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
+ const f=primaryFixture();f.setPrimary(false);f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false;f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
  assert.equal(await f.c.privatePhoneCloudBackup(false,false),false);assert.equal(f.commits,0);assert(!f.calls.some(x=>x.action.endsWith('.begin')));
 });
 
 test('a verified Mac primary can explicitly back up without enabling automatic Mac uploads',async()=>{
- const f=primaryFixture();f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
- assert.equal(await f.c.privatePhoneCloudBackup(false,false),true);assert.equal(f.commits,1);
+ const f=primaryFixture();f.c.__SMALL_PHONE_NATIVE_ACCOUNT__={platform:'macOS'};f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;
+ assert.equal(await f.c.NorthPrivateCloudBackup.tick(),false);assert.equal(await f.c.privatePhoneCloudBackup(false,false),true);assert.equal(f.commits,1);
 });
 
 
@@ -120,4 +120,40 @@ test('backup metadata refresh discards a response after account switch',async()=
  f.c.privatePhoneAccountCall=async(a,p,t)=>a==='account.backup.info'?await new Promise(r=>{complete=r;}):request(a,p,t);
  const pending=f.c.NorthPrivateCloudBackup.refreshInfo(true);f.c._privatePhoneAccount.userId='owner-b';complete({ok:true,found:true,backup:{checksum:'owner-a'}});await pending;
  assert.equal(f.c._privatePhoneAccount.backup,undefined);
+});
+
+
+test('a server-verified phone primary can back up while account sync is unready',async()=>{
+ const f=primaryFixture();f.c.__SMALL_PHONE_NATIVE_ACCOUNT__={platform:'iOS'};
+ f.c.NorthPrivateDeviceSyncClient={status:()=>({owner:'owner-a',ready:false,secondary:null,phase:'waiting'}),automaticStateAllowed:()=>false,backgroundAllowed:()=>false};
+ assert.equal(await f.c.privatePhoneCloudBackup(false,true),true,'sync progress must not disable a coherent current primary backup');assert.equal(f.commits,1);
+});
+
+
+test('a cloud authority outage preserves the completed local save and gives a cloud-only failure',async()=>{
+ const f=primaryFixture(),request=f.c.privatePhoneAccountCall;let saves=0;f.c.saveNowAsync=async()=>{saves++;return true;};
+ f.c.privatePhoneAccountCall=async(a,p,t)=>a==='account.backup.capabilities'?{ok:false,message:'server unavailable'}:request(a,p,t);
+ assert.equal(await f.c.privatePhoneCloudBackup(false),false);assert.equal(saves,1);assert.equal(f.commits,0);assert.match(f.c.NorthPrivateCloudBackup.status().detail,/本机已保存，云备份未确认成功/);
+});
+test('daily backup also ignores sync readiness and verifies actual server authority',async()=>{
+ const f=primaryFixture();f.c.__SMALL_PHONE_NATIVE_ACCOUNT__={platform:'iOS'};f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false;
+ assert.equal(await f.c.NorthPrivateCloudBackup.tick(),true);assert.equal(f.commits,1);
+});
+test('a wrong-owner authority reply cannot start an upload',async()=>{
+ const f=primaryFixture(),request=f.c.privatePhoneAccountCall;
+ f.c.privatePhoneAccountCall=async(a,p,t)=>a==='account.backup.capabilities'?{ok:true,preservationVersion:1,owner:'owner-b',isPrimary:true}:request(a,p,t);
+ assert.equal(await f.c.privatePhoneCloudBackup(false),false);assert.equal(f.commits,0);assert(!f.calls.some(x=>x.action.endsWith('.begin')));
+});
+
+
+test('retired device roles cannot block backup for the still-logged-in account',async()=>{
+ const f=primaryFixture();f.c.__SMALL_PHONE_DEVICE_SYNC_RETIRED__=true;f.setPrimary(false);f.c.NorthPrivateDeviceSyncClient.backgroundAllowed=()=>false;f.c.NorthPrivateDeviceSyncClient.automaticStateAllowed=()=>false;
+ assert.equal(await f.c.privatePhoneCloudBackup(false),true);assert.equal(f.commits,1);
+});
+
+
+test('retirement removes primary roles from backup while retaining account ownership',async()=>{
+ const f=primaryFixture();f.setPrimary(false);f.c.__SMALL_PHONE_DEVICE_SYNC_RETIRED__=true;
+ f.c.NorthPrivateDeviceSyncClient={backgroundAllowed(){throw new Error('retired sync must never be consulted');},automaticStateAllowed(){throw new Error('retired sync must never be consulted');}};
+ assert.equal(await f.c.privatePhoneCloudBackup(false,true),true);assert.equal(f.commits,1);
 });

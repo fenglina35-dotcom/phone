@@ -252,6 +252,45 @@
   return Object.freeze(api);
  }
  root.NorthPrivateDeviceSyncRuntime=Object.freeze({createClient});
+ // PRIVATE_DEVICE_SYNC_RETIRED_V1: retain storage identity and credentials; never start the old journal.
+ if(root.__SMALL_PHONE_PRIVATE__===true&&root.__SMALL_PHONE_DEVICE_SYNC_RETIRED__===true&&root.SmallPhoneNative){
+  const owner=()=>String(typeof privateAccountDataIdentity==='function'?privateAccountDataIdentity():root.__SMALL_PHONE_NATIVE_ACCOUNT__?.userId||root.__SMALL_PHONE_ACCOUNT__?.userId||'guest');
+  const ready=()=>root.__northBootReady===true&&(typeof privateAccountStorageReady!=='function'||privateAccountStorageReady())&&(!S._deviceSyncOwner||String(S._deviceSyncOwner)===owner());
+  const loginOwned=()=>ready()&&UUID.test(owner())&&String(S._deviceSyncOwner||'')===owner();
+  const settled=()=>Promise.resolve(ready());
+  const local=Object.freeze({status:()=>({owner:owner(),ready:ready(),phase:'local',secondary:null,conflicts:0,syncing:false,retired:true}),
+   gateAllowed:loginOwned,legacySourceOwned:user=>loginOwned()&&user===owner()&&typeof privateAccountLegacyIdentity==='function'&&privateAccountLegacyIdentity()===user,
+   automaticStateAllowed:ready,backgroundAllowed:()=>ready()&&root.__SMALL_PHONE_MAC__!==true,modelAllowed:ready,
+   markDirty(){},authorizeReply(){return '';},revokeReply(){},replyPermit(){return '';},syncNow:settled,retry:settled,waitForIdle:settled,flush:settled,suspend(){},stop(){},context:()=>null,
+   async prepareAccountSwitch(){if(typeof saveNowAsync==='function'&&!await saveNowAsync())throw new Error('本机保存尚未完成，请保存后再切换账号');}
+  });
+  root.NorthPrivateDeviceSyncClient=local;root.privatePhoneAutomaticStateAllowed=ready;
+  const chat=root.chatAPI;if(typeof chat==='function')root.chatAPI=async function(messages,opt){
+   // PRIVATE_LOCAL_MODEL_OWNER_V1: keep account isolation without waiting for a sync service.
+   if(!ready())throw new Error('本机存档尚未读取完成，未请求模型');
+   opt=Object.assign({},opt);if(typeof modelFeatureOf==='function'){const origin=Object.assign({},opt);delete origin._modelFeatureOrigin;opt._modelFeatureOrigin=modelFeatureOf(origin);}
+   const state=S,identity=owner(),account=typeof actId==='function'?String(actId()):'';
+   const result=await chat.call(this,messages,opt);
+   if(S!==state||owner()!==identity||(typeof actId==='function'?String(actId()):'')!==account)throw new Error('本次请求所属的账号或存档已变化，已取消旧请求');
+   return result;
+  };
+  let refreshing=null;
+  root.privatePhoneAccountRefresh=async function(showToast){
+   if(refreshing)return refreshing;
+   const requestedOwner=owner();
+   const task=Promise.resolve().then(async()=>{try{const status=await root.SmallPhoneNative.request('account.status',{});if(owner()!==requestedOwner)return;if(!status||status.ok===false)throw new Error(status?.message||'暂时无法读取本机登录，原凭据保留');
+    if(status.loggedIn&&String(status.userId||'')!==requestedOwner){_privatePhoneAccount.loggedIn=false;throw new Error('新账号登录已保留，请重新打开对应的本机资料；现有存档未迁移');}
+    const previous=String(_privatePhoneAccount.userId||'');if(previous!==String(status.userId||'')){_privatePhoneAccount.backup=null;_privatePhoneAccount.backupError='';if(typeof MCPTools!=='undefined')MCPTools.accountReset?.();}
+    Object.assign(_privatePhoneAccount,{loaded:true,loading:false,loggedIn:!!status.loggedIn,userId:status.userId||'',maskedPhone:status.maskedPhone||'',error:''});
+    if(showToast&&root.NorthPrivateCloudBackup?.refreshInfo)await root.NorthPrivateCloudBackup.refreshInfo(true);
+    if(showToast&&typeof toast==='function')toast(status.loggedIn?'账号登录已保留；设备数据仅保存在本机':'本机数据保留，云备份和MCP可另行登录');
+   }catch(error){if(typeof _privatePhoneAccount!=='undefined'){_privatePhoneAccount.loaded=true;_privatePhoneAccount.error=String(error.message||error);}if(showToast&&typeof toast==='function')toast('云账号暂时不可用，本机聊天和保存不受影响');}
+   finally{if(refreshing===task)refreshing=null;if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();}});refreshing=task;return task;
+  };
+  root.privatePhoneAccountAfterLogin=async()=>{await root.privatePhoneAccountRefresh(false);if(typeof MCPTools!=='undefined')Promise.resolve(MCPTools.accountSync?.()).catch(()=>{});};
+  root.privatePhoneAccountRefresh(false).then(()=>{if(typeof MCPTools!=='undefined')Promise.resolve(MCPTools.accountSync?.()).catch(()=>{});});
+  return;
+ }
  if(root.__SMALL_PHONE_PRIVATE__!==true||root.__SMALL_PHONE_ACCOUNT_SYNC__!==true||!root.SmallPhoneNative||!root.NorthPrivateDeviceSyncCore)return;
  const platform=root.__SMALL_PHONE_MAC__===true?'macOS':'iOS';let applying=false,client,overlay=null,activeModels=0,waitingReplies=0,finishingReplies=0,accountRecoveryExpanded=false;
  const BOUND='north-private-device-owner-v1';
@@ -563,7 +602,7 @@
   for(const button of content.querySelectorAll('[data-private-auth-submit]')){const primary=button.classList.contains('p');button.style.cssText=conflictButton('',primary?'p':'g').style.cssText+(primary?';width:100%;margin-top:8px':';min-height:34px;font-size:13px;margin-top:10px;border-color:transparent;background:transparent');}
  };
 
- const automaticBackup=root.privatePhoneCloudAutoBackup;if(typeof automaticBackup==='function')root.privatePhoneCloudAutoBackup=function(){if(!client.backgroundAllowed())return Promise.resolve(false);return automaticBackup.apply(this,arguments);};
+ // PRIVATE_BACKUP_SYNC_INDEPENDENT_V1: cloud backup checks native/server authority, never sync progress.
  // Hooks execute only in this private entry; the public build keeps its original account/backup flow.
  root.privatePhoneAccountAfterLogin=async()=>{client.accountChanged(String(_privatePhoneAccount.userId||''),true);};
  root.privatePhoneAccountRefresh=async function(showToast){try{await onAccount(await native('account.status'));if(typeof privatePhoneAccountPaint==='function')privatePhoneAccountPaint();if(showToast&&root.NorthPrivateCloudBackup?.refreshInfo)await root.NorthPrivateCloudBackup.refreshInfo(true);if(showToast&&typeof toast==='function')toast(_privatePhoneAccount.loggedIn?'账号已连接，数据自动同步':'请登录小手机账号');client.accountChanged(String(_privatePhoneAccount.userId||''));}catch(e){if(showToast&&typeof toast==='function')toast('账号连接暂时不可用');}};

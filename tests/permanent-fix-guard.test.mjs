@@ -2247,3 +2247,14 @@ test('private application icon refresh never replaces stored selection or contro
 test('private backup preservation keeps bounded-memory hashing, failed evidence and server authority',()=>{const dir='native/private-small-phone/XcodeProject/PhoneCompanionTest/';const bridge=read(dir+'PhoneNativeBridge.swift');for(const marker of ['PRIVATE_SNAPSHOT_HASH_POOL_V1','PRIVATE_SNAPSHOT_RETRY_PRESERVE_V1','PRIVATE_BACKUP_UNKNOWN_COMMIT_V1','save_private_phone_backup_manifest_v2'])assert(bridge.includes(marker));assert(read(dir+'PhoneWeb.bundle/private-cloud-backup.js').includes('PRIVATE_BACKUP_INFO_KNOWN_V1'));assert(read('supabase/migrations/202611190002_private_phone_backup_preservation.sql').includes('PRIVATE_BACKUP_PRESERVATION_V1'));});
 
 test('cloud restore preparation retains account ownership before publishing',()=>{for(const file of [WEB,PRIVATE])assert(read(file).includes('PRIVATE_BACKUP_RESTORE_OWNER_V1'));});
+
+test('retired private device sync keeps local namespaces and independent MCP and backup ownership',()=>{
+ const base='native/private-small-phone/XcodeProject/';
+ for(const file of ['PhoneCompanionTest/LocalPhoneWebView.swift','PhoneCompanionMac/MacPhoneBridge.swift']){
+  const source=read(base+file);assert.match(source,/__SMALL_PHONE_DEVICE_SYNC_RETIRED__\s*=\s*true/);assert.match(source,/__SMALL_PHONE_ACCOUNT_SYNC__\s*=\s*true/);
+ }
+ const adapter=read(base+'PhoneCompanionTest/PhoneWeb.bundle/private-device-sync-client.js');
+ for(const marker of ['PRIVATE_DEVICE_SYNC_RETIRED_V1','PRIVATE_LOCAL_MODEL_OWNER_V1'])assert(adapter.includes(marker));
+ assert(read(base+'PhoneCompanionTest/PhoneWeb.bundle/private-cloud-backup.js').includes('PRIVATE_BACKUP_SYNC_INDEPENDENT_V1'));
+ assert(read('supabase/migrations/202611190003_private_phone_backup_authority.sql').includes('PRIVATE_DEVICE_SYNC_RETIRED_V1'));
+});

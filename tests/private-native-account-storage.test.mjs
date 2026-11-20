@@ -437,7 +437,7 @@ let unique=Data("unique-interrupted-evidence".utf8)
 try unique.write(to:failedStage.appendingPathComponent("evidence.bin"))
 try JSONSerialization.data(withJSONObject:["owner":owner]).write(to:stageRoot.appendingPathComponent("job.json"))
 let blocked=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner)
-precondition(blocked["phase"] as? String=="failed")
+precondition(blocked["phase"] as? String=="failed");precondition(blocked["canRetry"] as? Bool==true)
 let retry=try jobs.begin(library:library,store:store,webRoot:web,extras:[],owner:owner,retryFailed:true)
 var retried=retry
 for _ in 0..<2000 {retried=try jobs.status(owner:owner,token:(retry["token"] as! String));if retried["phase"] as? String=="ready" || retried["phase"] as? String=="failed" {break};Thread.sleep(forTimeInterval:0.01)}

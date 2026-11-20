@@ -287,3 +287,71 @@ const devicePanel=page.locator('#privateSyncDevicesOverlay');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({privateHTML:true,cloudHydrated:true,noDefaultRoleLeak:true,secondaryAutomaticModelCalls:0,manualModelRequests:7,mcpCalls:1,composerPreserved:true,conflictUIBothChoices:true,media1200000Bytes:true,primaryPasswordUI:true,primaryOnlyRevocation:true,accountSwitchIsolated:true}));
  }finally{resolveRelease?.();for(const journal of sources)journal.close();if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));await db.close();}
 });
+
+
+// Removal acceptance: keep local storage/credentials, but do not start the archived journal.
+test('local-only adapter rejects late model and login responses after account changes',async()=>{
+ const source=read(PRIV_DIR+'private-device-sync-client.js'),a='10000000-0000-0000-0000-000000000001',b='10000000-0000-0000-0000-000000000002';
+ let releaseStatus,releaseModel;const nativeCalls=[];
+ const c={console,Promise,Map,Set,JSON,String,Number,Math,Date,URL,TextEncoder,TextDecoder,Uint8Array,crypto:webcrypto,
+  __SMALL_PHONE_PRIVATE__:true,__SMALL_PHONE_DEVICE_SYNC_RETIRED__:true,__northBootReady:true,
+  S:{_deviceSyncOwner:a},_privatePhoneAccount:{userId:a,loggedIn:true},identity:a,
+  privateAccountDataIdentity:()=>c.identity,privateAccountStorageReady:()=>true,actId:()=> 'main',
+  SmallPhoneNative:{request:async(action)=>{nativeCalls.push(action);return new Promise(r=>releaseStatus=r);}},
+  chatAPI:async()=>new Promise(r=>releaseModel=r),privatePhoneAccountPaint(){},saveNowAsync:async()=>true};
+ c.window=c;vm.createContext(c);vm.runInContext(source,c);await Promise.resolve();
+ const refresh=c.privatePhoneAccountRefresh(false);c.identity=b;c.S={_deviceSyncOwner:b};releaseStatus({ok:true,loggedIn:true,userId:a});await refresh;
+ assert.equal(c._privatePhoneAccount.userId,a,'a stale status cannot select a different local namespace');assert.equal(c.S._deviceSyncOwner,b);
+ const request=c.chatAPI([]);c.identity=a;c.S={_deviceSyncOwner:a};releaseModel('late result');await assert.rejects(request,/所属的账号或存档已变化/);
+ assert.deepEqual(nativeCalls,['account.status']);assert.equal(c.NorthPrivateDeviceSyncClient.status().retired,true);
+});
+
+test('retired device sync preserves local chats and MCP connections without remote gates or leases',async()=>{
+ const require=createRequire(import.meta.url),{chromium}=require('playwright'),owner='10000000-0000-0000-0000-000000000001';
+ const calls=[],errors=[],models=[];let browser;
+ const connection={id:'retained-mcp',name:'保留的MCP',url:'https://mcp-fixture.invalid/mcp',auth:'none',state:'connected',enabled:true,roles:['local-kept'],tools:[],accountManaged:true,cloudRevision:'1',token:'',refresh:'',clientSecret:''};
+ const server=http.createServer(async(req,res)=>{
+  if(req.url==='/__native'){
+   let input='';for await(const chunk of req)input+=chunk;const q=JSON.parse(input);calls.push(q);let result={ok:false,error:'unsupported_fixture'};
+   if(q.action==='account.status')result={ok:true,loggedIn:true,userId:owner,maskedPhone:'138****0001'};
+   if(q.action==='account.sync'&&q.body.action==='register')result={ok:true,device:{id:'30000000-0000-0000-0000-000000000001'}};
+   if(q.action==='account.mcp'&&q.body.action==='list')result={ok:true,connections:[connection]};
+   if(q.action==='account.backup.info')result={ok:true,found:false};
+   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(result));return;
+  }
+  const file=path.resolve(ROOT,decodeURIComponent(new URL(req.url,'http://localhost').pathname).slice(1));
+  if(!file.startsWith(ROOT+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}
+  res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'application/octet-stream');res.end(/\.(?:js|html)$/.test(file)?read(path.relative(ROOT,file)):fs.readFileSync(file));
+ });
+ try{
+  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+  browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+  const probe=await browser.newPage();await probe.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  await probe.goto(origin+'/'+PRIV_DIR+'index.html?northPreview=black-home');await probe.waitForFunction(()=>window.__northBootReady);
+  const base=await probe.evaluate(()=>({state:defState(),role:S.contacts[0],key:KEY}));await probe.close();
+  const state=base.state,role=base.role;role.id='local-kept';role.name='本机角色';role.remark='';role.persona='受控本机聊天测试';
+  state._deviceSyncOwner=owner;state._persistedAt=100;state.contacts=[role];state.messages={[role.id]:[{id:'kept',role:'assistant',type:'text',content:'原有本机消息',time:100}]};
+  state.settings.chat={base:'https://model-fixture.invalid/v1',key:'fixture',model:'fixture',temp:.7,maxTokens:4096};state.settings.manualReply=true;state.settings.replyDelay=0;state.settings.sound=false;state.settings.memoryFreq=0;
+  const page=await browser.newPage({viewport:{width:390,height:850}});page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(({origin,owner,state,key,connection})=>{
+   window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_MAC__=true;window.__SMALL_PHONE_ACCOUNT_SYNC__=true;window.__SMALL_PHONE_DEVICE_SYNC_RETIRED__=true;window.__SMALL_PHONE_NATIVE_ACCOUNT__={userId:owner,platform:'macOS'};
+   if(!localStorage.getItem('retirement-baseline-seeded')){localStorage.setItem(key,JSON.stringify(state));localStorage.setItem('smallphone-mcp-local-v1',JSON.stringify({['account:'+owner+':main']:{connections:[connection],receipts:[]}}));localStorage.setItem('retirement-baseline-seeded','1');}localStorage.setItem('yibei_manual_seen','1');
+   window.SmallPhoneNative={request:async(action,body={})=>(await fetch(origin+'/__native',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,body})})).json()};
+  },{origin,owner,state,key:base.key,connection});
+  await page.route('**/*',route=>{const req=route.request(),url=new URL(req.url());if(url.origin===origin)return route.continue();
+   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Methods':'POST,GET,OPTIONS','Access-Control-Allow-Headers':'*'}});if(url.hostname==='model-fixture.invalid'){models.push(req.postDataJSON());return route.fulfill({contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify({choices:[{message:{content:'本机正常回复。'},finish_reason:'stop'}]})});}return route.abort();});
+  await page.goto(origin+'/'+PRIV_DIR+'index.html');await page.waitForFunction(()=>window.__northBootReady&&_privatePhoneAccount.loggedIn);
+  assert.equal(await page.evaluate(()=>NorthPrivateDeviceSyncClient.status().retired),true);
+  assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['local-kept']);assert(await page.evaluate(()=>msgs('local-kept').some(x=>x.id==='kept')));
+  await page.evaluate(()=>{S.me.locked=false;document.getElementById('gate')?.remove();openChat('local-kept');});
+  await page.locator('#cinput').fill('你好，继续聊天');await page.locator('#cinput').evaluate(input=>sendText(input._chatId));await page.getByRole('button',{name:'▶ 让ta回',exact:true}).click();await page.waitForFunction(()=>msgs('local-kept').some(x=>x.role==='assistant'&&String(x.content).includes('本机正常回复'))&&!replyGenerationBusy('local-kept'));assert.equal(models.length,1);
+  await page.evaluate(async()=>{S.settings.hist=37;await saveNowAsync();openSettings('data');_setTab=3;privatePhoneAccountPaint();});
+  assert(!/登录设备|立即同步|退出此设备|查看\s*\d+\s*项不同修改/.test(await page.locator('#setpage3').innerText()));
+  const mcp=await page.evaluate(()=>JSON.parse(localStorage.getItem('smallphone-mcp-local-v1'))['account:'+_privatePhoneAccount.userId+':main'].connections[0]);assert.equal(mcp.id,connection.id);assert.equal(mcp.state,'connected');assert.deepEqual(mcp.roles,connection.roles);
+  assert(!calls.some(x=>x.action==='account.sync'&&x.body.action!=='register'),'no data pulls, pushes, seeds, leases or device management');
+  // Do not re-seed localStorage on reload: verify the actual saved database and deleted state.
+  await page.evaluate(async()=>{S.messages['local-kept']=msgs('local-kept').filter(x=>x.id!=='kept');await saveNowAsync();});
+  await page.reload();await page.waitForFunction(()=>window.__northBootReady&&_privatePhoneAccount.loggedIn);assert.deepEqual(await page.evaluate(()=>S.contacts.map(x=>x.id)),['local-kept']);assert.equal(await page.evaluate(()=>msgs('local-kept').some(x=>x.id==='kept')),false,'intentional deletion survives reloading the actual saved database');assert(await page.evaluate(()=>msgs('local-kept').some(x=>x.role==='assistant'&&String(x.content).includes('本机正常回复'))));
+  assert.deepEqual(errors,[]);
+ }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+});

@@ -11,11 +11,11 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   const page=await browser.newPage({viewport:{width:430,height:900}}),errors=[];
   // Keep real speech timing, but silence Windows system TTS during automated checks.
   await page.addInitScript(()=>{if(window.speechSynthesis){const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);window.speechSynthesis.speak=utterance=>{utterance.volume=0;return speak(utterance);};}});
-  if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
+  if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.__SMALL_PHONE_DEVICE_SYNC_RETIRED__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>(process.env.NORTH_MISSING_CONCERT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-concert.js')||process.env.NORTH_MISSING_FLIGHT==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-flight.js')||process.env.NORTH_MISSING_TRAIN==='1'&&new URL(r.request().url()).pathname.endsWith('/travel-train.js'))?r.abort():new URL(r.request().url()).origin===origin?r.continue():r.abort());
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview='+(process.env.NORTH_PAGE_ART==='1'?'page-art':'black-home'));
-  await page.waitForFunction(()=>window.__northBootReady);
+  await page.waitForFunction(()=>window.__northBootReady);if(privateApp)assert(await page.evaluate(()=>NorthPrivateDeviceSyncClient.status().retired===true),'private chat release gate must use the retired-sync runtime');
   if(process.env.NORTH_PAGE_ART==='1'){
    await page.evaluate(()=>{S.me.locked=false;localStorage.setItem('yibei_unlocked',String(SHARE_EPOCH));document.getElementById('gate')?.remove();renderLockScreen();});
    assert.equal(await page.evaluate(()=>cur().p),'home');

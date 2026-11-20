@@ -131,7 +131,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.594 (594)"
+    private static let build = "1.0.595 (595)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -481,6 +481,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     private var owner = "", token = "", phase = "idle", detail = ""
     private var done = 0, total = 0, cancelled = false
     private var capturedAt: Double = 0
+    private var canRetryPreservingFailure = false
     private var directory: URL?
     private var observers: [NSObjectProtocol] = []
     private init() {
@@ -497,7 +498,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
     func status(owner: String, token: String? = nil) throws -> [String: Any] {
         lock.lock(); defer { lock.unlock() }
         guard owner == self.owner, token == nil || token == self.token else { throw PrivateReadOnlySnapshot.failure("备份账号或任务已变化") }
-        return ["ok": true, "token": self.token, "phase": phase, "done": done, "total": total, "detail": detail, "capturedAt": capturedAt]
+        return ["ok": true, "token": self.token, "phase": phase, "done": done, "total": total, "detail": detail, "capturedAt": capturedAt, "canRetry": canRetryPreservingFailure]
     }
     func cancel(owner: String, token: String) throws {
         lock.lock(); defer { lock.unlock() }
@@ -509,7 +510,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
         if stop { throw PrivateReadOnlySnapshot.failure("备份已停止；本机原件未改动") }
     }
     private func update(_ phase: String, detail: String = "", done: Int = 0, total: Int = 0) {
-        lock.lock(); self.phase = phase; self.detail = detail; self.done = done; self.total = total; lock.unlock()
+        lock.lock(); self.phase = phase; self.detail = detail; self.done = done; self.total = total; if phase != "failed" { canRetryPreservingFailure = false }; lock.unlock()
     }
     func begin(library: URL, store: URL, webRoot: URL, extras: [URL], owner: String, retryFailed: Bool = false) throws -> [String: Any] {
         lock.lock()
@@ -520,6 +521,7 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
         }
         let root = library.appendingPathComponent("Application Support/SmallPhoneReadOnlyBackup", isDirectory: true)
         if self.owner == owner, directory == root, phase == "ready" { lock.unlock(); return try status(owner: owner) }
+        canRetryPreservingFailure = false
         var held = true
         do {
             _ = try PrivateReadOnlySnapshot.checked(root, inside: library)
@@ -557,7 +559,13 @@ final class PrivateReadOnlySnapshotJobs: @unchecked Sendable {
                           files.fileExists(atPath: archive.path), previous["complete"] as? Bool == true,
                           let archiveHash = previous["archiveSHA256"] as? String, archiveHash.count == 64,
                           let manifestHash = previous["manifestSHA256"] as? String else {
-                        phase = "failed"; detail = "已有未完成副本已保留；请先核查，未覆盖或认证成功"
+                        canRetryPreservingFailure = previous["complete"] as? Bool != true && proof?["verified"] as? Bool != true
+                            && !files.fileExists(atPath: root.appendingPathComponent("FailedSnapshot").path)
+                            && !files.fileExists(atPath: root.appendingPathComponent("FailedJob.json").path)
+                            && !files.fileExists(atPath: root.appendingPathComponent("FailedArchive.zip").path)
+                        phase = "failed"; detail = canRetryPreservingFailure
+                            ? "上次生成中断，旧副本和原件已保留；点下面按钮即可保留失败副本并重新生成"
+                            : "已有副本的完整性尚未确认，原件和已有副本均保留，未覆盖任何文件"
                         lock.unlock(); held = false; return try status(owner: owner)
                     }
                     capturedAt = (proof?["capturedAt"] as? NSNumber)?.doubleValue ?? 0
@@ -2799,6 +2807,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 case "account.sync", "account.mcp":
                     let epoch = self.privateAccountEpoch
                     let session = try await self.validPrivateAccountSession()
+                    if action == "account.sync", arguments["action"] as? String != "register" {
+                        throw NSError(domain: "PrivateDeviceSync", code: 410, userInfo: [NSLocalizedDescriptionKey: "设备数据同步已移除，本机资料保留"])
+                    }
                     let result = try await PrivateDeviceSyncHTTP.request(arguments, platform: "iOS", bearer: session.accessToken,
                         kind: action == "account.mcp" ? .mcp : .sync)
                     guard epoch == self.privateAccountEpoch,
@@ -2813,7 +2824,11 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                           let info = response.body as? [String: Any], info["preservationVersion"] as? Int == 1 else {
                         throw NSError(domain: "PrivateBackupManifest", code: response.status, userInfo: [NSLocalizedDescriptionKey: "云端安全备份规则尚未确认可用，旧备份保留"])
                     }
-                    self.reply(requestID: requestID, result: ["ok": true, "preservationVersion": 1])
+                    guard (info["owner"] as? String)?.lowercased() == session.userID.lowercased(),
+                          info["deviceSyncRetired"] as? Bool == true else {
+                        throw NSError(domain: "PrivateBackupManifest", code: 409, userInfo: [NSLocalizedDescriptionKey: "云备份身份暂未确认，本机数据保留"])
+                    }
+                    self.reply(requestID: requestID, result: ["ok": true, "preservationVersion": 1, "owner": session.userID, "deviceSyncRetired": true])
                 case "account.backup.info":
                     let session = try await self.validPrivateAccountSession()
                     if let fileRow = try await self.privateBackupFileMetadata(

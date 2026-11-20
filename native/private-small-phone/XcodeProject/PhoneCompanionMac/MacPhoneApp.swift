@@ -12,33 +12,8 @@ struct MacPhoneApp: App {
                 if !model.accountLoaded {
                     ProgressView("正在检查本机账号…")
                 } else if let userID = model.userID {
-                    ZStack {
-                        MacPhoneWebView(model: model, userID: userID).id(userID)
-                            .opacity(model.hasSyncedData ? 1 : 0)
-                            .allowsHitTesting(model.hasSyncedData)
-                            .accessibilityHidden(!model.hasSyncedData)
-                        if !model.hasSyncedData {
-                            VStack(spacing: 18) {
-                                if model.syncError.isEmpty {
-                                    ProgressView().controlSize(.large)
-                                } else {
-                                    Image(systemName: "icloud.slash").font(.system(size: 38)).foregroundStyle(.secondary)
-                                }
-                                Text(model.syncError.isEmpty ? "正在同步小手机" : "同步暂未完成").font(.title2.bold())
-                                Text(model.accountLabel).foregroundStyle(.secondary)
-                                Text(model.syncError.isEmpty ? model.syncDetail : model.syncError)
-                                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                                if model.syncTotal > 0 {
-                                    ProgressView(value: Double(model.syncCompleted), total: Double(model.syncTotal))
-                                        .frame(maxWidth: 260)
-                                }
-                                if !model.syncError.isEmpty {
-                                    Button("重新连接") { model.retrySync() }.buttonStyle(.borderedProminent)
-                                }
-                                Button("账号设置") { model.showsAccount = true }
-                            }.padding(32).frame(maxWidth: 360)
-                        }
-                    }
+                    // PRIVATE_MAC_LOCAL_DATA_V1: show the existing per-account local store without a cloud gate.
+                    MacPhoneWebView(model: model, userID: userID).id(userID)
                 } else {
                     MacAccountSheet(model: model, embedded: true)
                 }
@@ -186,7 +161,7 @@ private struct MacAccountSheet: View {
             if !model.accountError.isEmpty {
                 Text(model.accountError).foregroundStyle(.red).font(.callout)
             }
-            Text("登录后自动同步这个账号的角色、聊天和设置。")
+            Text("保留当前设备的本机资料；此登录仅用于MCP连接和备份，不同步或覆盖其他设备的数据。")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 Button(embedded ? "退出" : "稍后") {
