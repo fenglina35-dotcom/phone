@@ -913,13 +913,13 @@ function privateSelectStoredCore(a,b){
   const parse=record=>{if(!record)return null;let state;try{state=JSON.parse(record.json);}catch(_){throw new Error('本机核心存档无法完整核对，已停止自动读取');}if(!state||!state.settings||!privateAccountShellMatches(state))throw new Error('本机存档账号归属不符，已停止自动读取');const content=Object.assign({},state);delete content._persistedAt;delete content._deviceSyncOwner;delete content.__coreIdb;return JSON.stringify(content);};
   const left=parse(a);
   if(a&&a.stateHashVerified===true&&a.stats?.nativeAuthority===1&&/^[a-f0-9]{64}$/.test(a.contentSHA256||''))return a;
-  const right=parse(b);
+  const mirrorJSON=parse(b);
   if(a&&/^[a-f0-9]{64}$/.test(a.sourceApproval||'')){const before=b?Object.assign({},b):null;if(before)delete before.stateHashVerified;return Object.assign({},a,{approvedBefore:before});}
   // PRIVATE_CORE_LINEAGE_V1: only a verified predecessor permits crash repair.
   if(a&&b&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(b.contentSHA256||'')&&a.parentSHA256===b.contentSHA256)return Object.assign({},a,{repairMirror:true,repairExpectedMirror:b});
-  const sameLogical=left===right||typeof privateCoreJSONSame==='function'&&privateCoreJSONSame(JSON.parse(left),JSON.parse(right));
+  const sameLogical=left===mirrorJSON||typeof privateCoreJSONSame==='function'&&privateCoreJSONSame(JSON.parse(left),JSON.parse(mirrorJSON));
   if(a&&b&&sameLogical&&a.stateHashVerified===true&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(a.contentSHA256||'')&&a.contentSHA256!==b.contentSHA256)return Object.assign({},a,{repairMirror:true,repairExpectedMirror:b});
-  if(a&&b&&!sameLogical){if(typeof privateSetCoreBootConflict==='function')privateSetCoreBootConflict(a,b,left,right);if(typeof privateLogCoreConflict==='function')privateLogCoreConflict(a,b,left,right);throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');}
+  if(a&&b&&!sameLogical){if(typeof privateSetCoreBootConflict==='function')privateSetCoreBootConflict(a,b,left,mirrorJSON);if(typeof privateLogCoreConflict==='function')privateLogCoreConflict(a,b,left,mirrorJSON);throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');}
   return a&&b?((+b.savedAt||0)>(+a.savedAt||0)?b:a):a||b||null;
 }
 function newestStoredCore(a,b){
