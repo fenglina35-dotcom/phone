@@ -1139,3 +1139,31 @@ test('sync display failures cannot roll back an already persisted account state'
   assert.equal(c.applying,false);
  }
 });
+
+test('repeated mirror failures keep confirmed native saves bootable without writing a competing fallback',async()=>{
+ const source=read(PRIV_DIR+'app.js'),owner='10000000-0000-0000-0000-000000000001',h=n=>String(n).padStart(64,'a');
+ const state=n=>JSON.stringify({_deviceSyncOwner:owner,settings:{hist:n},contacts:[{id:'kept'}],messages:{__idb:'messages'},me:{}});
+ let native={ver:1,savedAt:1,json:state(1),contentSHA256:h(1),stateSHA256:Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(state(1)))).toString('hex')},fallback=0,failNative=false;
+ const mirror={...native,stateHashVerified:true},heads=new Map([[owner+'|__core_state',native.contentSHA256],[owner+'|__core_state|json',native.json]]);
+ const c={window:{__SMALL_PHONE_ACCOUNT_SYNC__:true,__SMALL_PHONE_PRIVATE__:true},CORE_IDB_KEY:'__core_state',_privateNativeCoreHeads:heads,crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,atob,setTimeout:f=>{f();},
+  privateAccountStateIdentity:()=>owner,privateAccountDataIdentity:()=>owner,privateAccountLegacyIdentity:()=>owner,privateAccountShellMatches:()=>true,privateNativeCoreStorageKey:()=>true,
+  privateCommitCoreMirror:async()=>{throw Object.assign(new Error('IndexedDB quota'),{name:'QuotaExceededError'});},imgPutIDBWithRetry:async()=>{fallback++;throw new Error('IndexedDB quota');}};
+ c.window.SmallPhoneNative={request:async(action,args)=>{if(action==='storage.put'){if(failNative)throw new Error('native unavailable');assert.equal(args.expectedSHA256,native.contentSHA256);native={ver:args.ver,savedAt:args.savedAt,json:args.stateJSON,parentSHA256:args.expectedSHA256,stats:args.stats,contentSHA256:h(args.savedAt),stateSHA256:Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(args.stateJSON))).toString('hex')};return {saved:true,...native};}return {found:true,primaryOnly:true,...native,stateJSON:native.json};}};
+ c.window.__smallPhoneNativeDiag=()=>{};vm.createContext(c);
+ for(const name of ['privateNativeCorePut','privateNativeCoreGet','privateVerifyCoreMirror','imgPut','privateCoreJSONSame','privateSelectStoredCore'])vm.runInContext(fnSource(source,name),c);
+ for(let n=2;n<=5;n++)assert.equal(await c.imgPut('__core_state',{owner,ver:1,savedAt:n,json:state(n)}).then(()=>true,()=>false),true,'native confirmation is a successful save even when its mirror is unavailable');
+ assert.equal(fallback,0,'a failed core write must never create a competing IDB-only branch');
+ const selected=c.privateSelectStoredCore({...native,stateHashVerified:true},mirror);assert.equal(selected.json,state(5));assert.equal(selected.repairMirror,true);
+ failNative=true;await assert.rejects(c.imgPut('__core_state',{owner,ver:1,savedAt:6,json:state(6)}),/native unavailable/);assert.equal(fallback,0);assert.equal(native.json,state(5));
+ const unrelated={...mirror,contentSHA256:h(99),json:state(99)};assert.throws(()=>c.privateSelectStoredCore({...native,stateHashVerified:true},unrelated),/不一致/);
+});
+
+test('a proven native core opens while mirror repair is unavailable, but an independent revision still blocks repair',async()=>{
+ const source=read(PRIV_DIR+'app.js');
+ for(const conflict of [false,true]){
+  const c=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true},_coreBootRef:{savedAt:10},_androidOrphanCoreProbe:false,CORE_IDB_KEY:'__core_state',privateAccountStorageReady:()=>true,privateAccountDataIdentity:()=> 'owner',imgGet:async()=>({savedAt:20,json:JSON.stringify({settings:{hist:47},contacts:[{id:'kept'}]}),repairMirror:true}),privateRepairCoreMirror:async()=>{throw Object.assign(new Error(conflict?'independent revision':'quota'),conflict?{code:'CORE_REVISION_CHANGED'}:{});},mergeStateData:x=>x,privateAccountShellMatches:()=>true,normalizeLoadedState(){},storedTextBytes:x=>x.length,S:null,_privateCoreVerifiedOwner:'',_coreOverflowMode:false,_coreLogicalBytes:0});
+  vm.runInContext(fnSource(source,'bootOverflowCore'),c);
+  if(conflict){await assert.rejects(c.bootOverflowCore(),/independent revision/);assert.equal(c.S,null);}
+  else{assert.equal(await c.bootOverflowCore(),true);assert.equal(c.S.settings.hist,47);assert.equal(c.window.__smallPhoneCoreMirrorPending,true);}
+ }
+});

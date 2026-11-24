@@ -2258,3 +2258,8 @@ test('retired private device sync keeps local namespaces and independent MCP and
  assert(read(base+'PhoneCompanionTest/PhoneWeb.bundle/private-cloud-backup.js').includes('PRIVATE_BACKUP_SYNC_INDEPENDENT_V1'));
  assert(read('supabase/migrations/202611190003_private_phone_backup_authority.sql').includes('PRIVATE_DEVICE_SYNC_RETIRED_V1'));
 });
+
+test('native core durability survives an unavailable mirror without competing fallback or timestamp selection',()=>{
+ const source=read(PRIVATE);for(const marker of ['PRIVATE_CORE_MIRROR_BASE_V1','PRIVATE_CORE_NATIVE_DURABLE_V1','PRIVATE_CORE_EXPLICIT_PRIMARY_REVIEW_V1'])assert(source.includes(marker));
+ assert(source.includes('mirrorBaseSHA256'));assert(source.includes("if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true||error?.code==='CORE_REVISION_CHANGED'"));
+});
