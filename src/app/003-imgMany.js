@@ -140,12 +140,12 @@ async function bootOverflowCore(){
 //@@ private
 async function bootOverflowCore(){if(!privateAccountStorageReady())throw new Error('本机存档来源尚未核实，已停止启动、保存和同步；原有数据均保留');const orphanProbe=!_coreBootRef&&_androidOrphanCoreProbe;if(!_coreBootRef&&!orphanProbe)return false;const needed=+(_coreBootRef&&_coreBootRef.savedAt||0),primary=await imgGet(CORE_IDB_KEY);let rec=primary,restored=null,recovered=false;const parse=x=>{if(!x||!x.json)return null;try{const d=JSON.parse(x.json);return d&&d.settings?d:null;}catch(_){return null;}},meaningful=d=>d&&recoveryStateMeaningful(recoveryStateStats(d));
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true){
-  if(primary&&primary.sourceApproval)await privateAlignApprovedCore(primary);
-  else if(primary&&primary.repairMirror){try{await privateRepairCoreMirror(primary);window.__smallPhoneCoreMirrorPending=false;}catch(error){if(error?.code==='CORE_REVISION_CHANGED'||/账号.*变化|storage_account_changed/.test(String(error?.message||error)))throw error;window.__smallPhoneCoreMirrorPending=true;}}
+  if(primary&&primary.sourceApproval&&primary.stats?.nativeAuthority!==1)await privateAlignApprovedCore(primary);
+  // A proven native core can load without writing the legacy recovery mirror.
   if(_coreBootRef&&_coreBootRef.inlineJSON){privateSelectStoredCore(primary,{ver:1,savedAt:needed,json:_coreBootRef.inlineJSON});if(!primary){_privateCoreVerifiedOwner=privateAccountDataIdentity();_coreBootRef=null;return false;}}
   restored=parse(primary);
   if(!restored){if(_coreBootRef&&(_coreBootRef.discover||_coreBootRef.accountSwitch)){_coreBootRef=null;_coreOverflowMode=false;return false;}throw new Error('本机主存档暂时无法核实，已停止自动恢复和同步；不会采用旧快照替换');}
-  if(!primary.sourceApproval&&(+primary.savedAt||0)<needed)throw new Error('本机主存档早于启动索引，已停止自动恢复和同步；请先核实来源');
+  if(primary.stats?.nativeAuthority!==1&&!primary.sourceApproval&&(+primary.savedAt||0)<needed)throw new Error('本机主存档早于启动索引，已停止自动恢复和同步；请先核实来源');
   if(!privateAccountShellMatches(restored))throw new Error('本机主存档账号不符，已停止同步');
   _privateCoreVerifiedOwner=privateAccountDataIdentity();S=mergeStateData(restored);_coreOverflowMode=true;_coreBootRef={ver:1,savedAt:+primary.savedAt||0};_androidOrphanCoreProbe=false;_coreLogicalBytes=storedTextBytes(primary.json);normalizeLoadedState();return true;
 //@@ end

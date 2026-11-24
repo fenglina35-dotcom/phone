@@ -1097,14 +1097,14 @@ test('account changes release predecessor bodies and pending review from another
 
 test('lost native save receipt is reconciled only against the exact committed operation',async()=>{
  const source=read(PRIV_DIR+'app.js'),owner='10000000-0000-0000-0000-000000000001',parent='a'.repeat(64),head='b'.repeat(64),json=JSON.stringify({_deviceSyncOwner:owner,contacts:[{id:'kept'}],messages:{__idb:'messages'}}),digest=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(json))).toString('hex');
- for(const mismatch of ['', 'body','parent','version','time','digest','account','missing']){
+ for(const mismatch of ['', 'body','parent','version','time','digest','account','missing','authority']){
   let activeOwner=owner,puts=0,gets=0;
   const heads=new Map([[owner+'|__core_state',parent],[owner+'|__core_state|json','previous']]);
   const ctx=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true,SmallPhoneNative:{async request(action,args){
    if(action==='storage.put'){puts++;if(puts===1)throw new Error('原生请求超时：storage.put');throw new Error('storage_revision_changed');}
    assert.equal(action,'storage.get');gets++;assert.equal(args.primaryOnly,true);
    if(mismatch==='account')activeOwner='other';
-   return {found:mismatch!=='missing',primaryOnly:true,ver:mismatch==='version'?2:1,savedAt:mismatch==='time'?201:200,stateJSON:mismatch==='body'?json+' ':json,contentSHA256:head,stateSHA256:mismatch==='digest'?'c'.repeat(64):digest,parentSHA256:mismatch==='parent'?'d'.repeat(64):parent};
+   return {found:mismatch!=='missing',primaryOnly:true,stats:{nativeAuthority:mismatch==='authority'?0:1},ver:mismatch==='version'?2:1,savedAt:mismatch==='time'?201:200,stateJSON:mismatch==='body'?json+' ':json,contentSHA256:head,stateSHA256:mismatch==='digest'?'c'.repeat(64):digest,parentSHA256:mismatch==='parent'?'d'.repeat(64):parent};
   }}},_privateNativeCoreHeads:heads,privateAccountStateIdentity:()=>activeOwner,privateAccountLegacyIdentity:()=>owner,CORE_IDB_KEY:'__core_state',crypto:webcrypto,TextEncoder,Uint8Array,setTimeout:fn=>{fn();}});
   for(const name of ['privateNativeCorePut','privateNativeCoreGet','privateVerifyCoreMirror'])vm.runInContext(fnSource(source,name),ctx);
   const pending=ctx.privateNativeCorePut('__core_state',{owner,ver:1,savedAt:200,json});
@@ -1153,19 +1153,15 @@ test('repeated mirror failures keep confirmed native saves bootable without writ
  for(const name of ['privateNativeCorePut','privateNativeCoreGet','privateVerifyCoreMirror','imgPut','privateCoreJSONSame','privateSelectStoredCore'])vm.runInContext(fnSource(source,name),c);
  for(let n=2;n<=5;n++)assert.equal(await c.imgPut('__core_state',{owner,ver:1,savedAt:n,json:state(n)}).then(()=>true,()=>false),true,'native confirmation is a successful save even when its mirror is unavailable');
  assert.equal(fallback,0,'a failed core write must never create a competing IDB-only branch');
- const selected=c.privateSelectStoredCore({...native,stateHashVerified:true},mirror);assert.equal(selected.json,state(5));assert.equal(selected.repairMirror,true);
+ const selected=c.privateSelectStoredCore({...native,stateHashVerified:true},mirror);assert.equal(selected.json,state(5));assert.equal(selected.stats.nativeAuthority,1);
  failNative=true;await assert.rejects(c.imgPut('__core_state',{owner,ver:1,savedAt:6,json:state(6)}),/native unavailable/);assert.equal(fallback,0);assert.equal(native.json,state(5));
- const unrelated={...mirror,contentSHA256:h(99),json:state(99)};assert.throws(()=>c.privateSelectStoredCore({...native,stateHashVerified:true},unrelated),/不一致/);
+ const unrelated={...mirror,contentSHA256:h(99),json:state(99)};assert.throws(()=>c.privateSelectStoredCore({...native,stats:{},stateHashVerified:true},unrelated),/不一致/);assert.equal(c.privateSelectStoredCore({...native,stateHashVerified:true},unrelated).json,state(5));
 });
 
-test('a proven native core opens while mirror repair is unavailable, but an independent revision still blocks repair',async()=>{
+test('a proven native core opens without writing its legacy mirror',async()=>{
  const source=read(PRIV_DIR+'app.js');
- for(const conflict of [false,true]){
-  const c=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true},_coreBootRef:{savedAt:10},_androidOrphanCoreProbe:false,CORE_IDB_KEY:'__core_state',privateAccountStorageReady:()=>true,privateAccountDataIdentity:()=> 'owner',imgGet:async()=>({savedAt:20,json:JSON.stringify({settings:{hist:47},contacts:[{id:'kept'}]}),repairMirror:true}),privateRepairCoreMirror:async()=>{throw Object.assign(new Error(conflict?'independent revision':'quota'),conflict?{code:'CORE_REVISION_CHANGED'}:{});},mergeStateData:x=>x,privateAccountShellMatches:()=>true,normalizeLoadedState(){},storedTextBytes:x=>x.length,S:null,_privateCoreVerifiedOwner:'',_coreOverflowMode:false,_coreLogicalBytes:0});
-  vm.runInContext(fnSource(source,'bootOverflowCore'),c);
-  if(conflict){await assert.rejects(c.bootOverflowCore(),/independent revision/);assert.equal(c.S,null);}
-  else{assert.equal(await c.bootOverflowCore(),true);assert.equal(c.S.settings.hist,47);assert.equal(c.window.__smallPhoneCoreMirrorPending,true);}
- }
+ const c=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true},_coreBootRef:{savedAt:10},_androidOrphanCoreProbe:false,CORE_IDB_KEY:'__core_state',privateAccountStorageReady:()=>true,privateAccountDataIdentity:()=> 'owner',imgGet:async()=>({savedAt:20,json:JSON.stringify({settings:{hist:47},contacts:[{id:'kept'}]}),repairMirror:true}),privateRepairCoreMirror:async()=>assert.fail('legacy mirror cannot block native startup'),mergeStateData:x=>x,privateAccountShellMatches:()=>true,normalizeLoadedState(){},storedTextBytes:x=>x.length,S:null,_privateCoreVerifiedOwner:'',_coreOverflowMode:false,_coreLogicalBytes:0});
+ vm.runInContext(fnSource(source,'bootOverflowCore'),c);assert.equal(await c.bootOverflowCore(),true);assert.equal(c.S.settings.hist,47);
 });
 
 test('mirror repair readback distinguishes an unavailable database from a competing committed version',async()=>{
@@ -1174,4 +1170,12 @@ test('mirror repair readback distinguishes an unavailable database from a compet
   const c=vm.createContext({privateAccountDataIdentity:()=> 'owner',privateCommitCoreMirror:async()=>{},CORE_IDB_KEY:'__core_state',imgGetIDB:async()=>competing?{json:'{"settings":{"hist":30}}',contentSHA256:'b'.repeat(64)}:null});vm.runInContext(fnSource(source,'privateRepairCoreMirror'),c);
   await assert.rejects(c.privateRepairCoreMirror(record),e=>competing?e.code==='CORE_REVISION_CHANGED':!e.code);
  }
+});
+
+test('a verified native authority opens its core without accessing an unavailable legacy database',async()=>{
+ const source=read(PRIV_DIR+'app.js'),owner='10000000-0000-0000-0000-000000000001',json=JSON.stringify({_deviceSyncOwner:owner,settings:{hist:81},contacts:[{id:'kept'}]}),digest=Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(json))).toString('hex');
+ const c=vm.createContext({window:{__SMALL_PHONE_ACCOUNT_SYNC__:true,SmallPhoneNative:{request:async()=>({found:true,primaryOnly:true,ver:1,savedAt:80,stateJSON:json,stats:{nativeAuthority:1},contentSHA256:'a'.repeat(64),stateSHA256:digest})}},_privateNativeCoreHeads:new Map(),CORE_IDB_KEY:'__core_state',privateNativeCoreStorageKey:()=>true,privateAccountStateIdentity:()=>owner,privateAccountDataIdentity:()=>owner,privateAccountShellMatches:s=>s._deviceSyncOwner===owner,crypto:webcrypto,TextEncoder,imgGetIDB:async()=>assert.fail('legacy core database must not be opened to authorize native startup')});
+ for(const name of ['privateNativeCoreGet','privateVerifyCoreMirror','privateSelectStoredCore','newestStoredCore','imgGet'])vm.runInContext(fnSource(source,name),c);
+ const value=await c.imgGet('__core_state');assert.equal(value.json,json);assert.equal(value.stateHashVerified,true);
+ assert.throws(()=>c.privateSelectStoredCore({...value,json:JSON.stringify({_deviceSyncOwner:'other',settings:{}})},null),/归属/);
 });

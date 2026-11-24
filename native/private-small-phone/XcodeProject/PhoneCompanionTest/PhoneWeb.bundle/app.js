@@ -769,20 +769,18 @@ async function privateNativeCorePut(k,v){v=v&&typeof v==='object'?v:{};const arg
   let capturedOwner=String(v.owner||'');if(!capturedOwner&&typeof v.json==='string')try{capturedOwner=String(JSON.parse(v.json)._deviceSyncOwner||'');}catch(_){}args.owner=capturedOwner||privateAccountLegacyIdentity();
   const headKey=args.owner+'|'+k;
   if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY){if(!_privateNativeCoreHeads.has(headKey))await privateNativeCoreGet(k,{primaryOnly:true});if(!_privateNativeCoreHeads.has(headKey))throw new Error('本机主存档缺少可核实的保存版本');args.expectedSHA256=_privateNativeCoreHeads.get(headKey);}
-  if(k===CORE_IDB_KEY&&_privateNativeCoreHeads.get(headKey+'|mirrorConflict')){const error=new Error('本机备用存档出现独立版本，原件保留，请核对后继续保存');error.code='CORE_REVISION_CHANGED';throw error;}
-  // PRIVATE_CORE_MIRROR_BASE_V1: carry the verified mirror ancestor across failed mirror writes.
-  const mirrorBase=_privateNativeCoreHeads.get(headKey+'|mirrorBase')||args.expectedSHA256;
-  if(k===CORE_IDB_KEY&&/^[a-f0-9]{64}$/.test(mirrorBase||'')){args.stats=Object.assign({},args.stats,{mirrorBaseSHA256:mirrorBase});_privateNativeCoreHeads.set(headKey+'|mirrorBase',mirrorBase);}
+  // PRIVATE_CORE_NATIVE_AUTHORITY_V1: successful account-scoped native CAS owns future core startup.
+  if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY)args.stats=Object.assign({},args.stats,{nativeAuthority:1});
   const previousJSON=_privateNativeCoreHeads.get(headKey+'|json');
   let last;for(let attempt=0;attempt<3;attempt++){try{const r=await window.SmallPhoneNative.request('storage.put',args);if(!r||r.saved!==true)throw new Error('Native storage write failed');
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&r.skippedOlderWrite===true){const error=new Error('本机存档版本已变化，本次写入未确认，原有数据保留');error.code='CORE_REVISION_CHANGED';throw error;}
-if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY){if(!/^[a-f0-9]{64}$/.test(r.contentSHA256||'')||!/^[a-f0-9]{64}$/.test(r.stateSHA256||''))throw new Error('本机存档保存回执缺少指纹');_privateNativeCoreHeads.set(headKey,r.contentSHA256);_privateNativeCoreHeads.set(headKey+'|json',args.stateJSON);return {contentSHA256:r.contentSHA256,stateSHA256:r.stateSHA256,parentSHA256:r.parentSHA256,stats:args.stats,previousJSON};}
+if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY){if(!/^[a-f0-9]{64}$/.test(r.contentSHA256||'')||!/^[a-f0-9]{64}$/.test(r.stateSHA256||''))throw new Error('本机存档保存回执缺少指纹');_privateNativeCoreHeads.set(headKey,r.contentSHA256);_privateNativeCoreHeads.set(headKey+'|json',args.stateJSON);_privateNativeCoreHeads.set(headKey+'|nativeAuthority',args.stats?.nativeAuthority===1);return {contentSHA256:r.contentSHA256,stateSHA256:r.stateSHA256,parentSHA256:r.parentSHA256,stats:args.stats,previousJSON};}
 return;}catch(e){
 /* PRIVATE_CORE_RECEIPT_READBACK_V1: 丢失回执不重放已提交写入；仅承认同一正文、版本和父指纹。 */
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY&&privateAccountStateIdentity()===args.owner&&!/storage_account_changed/.test(String(e&&e.message||e))){
   try{const found=await privateVerifyCoreMirror(await privateNativeCoreGet(k,{primaryOnly:true,trackHead:false}));
-    if(privateAccountStateIdentity()===args.owner&&found&&found.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(found.contentSHA256||'')&&found.ver===args.ver&&found.savedAt===args.savedAt&&found.json===args.stateJSON&&found.parentSHA256===args.expectedSHA256){
-      _privateNativeCoreHeads.set(headKey,found.contentSHA256);_privateNativeCoreHeads.set(headKey+'|json',args.stateJSON);
+    if(privateAccountStateIdentity()===args.owner&&found&&found.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(found.contentSHA256||'')&&found.ver===args.ver&&found.savedAt===args.savedAt&&found.json===args.stateJSON&&found.parentSHA256===args.expectedSHA256&&found.stats?.nativeAuthority===args.stats?.nativeAuthority){
+      _privateNativeCoreHeads.set(headKey,found.contentSHA256);_privateNativeCoreHeads.set(headKey+'|json',args.stateJSON);_privateNativeCoreHeads.set(headKey+'|nativeAuthority',args.stats?.nativeAuthority===1);
       return {contentSHA256:found.contentSHA256,stateSHA256:found.stateSHA256,parentSHA256:found.parentSHA256,stats:args.stats,previousJSON};
     }
   }catch(_){}
@@ -790,7 +788,7 @@ if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY&&privateAccountS
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true&&k===CORE_IDB_KEY&&privateAccountStateIdentity()!==args.owner){const changed=new Error('storage_account_changed');throw changed;}
 if(e&&e.code==='CORE_REVISION_CHANGED'||/storage_revision_changed|storage_account_changed/.test(String(e&&e.message||e)))throw e;
 last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,300*(attempt+1)));}}throw last||new Error('Native storage write failed after retry');}
-async function privateNativeCoreGet(k,opt){opt=opt||{};const owner=privateAccountStateIdentity(),r=await window.SmallPhoneNative.request('storage.get',{key:k,owner,backup:opt.backup===true,primaryOnly:opt.primaryOnly===true});if(r&&r.unreadable===true)throw new Error('本机存档文件存在但无法核实，已停止自动读取');if(!r||typeof r.found!=='boolean')throw new Error('本机存档读取未确认');if(!r.found){if(opt.backup!==true&&opt.trackHead!==false)_privateNativeCoreHeads.set(owner+'|'+k,'absent');return null;}if(opt.backup===true&&r.backup!==true)throw new Error('Native storage bridge does not support backup-only reads');if(opt.primaryOnly===true&&r.primaryOnly!==true)throw new Error('Native storage bridge does not support primary-only reads');let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,owner,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,owner,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(/^[a-f0-9]{64}$/.test(r.sourceApproval||''))v.sourceApproval=r.sourceApproval;if(/^[a-f0-9]{64}$/.test(r.contentSHA256||'')){v.contentSHA256=r.contentSHA256;if(opt.backup!==true&&opt.trackHead!==false){_privateNativeCoreHeads.set(owner+'|'+k,r.contentSHA256);if(k===CORE_IDB_KEY){_privateNativeCoreHeads.set(owner+'|'+k+'|json',stateJSON);_privateNativeCoreHeads.set(owner+'|'+k+'|mirrorBase',/^[a-f0-9]{64}$/.test(r.stats?.mirrorBaseSHA256||'')?r.stats.mirrorBaseSHA256:r.contentSHA256);}}}if(/^[a-f0-9]{64}$/.test(r.stateSHA256||''))v.stateSHA256=r.stateSHA256;if(r.parentSHA256)v.parentSHA256=r.parentSHA256;if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
+async function privateNativeCoreGet(k,opt){opt=opt||{};const owner=privateAccountStateIdentity(),r=await window.SmallPhoneNative.request('storage.get',{key:k,owner,backup:opt.backup===true,primaryOnly:opt.primaryOnly===true});if(r&&r.unreadable===true)throw new Error('本机存档文件存在但无法核实，已停止自动读取');if(!r||typeof r.found!=='boolean')throw new Error('本机存档读取未确认');if(!r.found){if(opt.backup!==true&&opt.trackHead!==false)_privateNativeCoreHeads.set(owner+'|'+k,'absent');return null;}if(opt.backup===true&&r.backup!==true)throw new Error('Native storage bridge does not support backup-only reads');if(opt.primaryOnly===true&&r.primaryOnly!==true)throw new Error('Native storage bridge does not support primary-only reads');let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,owner,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,owner,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(/^[a-f0-9]{64}$/.test(r.sourceApproval||''))v.sourceApproval=r.sourceApproval;if(/^[a-f0-9]{64}$/.test(r.contentSHA256||'')){v.contentSHA256=r.contentSHA256;if(opt.backup!==true&&opt.trackHead!==false){_privateNativeCoreHeads.set(owner+'|'+k,r.contentSHA256);if(k===CORE_IDB_KEY){_privateNativeCoreHeads.set(owner+'|'+k+'|json',stateJSON);_privateNativeCoreHeads.set(owner+'|'+k+'|nativeAuthority',r.stats?.nativeAuthority===1);}}}if(/^[a-f0-9]{64}$/.test(r.stateSHA256||''))v.stateSHA256=r.stateSHA256;if(r.parentSHA256)v.parentSHA256=r.parentSHA256;if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
 function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k,owner:privateAccountStateIdentity()}).then(()=>{});}
 function imgPutIDB(k,v,owner){return imgDB(owner).then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
 async function imgPutIDBWithRetry(k,v,owner){
@@ -800,20 +798,13 @@ const _audioPutAt=new Map();
 function imgPut(k,v){
  const owner=v&&typeof v==='object'&&v.owner||privateAccountStateIdentity();
  if(!privateNativeCoreStorageKey(k))return imgPutIDBWithRetry(k,v,owner);
- return privateNativeCorePut(k,v).then(async meta=>{
+ return privateNativeCorePut(k,v).then(meta=>{
+  // PRIVATE_CORE_NATIVE_DURABLE_V1: one durable native core; the old IDB core is recovery evidence only.
+  if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true)return;
   if(window.__SMALL_PHONE_ACCOUNT_SYNC__!==true)return;
   const value=Object.assign({},v);for(const field of ['contentSHA256','stateSHA256','parentSHA256','stats'])if(meta&&meta[field])value[field]=meta[field];
-  if(k!==CORE_IDB_KEY||!meta)return imgPutIDBWithRetry(k,value,owner);
-  try{await privateCommitCoreMirror(value,owner,{previousJSON:meta.previousJSON});_privateNativeCoreHeads.set(owner+'|'+k+'|mirrorBase',meta.contentSHA256);window.__smallPhoneCoreMirrorPending=false;}
-  catch(error){
-   if(privateAccountStateIdentity()!==owner)throw new Error('storage_account_changed');
-   if(error?.code==='CORE_REVISION_CHANGED'){_privateNativeCoreHeads.set(owner+'|'+k+'|mirrorConflict',true);throw error;}
-   // PRIVATE_CORE_NATIVE_DURABLE_V1: a verified native commit remains saved when its mirror is unavailable.
-   window.__smallPhoneCoreMirrorPending=true;
-   try{window.__smallPhoneNativeDiag?.('storage.mirror.pending',{category:error?.name==='QuotaExceededError'?'quota':error?.name==='AbortError'?'aborted':'unavailable'},0);}catch(_){}
-  }
+  return imgPutIDBWithRetry(k,value,owner);
  }).catch(error=>{
-  // Do not create an IDB-only competing core when native saving actually failed.
   if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true||error?.code==='CORE_REVISION_CHANGED'||/storage_revision_changed|storage_account|account.*changed|账号.*变化/i.test(String(error?.message||error)))throw error;
   return imgPutIDBWithRetry(k,v,owner);
  });
@@ -857,12 +848,13 @@ async function privateVerifyCoreMirror(record){
 function privateCommitCoreMirror(value,owner,opt){
   opt=opt||{};
   const changed=()=>{const e=new Error('本机备用存档已变化，本次旧写入已停止');e.code='CORE_REVISION_CHANGED';return e;};
+  if(typeof _privateNativeCoreHeads!=='undefined'&&_privateNativeCoreHeads.get(owner+'|'+CORE_IDB_KEY+'|nativeAuthority')===true)return Promise.reject(changed());
   const raw=x=>{if(!x)return null;const v=Object.assign({},x);delete v.stateHashVerified;return v;};
   return imgDB(owner).then(db=>new Promise((resolve,reject)=>{
     let failure=null,tx;
     try{if(privateAccountDataIdentity()!==owner)throw changed();tx=db.transaction('img','readwrite');const store=tx.objectStore('img'),get=store.get(CORE_IDB_KEY);
       get.onsuccess=()=>{const current=get.result,explicit=Object.prototype.hasOwnProperty.call(opt,'expectedMirror')&&opt.expectedMirror!==undefined;
-        const allowed=explicit?JSON.stringify(raw(current))===JSON.stringify(raw(opt.expectedMirror)):!current||current.json===value.json||current.contentSHA256&&(current.contentSHA256===value.parentSHA256||current.contentSHA256===value.stats?.mirrorBaseSHA256)||typeof opt.previousJSON==='string'&&current.json===opt.previousJSON;
+        const allowed=explicit?JSON.stringify(raw(current))===JSON.stringify(raw(opt.expectedMirror)):!current||current.json===value.json||current.contentSHA256&&current.contentSHA256===value.parentSHA256||typeof opt.previousJSON==='string'&&current.json===opt.previousJSON;
         if(privateAccountDataIdentity()!==owner||!allowed){failure=changed();tx.abort();return;}store.put(value,CORE_IDB_KEY);};
       tx.oncomplete=()=>{db.close();resolve();};tx.onerror=tx.onabort=()=>{db.close();reject(failure||tx.error||new Error('备用存档提交失败'));};
     }catch(e){db.close();reject(e);}
@@ -870,7 +862,7 @@ function privateCommitCoreMirror(value,owner,opt){
 }
 let _privateCoreBootConflict=null;
 /* PRIVATE_CORE_EXPLICIT_PRIMARY_REVIEW_V1: protected differences require an explicit choice and two verified archives. */
-/* PRIVATE_CORE_RUNTIME_REVIEW_V1: 完整比较所有其他栏目，实时状态差异须本人确认，先归档再对齐。 */
+/* PRIVATE_CORE_RUNTIME_REVIEW_V1: 完整比较差异，任何人工选择先双原文归档，再确认原生权威，不覆盖旧网页备用。 */
 function privateCoreJSONSame(a,b){if(a===b)return true;if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;const keys=Object.keys(a);return keys.length===Object.keys(b).length&&keys.every(k=>Object.prototype.hasOwnProperty.call(b,k)&&privateCoreJSONSame(a[k],b[k]));}
 function privateCoreOnlyRuntimeDiff(left,right){try{const a=JSON.parse(left),b=JSON.parse(right);delete a.presence;delete b.presence;delete a.roleBody;delete b.roleBody;return privateCoreJSONSame(a,b);}catch(_){return false;}}
 function privateSetCoreBootConflict(a,b,left,right){
@@ -888,7 +880,11 @@ async function privateConfirmCoreRuntimeChoice(ticket){
   try{await new Promise((resolve,reject)=>{let failure;const tx=db.transaction('state','readwrite'),store=tx.objectStore('state'),get=store.get(key);get.onsuccess=()=>{if(get.result&&JSON.stringify(get.result)!==JSON.stringify(archive)){failure=new Error('原始存档已保留，不能覆盖');tx.abort();}else if(!get.result)store.put(archive,key);};tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(failure||tx.error);});
     const verified=await new Promise((resolve,reject)=>{let v;const tx=db.transaction('state','readonly'),get=tx.objectStore('state').get(key);get.onsuccess=()=>{v=get.result;};tx.oncomplete=()=>resolve(v);tx.onerror=tx.onabort=()=>reject(tx.error);});if(JSON.stringify(verified)!==JSON.stringify(archive))throw new Error('两份原始存档尚未完整保留，已停止处理');
   }finally{db.close();}
-  await check();await privateRepairCoreMirror(ticket.native,ticket.mirror);_privateCoreBootConflict=null;
+  await check();
+  const saved=await privateNativeCorePut(CORE_IDB_KEY,{owner,ver:ticket.native.ver,savedAt:ticket.native.savedAt,json:ticket.native.json,stats:ticket.native.stats});
+  const verified=await privateVerifyCoreMirror(await privateNativeCoreGet(CORE_IDB_KEY,{primaryOnly:true}));
+  if(privateAccountDataIdentity()!==owner||!verified||verified.json!==ticket.native.json||verified.contentSHA256!==saved.contentSHA256||verified.stats?.nativeAuthority!==1)throw new Error('主存档确认尚未核实，两份原文仍保留');
+  _privateCoreBootConflict=null;
 }
 function privateRenderCoreRuntimeReview(){
   const ticket=_privateCoreBootConflict,card=document.querySelector('#app .bootcard');if(!ticket||!card||card.querySelector('[data-core-runtime-review]'))return;
@@ -915,12 +911,12 @@ function privateLogCoreConflict(a,b,left,right){
 }
 function privateSelectStoredCore(a,b){
   const parse=record=>{if(!record)return null;let state;try{state=JSON.parse(record.json);}catch(_){throw new Error('本机核心存档无法完整核对，已停止自动读取');}if(!state||!state.settings||!privateAccountShellMatches(state))throw new Error('本机存档账号归属不符，已停止自动读取');const content=Object.assign({},state);delete content._persistedAt;delete content._deviceSyncOwner;delete content.__coreIdb;return JSON.stringify(content);};
-  const left=parse(a),right=parse(b);
+  const left=parse(a);
+  if(a&&a.stateHashVerified===true&&a.stats?.nativeAuthority===1&&/^[a-f0-9]{64}$/.test(a.contentSHA256||''))return a;
+  const right=parse(b);
   if(a&&/^[a-f0-9]{64}$/.test(a.sourceApproval||'')){const before=b?Object.assign({},b):null;if(before)delete before.stateHashVerified;return Object.assign({},a,{approvedBefore:before});}
   // PRIVATE_CORE_LINEAGE_V1: only a verified predecessor permits crash repair.
   if(a&&b&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(b.contentSHA256||'')&&a.parentSHA256===b.contentSHA256)return Object.assign({},a,{repairMirror:true,repairExpectedMirror:b});
-  // A durable native witness proves ancestry even after several mirror failures; timestamps are irrelevant.
-  if(a&&b&&a.stateHashVerified===true&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(b.contentSHA256||'')&&a.stats?.mirrorBaseSHA256===b.contentSHA256)return Object.assign({},a,{repairMirror:true,repairExpectedMirror:b});
   const sameLogical=left===right||typeof privateCoreJSONSame==='function'&&privateCoreJSONSame(JSON.parse(left),JSON.parse(right));
   if(a&&b&&sameLogical&&a.stateHashVerified===true&&b.stateHashVerified===true&&/^[a-f0-9]{64}$/.test(a.contentSHA256||'')&&a.contentSHA256!==b.contentSHA256)return Object.assign({},a,{repairMirror:true,repairExpectedMirror:b});
   if(a&&b&&!sameLogical){if(typeof privateSetCoreBootConflict==='function')privateSetCoreBootConflict(a,b,left,right);if(typeof privateLogCoreConflict==='function')privateLogCoreConflict(a,b,left,right);throw new Error('原生存档与备用存档内容不一致，已停止自动选取；保存时间不能证明哪份数据正确');}
@@ -929,7 +925,13 @@ function privateSelectStoredCore(a,b){
 function newestStoredCore(a,b){
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true)return privateSelectStoredCore(a,b);
 if(!a)return b||null;if(!b)return a;return (+b.savedAt||0)>(+a.savedAt||0)?b:a;}
-function imgGet(k){if(privateNativeCoreStorageKey(k))return Promise.all([window.__SMALL_PHONE_ACCOUNT_SYNC__===true?privateNativeCoreGet(k,{primaryOnly:true}):privateNativeCoreGet(k).catch(()=>null),imgGetIDB(k)]).then(async rows=>{if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true){rows[0]=await privateVerifyCoreMirror(rows[0]);rows[1]=await privateVerifyCoreMirror(rows[1]);}return newestStoredCore(rows[0],rows[1]);});return imgGetIDB(k);}
+async function imgGet(k){
+ if(!privateNativeCoreStorageKey(k))return imgGetIDB(k);
+ if(window.__SMALL_PHONE_ACCOUNT_SYNC__!==true)return Promise.all([privateNativeCoreGet(k).catch(()=>null),imgGetIDB(k)]).then(rows=>newestStoredCore(rows[0],rows[1]));
+ const primary=await privateVerifyCoreMirror(await privateNativeCoreGet(k,{primaryOnly:true}));
+ if(k===CORE_IDB_KEY&&primary?.stats?.nativeAuthority===1)return privateSelectStoredCore(primary,null);
+ return newestStoredCore(primary,await privateVerifyCoreMirror(await imgGetIDB(k)));
+}
 function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){if(String(c.key).indexOf('__')!==0)out[c.key]=c.value;c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>({}));}
 function imgKeys(){return imgDB().then(db=>new Promise(res=>{const out=[];let tx;try{tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openKeyCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){out.push(String(c.key));c.continue();}};cur.onerror=()=>{};}catch(_){try{db.close();}catch(__){}res(out);return;}const done=()=>{try{db.close();}catch(_){}res(out);};tx.oncomplete=done;tx.onerror=done;tx.onabort=done;})).catch(()=>[]);}
 function imageRefKeys(root){const keys=new Set(),seen=typeof WeakSet!=='undefined'?new WeakSet():null;(function walk(o){if(!o||typeof o!=='object')return;if(seen){if(seen.has(o))return;seen.add(o);}for(const k in o){const v=o[k];if(typeof v==='string'&&v.indexOf('idb:')===0)keys.add(v.slice(4));else if(v&&typeof v==='object')walk(v);}})(root);return [...keys].filter(Boolean);}
@@ -1019,12 +1021,12 @@ function repairStaleVisionStates(){let changed=false;try{for(const k in S.messag
 function repairStaleGeneratedImageStates(){let changed=false;try{for(const k in S.messages){const a=S.messages[k];if(!Array.isArray(a))continue;a.forEach(m=>{if(m&&m.type==='image'&&m.role==='assistant'&&m.pending){m.pending=false;m.failed=true;m.errText='上次生图在完成写入前被页面关闭，请点图片位置重试';changed=true;}});}}catch(_){}return changed;}
 async function bootOverflowCore(){if(!privateAccountStorageReady())throw new Error('本机存档来源尚未核实，已停止启动、保存和同步；原有数据均保留');const orphanProbe=!_coreBootRef&&_androidOrphanCoreProbe;if(!_coreBootRef&&!orphanProbe)return false;const needed=+(_coreBootRef&&_coreBootRef.savedAt||0),primary=await imgGet(CORE_IDB_KEY);let rec=primary,restored=null,recovered=false;const parse=x=>{if(!x||!x.json)return null;try{const d=JSON.parse(x.json);return d&&d.settings?d:null;}catch(_){return null;}},meaningful=d=>d&&recoveryStateMeaningful(recoveryStateStats(d));
 if(window.__SMALL_PHONE_ACCOUNT_SYNC__===true){
-  if(primary&&primary.sourceApproval)await privateAlignApprovedCore(primary);
-  else if(primary&&primary.repairMirror){try{await privateRepairCoreMirror(primary);window.__smallPhoneCoreMirrorPending=false;}catch(error){if(error?.code==='CORE_REVISION_CHANGED'||/账号.*变化|storage_account_changed/.test(String(error?.message||error)))throw error;window.__smallPhoneCoreMirrorPending=true;}}
+  if(primary&&primary.sourceApproval&&primary.stats?.nativeAuthority!==1)await privateAlignApprovedCore(primary);
+  // A proven native core can load without writing the legacy recovery mirror.
   if(_coreBootRef&&_coreBootRef.inlineJSON){privateSelectStoredCore(primary,{ver:1,savedAt:needed,json:_coreBootRef.inlineJSON});if(!primary){_privateCoreVerifiedOwner=privateAccountDataIdentity();_coreBootRef=null;return false;}}
   restored=parse(primary);
   if(!restored){if(_coreBootRef&&(_coreBootRef.discover||_coreBootRef.accountSwitch)){_coreBootRef=null;_coreOverflowMode=false;return false;}throw new Error('本机主存档暂时无法核实，已停止自动恢复和同步；不会采用旧快照替换');}
-  if(!primary.sourceApproval&&(+primary.savedAt||0)<needed)throw new Error('本机主存档早于启动索引，已停止自动恢复和同步；请先核实来源');
+  if(primary.stats?.nativeAuthority!==1&&!primary.sourceApproval&&(+primary.savedAt||0)<needed)throw new Error('本机主存档早于启动索引，已停止自动恢复和同步；请先核实来源');
   if(!privateAccountShellMatches(restored))throw new Error('本机主存档账号不符，已停止同步');
   _privateCoreVerifiedOwner=privateAccountDataIdentity();S=mergeStateData(restored);_coreOverflowMode=true;_coreBootRef={ver:1,savedAt:+primary.savedAt||0};_androidOrphanCoreProbe=false;_coreLogicalBytes=storedTextBytes(primary.json);normalizeLoadedState();return true;
 }
@@ -22119,7 +22121,7 @@ async function showStorageBreakdown(){const safePrivate=privateNativeAppOn();ope
     ['浏览器缓存及数据库开销',(parts.other||0)+browserOther,'离线文件、数据库索引及浏览器预留'],
   ];const max=Math.max(1,...rows.map(x=>+x[1]||0));
   const pu=safePrivate&&parts.usage,capacity=native&&native.totalBytes?`${pu&&+pu.containerBytes?`小手机在这台手机上一共占用约 <b>${storageSizeLabel(pu.containerBytes)}</b>（不含 App 本体）。`:''}私人 App 原生存档已启用；手机当前可安全使用约 <b>${storageSizeLabel(native.availableBytes)}</b> / 总容量 <b>${storageSizeLabel(native.totalBytes)}</b>。`:estimate&&estimate.quota?`本站共用约 <b>${storageSizeLabel(total)}</b> / 浏览器可用 <b>${storageSizeLabel(estimate.quota)}</b>。`:'当前浏览器没有提供总配额数字，但大容量库不再受5MB核心上限限制。';openModal(`<h3>存储占用明细</h3><div class="hint">这里显示的是<b>已经存了多少数据</b>，不是容量上限。${capacity}原生核心存档使用双副本与旧写入拦截；音乐、视频等大文件仍放在 App 私有 WebKit 数据库中。</div><div style="margin-top:12px">${rows.map(x=>`<div style="padding:9px 0;border-bottom:1px solid #eee"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:13px">${x[0]}</b><span style="font-size:13px;color:#555">${storageSizeLabel(x[1])}</span></div><div style="height:5px;background:#eee;border-radius:5px;margin:6px 0 4px;overflow:hidden"><div style="height:100%;width:${Math.max(x[1]?2:0,Math.round((+x[1]||0)/max*100))}%;background:#19a463"></div></div><small style="color:#888">${x[2]}</small></div>`).join('')}</div>${pu&&+pu.tempBytes>10485760?`<button class="minibtn" style="margin-top:10px;margin-right:8px" onclick="privateClearTemp(true)">清理临时文件（${storageSizeLabel(pu.tempBytes)}）</button>`:''}${pu&&+pu.cachesBytes>1048576?`<button class="minibtn" style="margin-top:10px" onclick="privateClearWebCache()">清理网页缓存（${storageSizeLabel(pu.cachesBytes)}）</button>`:''}<div class="btns" style="margin-top:12px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();clearRoleCacheKeepBeauty()">清理聊天图片和语音</button></div>`);}
-function storageMeter(){refreshStorageEstimate();const si=storageInfo(),meterPct=si.native&&si.nativeTotal?si.nativePct:si.overflow?(si.hasDevice?si.devicePct:(si.pending?32:18)):si.pct,col=meterPct>=92?'#fa5151':meterPct>=75?'#ffb83b':'#19a463',label=si.native?('主存档 '+storageSizeLabel(si.nativePrimaryBytes)+' · 保护副本 '+storageSizeLabel(si.nativeProtectionBytes)+(si.pending?' · 保存中':'')):si.overflow?(si.hasDevice?('已用 '+si.deviceMb.toFixed(1)+' / '+si.deviceCapMb.toFixed(0)+'MB（'+si.devicePct+'%）'):('数据量 '+si.logicalMb.toFixed(2)+'MB · 大容量模式'+(si.pending?' · 保存中':''))):(si.mb.toFixed(2)+' / '+si.capMb+'MB（'+si.pct+'%）'),hint=si.native?`${typeof window!=='undefined'&&window.__smallPhoneCoreMirrorPending?'主存档已保存，备用副本等待重试；请勿清除本机数据。':''}上面这根条是整台手机的存储用量，不是小手机自己的；小手机具体占多少点「查看占用明细」。主存档与保护副本分开显示；保护副本会暂时保留清理前的旧状态，不代表图片被重新保存。新图片入库后会自动把主存档压成短引用。手机当前可安全使用约 ${storageSizeLabel(si.nativeFree)}。`:si.overflow?'当前数字是本站已经使用的数据量，不是容量上限。核心索引已自动精简，增长数据保存在浏览器大容量库中。':si.pct>=75?'核心存档正在接近小容量上限，达到安全阈值后会自动迁入大容量存储。':'图片、长聊天和增长较快的数据会自动转入大容量存储。';
+function storageMeter(){refreshStorageEstimate();const si=storageInfo(),meterPct=si.native&&si.nativeTotal?si.nativePct:si.overflow?(si.hasDevice?si.devicePct:(si.pending?32:18)):si.pct,col=meterPct>=92?'#fa5151':meterPct>=75?'#ffb83b':'#19a463',label=si.native?('主存档 '+storageSizeLabel(si.nativePrimaryBytes)+' · 保护副本 '+storageSizeLabel(si.nativeProtectionBytes)+(si.pending?' · 保存中':'')):si.overflow?(si.hasDevice?('已用 '+si.deviceMb.toFixed(1)+' / '+si.deviceCapMb.toFixed(0)+'MB（'+si.devicePct+'%）'):('数据量 '+si.logicalMb.toFixed(2)+'MB · 大容量模式'+(si.pending?' · 保存中':''))):(si.mb.toFixed(2)+' / '+si.capMb+'MB（'+si.pct+'%）'),hint=si.native?`上面这根条是整台手机的存储用量，不是小手机自己的；小手机具体占多少点「查看占用明细」。主存档与保护副本分开显示；保护副本会暂时保留清理前的旧状态，不代表图片被重新保存。新图片入库后会自动把主存档压成短引用。手机当前可安全使用约 ${storageSizeLabel(si.nativeFree)}。`:si.overflow?'当前数字是本站已经使用的数据量，不是容量上限。核心索引已自动精简，增长数据保存在浏览器大容量库中。':si.pct>=75?'核心存档正在接近小容量上限，达到安全阈值后会自动迁入大容量存储。':'图片、长聊天和增长较快的数据会自动转入大容量存储。';
   return `<div class="section" id="set_storage"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${label}</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${meterPct}%;background:${col};transition:.3s"></div></div>
     <div class="hint" style="padding:7px 0 0">${hint}${si.hasDevice&&!si.overflow?`<br>浏览器总空间约 ${si.deviceMb.toFixed(1)} / ${si.deviceCapMb.toFixed(0)}MB（${si.devicePct}%）`:''}</div><button class="minibtn" style="margin-top:9px" onclick="showStorageBreakdown()">查看占用明细</button></div></div>`;}

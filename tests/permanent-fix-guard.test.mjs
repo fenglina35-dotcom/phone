@@ -2260,6 +2260,6 @@ test('retired private device sync keeps local namespaces and independent MCP and
 });
 
 test('native core durability survives an unavailable mirror without competing fallback or timestamp selection',()=>{
- const source=read(PRIVATE);for(const marker of ['PRIVATE_CORE_MIRROR_BASE_V1','PRIVATE_CORE_NATIVE_DURABLE_V1','PRIVATE_CORE_EXPLICIT_PRIMARY_REVIEW_V1'])assert(source.includes(marker));
- assert(source.includes('mirrorBaseSHA256'));assert(source.includes("if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true||error?.code==='CORE_REVISION_CHANGED'"));
+ const source=read(PRIVATE);for(const marker of ['PRIVATE_CORE_NATIVE_AUTHORITY_V1','PRIVATE_CORE_NATIVE_DURABLE_V1','PRIVATE_CORE_EXPLICIT_PRIMARY_REVIEW_V1'])assert(source.includes(marker));
+ assert(source.includes('nativeAuthority')); assert(source.includes("if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true||error?.code==='CORE_REVISION_CHANGED'"));
 });
