@@ -502,7 +502,9 @@ async function privateRepairCoreMirror(record,expectedMirror){
   for(const key of ['contentSHA256','stateSHA256','parentSHA256'])if(record[key])value[key]=record[key];
   await privateCommitCoreMirror(value,owner,{expectedMirror:expectedMirror||record.repairExpectedMirror});
   if(privateAccountDataIdentity()!==owner)throw new Error('账号已变化，已停止迁移');
-  const verified=await imgGetIDB(CORE_IDB_KEY);if(!verified||verified.json!==record.json||verified.contentSHA256!==value.contentSHA256)throw new Error('本机备用存档保存未核实');
+  const verified=await imgGetIDB(CORE_IDB_KEY);
+  if(verified&&(verified.json!==record.json||verified.contentSHA256!==value.contentSHA256)){const error=new Error('备用存档在核验期间出现另一版本，原有数据保留');error.code='CORE_REVISION_CHANGED';throw error;}
+  if(!verified)throw new Error('本机备用存档保存未核实');
 }
 async function privateVerifyCoreMirror(record){
   if(!record||!record.stateSHA256)return record;

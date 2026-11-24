@@ -1167,3 +1167,11 @@ test('a proven native core opens while mirror repair is unavailable, but an inde
   else{assert.equal(await c.bootOverflowCore(),true);assert.equal(c.S.settings.hist,47);assert.equal(c.window.__smallPhoneCoreMirrorPending,true);}
  }
 });
+
+test('mirror repair readback distinguishes an unavailable database from a competing committed version',async()=>{
+ const source=read(PRIV_DIR+'app.js'),record={ver:1,savedAt:20,json:'{"settings":{"hist":20}}',contentSHA256:'a'.repeat(64)};
+ for(const competing of [false,true]){
+  const c=vm.createContext({privateAccountDataIdentity:()=> 'owner',privateCommitCoreMirror:async()=>{},CORE_IDB_KEY:'__core_state',imgGetIDB:async()=>competing?{json:'{"settings":{"hist":30}}',contentSHA256:'b'.repeat(64)}:null});vm.runInContext(fnSource(source,'privateRepairCoreMirror'),c);
+  await assert.rejects(c.privateRepairCoreMirror(record),e=>competing?e.code==='CORE_REVISION_CHANGED':!e.code);
+ }
+});
