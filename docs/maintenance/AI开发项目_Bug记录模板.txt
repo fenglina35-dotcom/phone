@@ -3509,3 +3509,10 @@ PURSUIT_DELIVERY_TRANSACTION_V1：已复现旧实现丢弃未返回的付费决�
 清理：仅删除本轮自动测试重生成的4张同步/商城场景图及未引用的320宽/重复预览，保留本聊天已经引用的6张预览图，避免既有图片链接失效；无新增源码副本/备份目录，不清用户存档、配置、旧包或其他工作树。源码/回归/维护TXT未提交，版本标签未升；当前HEAD仍21f32b1e。三份原有损坏DOCX未改。修改所在ROOT=/Users/zoushijie/.codex/worktrees/acbe/sad-panini-0a44f0；Codex未能验证ownerless工作树的归属而未挂到本聊天，后续命令仍须显式指定该路径，不能用默认旧.claude目录。
 
 2026-11-26 本人明确允许安装上手测试后发布网页。发布候选网页v1952 / 私人v1951 / iOS与Mac597，使用统一bump_version工具。业务源码前轮5572/5572完整回归与普通/查岗门禁通过；升版后门禁继续核对。先提交本轮源码，从该提交用独立OBJROOT与InteractiveUpdate-iphoneos产品目录构建，保留CoreDurable-iphoneos596唯一包；严格签名及所有PhoneWeb资源对比提交。只覆盖iPhone App，不卸载、不清数据、不恢复旧存档。手机安装与系统版本读回完成前网页不推送；真实私人版拉黑流程留给本人上手，不代调收费模型。当前仅准备，不把候选写成已交付。
+
+2026-11-26 597/网页1952实际交付记录
+业务提交6d0fe6919cbdae68eadaa92fc168cd21f674664a；正式版本网页v1952、私人资源v1951、iOS1.0.597/build597。升版后完整5572/5572，0失败/0跳过/0取消，349969.845916ms；普通与NORTH_CHECKIN_PREVIEW=1两组完整双端HTML聊天门禁通过，pageErrors0；提交后版本工具4/4通过。升版工具的自动重分块已在严格核对两端app.js字节相同的前提下恢复原manifest边界，未留下重复源码或另建版本脚本。
+Xcode26.6从已提交源码构建iPhone Release成功，复用既有DerivedData、隔离InteractiveUpdate-iOS OBJROOT和InteractiveUpdate-iphoneos产品输出。codesign严格深度验证通过，全部1917个PhoneWeb资源逐项匹配Git blob，主App及4扩展签名权限与596完全相同、扩展均597。原CoreDurable-iphoneos596包1947文件聚合SHA256 feaf051a69cb247e9ebb77f01d135350c6d42d60575c95d54ea6ecdd720e6ba2保持。新交付包=/Users/zoushijie/Downloads/mac/extracted/claude-work/DerivedData/Build/Products/InteractiveUpdate-iphoneos/PhoneCompanionTest.app。本轮未编译或覆盖Mac安装。
+本人已明确确认聊天/备份结束、保存退出且iPhone解锁。安装前系统读回1.0.596/596；devicectl覆盖安装成功后，实际系统再次读回1.0.597/597，启动回执成功。中途读回因聊天工具中断未取到，之后只重查版本，未重复安装；首次开发者服务准备20秒超时，后续60秒只读查询成功。未卸载、清库、恢复存档或应用旧Mac内容。启动成功不等于本人数据及功能验收：现有数据可见、重开和真实拉黑/重生成效果仍待本人上手确认。真实完整备份仍未验收；本轮没有代本人发起收费模型功能测试。
+在手机版本读回及启动之后，首次git push origin HEAD:main成功，7c6be259快进至6d0fe691；Pages任务45787886140 completed/success。线上index.html/小手机.html/app.js/sw.js均HTTP200，1123/563588/5310984/29355字节，与提交逐字节一致。app.js读回v1952“手动更新与重生成、拉黑追联修复”，SHA256 a76c2b2997a393667cfd5f4c14f50c6b5d6041147e26d44427dbc0f8d9fcbb37。网址https://fenglina35-dotcom.github.io/phone/小手机.html。仅随后补交付文档，运行源码/签名包仍对应6d0fe691。
+清理本轮全量重生成的4张同步/商城场景PNG和空eight-chat目录；保留此前已向本人展示的6张预览图，保护全部原存档/配置/旧签名包及本次597交付物。三份历史损坏DOCX原件继续保留，仅对应TXT和区域指南补录。
