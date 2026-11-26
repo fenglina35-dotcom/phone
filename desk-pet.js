@@ -726,7 +726,7 @@ function bodyPageHTML(c){if(!c)return'<div class="dp-note">先在「宠物」那
 /* 桌宠陪着的角色：角色资料页、共同生活设置里的「作息时间表」直接跳到这一页；别的角色仍用原来的作息窗口 */
 let _schedModal=null;
 if(typeof schedSet==='function'){_schedModal=schedSet;schedSet=function(id){const p=cfg();if(p&&p.on&&p.cid===id&&bodyCfg().on){_dpTab='body';if(typeof closeModal==='function')closeModal();if(typeof cur==='function'&&cur()&&cur().p==='deskPet')rerender();else if(typeof go==='function')go('deskPet');return;}return _schedModal.apply(this,arguments);};}
-if(typeof settingsHomeHTML==='function'){const original=settingsHomeHTML;settingsHomeHTML=function(){const html=original.apply(this,arguments);return html.includes('deskPetOpen()')?html:html.replace('<div class="ios-settings-version"',deskPetRow()+'<div class="ios-settings-version"');};}
+if(typeof settingsHomeHTML==='function'){const original=settingsHomeHTML;settingsHomeHTML=function(){const html=original.apply(this,arguments);const anchor=html.includes('id="settings-update-group"')?'<div class="ios-settings-group" id="settings-update-group"':'<div class="ios-settings-version"';return html.includes('deskPetOpen()')?html:html.replace(anchor,deskPetRow()+anchor);};}
 function deskPetOpen(){ensureCfg();if(typeof go==='function')go('deskPet');}
 /* ---------- 零食盒（DESK_PET_SNACK_V1，2026-11-05 她要求） ----------
    开着「零食盒」时，连点两下桌宠弹出零食盒；长按一样零食拖到桌宠嘴边松手就喂进去。用手机自带的表情，不画图。

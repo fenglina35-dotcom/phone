@@ -1234,3 +1234,6 @@ input:is([type=date],[type=time],[type=datetime-local],[type=month],[type=week])
 .tts-dot.busy{background:#ff453a;box-shadow:0 0 7px rgba(255,69,58,.85);animation:ttsDotBlink 1s ease-in-out infinite}
 @keyframes ttsDotBlink{0%,100%{opacity:1}50%{opacity:.2}}
 @media (prefers-reduced-motion:reduce){.tts-dot.busy{animation-duration:2s}}
+
+/* PHOTO_ALBUM_COMMENT_REGENERATE_V1：复用底栏中间按钮，不增加控件。 */
+.photo-role-comment-body{flex:1;min-width:0}.photo-view-tool-pill .photo-comment-regenerate{cursor:pointer;transition:opacity .15s,transform .15s}.photo-view-tool-pill .photo-comment-regenerate:active{transform:scale(.92)}.photo-view-tool-pill .photo-comment-regenerate:focus-visible{outline:1px solid #8ebdff;outline-offset:-3px;border-radius:50%}.photo-view-tool-pill .photo-comment-regenerate:disabled{opacity:.4;cursor:default}@media(prefers-reduced-motion:reduce){.photo-view-tool-pill .photo-comment-regenerate{transition:none}}

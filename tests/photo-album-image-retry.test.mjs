@@ -37,3 +37,12 @@ for (const file of ['photo-album.js', 'native/private-small-phone/XcodeProject/P
     assert(s.includes('onerror="photoAlbumImageRetry(this)"'));
   });
 }
+
+const {read:albumRead,fnSource:albumFn,PRIV_DIR:albumPrivate}=await import('./_helpers.mjs');
+for(const file of ['photo-album.js',albumPrivate+'photo-album.js']){
+ const source=albumRead(file);
+ function commentFixture(){const c={id:'role',name:'甲'},old={roleId:'role',text:'原留言',time:1},row={id:'photo',roleComment:old,desc:'一只猫',visionState:'success'},cp={cid:c.id},state={couple:cp,me:{active:'main'},settings:{chat:{base:'fixture',key:'fixture'}}};let calls=0,answer='新的留言',saved=true,wait=null;const ctx=vm.createContext({S:state,Date,Promise,String,photoAlbumCoupleAllowed:()=>true,photoAlbumRoleRows:()=>[row],photoAlbumEnsureVision:async()=>true,cur:()=>({p:'home'}),photoAlbumCommentRefresh(){},photoAlbumRoleLike:async()=>{},saveNowAsync:async()=>saved,save(){},toast(){},chatAPI:async()=>{calls++;if(wait)await wait;return answer;}});vm.runInContext('const _photoAlbumCommentActive=new WeakSet();'+albumFn(source,'photoAlbumGenerateComment'),ctx);return{ctx,c,row,old,calls:()=>calls,answer:v=>answer=v,saved:v=>saved=v,wait:v=>wait=v};}
+ test(file+': regeneration replaces only the chosen comment after success',async()=>{const f=commentFixture();await f.ctx.photoAlbumGenerateComment(f.row,f.c,true);assert.equal(f.row.roleComment.text,'新的留言');assert.equal(f.calls(),1);});
+ test(file+': failed generation or persistence retains the original comment',async()=>{for(const mode of ['empty','save']){const f=commentFixture();if(mode==='empty')f.answer('');else f.saved(false);await f.ctx.photoAlbumGenerateComment(f.row,f.c,true);assert.equal(f.row.roleComment,f.old);}});
+ test(file+': repeated clicks share one generation and permission changes discard its result',async()=>{const f=commentFixture();let release;f.wait(new Promise(r=>release=r));const work=f.ctx.photoAlbumGenerateComment(f.row,f.c,true);await Promise.resolve();await f.ctx.photoAlbumGenerateComment(f.row,f.c,true);f.ctx.S.couple.albumAuthEpoch=1;release();await work;assert.equal(f.row.roleComment,f.old);assert.ok(f.calls()<=1);});
+}

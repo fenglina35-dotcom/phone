@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const P='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
@@ -18,9 +19,14 @@ test('desk pet ships identically in web and private and is wired into every entr
   }
 });
 
-test('the settings home bottom row is the desk pet, and the duplicate 小 K row is gone',()=>{
+test('desk pet stays before web update or the native version without duplicate entries',()=>{
   const s=read('desk-pet.js');
-  assert.match(s,/settingsHomeHTML=function\(\)\{const html=original\.apply\(this,arguments\);return html\.includes\('deskPetOpen\(\)'\)\?html:html\.replace\('<div class="ios-settings-version"',deskPetRow\(\)/);
+  const binding=s.split('\n').find(line=>line.startsWith("if(typeof settingsHomeHTML==='function')"));
+  for(const html of ['<div class="ios-settings-group" id="settings-update-group">更新</div><div class="ios-settings-version">版本</div>','<div class="ios-settings-version">版本</div>','<button onclick="deskPetOpen()">已有桌宠</button><div class="ios-settings-version">版本</div>']){
+    const ctx={settingsHomeHTML:()=>html,deskPetRow:()=>'<button onclick="deskPetOpen()">桌宠</button>'};vm.runInNewContext(binding,ctx);const result=ctx.settingsHomeHTML();assert.equal((result.match(/deskPetOpen\(\)/g)||[]).length,1);
+    if(html.includes('settings-update-group'))assert(result.indexOf('deskPetOpen()')<result.indexOf('settings-update-group'));
+    else assert(result.indexOf('deskPetOpen()')<result.indexOf('ios-settings-version'));
+  }
   assert.match(s,/<b>桌面宠物<\/b>/);assert.match(s,/miniSprite\(26\)/);
   const k=read(P+'private-robot-face.js');
   assert.doesNotMatch(k,/桌面伙伴 · 表情联动/);

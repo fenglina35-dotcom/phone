@@ -2263,3 +2263,7 @@ test('native core durability survives an unavailable mirror without competing fa
  const source=read(PRIVATE);for(const marker of ['PRIVATE_CORE_NATIVE_AUTHORITY_V1','PRIVATE_CORE_NATIVE_DURABLE_V1','PRIVATE_CORE_EXPLICIT_PRIMARY_REVIEW_V1'])assert(source.includes(marker));
  assert(source.includes('nativeAuthority')); assert(source.includes("if(k===CORE_IDB_KEY&&window.__SMALL_PHONE_ACCOUNT_SYNC__===true||error?.code==='CORE_REVISION_CHANGED'"));
 });
+
+test('manual web update, targeted regeneration and delivered pursuit remain available',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js');assert(app.includes('PURSUIT_DELIVERY_TRANSACTION_V1'));assert(read(prefix+'photo-album.js').includes('PHOTO_ALBUM_COMMENT_REGENERATE_V1'));assert(read(prefix+'task-notes.js').includes('GLOBE_LETTER_REGENERATE_V1'));}assert(read('app.js').includes('WEB_MANUAL_UPDATE_V1'));
+});

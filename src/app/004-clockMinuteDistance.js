@@ -457,7 +457,7 @@ const MODEL_FEATURES=[
  ['letter_reply','信箱·角色回信','信箱与任务',0,1,'mail-outbox.js:mailReply'],
  ['assigned_tasks','任务便签·角色完成小事','信箱与任务',0,1,'task-notes.js:assignedTick'],
  ['tasks','任务便签·布置任务','信箱与任务',0,1,'genTasks'],
- ['task_notes','任务便签·小猫和水晶球的信','信箱与任务',0,1,'task-notes.js:writeLine','task-notes.js:writeLetter'],
+ ['task_notes','任务便签·小猫和水晶球的信','信箱与任务',0,1,'task-notes.js:writeLine','task-notes.js:writeLetter','task-notes.js:writeLetterWork'],
  ['jail','小黑屋·对话','线下与剧情',0,'在情侣空间「禁闭室用辅助模型」切换','jailAI'],
  ['jail_summary','小黑屋·结束总结','线下与剧情',0,1,'summarizeJail'],
  ['rp','角色扮演·对话','线下与剧情',0,'在角色扮演「设定」里切换对话模型和路线','rpAI'],
